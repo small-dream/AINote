@@ -74,7 +74,7 @@ flowchart TB
 
 - `commands/`（Controller）：一命令一文件。只做参数反序列化、调用 Service、把 `Result<T, AppError>` 返回给前端。**禁止出现业务逻辑**。
 - `services/`（Service）：一个业务用例一个文件/模块。编排 Repository，实现 PRD 中的业务规则（如防抖提交策略）。
-- `repositories/`：trait 与实现分离。`git_backend.rs` 定义 `GitBackend` trait，`git2_backend.rs` 是 libgit2 实现。未来可换实现，Service 零感知。
+- `repositories/`：trait 与实现分离。`git_backend.rs` 定义 `GitBackend` trait，`git2_backend.rs`（本地操作）+ `git2_remote.rs`（网络操作）是 libgit2 实现；`file_storage.rs` / `note_files.rs` / `file_tree.rs` 为文件系统访问（受 200 行上限拆分）。未来可换实现，Service 零感知。
 - `domain/`：实体（`Note`）、值对象、统一错误 `AppError`。**零外部依赖**，不 import git2 / tauri。
 
 ### 前端
@@ -119,18 +119,18 @@ MyNote/
 │   │   │   └── types.ts
 │   │   ├── file-tree/
 │   │   ├── sync/
-│   │   └── settings/
+│   │   ├── auth/                 # 登录（Token 校验/保存）
+│   │   └── repo/                 # 绑定/创建仓库
 │   ├── components/               # 业务无关组件
 │   │   ├── atoms/
 │   │   └── molecules/
 │   ├── api/                      # IPC Client, 一领域一文件
 │   │   ├── client.ts             # invoke 薄封装 + 错误统一转换
-│   │   ├── note.api.ts
-│   │   ├── repo.api.ts
-│   │   └── sync.api.ts
+│   │   ├── types.ts              # 与 Rust DTO 结构一致的镜像类型
+│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts
 │   ├── stores/                   # Zustand, 按领域切片
 │   ├── queries/                  # TanStack Query hooks (服务端/Git 状态)
-│   ├── hooks/                    # 跨领域通用 hooks
+│   ├── hooks/                    # 跨领域通用 hooks（useNetworkStatus 等）
 │   ├── lib/                      # 纯工具函数, 无 React 依赖
 │   └── styles/
 │       └── tokens.css            # 设计 Token (明暗双主题)
@@ -139,9 +139,10 @@ MyNote/
 │   │   ├── main.rs               # 仅做 Command 注册, < 50 行
 │   │   ├── commands/             # Controller: 一命令一文件
 │   │   │   ├── mod.rs            # 仅 re-export
-│   │   │   ├── note/             # create.rs / update.rs / delete.rs / list.rs
-│   │   │   ├── git/              # commit.rs / pull.rs / push.rs / status.rs
-│   │   │   └── repo/             # clone.rs / validate.rs
+│   │   │   ├── note/             # create.rs / read.rs / update.rs / delete.rs / move.rs / tree.rs / list.rs
+│   │   │   ├── git/              # commit.rs / pull.rs / push.rs / status.rs / sync.rs / resolve.rs
+│   │   │   ├── repo/             # bind.rs / create.rs / validate.rs / path.rs
+│   │   │   └── auth/             # save_token.rs / validate.rs / status.rs / logout.rs
 │   │   ├── services/             # 一用例一模块
 │   │   ├── repositories/         # trait + 实现分离
 │   │   ├── domain/               # 实体、值对象、AppError
