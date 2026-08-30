@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, type FormEvent } from "react";
 import { messageOf } from "@/api";
 import { Button } from "@/components/atoms/Button";
+import { Modal } from "@/components/molecules/Modal";
 import { useMoveNoteMutation } from "@/queries/note.queries";
 import { normalizeNotePath } from "../utils/path";
 
@@ -16,9 +17,8 @@ export function MoveNoteDialog({ path, onClose, onMoved }: MoveNoteDialogProps) 
   const [to, setTo] = useState(path ?? "");
   const [error, setError] = useState<string | null>(null);
 
-  if (!path) return null;
-
-  function submit() {
+  function submit(event: FormEvent) {
+    event.preventDefault();
     if (!path) return;
     const normalized = normalizeNotePath(to);
     if (!normalized) {
@@ -32,19 +32,71 @@ export function MoveNoteDialog({ path, onClose, onMoved }: MoveNoteDialogProps) 
     move.mutate({ from: path, to: normalized }, { onSuccess: () => { onMoved(normalized); onClose(); } });
   }
 
+  const mutateMessage = move.isError ? messageOf(move.error) : null;
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
-      <div className="w-full max-w-md rounded-lg bg-bg-primary p-6 shadow-lg">
-        <h2 className="mb-4 text-lg font-semibold">重命名 / 移动</h2>
-        <p className="mb-3 text-xs text-text-secondary">当前：{path}</p>
-        <input autoFocus className="mb-2 w-full rounded-md border border-bg-secondary bg-bg-primary px-3 py-2 text-sm outline-none focus:border-accent" placeholder="目标路径，如 daily/新名字.md" value={to} onChange={(e) => { setTo(e.target.value); setError(null); }} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
-        {error && <p className="mb-2 text-xs text-danger">{error}</p>}
-        {move.isError && <p className="mb-2 text-xs text-danger">{messageOf(move.error)}</p>}
-        <div className="flex justify-end gap-2">
-          <Button variant="ghost" onClick={onClose} disabled={move.isPending}>取消</Button>
-          <Button variant="primary" onClick={submit} disabled={move.isPending}>{move.isPending ? "移动中…" : "确认"}</Button>
-        </div>
+    <Modal open={path !== null} title="重命名 / 移动" onClose={onClose}>
+      <MoveNoteForm
+        current={path}
+        to={to}
+        error={error}
+        pending={move.isPending}
+        mutateMessage={mutateMessage}
+        onToChange={(value) => setTo(value)}
+        onErrorReset={() => setError(null)}
+        onCancel={onClose}
+        onSubmit={submit}
+      />
+    </Modal>
+  );
+}
+
+interface MoveNoteFormProps {
+  current: string | null;
+  to: string;
+  error: string | null;
+  pending: boolean;
+  mutateMessage: string | null;
+  onToChange: (value: string) => void;
+  onErrorReset: () => void;
+  onCancel: () => void;
+  onSubmit: (event: FormEvent) => void;
+}
+
+function MoveNoteForm({
+  current,
+  to,
+  error,
+  pending,
+  mutateMessage,
+  onToChange,
+  onErrorReset,
+  onCancel,
+  onSubmit,
+}: MoveNoteFormProps) {
+  return (
+    <form onSubmit={onSubmit}>
+      <p className="mb-3 text-xs text-text-secondary">当前：{current}</p>
+      <input
+        autoFocus
+        className="mb-2 w-full rounded-md border border-bg-secondary bg-bg-primary px-3 py-2 text-sm outline-none focus:border-accent"
+        placeholder="目标路径，如 daily/新名字.md"
+        value={to}
+        onChange={(e) => {
+          onToChange(e.target.value);
+          onErrorReset();
+        }}
+      />
+      {error && <p className="mb-2 text-xs text-danger">{error}</p>}
+      {mutateMessage && <p className="mb-2 text-xs text-danger">{mutateMessage}</p>}
+      <div className="flex justify-end gap-2">
+        <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
+          取消
+        </Button>
+        <Button type="submit" variant="primary" disabled={pending}>
+          {pending ? "移动中…" : "确认"}
+        </Button>
       </div>
-    </div>
+    </form>
   );
 }

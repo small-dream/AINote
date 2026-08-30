@@ -3,6 +3,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { forwardRef, useImperativeHandle, useState } from "react";
 import { Button } from "@/components/atoms/Button";
 import { useNoteEditor, type NoteEditorHandle } from "../hooks/useNoteEditor";
+import { useFocusTitleOnLoad } from "../hooks/useEditorFocus";
 import { MarkdownPreview } from "./MarkdownPreview";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
@@ -13,13 +14,16 @@ interface NoteEditorProps {
   repoPath: string | null;
   notePath: string | null;
   onMove: (from: string) => void;
+  /** 新建打开时自动聚焦首行标题（P2） */
+  focusTitleOnLoad?: boolean;
 }
 
 /** 笔记编辑器：编辑/预览双模式 + 防抖自动保存（P0-2） */
 export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
-  function NoteEditor({ repoPath, notePath, onMove }, ref) {
+  function NoteEditor({ repoPath, notePath, onMove, focusTitleOnLoad = false }, ref) {
     const { draft, onChange, flush, saving, dirty, error } = useNoteEditor(repoPath, notePath);
     const [mode, setMode] = useState<ViewMode>("edit");
+    const { onCreateEditor } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
 
     useImperativeHandle(ref, () => ({ flush }), [flush]);
 
@@ -43,6 +47,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
             value={draft}
             onChange={onChange}
             extensions={[markdown()]}
+            onCreateEditor={onCreateEditor}
           />
         ) : (
           <div className="flex-1 overflow-y-auto p-6">

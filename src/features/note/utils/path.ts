@@ -6,3 +6,9 @@ export function normalizeNotePath(input: string): string | null {
   if (!trimmed) return null;
   return /\.md$/i.test(trimmed) ? trimmed : `${trimmed}.md`;
 }
+
+/** 拼接目录前缀与文件名：目录去斜杠；目录为空时直接返回文件名 */
+export function joinNotePath(dir: string, name: string): string {
+  const normalizedDir = dir.trim().replace(/^\/+|\/+$/g, "");
+  return normalizedDir ? `${normalizedDir}/${name}` : name;
+}

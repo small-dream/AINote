@@ -2,31 +2,28 @@ import { useState } from "react";
 import { Button } from "@/components/atoms/Button";
 import type { NoteMeta } from "@/api/types";
 import {
-  useCreateNoteMutation,
   useDeleteNoteMutation,
   useNoteListQuery,
 } from "@/queries/note.queries";
 import { useSessionStore } from "@/stores/session.store";
 import { MoveNoteDialog } from "./MoveNoteDialog";
-import { NewNoteDialog } from "./NewNoteDialog";
 
 interface NoteListProps {
   repoPath: string | null;
   onSelect: (path: string) => void;
+  onRequestNew: () => void;
 }
 
-/** 笔记列表：全部笔记 + 新建 / 重命名 / 删除（P0-2 / P0-3） */
-export function NoteList({ repoPath, onSelect }: NoteListProps) {
+/** 笔记列表：全部笔记 + 删除 / 重命名（P0-2 / P0-3；新建入口提升到工作区） */
+export function NoteList({ repoPath, onSelect, onRequestNew }: NoteListProps) {
   const { data: notes, isLoading } = useNoteListQuery(repoPath);
-  const create = useCreateNoteMutation();
   const remove = useDeleteNoteMutation();
   const currentNotePath = useSessionStore((s) => s.currentNotePath);
-  const [newOpen, setNewOpen] = useState(false);
   const [moveTarget, setMoveTarget] = useState<string | null>(null);
 
   return (
     <div className="flex h-full flex-col">
-      <NoteListHeader onNew={() => setNewOpen(true)} />
+      <NoteListHeader onNew={onRequestNew} />
       <NoteListBody
         notes={notes ?? []}
         isLoading={isLoading}
@@ -34,15 +31,6 @@ export function NoteList({ repoPath, onSelect }: NoteListProps) {
         onSelect={onSelect}
         onMove={setMoveTarget}
         onDelete={(path) => remove.mutate(path)}
-      />
-      <NewNoteDialog
-        open={newOpen}
-        onClose={() => setNewOpen(false)}
-        onCreate={(path) => {
-          create.mutate(path);
-          onSelect(path);
-          setNewOpen(false);
-        }}
       />
       <MoveNoteDialog
         key={moveTarget ?? "none"}

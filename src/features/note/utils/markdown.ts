@@ -15,3 +15,10 @@ export function extractWikiLinks(markdown: string): string[] {
   }
   return links;
 }
+
+/** 返回「光标定位到首行标题文字处」的插入点：首行是 `# xxx` 时返回 2，否则返回 0 */
+export function findTitleCursorIndex(markdown: string): number {
+  const lineEnd = markdown.indexOf("\n");
+  const firstLine = lineEnd === -1 ? markdown : markdown.slice(0, lineEnd);
+  return firstLine.startsWith("# ") ? 2 : 0;
+}

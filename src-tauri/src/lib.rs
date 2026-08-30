@@ -14,6 +14,7 @@ pub fn run() {
     tauri::Builder::default()
         .invoke_handler(tauri::generate_handler![
             commands::note::create::create_note,
+            commands::note::create_folder::create_folder,
             commands::note::read::read_note,
             commands::note::update::update_note,
             commands::note::delete::delete_note,

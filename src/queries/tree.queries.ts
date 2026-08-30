@@ -1,4 +1,4 @@
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { noteApi } from "@/api";
 import type { TreeNode } from "@/api/types";
 
@@ -8,6 +8,17 @@ export function useNoteTreeQuery(repoPath: string | null) {
     queryKey: ["tree", repoPath],
     queryFn: () => noteApi.tree(),
     enabled: repoPath !== null,
+  });
+}
+
+/** 新建文件夹，成功后刷新目录树 */
+export function useCreateFolderMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (path: string) => noteApi.createFolder(path),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["tree"] });
+    },
   });
 }
 

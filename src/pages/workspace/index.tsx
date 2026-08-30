@@ -1,56 +1,38 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
-import { authApi } from "@/api";
-import { Button } from "@/components/atoms/Button";
-import { FileTree } from "@/features/file-tree/components/FileTree";
-import { MoveNoteDialog } from "@/features/note/components/MoveNoteDialog";
-import { NoteEditor, type NoteEditorHandle } from "@/features/note/components/NoteEditor";
-import { NoteList } from "@/features/note/components/NoteList";
-import { SyncBar } from "@/features/sync/components/SyncBar";
+import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { useStartupSync } from "@/features/sync/hooks/useStartupSync";
 import { useAuthStatusQuery } from "@/queries/auth.queries";
 import { useSessionStore } from "@/stores/session.store";
+import { WorkspaceLayout } from "./WorkspaceLayout";
+import { useWorkspaceActions } from "./useWorkspaceActions";
 
-/** 工作区：同步条 + 目录树 | 笔记列表 | 编辑器（三栏） */
+/** 工作区：启动守卫 + 新建/移动编排，三栏渲染委托给 WorkspaceLayout */
 export function WorkspacePage() {
-  const navigate = useNavigate();
   const { ready, repoPath } = useWorkspaceGate();
   const startupSyncing = useStartupSync(repoPath);
   const currentNotePath = useSessionStore((s) => s.currentNotePath);
   const openNote = useSessionStore((s) => s.openNote);
-  const reset = useSessionStore((s) => s.reset);
   const editorRef = useRef<NoteEditorHandle>(null);
-  const [moveTarget, setMoveTarget] = useState<string | null>(null);
-  const [logoutBusy, setLogoutBusy] = useState(false);
+  const actions = useWorkspaceActions(repoPath, handleSelect);
 
   function handleSelect(path: string) {
     editorRef.current?.flush();
     openNote(path);
   }
 
-  async function handleLogout() {
-    setLogoutBusy(true);
-    try {
-      await authApi.logout();
-      reset();
-      navigate("/setup", { replace: true });
-    } finally {
-      setLogoutBusy(false);
-    }
-  }
-
   if (!ready) return <LoadingScreen />;
 
   return (
-    <div className="flex h-screen flex-col">
-      <SyncBar repoPath={repoPath} startupSyncing={startupSyncing} />
-      <div className="flex min-h-0 flex-1">
-        <WorkspaceSidebar repoPath={repoPath} onSelect={handleSelect} onLogout={() => void handleLogout()} logoutBusy={logoutBusy} />
-        <section className="w-72 border-r border-bg-secondary"><NoteList repoPath={repoPath} onSelect={handleSelect} /></section>
-        <main className="min-w-0 flex-1"><NoteEditor ref={editorRef} repoPath={repoPath} notePath={currentNotePath} onMove={setMoveTarget} /></main>
-      </div>
-      <MoveNoteDialog key={moveTarget ?? "none"} path={moveTarget} onClose={() => setMoveTarget(null)} onMoved={(to) => { openNote(to); setMoveTarget(null); }} />
-    </div>
+    <WorkspaceLayout
+      repoPath={repoPath}
+      startupSyncing={startupSyncing}
+      currentNotePath={currentNotePath}
+      editorRef={editorRef}
+      actions={actions}
+      onSelect={handleSelect}
+      onMoved={openNote}
+    />
   );
 }
 
@@ -68,29 +50,6 @@ function useWorkspaceGate() {
   }, [isLoading, data, navigate, repoPath, setRepoPath]);
 
   return { ready: !isLoading && repoPath !== null, repoPath };
-}
-
-interface WorkspaceSidebarProps {
-  repoPath: string | null;
-  onSelect: (path: string) => void;
-  onLogout: () => void;
-  logoutBusy: boolean;
-}
-
-function WorkspaceSidebar({ repoPath, onSelect, onLogout, logoutBusy }: WorkspaceSidebarProps) {
-  return (
-    <aside className="flex w-64 flex-col border-r border-bg-secondary bg-bg-secondary">
-      <div className="flex items-center justify-between border-b border-bg-secondary px-4 py-2">
-        <span className="truncate text-sm font-medium">我的笔记</span>
-        <Button variant="ghost" onClick={onLogout} disabled={logoutBusy}>
-          登出
-        </Button>
-      </div>
-      <div className="min-h-0 flex-1">
-        <FileTree repoPath={repoPath} onSelect={onSelect} />
-      </div>
-    </aside>
-  );
 }
 
 function LoadingScreen() {

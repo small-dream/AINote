@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::Path;
 
 use crate::domain::error::AppError;
@@ -13,15 +14,23 @@ pub fn list_notes(repo_path: &Path) -> Result<Vec<NoteMeta>, AppError> {
     files.iter().map(|f| to_meta(repo_path, f)).collect()
 }
 
-/// 用例：新建笔记（模板 `# 未命名`）；已存在时幂等返回元数据。
-pub fn create_note(repo_path: &Path, rel: &str) -> Result<NoteMeta, AppError> {
+/// 用例：新建笔记；content 为 None 时写入默认模板 `# 未命名`，已存在时幂等返回元数据。
+pub fn create_note(repo_path: &Path, rel: &str, content: Option<&str>) -> Result<NoteMeta, AppError> {
+    let content = content.unwrap_or(NEW_NOTE_TEMPLATE);
     if !repo_path
         .join(note_files::validate_rel_path(rel)?)
         .is_file()
     {
-        note_files::write_note(repo_path, rel, NEW_NOTE_TEMPLATE)?;
+        note_files::write_note(repo_path, rel, content)?;
     }
     to_meta(repo_path, &repo_path.join(rel))
+}
+
+/// 用例：新建文件夹（目录）；已存在时幂等。空目录不产生 Git 变更，首次放入笔记后才会被版本化。
+pub fn create_folder(repo_path: &Path, rel: &str) -> Result<(), AppError> {
+    let dir = repo_path.join(note_files::validate_rel_path(rel)?);
+    fs::create_dir_all(dir)?;
+    Ok(())
 }
 
 /// 用例：读取笔记完整内容
@@ -109,7 +118,7 @@ mod tests {
     fn create_read_update_move_delete_roundtrip() {
         let tmp = setup();
         let root = tmp.path();
-        let meta = create_note(root, "d/n.md").unwrap();
+        let meta = create_note(root, "d/n.md", None).unwrap();
         assert_eq!(meta.title, "未命名");
         assert_eq!(
             read_note(root, "d/n.md").unwrap().content,
@@ -126,11 +135,36 @@ mod tests {
     fn create_is_idempotent_and_validates_path() {
         let tmp = setup();
         let root = tmp.path();
-        create_note(root, "a.md").unwrap();
+        create_note(root, "a.md", None).unwrap();
         update_note(root, "a.md", "# 自定义").unwrap();
-        let meta = create_note(root, "a.md").unwrap();
+        let meta = create_note(root, "a.md", None).unwrap();
         assert_eq!(meta.title, "自定义");
-        assert!(create_note(root, "../evil.md").is_err());
+        assert!(create_note(root, "../evil.md", None).is_err());
+    }
+
+    #[test]
+    fn create_uses_supplied_template() {
+        let tmp = setup();
+        let root = tmp.path();
+        let meta = create_note(root, "daily/2026-08-30.md", Some("# 2026-08-30\n\n")).unwrap();
+        assert_eq!(meta.title, "2026-08-30");
+        assert_eq!(
+            read_note(root, "daily/2026-08-30.md").unwrap().content,
+            "# 2026-08-30\n\n"
+        );
+        let blank = create_note(root, "blank.md", Some("")).unwrap();
+        assert_eq!(blank.title, "blank");
+    }
+
+    #[test]
+    fn create_folder_creates_and_is_idempotent() {
+        let tmp = setup();
+        let root = tmp.path();
+        create_folder(root, "daily/2026").unwrap();
+        assert!(root.join("daily/2026").is_dir());
+        create_folder(root, "daily/2026").unwrap();
+        assert!(create_folder(root, "../evil").is_err());
+        assert!(create_folder(root, "").is_err());
     }
 
     #[test]

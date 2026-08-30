@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { noteApi } from "@/api";
+import { noteApi, syncApi } from "@/api";
 import type { NoteContent, NoteMeta } from "@/api/types";
 
 export const noteKeys = {
@@ -25,15 +25,24 @@ export function useNoteContentQuery(repoPath: string | null, path: string | null
   });
 }
 
-/** 新建笔记，成功后打开并刷新列表 */
+interface CreateNoteInput {
+  path: string;
+  /** 模板内容；null 表示后端默认模板 */
+  content: string | null;
+}
+
+/** 新建笔记：成功即本地 commit 版本化，并刷新列表/树/同步状态（P0-2） */
 export function useCreateNoteMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (path: string) => noteApi.create(path),
-    onSuccess: (note) => {
+    mutationFn: ({ path, content }: CreateNoteInput) => noteApi.create(path, content),
+    onSuccess: (_note, { path }) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
-      return note;
+      void queryClient.removeQueries({ queryKey: noteKeys.content(path) });
+      void syncApi.commit(`note: create ${path}`).finally(() => {
+        void queryClient.invalidateQueries({ queryKey: ["sync"] });
+      });
     },
   });
 }
