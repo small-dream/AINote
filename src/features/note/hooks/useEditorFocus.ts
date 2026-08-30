@@ -20,5 +20,5 @@ export function useFocusTitleOnLoad(active: boolean, notePath: string | null, co
     viewRef.current = view;
   }, []);
 
-  return { onCreateEditor };
+  return { onCreateEditor, viewRef };
 }
