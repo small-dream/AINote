@@ -17,3 +17,9 @@ export function isAppError(value: unknown): value is AppError {
     "message" in value
   );
 }
+
+/** 从任意错误中提取用户可读消息（AppError 优先） */
+export function messageOf(err: unknown): string {
+  if (isAppError(err)) return err.message;
+  return err instanceof Error ? err.message : String(err);
+}

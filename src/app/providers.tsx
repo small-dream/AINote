@@ -1,5 +1,6 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import type { ReactNode } from "react";
+import { useEffect, type ReactNode } from "react";
+import { useUiStore } from "@/stores/ui.store";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -8,5 +9,19 @@ const queryClient = new QueryClient({
 });
 
 export function AppProviders({ children }: { children: ReactNode }) {
-  return <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>;
+  return (
+    <QueryClientProvider client={queryClient}>
+      <ThemeApplier />
+      {children}
+    </QueryClientProvider>
+  );
+}
+
+/** 全局 UI 态：将 theme 写入 <html data-theme>，驱动 tokens.css 明暗切换 */
+function ThemeApplier() {
+  const theme = useUiStore((s) => s.theme);
+  useEffect(() => {
+    document.documentElement.dataset.theme = theme;
+  }, [theme]);
+  return null;
 }
