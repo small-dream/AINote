@@ -1,0 +1,8 @@
+node_modules/
+dist/
+src-tauri/target/
+*.log
+.DS_Store
+
+# 本地笔记仓库数据，绝不提交
+/local-repos/

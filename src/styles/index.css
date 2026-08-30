@@ -1,0 +1,30 @@
+@import "tailwindcss";
+@import "./tokens.css";
+
+/* 设计 Token 映射为 Tailwind 色板（见 docs/ARCHITECTURE.md / tokens.css） */
+@theme inline {
+  --color-bg-primary: var(--bg-primary);
+  --color-bg-secondary: var(--bg-secondary);
+  --color-accent: var(--accent);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-danger: var(--danger);
+}
+
+/* 暗色主题通过 [data-theme="dark"] 属性切换 */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+body {
+  @apply bg-bg-primary text-text-primary;
+  font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+code,
+pre,
+.cm-editor {
+  font-family: "JetBrains Mono", "SF Mono", monospace;
+}
