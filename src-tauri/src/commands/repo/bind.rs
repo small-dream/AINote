@@ -10,7 +10,7 @@ use crate::services::{auth_service, repo_service};
 /// Controller：绑定远端仓库（探测 → clone 到默认目录 → 写 config）。
 #[tauri::command]
 pub async fn bind_repo(app: AppHandle, repo_url: String) -> Result<RepoPathDto, AppErrorDto> {
-    let token = auth_service::read_token()?;
+    let token = auth_service::read_token(&app)?;
     let dest = config::notes_dir(&app)?;
     let backend = Git2Backend;
     let repo_path =

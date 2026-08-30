@@ -72,12 +72,12 @@ describe("SetupPage 登录并保存 Token", () => {
 
   it("保存 token 失败时应显示错误而非无响应", async () => {
     authApiMock.validateToken.mockResolvedValue({ login: "small-dream" });
-    authApiMock.saveToken.mockRejectedValue(new Error("钥匙串写入失败"));
+    authApiMock.saveToken.mockRejectedValue(new Error("本地加密写入失败"));
 
     renderSetup();
     await loginThrough();
 
-    await screen.findByText("钥匙串写入失败");
+    await screen.findByText("本地加密写入失败");
     expect(screen.queryByText("绑定已有仓库")).toBeNull();
   });
 });

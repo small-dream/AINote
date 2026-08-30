@@ -78,7 +78,7 @@ flowchart TD
 - **笔记即文件**：一篇笔记 = 仓库内一个 `.md` 文件；文件夹 = 目录。不引入任何私有数据库格式。
 - **自动提交策略**：编辑防抖（默认 30s）落盘后自动生成一条 commit，message 规范：`note: <action> <path>`。
 - **冲突策略（MVP）**：Pull 冲突时暂停自动同步，提示用户；图形化解决在 P1-3，MVP 提供「保留本地 / 使用远端」二选一。
-- **凭证存储**：GitHub Token 存系统钥匙串（macOS Keychain / Windows Credential Manager），绝不落盘明文。
+- **凭证存储**：GitHub Token 存本地加密文件，绝不落盘明文；登出时删除本地凭证。
 
 ## 5. 成功指标（MVP）
 

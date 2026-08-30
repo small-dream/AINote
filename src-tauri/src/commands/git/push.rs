@@ -11,7 +11,7 @@ use crate::services::{auth_service, sync_service};
 #[tauri::command]
 pub async fn git_push(app: AppHandle) -> Result<SyncStatus, AppErrorDto> {
     let root = config::require_repo_path(&app)?;
-    let token = auth_service::read_token()?;
+    let token = auth_service::read_token(&app)?;
     let backend = Git2Backend;
     blocking::run(move || sync_service::push(&backend, &root, &token))
         .await

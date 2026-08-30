@@ -1,4 +1,4 @@
-//! 应用配置持久化：已绑定仓库路径和认证状态存于 app config dir 下的 mynote.json。
+//! 应用配置持久化：已绑定仓库路径与非敏感认证状态存于 app config dir 下的 mynote.json。
 
 use std::fs;
 use std::path::PathBuf;
@@ -51,8 +51,7 @@ pub fn load_repo_path(app: &AppHandle) -> Result<Option<String>, AppError> {
 /// 当前认证状态与绑定状态（启动守卫使用）。
 pub fn load_auth_status(app: &AppHandle) -> Result<(bool, Option<String>), AppError> {
     let cfg = load_config(app)?;
-    let has_token = cfg.has_token.unwrap_or(cfg.repo_path.is_some());
-    Ok((has_token, cfg.repo_path))
+    Ok((cfg.has_token.unwrap_or(false), cfg.repo_path))
 }
 
 /// 读取绑定路径，未绑定时报 REPO_3001（供各 Command 统一前置校验）。

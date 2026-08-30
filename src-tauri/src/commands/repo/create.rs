@@ -14,7 +14,7 @@ pub async fn create_repo(
     name: String,
     is_private: bool,
 ) -> Result<RepoPathDto, AppErrorDto> {
-    let token = auth_service::read_token()?;
+    let token = auth_service::read_token(&app)?;
     let dest = config::notes_dir(&app)?;
     let backend = Git2Backend;
     let repo_path = blocking::run(move || {

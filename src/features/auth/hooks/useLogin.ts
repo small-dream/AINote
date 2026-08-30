@@ -2,7 +2,7 @@ import { useState } from "react";
 import { authApi, messageOf } from "@/api";
 import { useSessionStore } from "@/stores/session.store";
 
-/** GitHub 登录流程编排：校验 token → 保存到钥匙串 */
+/** GitHub 登录流程编排：校验 token → 保存到本地加密存储 */
 export function useLogin(onSuccess: () => void) {
   const setLogin = useSessionStore((s) => s.setLogin);
   const [token, setToken] = useState("");

@@ -13,7 +13,7 @@
   - `pnpm build` / `pnpm test` / `pnpm lint` — 前端构建 / 单测 / 静态检查（CI 门槛）
 - **依赖版本策略：一律使用最新稳定版**（`^latest`），升级后必须通过 `pnpm build && pnpm test && pnpm lint` 与 `cargo test` 全量验证。
   - 唯一例外：`typescript` 锁定 `~6.0`——typescript-eslint 8.x 尚不支持 TS 7.x 编译器（见 typescript-eslint#10940），待其支持后立即升级。
-- Rust 依赖同样使用最新 stable major（tauri 2 / git2 0.20 / thiserror 2 / keyring 3）。
+- Rust 依赖同样使用最新 stable major（tauri 2 / git2 0.20 / thiserror 2 / aes-gcm 0.10）。
 
 ## 1. 技术选型
 
@@ -28,7 +28,7 @@
 | 前后端桥 | **Tauri Commands (IPC) + `serde`** | Rust 强类型入参/出参，TS 侧镜像类型，双向类型安全 |
 | GitHub 接入 | **OAuth Device Flow / PAT + GitHub REST API** | 仅用于仓库创建与授权验证；数据同步走纯 Git 协议 |
 | 前端状态 | **Zustand（全局 UI 态）+ TanStack Query（服务端/Git 态）** | 轻量、无样板、职责边界清晰 |
-| 凭证 | **`keyring` crate（系统钥匙串）** | Token 不落盘明文；登录态布尔标记可落盘到 app config |
+| 凭证 | **本地加密文件（AES-GCM）+ 本地状态标记** | Token 不落盘明文；登录态布尔标记可落盘到 app config |
 | 测试 | **Vitest + React Testing Library + `cargo test`** | 前后端同构的快测试 |
 
 **核心架构决策**：所有 Git / 文件 IO 放在 Rust 层，前端只做「纯 UI + 状态编排」。
@@ -156,6 +156,6 @@ MyNote/
 
 - **自动提交防抖**：编辑器变更 → 前端 30s 防抖落盘 → `sync_service.commit_pending()` 汇总未提交变更生成单条 commit。策略细节由 Service 层实现，Controller 不感知。
 - **离线优先**：所有读写只操作本地仓库；Push/Pull 失败进入待同步状态，网络恢复事件触发重试（前端 `online` 事件 + Query 重取）。
-- **凭证流**：Token 只存系统钥匙串；Rust 层在使用时读取，前端永远拿不到明文 Token。
-- **登录态**：`has_token` 这类非敏感状态存于 app config，路由守卫不直接探测钥匙串。
+- **凭证流**：Token 存本地加密文件；Rust 层在使用时读取并解密，前端永远拿不到明文 Token。
+- **登录态**：`has_token` 这类非敏感状态存于 app config，路由守卫不直接解密 token。
 - **长耗时 IPC**：Git / 文件 / 网络类 Command 统一通过 `async command + spawn_blocking` 执行，避免阻塞前端渲染与交互。

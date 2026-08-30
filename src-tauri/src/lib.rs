@@ -1,11 +1,13 @@
 // 库入口：模块声明与应用启动（Tauri 2 移动端需要 lib 形式）
 //
-// 说明：Command 统一把 git2 / ureq / keyring / 文件 IO 放到后台线程执行，避免阻塞前端。
+// 说明：Command 统一把 git2 / ureq / 本地加密文件 IO 放到后台线程执行，避免阻塞前端。
 mod commands;
 mod config;
 mod domain;
 mod repositories;
 mod services;
+
+pub use services::auth_store::AuthStore;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

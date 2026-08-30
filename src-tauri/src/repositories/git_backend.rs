@@ -4,7 +4,7 @@ use crate::domain::error::AppError;
 
 /// Git 能力抽象（防腐化关键：Service 只依赖此 trait，不依赖 git2）。
 /// 实现：git2_backend.rs（本地）+ git2_remote.rs（网络）。测试注入 MockGitBackend。
-/// token 由 Service 层从钥匙串读出后传入，Repository 不碰 keyring。
+/// token 由 Service 层从本地加密存储读出后传入，Repository 不关心持久化方式。
 pub trait GitBackend: Send + Sync {
     fn is_git_repo(&self, path: &str) -> Result<bool, AppError>;
     /// HTTPS clone，凭证回调使用 x-access-token
