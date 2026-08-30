@@ -1,11 +1,17 @@
 import CodeMirror from "@uiw/react-codemirror";
-import { forwardRef, useImperativeHandle, useState } from "react";
+import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import type { RefObject } from "react";
+import type { Extension } from "@codemirror/state";
+import type { EditorView } from "@codemirror/view";
 import { useNoteEditor, type NoteEditorHandle } from "../hooks/useNoteEditor";
 import { useFocusTitleOnLoad } from "../hooks/useEditorFocus";
 import { useEditorExtensions } from "../hooks/useEditorExtensions";
+import { useEditorViewReady } from "../hooks/useEditorViewReady";
+import { useSyncScroll } from "../hooks/useSyncScroll";
 import { EditorToolbar, type ViewMode } from "./EditorToolbar";
 import { FormatToolbar } from "./FormatToolbar";
 import { MarkdownPreview } from "./MarkdownPreview";
+import { SplitPane } from "./SplitPane";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -17,13 +23,16 @@ interface NoteEditorProps {
   focusTitleOnLoad?: boolean;
 }
 
-/** 笔记编辑器：格式工具栏 + 编辑/预览双模式 + 防抖自动保存（P0-2） */
+/** 笔记编辑器：格式工具栏 + 编辑/分栏/预览三模式 + 防抖自动保存（P0-2） */
 export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
   function NoteEditor({ repoPath, notePath, onMove, focusTitleOnLoad = false }, ref) {
     const { draft, onChange, flush, saving, dirty, error } = useNoteEditor(repoPath, notePath);
     const [mode, setMode] = useState<ViewMode>("edit");
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const { extensions, activeFormats } = useEditorExtensions();
+    const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
+    const previewRef = useRef<HTMLDivElement | null>(null);
+    useSyncScroll(readyView, previewRef, mode);
 
     useImperativeHandle(ref, () => ({ flush }), [flush]);
 
@@ -41,26 +50,67 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
           onSave={flush}
           onMove={() => onMove(notePath)}
         />
-        {mode === "edit" && <FormatToolbar viewRef={viewRef} active={activeFormats} />}
-        {mode === "edit" ? (
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <CodeMirror
-              className="h-full"
-              value={draft}
-              onChange={onChange}
-              extensions={extensions}
-              onCreateEditor={onCreateEditor}
-            />
-          </div>
-        ) : (
-          <div className="min-h-0 flex-1 overflow-y-auto p-6">
-            <MarkdownPreview content={draft} />
-          </div>
-        )}
+        {mode !== "preview" && <FormatToolbar viewRef={viewRef} active={activeFormats} />}
+        <EditorBody
+          mode={mode}
+          draft={draft}
+          onChange={onChange}
+          extensions={extensions}
+          onCreateEditor={handleCreateEditor}
+          previewRef={previewRef}
+        />
       </div>
     );
   }
 );
+
+interface EditorBodyProps {
+  mode: ViewMode;
+  draft: string;
+  onChange: (value: string) => void;
+  extensions: Extension[];
+  onCreateEditor: (view: EditorView) => void;
+  previewRef: RefObject<HTMLDivElement | null>;
+}
+
+function EditorBody({
+  mode,
+  draft,
+  onChange,
+  extensions,
+  onCreateEditor,
+  previewRef,
+}: EditorBodyProps) {
+  const editor = (
+    <CodeMirror
+      className="h-full"
+      value={draft}
+      onChange={onChange}
+      extensions={extensions}
+      onCreateEditor={onCreateEditor}
+    />
+  );
+  if (mode === "split") {
+    return (
+      <SplitPane
+        left={editor}
+        right={
+          <div ref={previewRef} className="h-full overflow-y-auto p-6">
+            <MarkdownPreview content={draft} />
+          </div>
+        }
+      />
+    );
+  }
+  if (mode === "preview") {
+    return (
+      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+        <MarkdownPreview content={draft} />
+      </div>
+    );
+  }
+  return <div className="min-h-0 flex-1 overflow-hidden">{editor}</div>;
+}
 
 function EmptyState() {
   return (

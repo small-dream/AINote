@@ -1,15 +1,32 @@
-import ReactMarkdown from "react-markdown";
+import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
 
 interface MarkdownPreviewProps {
   content: string;
 }
 
+/** 为块级元素注入 data-line（Markdown 起始行号），供分栏同步滚动收集锚点 */
+const blockComponents: Components = {
+  h1: ({ node, ...props }) => <h1 data-line={node?.position?.start.line} {...props} />,
+  h2: ({ node, ...props }) => <h2 data-line={node?.position?.start.line} {...props} />,
+  h3: ({ node, ...props }) => <h3 data-line={node?.position?.start.line} {...props} />,
+  h4: ({ node, ...props }) => <h4 data-line={node?.position?.start.line} {...props} />,
+  h5: ({ node, ...props }) => <h5 data-line={node?.position?.start.line} {...props} />,
+  h6: ({ node, ...props }) => <h6 data-line={node?.position?.start.line} {...props} />,
+  p: ({ node, ...props }) => <p data-line={node?.position?.start.line} {...props} />,
+  pre: ({ node, ...props }) => <pre data-line={node?.position?.start.line} {...props} />,
+  blockquote: ({ node, ...props }) => <blockquote data-line={node?.position?.start.line} {...props} />,
+  li: ({ node, ...props }) => <li data-line={node?.position?.start.line} {...props} />,
+  tr: ({ node, ...props }) => <tr data-line={node?.position?.start.line} {...props} />,
+};
+
 /** Markdown 渲染预览。react-markdown 默认不渲染原始 HTML（当作文本），天然防 XSS（安全红线）。 */
 export function MarkdownPreview({ content }: MarkdownPreviewProps) {
   return (
     <article className="markdown-body max-w-3xl">
-      <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={blockComponents}>
+        {content}
+      </ReactMarkdown>
     </article>
   );
 }

@@ -1,6 +1,6 @@
 import { Button } from "@/components/atoms/Button";
 
-export type ViewMode = "edit" | "preview";
+export type ViewMode = "edit" | "split" | "preview";
 
 interface EditorToolbarProps {
   path: string;
@@ -11,6 +11,12 @@ interface EditorToolbarProps {
   onSave: () => void;
   onMove: () => void;
 }
+
+const MODE_TABS: { key: ViewMode; label: string }[] = [
+  { key: "edit", label: "编辑" },
+  { key: "split", label: "分栏" },
+  { key: "preview", label: "预览" },
+];
 
 /** 编辑器顶部工具栏：文件名 + 保存状态 + 模式切换 + 操作按钮 */
 export function EditorToolbar({
@@ -49,12 +55,11 @@ function ModeTabs({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) 
     `px-3 py-1.5 transition-colors ${active ? "bg-accent text-white" : "text-text-secondary hover:bg-bg-tertiary"}`;
   return (
     <div className="flex overflow-hidden rounded-md border border-border bg-bg-secondary text-xs">
-      <button className={tabClass(mode === "edit")} onClick={() => onChange("edit")}>
-        编辑
-      </button>
-      <button className={tabClass(mode === "preview")} onClick={() => onChange("preview")}>
-        预览
-      </button>
+      {MODE_TABS.map((tab) => (
+        <button key={tab.key} className={tabClass(mode === tab.key)} onClick={() => onChange(tab.key)}>
+          {tab.label}
+        </button>
+      ))}
     </div>
   );
 }
