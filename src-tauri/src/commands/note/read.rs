@@ -1,5 +1,6 @@
 use tauri::AppHandle;
 
+use crate::commands::blocking;
 use crate::config;
 use crate::domain::error::AppErrorDto;
 use crate::domain::note::NoteContent;
@@ -7,7 +8,9 @@ use crate::services::note_service;
 
 /// Controller：读取笔记完整内容。
 #[tauri::command]
-pub fn read_note(app: AppHandle, path: String) -> Result<NoteContent, AppErrorDto> {
+pub async fn read_note(app: AppHandle, path: String) -> Result<NoteContent, AppErrorDto> {
     let root = config::require_repo_path(&app)?;
-    note_service::read_note(&root, &path).map_err(Into::into)
+    blocking::run(move || note_service::read_note(&root, &path))
+        .await
+        .map_err(AppErrorDto::from)
 }

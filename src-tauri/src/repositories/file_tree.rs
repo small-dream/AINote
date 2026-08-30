@@ -9,7 +9,10 @@ use super::file_storage::is_hidden;
 /// 用例支撑：列出仓库的笔记文件树（目录优先、按名称排序，跳过隐藏项）。
 pub fn list_tree(root: &Path) -> Result<TreeNode, AppError> {
     if !root.is_dir() {
-        return Err(AppError::Repo(format!("not a directory: {}", root.display())));
+        return Err(AppError::Repo(format!(
+            "not a directory: {}",
+            root.display()
+        )));
     }
     build_node(root, root)
 }

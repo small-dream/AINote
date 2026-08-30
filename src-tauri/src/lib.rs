@@ -1,8 +1,6 @@
 // 库入口：模块声明与应用启动（Tauri 2 移动端需要 lib 形式）
 //
-// 说明：Command 均为同步实现（git2 / ureq / keyring 均为阻塞 API）。
-// 按任务约束采用简单方案：同步 command 直接阻塞调用，单次操作（本地 Git / 小文件 IO /
-// 短超时 HTTP）耗时可控；后续若出现长耗时操作，可改为 async command + spawn_blocking。
+// 说明：Command 统一把 git2 / ureq / keyring / 文件 IO 放到后台线程执行，避免阻塞前端。
 mod commands;
 mod config;
 mod domain;

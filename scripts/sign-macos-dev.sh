@@ -9,6 +9,6 @@ if [ ! -f "$BIN" ]; then
   exit 1
 fi
 
-codesign --force --sign - --entitlements src-tauri/entitlements/macOS.plist "$BIN"
+codesign --force --sign - "$BIN"
 echo "已签名: $BIN"
 codesign -dv "$BIN" 2>&1 | sed -n '1,3p'

@@ -39,7 +39,6 @@ function useSetupGate() {
 
   const handleAuthed = () => {
     queryClient.setQueryData(["auth-status"], { hasToken: true, repoPath: null });
-    void queryClient.invalidateQueries({ queryKey: ["auth-status"] });
   };
 
   const handleBound = (repoPath: string) => {

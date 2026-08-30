@@ -6,6 +6,10 @@ export function useAuthStatusQuery() {
   return useQuery({
     queryKey: ["auth-status"],
     queryFn: () => authApi.status(),
+    staleTime: Infinity,
+    refetchOnMount: false,
+    refetchOnWindowFocus: false,
+    refetchOnReconnect: false,
     retry: false,
   });
 }

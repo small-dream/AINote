@@ -4,8 +4,8 @@ use git2::{Repository, Signature, StatusOptions};
 
 use crate::domain::error::AppError;
 
-use super::git_backend::GitBackend;
 use super::git2_remote;
+use super::git_backend::GitBackend;
 
 /// libgit2 实现的本地操作；网络操作委托给 git2_remote。
 pub struct Git2Backend;
@@ -21,7 +21,9 @@ pub(crate) fn open(path: &str) -> Result<Repository, AppError> {
 /// 提交签名：优先读仓库 config，缺省回退到应用内置身份。
 pub(crate) fn signature(repo: &Repository) -> Result<Signature<'static>, AppError> {
     let cfg = repo.config().map_err(to_git)?;
-    let name = cfg.get_string("user.name").unwrap_or_else(|_| "MyNote".into());
+    let name = cfg
+        .get_string("user.name")
+        .unwrap_or_else(|_| "MyNote".into());
     let email = cfg
         .get_string("user.email")
         .unwrap_or_else(|_| "mynote@localhost".into());
@@ -46,7 +48,9 @@ fn commit_all(repo_path: &str, message: &str) -> Result<Option<String>, AppError
         .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
         .map_err(to_git)?;
     index.write().map_err(to_git)?;
-    let tree = repo.find_tree(index.write_tree().map_err(to_git)?).map_err(to_git)?;
+    let tree = repo
+        .find_tree(index.write_tree().map_err(to_git)?)
+        .map_err(to_git)?;
     let sig = signature(&repo)?;
     let parents = parents_of(&repo)?;
     let parent_refs: Vec<&git2::Commit> = parents.iter().collect();

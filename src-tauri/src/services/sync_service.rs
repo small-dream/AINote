@@ -26,20 +26,32 @@ pub fn commit_pending<B: GitBackend>(
 }
 
 /// 用例：拉取远端（冲突时返回 Conflict 错误，状态可查）
-pub fn pull<B: GitBackend>(backend: &B, repo_path: &Path, token: &str) -> Result<SyncStatus, AppError> {
+pub fn pull<B: GitBackend>(
+    backend: &B,
+    repo_path: &Path,
+    token: &str,
+) -> Result<SyncStatus, AppError> {
     backend.pull(&repo_path.to_string_lossy(), token)?;
     status(backend, repo_path)
 }
 
 /// 用例：推送本地提交
-pub fn push<B: GitBackend>(backend: &B, repo_path: &Path, token: &str) -> Result<SyncStatus, AppError> {
+pub fn push<B: GitBackend>(
+    backend: &B,
+    repo_path: &Path,
+    token: &str,
+) -> Result<SyncStatus, AppError> {
     backend.push(&repo_path.to_string_lossy(), token)?;
     status(backend, repo_path)
 }
 
 /// 用例：完整同步 —— 提交未提交变更 → pull → push，返回同步后状态。
 /// 合并进行中直接报 Conflict，由 resolve 收尾。
-pub fn sync<B: GitBackend>(backend: &B, repo_path: &Path, token: &str) -> Result<SyncStatus, AppError> {
+pub fn sync<B: GitBackend>(
+    backend: &B,
+    repo_path: &Path,
+    token: &str,
+) -> Result<SyncStatus, AppError> {
     let path = repo_path.to_string_lossy();
     if backend.is_merging(&path)? {
         return Err(AppError::Conflict("存在未解决的合并冲突".into()));

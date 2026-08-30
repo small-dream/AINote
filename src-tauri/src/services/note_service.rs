@@ -15,7 +15,10 @@ pub fn list_notes(repo_path: &Path) -> Result<Vec<NoteMeta>, AppError> {
 
 /// 用例：新建笔记（模板 `# 未命名`）；已存在时幂等返回元数据。
 pub fn create_note(repo_path: &Path, rel: &str) -> Result<NoteMeta, AppError> {
-    if !repo_path.join(note_files::validate_rel_path(rel)?).is_file() {
+    if !repo_path
+        .join(note_files::validate_rel_path(rel)?)
+        .is_file()
+    {
         note_files::write_note(repo_path, rel, NEW_NOTE_TEMPLATE)?;
     }
     to_meta(repo_path, &repo_path.join(rel))
@@ -70,7 +73,10 @@ fn to_meta(root: &Path, file: &Path) -> Result<NoteMeta, AppError> {
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_default();
-    let title = extract_title(&std::fs::read_to_string(file).unwrap_or_default(), &fallback);
+    let title = extract_title(
+        &std::fs::read_to_string(file).unwrap_or_default(),
+        &fallback,
+    );
     let updated_at = file
         .metadata()?
         .modified()?
@@ -105,7 +111,10 @@ mod tests {
         let root = tmp.path();
         let meta = create_note(root, "d/n.md").unwrap();
         assert_eq!(meta.title, "未命名");
-        assert_eq!(read_note(root, "d/n.md").unwrap().content, NEW_NOTE_TEMPLATE);
+        assert_eq!(
+            read_note(root, "d/n.md").unwrap().content,
+            NEW_NOTE_TEMPLATE
+        );
         update_note(root, "d/n.md", "# 新标题\n正文").unwrap();
         move_note(root, "d/n.md", "e/m.md").unwrap();
         assert!(read_note(root, "d/n.md").is_err());
@@ -131,8 +140,10 @@ mod tests {
         update_note(root, "sub/x.md", "# 标题X\n").unwrap();
         update_note(root, "y.md", "无标题").unwrap();
         let notes = list_notes(root).unwrap();
-        let by_path: std::collections::HashMap<_, _> =
-            notes.iter().map(|n| (n.path.as_str(), n.title.as_str())).collect();
+        let by_path: std::collections::HashMap<_, _> = notes
+            .iter()
+            .map(|n| (n.path.as_str(), n.title.as_str()))
+            .collect();
         assert_eq!(by_path["sub/x.md"], "标题X");
         assert_eq!(by_path["y.md"], "y");
     }

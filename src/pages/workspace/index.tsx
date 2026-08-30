@@ -15,14 +15,13 @@ import { useSessionStore } from "@/stores/session.store";
 export function WorkspacePage() {
   const navigate = useNavigate();
   const { ready, repoPath } = useWorkspaceGate();
+  const startupSyncing = useStartupSync(repoPath);
   const currentNotePath = useSessionStore((s) => s.currentNotePath);
   const openNote = useSessionStore((s) => s.openNote);
   const reset = useSessionStore((s) => s.reset);
   const editorRef = useRef<NoteEditorHandle>(null);
   const [moveTarget, setMoveTarget] = useState<string | null>(null);
   const [logoutBusy, setLogoutBusy] = useState(false);
-
-  useStartupSync(repoPath);
 
   function handleSelect(path: string) {
     editorRef.current?.flush();
@@ -44,7 +43,7 @@ export function WorkspacePage() {
 
   return (
     <div className="flex h-screen flex-col">
-      <SyncBar repoPath={repoPath} />
+      <SyncBar repoPath={repoPath} startupSyncing={startupSyncing} />
       <div className="flex min-h-0 flex-1">
         <WorkspaceSidebar repoPath={repoPath} onSelect={handleSelect} onLogout={() => void handleLogout()} logoutBusy={logoutBusy} />
         <section className="w-72 border-r border-bg-secondary"><NoteList repoPath={repoPath} onSelect={handleSelect} /></section>

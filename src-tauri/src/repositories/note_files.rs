@@ -67,7 +67,14 @@ mod tests {
 
     #[test]
     fn rejects_traversal_and_hidden_segments() {
-        for bad in ["../a.md", "/abs/a.md", "a/../b.md", ".hidden/a.md", "a/.b.md", ""] {
+        for bad in [
+            "../a.md",
+            "/abs/a.md",
+            "a/../b.md",
+            ".hidden/a.md",
+            "a/.b.md",
+            "",
+        ] {
             assert!(validate_rel_path(bad).is_err(), "should reject: {bad}");
         }
         assert!(validate_rel_path("daily/2026-08-30.md").is_ok());

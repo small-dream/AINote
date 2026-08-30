@@ -12,9 +12,7 @@ use super::git2_backend::{current_branch, open, signature, to_git};
 fn callbacks(token: &str) -> RemoteCallbacks<'static> {
     let token = token.to_owned();
     let mut cb = RemoteCallbacks::new();
-    cb.credentials(move |_url, _user, _allowed| {
-        Cred::userpass_plaintext("x-access-token", &token)
-    });
+    cb.credentials(move |_url, _user, _allowed| Cred::userpass_plaintext("x-access-token", &token));
     cb
 }
 
@@ -139,10 +137,12 @@ fn commit_merge(repo: &Repository, message: &str) -> Result<(), AppError> {
         .find_tree(index.write_tree().map_err(to_git)?)
         .map_err(to_git)?;
     let sig = signature(repo)?;
-    let head = repo.head().map_err(to_git)?.peel_to_commit().map_err(to_git)?;
-    let their = repo
-        .find_commit(read_merge_head(repo)?)
+    let head = repo
+        .head()
+        .map_err(to_git)?
+        .peel_to_commit()
         .map_err(to_git)?;
+    let their = repo.find_commit(read_merge_head(repo)?).map_err(to_git)?;
     repo.commit(Some("HEAD"), &sig, &sig, message, &tree, &[&head, &their])
         .map_err(to_git)?;
     repo.cleanup_state().map_err(to_git)

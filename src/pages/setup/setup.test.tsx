@@ -50,7 +50,7 @@ async function loginThrough() {
 
 describe("SetupPage 登录并保存 Token", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.resetAllMocks();
     authApiMock.status.mockResolvedValue({ hasToken: false, repoPath: null });
   });
 

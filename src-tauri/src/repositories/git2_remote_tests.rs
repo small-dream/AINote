@@ -2,7 +2,6 @@
 
 use std::path::Path;
 
-
 use super::{clone_repo, pull, push};
 
 fn sig() -> git2::Signature<'static> {
@@ -22,7 +21,8 @@ fn commit_file(repo: &git2::Repository, name: &str, content: &str, msg: &str) ->
         .into_iter()
         .collect();
     let parent_refs: Vec<&git2::Commit> = parents.iter().collect();
-    repo.commit(Some("HEAD"), &sig, &sig, msg, &tree, &parent_refs).unwrap()
+    repo.commit(Some("HEAD"), &sig, &sig, msg, &tree, &parent_refs)
+        .unwrap()
 }
 
 fn init_local(remote_url: &str) -> (tempfile::TempDir, std::path::PathBuf) {
@@ -40,9 +40,17 @@ fn seed_bare(bare: &Path) {
     tb.insert("seed.md", blob, 0o100644).unwrap();
     let tree = repo.find_tree(tb.write().unwrap()).unwrap();
     let commit = repo
-        .commit(Some("refs/heads/master"), &sig(), &sig(), "seed", &tree, &[])
+        .commit(
+            Some("refs/heads/master"),
+            &sig(),
+            &sig(),
+            "seed",
+            &tree,
+            &[],
+        )
         .unwrap();
-    repo.reference("refs/heads/master", commit, true, "seed").unwrap();
+    repo.reference("refs/heads/master", commit, true, "seed")
+        .unwrap();
     repo.set_head("refs/heads/master").unwrap();
 }
 

@@ -9,8 +9,7 @@ const KEYRING_SERVICE: &str = "dev.mynote.app";
 const KEYRING_USER: &str = "github";
 
 fn entry() -> Result<keyring::Entry, AppError> {
-    keyring::Entry::new(KEYRING_SERVICE, KEYRING_USER)
-        .map_err(|e| AppError::Auth(e.to_string()))
+    keyring::Entry::new(KEYRING_SERVICE, KEYRING_USER).map_err(|e| AppError::Auth(e.to_string()))
 }
 
 pub fn save_token(token: &str) -> Result<(), AppError> {
@@ -26,10 +25,6 @@ pub fn read_token() -> Result<String, AppError> {
         .map_err(|_| AppError::Auth("未登录或凭证已失效".into()))
 }
 
-pub fn has_token() -> bool {
-    entry().is_ok_and(|e| e.get_password().is_ok())
-}
-
 /// 删除钥匙串中的 token（logout；config 清理由 Command 层编排）。
 pub fn delete_token() -> Result<(), AppError> {
     match entry()?.delete_credential() {
@@ -43,4 +38,3 @@ pub fn delete_token() -> Result<(), AppError> {
 pub fn validate_token(token: &str) -> Result<String, AppError> {
     github_api::fetch_login(token)
 }
-
