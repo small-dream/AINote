@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { noteApi } from "@/api";
 import type { TreeNode } from "@/api/types";
+import { useWorkspaceActivityStore } from "@/stores/workspace-activity.store";
 
 /** 笔记文件树（P0-3，服务端/Git 状态权威来源） */
 export function useNoteTreeQuery(repoPath: string | null) {
@@ -25,6 +26,7 @@ export function useCreateFolderMutation() {
 /** 删除文件夹及其内容，成功后刷新目录树与笔记列表。 */
 export function useDeleteFolderMutation(onDeleted?: (path: string) => void) {
   const queryClient = useQueryClient();
+  const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
   return useMutation({
     mutationFn: (path: string) => noteApi.removeFolder(path),
     onMutate: async () => {
@@ -34,6 +36,8 @@ export function useDeleteFolderMutation(onDeleted?: (path: string) => void) {
     onSuccess: (_data, path) => {
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
+      markActivity();
       onDeleted?.(path);
     },
   });

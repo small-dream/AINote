@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { noteApi, syncApi } from "@/api";
 import type { NoteContent, NoteMeta } from "@/api/types";
+import { useWorkspaceActivityStore } from "@/stores/workspace-activity.store";
 
 export const noteKeys = {
   list: (repoPath: string | null) => ["notes", repoPath] as const,
@@ -50,11 +51,14 @@ export function useCreateNoteMutation() {
 /** 更新笔记内容（防抖自动保存由 Hook 层调用） */
 export function useUpdateNoteMutation() {
   const queryClient = useQueryClient();
+  const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
   return useMutation({
     mutationFn: ({ path, content }: { path: string; content: string }) =>
       noteApi.update(path, content),
     onSuccess: (_data, { path }) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
+      markActivity();
       void queryClient.setQueryData(noteKeys.content(path), (old: NoteContent | undefined) =>
         old ? { ...old } : old
       );
@@ -65,6 +69,7 @@ export function useUpdateNoteMutation() {
 /** 删除笔记，成功后刷新列表与树 */
 export function useDeleteNoteMutation(onDeleted?: (path: string) => void) {
   const queryClient = useQueryClient();
+  const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
   return useMutation({
     mutationFn: (path: string) => noteApi.remove(path),
     onMutate: async (path) => {
@@ -75,6 +80,8 @@ export function useDeleteNoteMutation(onDeleted?: (path: string) => void) {
     onSuccess: (_data, path) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
+      markActivity();
       void queryClient.removeQueries({ queryKey: noteKeys.content(path) });
       onDeleted?.(path);
     },
@@ -84,11 +91,14 @@ export function useDeleteNoteMutation(onDeleted?: (path: string) => void) {
 /** 移动/重命名笔记 */
 export function useMoveNoteMutation() {
   const queryClient = useQueryClient();
+  const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
   return useMutation({
     mutationFn: ({ from, to }: { from: string; to: string }) => noteApi.move(from, to),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
+      markActivity();
     },
   });
 }

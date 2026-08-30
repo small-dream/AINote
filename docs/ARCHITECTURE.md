@@ -154,7 +154,7 @@ MyNote/
 
 ## 5. 关键运行时设计
 
-- **自动提交防抖**：编辑器变更 → 前端 30s 防抖落盘 → `sync_service.commit_pending()` 汇总未提交变更生成单条 commit。策略细节由 Service 层实现，Controller 不感知。
+- **批量提交与推送**：编辑器变更 → 前端 30s 防抖落盘；`useSync` 观察到工作区有未提交变更后启动默认 5 分钟空闲计时器，到期调用 `git_commit`，把所有笔记/删除/移动汇总成单条 `note: auto commit`。一键同步仍执行“汇总提交 → Pull → Push”；手动「保存版本」调用同一提交接口生成 `note: checkpoint`，不自动 Push。新建笔记保留即时 `note: create <path>` 提交。策略细节由 Service 层实现，Controller 不感知。
 - **离线优先**：所有读写只操作本地仓库；Push/Pull 失败进入待同步状态，网络恢复事件触发重试（前端 `online` 事件 + Query 重取）。
 - **凭证流**：Token 存本地加密文件；Rust 层在使用时读取并解密，前端永远拿不到明文 Token。
 - **登录态**：`has_token` 这类非敏感状态存于 app config，路由守卫不直接解密 token。

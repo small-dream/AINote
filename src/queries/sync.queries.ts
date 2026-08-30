@@ -20,6 +20,15 @@ function invalidateSync(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: ["sync"] });
 }
 
+/** 提交工作区全部变更；不执行 Pull/Push。 */
+export function useCommitPendingMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (message: string) => syncApi.commit(message),
+    onSuccess: () => invalidateSync(queryClient),
+  });
+}
+
 /** 一键同步：commit → pull → push（P0-4） */
 export function useSyncNowMutation() {
   const queryClient = useQueryClient();
