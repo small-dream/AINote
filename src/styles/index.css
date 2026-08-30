@@ -5,9 +5,13 @@
 @theme inline {
   --color-bg-primary: var(--bg-primary);
   --color-bg-secondary: var(--bg-secondary);
+  --color-bg-tertiary: var(--bg-tertiary);
   --color-accent: var(--accent);
+  --color-accent-soft: var(--accent-soft);
   --color-text-primary: var(--text-primary);
   --color-text-secondary: var(--text-secondary);
+  --color-text-tertiary: var(--text-tertiary);
+  --color-border: var(--border);
   --color-success: var(--success);
   --color-warning: var(--warning);
   --color-danger: var(--danger);
@@ -23,10 +27,155 @@ body {
   line-height: 1.6;
 }
 
+button, input, textarea { font: inherit; }
+button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+::selection { background: color-mix(in srgb, var(--accent) 20%, transparent); }
+
+.tree-action { color: var(--text-tertiary); }
+.tree-action:hover { color: var(--accent); }
+.tree-node-action { width: 24px; height: 24px; display: grid; place-items: center; }
+.tree-chevron {
+  width: 7px;
+  height: 7px;
+  flex: 0 0 7px;
+  border-right: 1.5px solid var(--text-tertiary);
+  border-bottom: 1.5px solid var(--text-tertiary);
+  transform: rotate(-45deg) translateY(-1px);
+  transition: transform 160ms ease-out;
+}
+.tree-chevron-open { transform: rotate(45deg) translate(-1px, -2px); }
+.tree-folder {
+  position: relative;
+  width: 16px;
+  height: 11px;
+  flex: 0 0 16px;
+  border: 1.5px solid var(--text-tertiary);
+  border-radius: 2px;
+  color: var(--text-secondary);
+}
+.tree-folder::before {
+  content: "";
+  position: absolute;
+  top: -4px;
+  left: 1px;
+  width: 7px;
+  height: 4px;
+  border: 1.5px solid currentColor;
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
+}
+.tree-folder-open { border-color: var(--accent); color: var(--accent); }
+.tree-plus-icon {
+  position: relative;
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  color: currentColor;
+}
+.tree-plus-icon::before,
+.tree-plus-icon::after {
+  content: "";
+  position: absolute;
+  left: 7px;
+  top: 2px;
+  width: 2px;
+  height: 12px;
+  border-radius: 1px;
+  background: currentColor;
+}
+.tree-plus-icon::after { transform: rotate(90deg); }
+.tree-new-folder-icon {
+  position: relative;
+  display: inline-block;
+  width: 19px;
+  height: 17px;
+  color: currentColor;
+}
+.tree-new-folder-shape {
+  position: absolute;
+  left: 1px;
+  bottom: 1px;
+  width: 15px;
+  height: 10px;
+  border: 1.5px solid currentColor;
+  border-radius: 2px;
+}
+.tree-new-folder-shape::before {
+  content: "";
+  position: absolute;
+  left: 1px;
+  top: -4px;
+  width: 7px;
+  height: 4px;
+  border: 1.5px solid currentColor;
+  border-bottom: 0;
+  border-radius: 2px 2px 0 0;
+}
+.tree-new-folder-plus {
+  position: absolute;
+  right: -1px;
+  top: -2px;
+  display: grid;
+  width: 10px;
+  height: 10px;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--bg-secondary);
+  color: currentColor;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 10px;
+}
+.tree-file { line-height: 1; border-width: 1px; }
+
+.tree-context-menu {
+  position: fixed;
+  z-index: 50;
+  min-width: 188px;
+  padding: 5px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  box-shadow: 0 8px 24px rgb(15 23 42 / 14%);
+}
+.tree-menu-heading {
+  max-width: 230px;
+  padding: 6px 9px 7px;
+  overflow: hidden;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.tree-menu-item {
+  display: block;
+  width: 100%;
+  padding: 7px 9px;
+  border-radius: 5px;
+  color: var(--text-primary);
+  font-size: 13px;
+  text-align: left;
+  transition: background-color 120ms ease-out, color 120ms ease-out;
+}
+.tree-menu-item:hover { background: var(--bg-tertiary); }
+.tree-menu-danger { color: var(--danger); }
+.tree-menu-danger:hover { background: color-mix(in srgb, var(--danger) 9%, transparent); }
+.tree-menu-divider { height: 1px; margin: 4px 5px; background: var(--border); }
+.tree-error { flex: 0 0 auto; padding: 7px 12px; color: var(--danger); background: color-mix(in srgb, var(--danger) 8%, transparent); font-size: 12px; }
+
 code,
 pre,
 .cm-editor {
   font-family: "JetBrains Mono", "SF Mono", monospace;
+}
+
+.cm-editor {
+  height: 100%;
+}
+
+.cm-editor .cm-scroller {
+  height: 100%;
+  overflow: auto;
 }
 
 /* Markdown 渲染样式（react-markdown 输出） */

@@ -12,6 +12,7 @@ export const noteApi = {
   createFolder: (path: string) => call<null>("create_folder", { path }),
   update: (path: string, content: string) => call<null>("update_note", { path, content }),
   remove: (path: string) => call<null>("delete_note", { path }),
+  removeFolder: (path: string) => call<null>("delete_folder", { path }),
   move: (from: string, to: string) => call<null>("move_note", { from, to }),
   tree: () => call<TreeNode>("note_tree"),
 };

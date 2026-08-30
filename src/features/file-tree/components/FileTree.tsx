@@ -1,52 +1,67 @@
+import type { ComponentProps, MouseEvent } from "react";
+import { useState } from "react";
 import { Button } from "@/components/atoms/Button";
 import type { TreeNode } from "@/api/types";
+import { messageOf } from "@/api";
+import { useDeleteNoteMutation } from "@/queries/note.queries";
+import { useDeleteFolderMutation } from "@/queries/tree.queries";
 import { useSessionStore } from "@/stores/session.store";
 import { useFileTree } from "../hooks/useFileTree";
+import { useTreeContextMenu } from "../hooks/useTreeContextMenu";
+import { TreeContextMenu as TreeContextMenuView } from "./TreeContextMenu";
+import { DeleteConfirmDialog, type PendingDelete } from "./DeleteConfirmDialog";
 
 interface FileTreeProps {
   repoPath: string | null;
   onSelect: (path: string) => void;
   onRequestNew: (dir: string) => void;
   onRequestFolder: (dir: string) => void;
+  onRequestMove: (path: string) => void;
 }
 
 /** 目录树（P0-3）：目录可折叠、可在目录内新建笔记/文件夹；文件点击打开 */
-export function FileTree({ repoPath, onSelect, onRequestNew, onRequestFolder }: FileTreeProps) {
+export function FileTree({ repoPath, onSelect, onRequestNew, onRequestFolder, onRequestMove }: FileTreeProps) {
   const { tree, isLoading, expanded, toggle } = useFileTree(repoPath);
-  const currentNotePath = useSessionStore((s) => s.currentNotePath);
 
   if (isLoading || !tree) {
     return <div className="p-4 text-sm text-text-secondary">加载中…</div>;
   }
 
-  return (
-    <div className="flex h-full flex-col">
-      <div className="flex shrink-0 items-center gap-1 border-b border-bg-secondary px-2 py-1.5">
-        <Button variant="ghost" className="px-2 py-1 text-xs" onClick={() => onRequestNew("")}>
-          ＋ 笔记
-        </Button>
-        <Button
-          variant="ghost"
-          className="px-2 py-1 text-xs"
-          onClick={() => onRequestFolder("")}
-        >
-          ＋ 文件夹
-        </Button>
-      </div>
-      <nav className="min-h-0 flex-1 overflow-y-auto p-2" aria-label="笔记目录树">
-        <TreeNodeItem
-          node={tree}
-          depth={0}
-          expanded={expanded}
-          currentNotePath={currentNotePath}
-          onToggle={toggle}
-          onSelect={onSelect}
-          onRequestNew={onRequestNew}
-          onRequestFolder={onRequestFolder}
-        />
-      </nav>
+  return <TreeContent tree={tree} expanded={expanded} toggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} />;
+}
+
+function TreeContent({ tree, expanded, toggle, onSelect, onRequestNew, onRequestFolder, onRequestMove }: { tree: TreeNode; expanded: Set<string>; toggle: (path: string) => void; onSelect: (path: string) => void; onRequestNew: (dir: string) => void; onRequestFolder: (dir: string) => void; onRequestMove: (path: string) => void }) {
+  const currentNotePath = useSessionStore((s) => s.currentNotePath);
+  const openNote = useSessionStore((s) => s.openNote);
+  const remove = useDeleteNoteMutation((path) => { if (path === currentNotePath) openNote(null); });
+  const removeFolder = useDeleteFolderMutation((path) => { if (currentNotePath && (currentNotePath === path || currentNotePath.startsWith(`${path}/`))) openNote(null); });
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [pendingDelete, setPendingDelete] = useState<PendingDelete | null>(null);
+  const contextMenu = useTreeContextMenu();
+  const requestDelete = (path: string, isFolder: boolean) => { setDeleteError(null); setPendingDelete({ path, isFolder, name: contextMenu.menu?.node.name ?? path }); };
+  const confirmDelete = async () => { if (!pendingDelete) return; try { if (pendingDelete.isFolder) await removeFolder.mutateAsync(pendingDelete.path); else await remove.mutateAsync(pendingDelete.path); setPendingDelete(null); } catch (error) { setDeleteError(messageOf(error)); } };
+  return <div className="flex h-full flex-col">
+    <TreeToolbar onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} />
+    <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="笔记目录树"><TreeNodeItem node={tree} depth={0} expanded={expanded} currentNotePath={currentNotePath} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onContextMenu={contextMenu.open} /></nav>
+    {deleteError && <div className="tree-error" role="alert">删除失败：{deleteError}</div>}
+    <ContextMenuSlot menu={contextMenu.menu} copied={contextMenu.copied} onClose={contextMenu.close} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} onDelete={(path) => requestDelete(path, false)} onDeleteFolder={(path) => requestDelete(path, true)} onCopy={contextMenu.copy} />
+    <DeleteConfirmDialog pending={pendingDelete} busy={remove.isPending || removeFolder.isPending} onClose={() => setPendingDelete(null)} onConfirm={confirmDelete} />
+  </div>;
+}
+
+function TreeToolbar({ onRequestNew, onRequestFolder }: Pick<FileTreeProps, "onRequestNew" | "onRequestFolder">) {
+  return <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
+    <span className="text-xs font-medium uppercase tracking-wide text-text-tertiary">目录</span>
+    <div className="flex items-center gap-0.5">
+      <Button aria-label="新建笔记" title="新建笔记" variant="ghost" className="tree-action h-7 w-7 p-0" onClick={() => onRequestNew("")}><span className="tree-plus-icon" aria-hidden="true" /></Button>
+      <Button aria-label="新建文件夹" title="新建文件夹" variant="ghost" className="tree-action h-7 w-7 p-0" onClick={() => onRequestFolder("")}><span className="tree-new-folder-icon" aria-hidden="true"><span className="tree-new-folder-shape" /><span className="tree-new-folder-plus">+</span></span></Button>
     </div>
-  );
+  </div>;
+}
+
+function ContextMenuSlot(props: Omit<ComponentProps<typeof TreeContextMenuView>, "menu"> & { menu: ComponentProps<typeof TreeContextMenuView>["menu"] | null }) {
+  const { menu, ...rest } = props;
+  return menu ? <TreeContextMenuView {...rest} menu={menu} /> : null;
 }
 
 interface TreeNodeItemProps {
@@ -58,27 +73,29 @@ interface TreeNodeItemProps {
   onSelect: (path: string) => void;
   onRequestNew: (dir: string) => void;
   onRequestFolder: (dir: string) => void;
+  onContextMenu: (event: MouseEvent, node: TreeNode) => void;
 }
 
 function TreeNodeItem(props: TreeNodeItemProps) {
   return props.node.nodeType === "dir" ? <DirNode {...props} /> : <FileNode {...props} />;
 }
 
-function FileNode({ node, depth, currentNotePath, onSelect }: TreeNodeItemProps) {
+function FileNode({ node, depth, currentNotePath, onSelect, onContextMenu }: TreeNodeItemProps) {
   const active = node.path === currentNotePath;
   return (
     <button
-      className={`flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-sm ${active ? "bg-accent/15 text-accent" : "text-text-primary hover:bg-bg-secondary"}`}
-      style={{ paddingLeft: `${depth * 14 + 8}px` }}
+      className={`flex min-h-8 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${active ? "bg-accent-soft font-medium text-accent" : "text-text-primary hover:bg-bg-tertiary"}`}
+      style={{ paddingLeft: `${depth * 16 + 8}px` }}
       onClick={() => onSelect(node.path)}
+      onContextMenu={(event) => onContextMenu(event, node)}
     >
-      <span className="text-text-secondary">📄</span>
+      <span className={`tree-file flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border text-[9px] font-semibold ${active ? "border-accent/40 text-accent" : "border-text-tertiary text-text-tertiary"}`} aria-hidden="true">M</span>
       <span className="truncate">{node.name}</span>
     </button>
   );
 }
 
-function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, onRequestNew, onRequestFolder }: TreeNodeItemProps) {
+function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, onRequestNew, onRequestFolder, onContextMenu }: TreeNodeItemProps) {
   const isOpen = expanded.has(node.path);
   return (
     <div>
@@ -89,6 +106,7 @@ function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, o
         onToggle={onToggle}
         onRequestNew={onRequestNew}
         onRequestFolder={onRequestFolder}
+        onContextMenu={onContextMenu}
       />
       {isOpen &&
         node.children.map((child) => (
@@ -102,6 +120,7 @@ function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, o
             onSelect={onSelect}
             onRequestNew={onRequestNew}
             onRequestFolder={onRequestFolder}
+            onContextMenu={onContextMenu}
           />
         ))}
     </div>
@@ -115,38 +134,43 @@ interface DirRowProps {
   onToggle: (path: string) => void;
   onRequestNew: (dir: string) => void;
   onRequestFolder: (dir: string) => void;
+  onContextMenu: (event: MouseEvent, node: TreeNode) => void;
 }
 
-function DirRow({ node, depth, isOpen, onToggle, onRequestNew, onRequestFolder }: DirRowProps) {
+function DirRow({ node, depth, isOpen, onToggle, onRequestNew, onRequestFolder, onContextMenu }: DirRowProps) {
   return (
-    <div className="group flex items-center" style={{ paddingLeft: `${depth * 14 + 4}px` }}>
+    <div className="group flex items-center" style={{ paddingLeft: `${depth * 16 + 4}px` }}>
       <button
-        className="flex min-w-0 flex-1 items-center gap-1.5 rounded py-1 text-left text-sm text-text-primary hover:bg-bg-secondary"
+        aria-expanded={isOpen}
+        className="flex min-h-8 min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
         onClick={() => onToggle(node.path)}
+        onContextMenu={(event) => onContextMenu(event, node)}
       >
-        <span className="w-3 shrink-0 text-text-secondary">{isOpen ? "▾" : "▸"}</span>
-        <span className="shrink-0 text-text-secondary">📁</span>
+        <span className={`tree-chevron ${isOpen ? "tree-chevron-open" : ""}`} aria-hidden="true" />
+        <span className={`tree-folder ${isOpen ? "tree-folder-open" : ""}`} aria-hidden="true" />
         <span className="truncate">{node.name}</span>
       </button>
       <button
         title="在此目录新建笔记"
-        className="shrink-0 px-1 py-1 text-sm text-text-secondary opacity-0 group-hover:opacity-100"
+        aria-label="在此目录新建笔记"
+        className="tree-node-action shrink-0 rounded p-1 text-text-secondary opacity-0 transition-opacity hover:bg-bg-primary hover:text-accent group-hover:opacity-100"
         onClick={(event) => {
           event.stopPropagation();
           onRequestNew(node.path);
         }}
       >
-        📄＋
+        <span className="tree-plus-icon" aria-hidden="true" />
       </button>
       <button
         title="在此目录新建文件夹"
-        className="shrink-0 px-1 py-1 text-sm text-text-secondary opacity-0 group-hover:opacity-100"
+        aria-label="在此目录新建文件夹"
+        className="tree-node-action shrink-0 rounded p-1 text-text-secondary opacity-0 transition-opacity hover:bg-bg-primary hover:text-accent group-hover:opacity-100"
         onClick={(event) => {
           event.stopPropagation();
           onRequestFolder(node.path);
         }}
       >
-        📁＋
+        <span className="tree-new-folder-icon" aria-hidden="true"><span className="tree-new-folder-shape" /><span className="tree-new-folder-plus">+</span></span>
       </button>
     </div>
   );

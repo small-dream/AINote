@@ -51,6 +51,11 @@ pub fn delete_note(repo_path: &Path, rel: &str) -> Result<(), AppError> {
     note_files::delete_note(repo_path, rel)
 }
 
+/// 用例：递归删除目录及其中的笔记
+pub fn delete_folder(repo_path: &Path, rel: &str) -> Result<(), AppError> {
+    note_files::delete_folder(repo_path, rel)
+}
+
 /// 用例：移动/重命名笔记
 pub fn move_note(repo_path: &Path, from: &str, to: &str) -> Result<(), AppError> {
     note_files::move_note(repo_path, from, to)

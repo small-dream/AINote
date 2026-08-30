@@ -22,4 +22,21 @@ export function useCreateFolderMutation() {
   });
 }
 
+/** 删除文件夹及其内容，成功后刷新目录树与笔记列表。 */
+export function useDeleteFolderMutation(onDeleted?: (path: string) => void) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (path: string) => noteApi.removeFolder(path),
+    onMutate: async () => {
+      await queryClient.cancelQueries({ queryKey: ["tree"] });
+      await queryClient.cancelQueries({ queryKey: ["notes"] });
+    },
+    onSuccess: (_data, path) => {
+      void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["notes"] });
+      onDeleted?.(path);
+    },
+  });
+}
+
 export type { TreeNode };

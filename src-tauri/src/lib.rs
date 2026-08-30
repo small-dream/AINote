@@ -18,6 +18,7 @@ pub fn run() {
             commands::note::read::read_note,
             commands::note::update::update_note,
             commands::note::delete::delete_note,
+            commands::note::delete_folder::delete_folder,
             commands::note::r#move::move_note,
             commands::note::tree::note_tree,
             commands::note::list::list_notes,

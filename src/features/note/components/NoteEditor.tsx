@@ -31,7 +31,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     if (error) return <ErrorState message={error.message} />;
 
     return (
-      <div className="flex h-full flex-col">
+      <div className="flex h-full flex-col bg-bg-primary">
         <EditorToolbar
           path={notePath}
           mode={mode}
@@ -42,15 +42,17 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
           onMove={() => onMove(notePath)}
         />
         {mode === "edit" ? (
-          <CodeMirror
-            className="h-full min-h-0 flex-1"
-            value={draft}
-            onChange={onChange}
-            extensions={[markdown()]}
-            onCreateEditor={onCreateEditor}
-          />
+          <div className="min-h-0 flex-1 overflow-hidden">
+            <CodeMirror
+              className="h-full"
+              value={draft}
+              onChange={onChange}
+              extensions={[markdown()]}
+              onCreateEditor={onCreateEditor}
+            />
+          </div>
         ) : (
-          <div className="flex-1 overflow-y-auto p-6">
+          <div className="min-h-0 flex-1 overflow-y-auto p-6">
             <MarkdownPreview content={draft} />
           </div>
         )}
@@ -80,19 +82,19 @@ function EditorToolbar({
 }: EditorToolbarProps) {
   const status = saving ? "保存中…" : dirty ? "未保存" : "已保存";
   return (
-    <div className="flex items-center justify-between gap-3 border-b border-bg-secondary px-4 py-2">
+    <div className="flex min-h-14 items-center justify-between gap-3 border-b border-border px-6 py-3">
       <div className="flex min-w-0 items-center gap-3">
-        <span className="truncate text-sm font-medium">{path}</span>
-        <span className={`shrink-0 text-xs ${saving || dirty ? "text-warning" : "text-success"}`}>
+        <span className="truncate text-sm font-semibold">{path.split("/").at(-1)}</span>
+        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] ${saving || dirty ? "bg-warning/10 text-warning" : "bg-success/10 text-success"}`}>
           {status}
         </span>
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <ModeTabs mode={mode} onChange={onModeChange} />
-        <Button variant="ghost" onClick={onMove}>
-          重命名
+        <Button variant="ghost" className="text-xs" onClick={onMove}>
+          移动 / 重命名
         </Button>
-        <Button variant="ghost" onClick={onSave} disabled={saving || !dirty}>
+        <Button variant="primary" className="text-xs" onClick={onSave} disabled={saving || !dirty}>
           保存
         </Button>
       </div>
@@ -102,9 +104,9 @@ function EditorToolbar({
 
 function ModeTabs({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) => void }) {
   const tabClass = (active: boolean) =>
-    `px-2 py-1 ${active ? "bg-accent text-white" : "text-text-secondary"}`;
+    `px-3 py-1.5 transition-colors ${active ? "bg-accent text-white" : "text-text-secondary hover:bg-bg-tertiary"}`;
   return (
-    <div className="flex overflow-hidden rounded-md border border-bg-secondary text-xs">
+    <div className="flex overflow-hidden rounded-md border border-border bg-bg-secondary text-xs">
       <button className={tabClass(mode === "edit")} onClick={() => onChange("edit")}>
         编辑
       </button>

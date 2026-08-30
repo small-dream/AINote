@@ -43,6 +43,14 @@ pub fn delete_note(root: &Path, rel: &str) -> Result<(), AppError> {
     Ok(fs::remove_file(path)?)
 }
 
+pub fn delete_folder(root: &Path, rel: &str) -> Result<(), AppError> {
+    let path = root.join(validate_rel_path(rel)?);
+    if !path.is_dir() {
+        return Err(AppError::Io(format!("folder not found: {rel}")));
+    }
+    Ok(fs::remove_dir_all(path)?)
+}
+
 pub fn move_note(root: &Path, from: &str, to: &str) -> Result<(), AppError> {
     let src = root.join(validate_rel_path(from)?);
     let dst = root.join(validate_rel_path(to)?);

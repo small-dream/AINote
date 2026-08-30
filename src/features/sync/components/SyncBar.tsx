@@ -24,7 +24,7 @@ export function SyncBar({ repoPath, startupSyncing = false }: SyncBarProps) {
   const display = deriveSyncHeader(status, online, operation);
 
   return (
-    <div className="flex items-center justify-between border-b border-bg-secondary px-4 py-2">
+    <div className="flex min-h-11 items-center justify-between border-b border-border bg-bg-secondary px-4 py-2">
       <div className="flex min-w-0 items-center gap-2">
         <span className={`h-2 w-2 shrink-0 rounded-full ${TONE_DOT[display.tone]}`} />
         <span className="truncate text-sm text-text-secondary">{display.text}</span>

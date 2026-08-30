@@ -6,7 +6,6 @@ import {
   NoteEditor,
   type NoteEditorHandle,
 } from "@/features/note/components/NoteEditor";
-import { NoteList } from "@/features/note/components/NoteList";
 import { SyncBar } from "@/features/sync/components/SyncBar";
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
 import type { WorkspaceActions } from "./useWorkspaceActions";
@@ -32,7 +31,7 @@ export function WorkspaceLayout({
   onMoved,
 }: WorkspaceLayoutProps) {
   return (
-    <div className="flex h-screen flex-col">
+    <div className="flex h-screen flex-col overflow-hidden bg-bg-primary">
       <SyncBar repoPath={repoPath} startupSyncing={startupSyncing} />
       <WorkspaceColumns
         repoPath={repoPath}
@@ -71,17 +70,15 @@ function WorkspaceColumns({
   onSetMove,
 }: WorkspaceColumnsProps) {
   return (
-    <div className="flex min-h-0 flex-1">
+    <div className="flex min-h-0 flex-1 overflow-hidden">
       <WorkspaceSidebar
         repoPath={repoPath}
         onSelect={onSelect}
         onRequestNew={onRequestNew}
         onRequestFolder={onRequestFolder}
+        onRequestMove={onSetMove}
       />
-      <section className="w-72 border-r border-bg-secondary">
-        <NoteList repoPath={repoPath} onSelect={onSelect} onRequestNew={() => onRequestNew("")} />
-      </section>
-      <main className="min-w-0 flex-1">
+      <main className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary">
         <NoteEditor
           ref={editorRef}
           repoPath={repoPath}

@@ -63,14 +63,20 @@ export function useUpdateNoteMutation() {
 }
 
 /** 删除笔记，成功后刷新列表与树 */
-export function useDeleteNoteMutation() {
+export function useDeleteNoteMutation(onDeleted?: (path: string) => void) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (path: string) => noteApi.remove(path),
+    onMutate: async (path) => {
+      await queryClient.cancelQueries({ queryKey: ["tree"] });
+      await queryClient.cancelQueries({ queryKey: ["notes"] });
+      return { path };
+    },
     onSuccess: (_data, path) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
       void queryClient.removeQueries({ queryKey: noteKeys.content(path) });
+      onDeleted?.(path);
     },
   });
 }

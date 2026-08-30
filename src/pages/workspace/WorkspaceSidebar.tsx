@@ -10,6 +10,7 @@ interface WorkspaceSidebarProps {
   onSelect: (path: string) => void;
   onRequestNew: (dir: string) => void;
   onRequestFolder: (dir: string) => void;
+  onRequestMove: (path: string) => void;
 }
 
 /** 侧栏：仓库名 + 登出 + 目录树（新建笔记/文件夹入口） */
@@ -18,6 +19,7 @@ export function WorkspaceSidebar({
   onSelect,
   onRequestNew,
   onRequestFolder,
+  onRequestMove,
 }: WorkspaceSidebarProps) {
   const navigate = useNavigate();
   const reset = useSessionStore((s) => s.reset);
@@ -35,21 +37,31 @@ export function WorkspaceSidebar({
   }
 
   return (
-    <aside className="flex w-64 flex-col border-r border-bg-secondary bg-bg-secondary">
-      <div className="flex items-center justify-between border-b border-bg-secondary px-4 py-2">
-        <span className="truncate text-sm font-medium">我的笔记</span>
-        <Button variant="ghost" onClick={() => void handleLogout()} disabled={logoutBusy}>
-          登出
-        </Button>
-      </div>
+    <aside className="flex min-h-0 w-[248px] shrink-0 flex-col overflow-hidden border-r border-border bg-bg-secondary">
+      <SidebarHeader logoutBusy={logoutBusy} onLogout={() => void handleLogout()} />
       <div className="min-h-0 flex-1">
         <FileTree
           repoPath={repoPath}
           onSelect={onSelect}
           onRequestNew={onRequestNew}
           onRequestFolder={onRequestFolder}
+          onRequestMove={onRequestMove}
         />
       </div>
     </aside>
+  );
+}
+
+function SidebarHeader({ logoutBusy, onLogout }: { logoutBusy: boolean; onLogout: () => void }) {
+  return (
+    <div className="flex items-center justify-between border-b border-border px-4 py-3">
+      <div className="min-w-0">
+        <p className="truncate text-[15px] font-semibold">我的笔记</p>
+        <p className="mt-0.5 truncate text-xs text-text-tertiary">本地知识库</p>
+      </div>
+      <Button aria-label="退出登录" title="退出登录" variant="ghost" className="px-2 text-xs" onClick={onLogout} disabled={logoutBusy}>
+        退出
+      </Button>
+    </div>
   );
 }
