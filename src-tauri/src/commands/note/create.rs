@@ -5,9 +5,9 @@ use crate::domain::error::AppErrorDto;
 use crate::domain::note::NoteMeta;
 use crate::services::note_service;
 
-/// Controller：仅做参数转换与错误映射，业务逻辑在 note_service。
+/// Controller：新建笔记（repoPath 由后端 config 读取）。
 #[tauri::command]
-pub fn list_notes(app: AppHandle) -> Result<Vec<NoteMeta>, AppErrorDto> {
+pub fn create_note(app: AppHandle, path: String) -> Result<NoteMeta, AppErrorDto> {
     let root = config::require_repo_path(&app)?;
-    note_service::list_notes(&root).map_err(Into::into)
+    note_service::create_note(&root, &path).map_err(Into::into)
 }

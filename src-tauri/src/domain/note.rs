@@ -9,3 +9,11 @@ pub struct NoteMeta {
     pub title: String,
     pub updated_at: u64,
 }
+
+/// 笔记完整内容（read_note 返回）
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct NoteContent {
+    pub path: String,
+    pub content: String,
+}

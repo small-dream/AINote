@@ -13,19 +13,19 @@ pub fn collect_markdown_files(root: &Path) -> Result<Vec<PathBuf>, AppError> {
         )));
     }
     let mut files = Vec::new();
-    walk(root, root, &mut files)?;
+    walk(root, &mut files)?;
     files.sort();
     Ok(files)
 }
 
-fn walk(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AppError> {
+fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AppError> {
     for entry in fs::read_dir(dir)? {
         let path = entry?.path();
         if is_hidden(&path) {
             continue;
         }
         if path.is_dir() {
-            walk(root, &path, out)?;
+            walk(&path, out)?;
         } else if path.extension().is_some_and(|ext| ext == "md") {
             out.push(path);
         }
@@ -33,7 +33,7 @@ fn walk(root: &Path, dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AppError>
     Ok(())
 }
 
-fn is_hidden(path: &Path) -> bool {
+pub(crate) fn is_hidden(path: &Path) -> bool {
     path.file_name()
         .is_some_and(|name| name.to_string_lossy().starts_with('.'))
 }
