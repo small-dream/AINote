@@ -1,9 +1,11 @@
 import { useState, type FormEvent } from "react";
 import { messageOf } from "@/api";
 import { normalizeFolderPath } from "../utils/path";
+import { useTranslation } from "@/i18n";
 
 /** 新建文件夹表单编排：路径 + pending/error + 提交校验 */
 export function useNewFolderForm(dir: string, onCreate: (path: string) => Promise<void>) {
+  const { t } = useTranslation();
   const [path, setPath] = useState(() => (dir ? `${dir}/` : ""));
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -17,11 +19,11 @@ export function useNewFolderForm(dir: string, onCreate: (path: string) => Promis
     event.preventDefault();
     const normalized = normalizeFolderPath(path);
     if (!normalized) {
-      setError("请输入文件夹路径");
+      setError(t("tree.folderPathRequired"));
       return;
     }
     if (normalized.endsWith(".md")) {
-      setError("文件夹名不应以 .md 结尾");
+      setError(t("tree.folderExtension"));
       return;
     }
     setPending(true);

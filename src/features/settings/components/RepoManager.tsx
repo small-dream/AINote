@@ -6,17 +6,18 @@ import { useRepoManager } from "../hooks/useRepoManager";
 import { AddRepoDialog } from "./AddRepoDialog";
 import { RemoveRepoDialog } from "./RemoveRepoDialog";
 import { RenameRepoDialog } from "./RenameRepoDialog";
+import { useTranslation } from "@/i18n";
 
 /** 设置页仓库管理：列表 + 添加/设为当前/重命名/移除 */
 export function RepoManager() {
+  const { t } = useTranslation();
   const { repos, rename, remove, activate, handleAdded } = useRepoManager();
   const activePath = useSessionStore((s) => s.repoPath);
   const [addOpen, setAddOpen] = useState(false);
   const [renaming, setRenaming] = useState<RepoInfo | null>(null);
   const [removing, setRemoving] = useState<RepoInfo | null>(null);
-  return (
-    <section className="mb-6">
-      <RepoListHeader onAdd={() => setAddOpen(true)} />
+  return (<section className="mb-6">
+      <RepoListHeader label={t("repo.add")} title={t("repo.createTitle")} onAdd={() => setAddOpen(true)} />
       <ul className="max-h-64 space-y-2 overflow-y-auto">
         {repos.length === 0 ? (
           <EmptyRepos />
@@ -45,8 +46,7 @@ export function RepoManager() {
         onRename={async (id, name) => { await rename.mutateAsync({ id, name }); }}
         onRemove={async (id) => { await remove.mutateAsync(id); }}
       />
-    </section>
-  );
+    </section>);
 }
 
 function RepoDialogs(props: RepoDialogsProps) {
@@ -71,17 +71,17 @@ interface RepoDialogsProps {
   onRemove: (id: string) => Promise<void>;
 }
 
-function RepoListHeader({ onAdd }: { onAdd: () => void }) {
+function RepoListHeader({ label, title, onAdd }: { label: string; title: string; onAdd: () => void }) {
   return (
     <div className="mb-3 flex items-center justify-between">
-      <h3 className="text-sm font-semibold">笔记仓库</h3>
+      <h3 className="text-sm font-semibold">{title}</h3>
       <button
         type="button"
         onClick={onAdd}
         className="inline-flex items-center gap-1 text-xs text-accent transition-colors hover:underline"
       >
         <Plus size={14} />
-        添加仓库
+        {label}
       </button>
     </div>
   );
@@ -97,6 +97,7 @@ interface RepoRowProps {
 }
 
 function RepoRow({ repo, isActive, activating, onActivate, onRename, onRemove }: RepoRowProps) {
+  const { t } = useTranslation();
   return (
     <li className="rounded-md border border-border p-3">
       <div className="flex items-center justify-between gap-2">
@@ -104,21 +105,21 @@ function RepoRow({ repo, isActive, activating, onActivate, onRename, onRemove }:
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium">{repo.name}</span>
             {isActive && (
-              <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[11px] text-accent">当前</span>
+              <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[11px] text-accent">{t("repo.current")}</span>
             )}
           </div>
           <p className="mt-0.5 truncate text-xs text-text-tertiary" title={repo.path}>{repo.path}</p>
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {!isActive && (
-            <IconButton label={`设为当前：${repo.name}`} title="设为当前" disabled={activating} onClick={onActivate}>
+            <IconButton label={t("repo.setCurrent", { name: repo.name })} title={t("repo.setCurrent", { name: repo.name })} disabled={activating} onClick={onActivate}>
               <Check size={15} />
             </IconButton>
           )}
-          <IconButton label={`重命名：${repo.name}`} title="重命名" onClick={onRename}>
+          <IconButton label={t("repo.rename", { name: repo.name })} title={t("repo.rename", { name: repo.name })} onClick={onRename}>
             <Pencil size={15} />
           </IconButton>
-          <IconButton label={`移除：${repo.name}`} title="移除" danger onClick={onRemove}>
+          <IconButton label={t("repo.remove", { name: repo.name })} title={t("repo.remove", { name: repo.name })} danger onClick={onRemove}>
             <Trash2 size={15} />
           </IconButton>
         </div>
@@ -153,5 +154,6 @@ function IconButton({ label, title, danger, disabled, onClick, children }: IconB
 }
 
 function EmptyRepos() {
-  return <li className="py-3 text-center text-xs text-text-tertiary">还没有笔记仓库，点击右上角添加。</li>;
+  const { t } = useTranslation();
+  return <li className="py-3 text-center text-xs text-text-tertiary">{t("repo.none")}</li>;
 }

@@ -5,6 +5,7 @@ import type { SyncStatus } from "@/api/types";
 import { deriveSyncLabel } from "../utils/status";
 import { useIdleCommit } from "./useIdleCommit";
 import { useWorkspaceActivityStore } from "@/stores/workspace-activity.store";
+import { useTranslation } from "@/i18n";
 
 const DEFAULT_STATUS: SyncStatus = {
   ahead: 0,
@@ -15,6 +16,7 @@ const DEFAULT_STATUS: SyncStatus = {
 
 /** 同步业务编排：联网状态 + 后端同步状态 + 一键同步/冲突解决 */
 export function useSync(repoPath: string | null) {
+  const { locale } = useTranslation();
   const online = useNetworkStatus();
   const statusQuery = useSyncStatusQuery(repoPath);
   const syncNow = useSyncNowMutation();
@@ -23,7 +25,7 @@ export function useSync(repoPath: string | null) {
   const activityVersion = useWorkspaceActivityStore((state) => state.version);
 
   const status = statusQuery.data ?? DEFAULT_STATUS;
-  const label = deriveSyncLabel(status, online);
+  const label = deriveSyncLabel(status, online, locale);
   const { committing } = useIdleCommit(
     repoPath,
     status.hasUncommitted,

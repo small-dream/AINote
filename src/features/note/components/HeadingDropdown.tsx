@@ -1,11 +1,12 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { ChevronDown } from "lucide-react";
+import { useTranslation } from "@/i18n";
 
 const OPTIONS = [
-  { level: 0, label: "正文" },
-  { level: 1, label: "H1" },
-  { level: 2, label: "H2" },
-  { level: 3, label: "H3" },
+  { level: 0, labelKey: "note.body" },
+  { level: 1, labelKey: "H1" },
+  { level: 2, labelKey: "H2" },
+  { level: 3, labelKey: "H3" },
 ] as const;
 
 type HeadingLevel = (typeof OPTIONS)[number]["level"];
@@ -18,6 +19,7 @@ interface HeadingDropdownProps {
 
 /** 标题级别下拉：按钮显示当前行级别，点击外部 / Escape 关闭 */
 export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
+  const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   useCloseOnOutside(rootRef, open, () => setOpen(false));
@@ -27,8 +29,8 @@ export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
     <div ref={rootRef} className="relative">
       <button
         type="button"
-        aria-label="标题级别"
-        title="标题级别"
+        aria-label={t("note.headingLevel")}
+        title={t("note.headingLevel")}
         aria-expanded={open}
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => setOpen((v) => !v)}
@@ -38,7 +40,7 @@ export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
             : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
         }`}
       >
-        {current.label}
+        {current.labelKey === "H1" ? "H1" : current.labelKey === "H2" ? "H2" : current.labelKey === "H3" ? "H3" : t(current.labelKey)}
         <ChevronDown size={12} />
       </button>
       {open && (
@@ -55,6 +57,7 @@ export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
 }
 
 function MenuList({ current, onPick }: { current: Option; onPick: (l: HeadingLevel) => void }) {
+  const { t } = useTranslation();
   const itemClass = (o: Option) =>
     `block w-full px-3 py-1.5 text-left text-xs transition-colors duration-120 ${
       o.level === current.level
@@ -71,7 +74,7 @@ function MenuList({ current, onPick }: { current: Option; onPick: (l: HeadingLev
             onClick={() => onPick(o.level)}
             className={itemClass(o)}
           >
-            {o.label}
+            {o.labelKey === "H1" ? "H1" : o.labelKey === "H2" ? "H2" : o.labelKey === "H3" ? "H3" : t(o.labelKey)}
           </button>
         </li>
       ))}

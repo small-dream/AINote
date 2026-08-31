@@ -6,6 +6,7 @@ import { useAuthStatusQuery } from "@/queries/auth.queries";
 import { useSessionStore } from "@/stores/session.store";
 import { WorkspaceLayout } from "./WorkspaceLayout";
 import { useWorkspaceActions } from "./useWorkspaceActions";
+import { useTranslation } from "@/i18n";
 
 /** 工作区：启动守卫 + 新建/移动编排，三栏渲染委托给 WorkspaceLayout */
 export function WorkspacePage() {
@@ -53,9 +54,10 @@ function useWorkspaceGate() {
 }
 
 function LoadingScreen() {
+  const { t } = useTranslation();
   return (
     <div className="flex h-screen items-center justify-center text-sm text-text-secondary">
-      加载中…
+      {t("common.loading")}
     </div>
   );
 }

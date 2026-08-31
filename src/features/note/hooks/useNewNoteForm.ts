@@ -7,9 +7,11 @@ import {
   renderNoteTemplate,
   type NoteTemplate,
 } from "../utils/template";
+import { useTranslation } from "@/i18n";
 
 /** 新建对话框表单编排：模板 + 路径 + pending/error（P2 模板选择） */
 export function useNewNoteForm(dir: string, onCreate: (input: NewNoteInput) => Promise<void>) {
+  const { t } = useTranslation();
   const [template, setTemplate] = useState<NoteTemplate>("default");
   const [path, setPath] = useState(() =>
     joinNotePath(dir, defaultNoteFileName("default", new Date()))
@@ -32,7 +34,7 @@ export function useNewNoteForm(dir: string, onCreate: (input: NewNoteInput) => P
     event.preventDefault();
     const normalized = normalizeNotePath(path);
     if (!normalized) {
-      setError("请输入笔记路径");
+      setError(t("note.pathRequired"));
       return;
     }
     setPending(true);

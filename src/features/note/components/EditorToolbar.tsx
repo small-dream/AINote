@@ -1,5 +1,6 @@
 import { Button } from "@/components/atoms/Button";
 import { FilePenLine, FolderInput, Save, Split, Eye, Pencil } from "lucide-react";
+import { useTranslation } from "@/i18n";
 
 export type ViewMode = "edit" | "split" | "preview";
 
@@ -13,23 +14,16 @@ interface EditorToolbarProps {
   onMove: () => void;
 }
 
-const MODE_TABS: { key: ViewMode; label: string }[] = [
-  { key: "edit", label: "编辑" },
-  { key: "split", label: "分栏" },
-  { key: "preview", label: "预览" },
+const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.preview" }[] = [
+  { key: "edit", labelKey: "note.edit" },
+  { key: "split", labelKey: "note.split" },
+  { key: "preview", labelKey: "note.preview" },
 ];
 
 /** 笔记操作栏：标题与保存状态、视图切换、文件操作。 */
-export function EditorToolbar({
-  path,
-  mode,
-  saving,
-  dirty,
-  onModeChange,
-  onSave,
-  onMove,
-}: EditorToolbarProps) {
-  const status = saving ? "保存中…" : dirty ? "有未保存修改" : "已保存";
+export function EditorToolbar({ path, mode, saving, dirty, onModeChange, onSave, onMove }: EditorToolbarProps) {
+  const { t } = useTranslation();
+  const status = saving ? t("common.saving") : dirty ? t("note.unsaved") : t("note.saved");
   return (
     <div className="flex min-h-14 items-center justify-between gap-4 border-b border-border bg-bg-primary px-6 py-2.5">
       <div className="flex min-w-0 items-center gap-3">
@@ -48,13 +42,13 @@ export function EditorToolbar({
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <ModeTabs mode={mode} onChange={onModeChange} />
-        <Button variant="ghost" aria-label="移动或重命名" title="移动或重命名" className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onMove}>
+        <Button variant="ghost" aria-label={t("note.moving")} title={t("note.moving")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onMove}>
           <FolderInput size={14} />
-          <span className="hidden xl:inline">移动 / 重命名</span>
+          <span className="hidden xl:inline">{t("note.moving")}</span>
         </Button>
         <Button variant="primary" className="inline-flex items-center gap-1.5 px-3.5 text-xs font-medium" onClick={onSave} disabled={saving || !dirty}>
           <Save size={14} />
-          保存
+          {t("common.save")}
         </Button>
       </div>
     </div>
@@ -62,16 +56,17 @@ export function EditorToolbar({
 }
 
 function ModeTabs({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) => void }) {
+  const { t } = useTranslation();
   const tabClass = (active: boolean) =>
     `inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors ${active ? "bg-accent/10 text-accent shadow-sm" : "text-text-secondary hover:text-text-primary"}`;
   return (
     <div className="flex overflow-hidden rounded-lg border border-border bg-bg-secondary p-0.5">
-      {MODE_TABS.map((tab) => {
-        const Icon = tab.key === "edit" ? Pencil : tab.key === "split" ? Split : Eye;
+      {MODE_TABS.map(({ key, labelKey }) => {
+        const Icon = key === "edit" ? Pencil : key === "split" ? Split : Eye;
         return (
-        <button key={tab.key} className={tabClass(mode === tab.key)} onClick={() => onChange(tab.key)}>
+        <button key={key} className={tabClass(mode === key)} onClick={() => onChange(key)}>
           <Icon size={14} />
-          {tab.label}
+          {t(labelKey)}
         </button>
         );
       })}

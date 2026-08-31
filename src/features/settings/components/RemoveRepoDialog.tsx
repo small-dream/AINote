@@ -3,6 +3,7 @@ import { messageOf } from "@/api";
 import type { RepoInfo } from "@/api/types";
 import { Button } from "@/components/atoms/Button";
 import { Modal } from "@/components/molecules/Modal";
+import { useTranslation } from "@/i18n";
 
 interface RemoveRepoDialogProps {
   repo: RepoInfo | null;
@@ -12,6 +13,7 @@ interface RemoveRepoDialogProps {
 
 /** 设置页「移除仓库」：仅取消绑定，不删除本地数据 */
 export function RemoveRepoDialog({ repo, onClose, onConfirm }: RemoveRepoDialogProps) {
+  const { t } = useTranslation();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,9 +32,9 @@ export function RemoveRepoDialog({ repo, onClose, onConfirm }: RemoveRepoDialogP
   }
 
   return (
-    <Modal open={repo !== null} title="移除仓库" onClose={onClose}>
+    <Modal open={repo !== null} title={t("repo.removeTitle")} onClose={onClose}>
       <p className="mb-2 text-sm">
-        确定移除「{repo?.name}」？仅取消绑定，本地笔记数据不会被删除。
+        {t("repo.removeConfirm", { name: repo?.name ?? "" })}
       </p>
       {repo?.path && (
         <p className="mb-4 truncate text-xs text-text-tertiary" title={repo.path}>
@@ -42,10 +44,10 @@ export function RemoveRepoDialog({ repo, onClose, onConfirm }: RemoveRepoDialogP
       {error && <p className="mb-3 text-xs text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>
-          取消
+          {t("common.cancel")}
         </Button>
         <Button onClick={confirm} disabled={busy || !repo}>
-          {busy ? "移除中…" : "移除"}
+          {busy ? t("repo.removing") : t("common.remove")}
         </Button>
       </div>
     </Modal>

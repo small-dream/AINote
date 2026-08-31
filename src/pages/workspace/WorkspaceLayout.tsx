@@ -9,6 +9,7 @@ import {
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
 import { WorkspaceNavRail } from "./WorkspaceNavRail";
 import type { WorkspaceActions } from "./useWorkspaceActions";
+import { useTranslation } from "@/i18n";
 
 interface WorkspaceLayoutProps {
   repoPath: string | null;
@@ -71,6 +72,7 @@ function WorkspaceColumns({
   onRequestFolder,
   onSetMove,
 }: WorkspaceColumnsProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <WorkspaceSidebar
@@ -80,7 +82,7 @@ function WorkspaceColumns({
         onRequestFolder={onRequestFolder}
         onRequestMove={onSetMove}
       />
-      <section className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary" aria-label="笔记内容">
+      <section className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary" aria-label={t("app.noteContent")}>
         <NoteEditor
           ref={editorRef}
           repoPath={repoPath}

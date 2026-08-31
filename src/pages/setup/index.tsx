@@ -6,6 +6,7 @@ import { LoginForm } from "@/features/auth/components/LoginForm";
 import { RepoSetup } from "@/features/repo/components/RepoSetup";
 import { useAuthStatusQuery } from "@/queries/auth.queries";
 import { useSessionStore } from "@/stores/session.store";
+import { useTranslation } from "@/i18n";
 
 /** 首次启动引导：登录 → 绑定/创建笔记仓库 → 进入工作区（P0-1） */
 export function SetupPage() {
@@ -51,19 +52,21 @@ function useSetupGate() {
 }
 
 function LoadingScreen() {
+  const { t } = useTranslation();
   return (
     <div className="flex h-screen items-center justify-center text-sm text-text-secondary">
-      加载中…
+      {t("common.loading")}
     </div>
   );
 }
 
 function LoadFailed({ onRetry }: { onRetry: () => void }) {
+  const { t } = useTranslation();
   return (
     <div className="flex h-screen flex-col items-center justify-center gap-3 text-sm text-danger">
-      <span>加载认证状态失败</span>
+      <span>{t("app.authLoadFailed")}</span>
       <Button variant="ghost" onClick={onRetry}>
-        重试
+        {t("common.retry")}
       </Button>
     </div>
   );

@@ -1,20 +1,22 @@
 import { Moon, Sun } from "lucide-react";
 import { useUiStore, type Theme } from "@/stores/ui.store";
+import { useTranslation } from "@/i18n";
 
-const THEME_OPTIONS: ReadonlyArray<{ value: Theme; label: string; icon: typeof Sun }> = [
-  { value: "light", label: "亮色", icon: Sun },
-  { value: "dark", label: "暗色", icon: Moon },
+const THEME_OPTIONS: ReadonlyArray<{ value: Theme; key: "settings.light" | "settings.dark"; icon: typeof Sun }> = [
+  { value: "light", key: "settings.light", icon: Sun },
+  { value: "dark", key: "settings.dark", icon: Moon },
 ];
 
 /** 设置页外观区块：亮色 / 暗色主题切换（全局 UI 态，偏好持久化到本地） */
 export function ThemeSettings() {
+  const { t } = useTranslation();
   const theme = useUiStore((s) => s.theme);
   const setTheme = useUiStore((s) => s.setTheme);
   return (
     <section>
-      <h3 className="mb-3 text-sm font-semibold">外观</h3>
-      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label="主题">
-        {THEME_OPTIONS.map(({ value, label, icon: Icon }) => {
+      <h3 className="mb-3 text-sm font-semibold">{t("settings.appearance")}</h3>
+      <div className="grid grid-cols-2 gap-2" role="radiogroup" aria-label={t("settings.theme")}>
+        {THEME_OPTIONS.map(({ value, key, icon: Icon }) => {
           const selected = theme === value;
           return (
             <button
@@ -30,7 +32,7 @@ export function ThemeSettings() {
               }`}
             >
               <Icon size={16} />
-              {label}
+              {t(key)}
             </button>
           );
         })}

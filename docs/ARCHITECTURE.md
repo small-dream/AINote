@@ -109,6 +109,7 @@ AINote/
 │   ├── app/
 │   │   ├── router.tsx            # 路由表 (唯一集中声明处)
 │   │   └── providers.tsx         # QueryClient/Theme 等 Provider 组装
+│   ├── i18n/                     # 翻译字典与 useTranslation（纯前端显示语言）
 │   ├── pages/                    # 页面级组件, 只做组装
 │   │   ├── workspace/index.tsx
 │   │   └── setup/index.tsx
@@ -162,3 +163,4 @@ AINote/
 - **登录态**：`has_token` 这类非敏感状态存于 app config，路由守卫不直接解密 token。
 - **长耗时 IPC**：Git / 文件 / 网络类 Command 统一通过 `async command + spawn_blocking` 执行，避免阻塞前端渲染与交互。
 - **软件更新链路**：`features/update` → `src/api/update.api.ts` → Tauri updater 插件 → GitHub Releases。更新状态为局部 UI 态，不写入 Zustand 或业务仓库；私钥只存在 GitHub Actions Secret。
+- **界面语言**：`stores/ui.store.ts` 持久化 `zh-CN` / `en-US` 显示偏好；`i18n/` 集中维护翻译键与插值，不让组件散落硬编码文案。`AppProviders` 同步 `<html lang>`，保证屏幕阅读器使用正确语言。

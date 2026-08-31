@@ -10,6 +10,7 @@ import { useFileTree } from "../hooks/useFileTree";
 import { useTreeContextMenu } from "../hooks/useTreeContextMenu";
 import { TreeContextMenu as TreeContextMenuView } from "./TreeContextMenu";
 import { DeleteConfirmDialog, type PendingDelete } from "./DeleteConfirmDialog";
+import { useTranslation } from "@/i18n";
 
 interface FileTreeProps {
   repoPath: string | null;
@@ -21,16 +22,18 @@ interface FileTreeProps {
 
 /** 目录树（P0-3）：目录可折叠、可在目录内新建笔记/文件夹；文件点击打开 */
 export function FileTree({ repoPath, onSelect, onRequestNew, onRequestFolder, onRequestMove }: FileTreeProps) {
+  const { t } = useTranslation();
   const { tree, isLoading, expanded, toggle } = useFileTree(repoPath);
 
   if (isLoading || !tree) {
-    return <div className="p-4 text-sm text-text-secondary">加载中…</div>;
+    return <div className="p-4 text-sm text-text-secondary">{t("common.loading")}</div>;
   }
 
   return <TreeContent tree={tree} expanded={expanded} toggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} />;
 }
 
 function TreeContent({ tree, expanded, toggle, onSelect, onRequestNew, onRequestFolder, onRequestMove }: { tree: TreeNode; expanded: Set<string>; toggle: (path: string) => void; onSelect: (path: string) => void; onRequestNew: (dir: string) => void; onRequestFolder: (dir: string) => void; onRequestMove: (path: string) => void }) {
+  const { t } = useTranslation();
   const currentNotePath = useSessionStore((s) => s.currentNotePath);
   const openNote = useSessionStore((s) => s.openNote);
   const remove = useDeleteNoteMutation((path) => { if (path === currentNotePath) openNote(null); });
@@ -42,19 +45,20 @@ function TreeContent({ tree, expanded, toggle, onSelect, onRequestNew, onRequest
   const confirmDelete = async () => { if (!pendingDelete) return; try { if (pendingDelete.isFolder) await removeFolder.mutateAsync(pendingDelete.path); else await remove.mutateAsync(pendingDelete.path); setPendingDelete(null); } catch (error) { setDeleteError(messageOf(error)); } };
   return <div className="flex h-full min-h-0 flex-col">
     <TreeToolbar onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} />
-    <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2" aria-label="笔记目录树"><TreeNodeItem node={tree} depth={0} expanded={expanded} currentNotePath={currentNotePath} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onContextMenu={contextMenu.open} /></nav>
-    {deleteError && <div className="tree-error" role="alert">删除失败：{deleteError}</div>}
+    <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2" aria-label={t("tree.navigation")}><TreeNodeItem node={tree} depth={0} expanded={expanded} currentNotePath={currentNotePath} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onContextMenu={contextMenu.open} /></nav>
+    {deleteError && <div className="tree-error" role="alert">{t("tree.deleteFailed", { message: deleteError })}</div>}
     <ContextMenuSlot menu={contextMenu.menu} copied={contextMenu.copied} onClose={contextMenu.close} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} onDelete={(path) => requestDelete(path, false)} onDeleteFolder={(path) => requestDelete(path, true)} onCopy={contextMenu.copy} />
     <DeleteConfirmDialog pending={pendingDelete} busy={remove.isPending || removeFolder.isPending} onClose={() => setPendingDelete(null)} onConfirm={confirmDelete} />
   </div>;
 }
 
 function TreeToolbar({ onRequestNew, onRequestFolder }: Pick<FileTreeProps, "onRequestNew" | "onRequestFolder">) {
+  const { t } = useTranslation();
   return <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
-    <span className="text-xs font-medium uppercase tracking-wide text-text-tertiary">目录</span>
+    <span className="text-xs font-medium uppercase tracking-wide text-text-tertiary">{t("tree.label")}</span>
     <div className="flex items-center gap-0.5">
-      <Button aria-label="新建笔记" title="新建笔记" variant="ghost" className="tree-action h-7 w-7 p-0" onClick={() => onRequestNew("")}><span className="tree-plus-icon" aria-hidden="true" /></Button>
-      <Button aria-label="新建文件夹" title="新建文件夹" variant="ghost" className="tree-action h-7 w-7 p-0" onClick={() => onRequestFolder("")}><span className="tree-new-folder-icon" aria-hidden="true"><span className="tree-new-folder-shape" /><span className="tree-new-folder-plus">+</span></span></Button>
+      <Button aria-label={t("tree.newNote")} title={t("tree.newNote")} variant="ghost" className="tree-action h-7 w-7 p-0" onClick={() => onRequestNew("")}><span className="tree-plus-icon" aria-hidden="true" /></Button>
+      <Button aria-label={t("tree.newFolder")} title={t("tree.newFolder")} variant="ghost" className="tree-action h-7 w-7 p-0" onClick={() => onRequestFolder("")}><span className="tree-new-folder-icon" aria-hidden="true"><span className="tree-new-folder-shape" /><span className="tree-new-folder-plus">+</span></span></Button>
     </div>
   </div>;
 }
@@ -138,6 +142,7 @@ interface DirRowProps {
 }
 
 function DirRow({ node, depth, isOpen, onToggle, onRequestNew, onRequestFolder, onContextMenu }: DirRowProps) {
+  const { t } = useTranslation();
   return (
     <div className="group flex items-center" style={{ paddingLeft: `${depth * 16 + 4}px` }}>
       <button
@@ -151,8 +156,8 @@ function DirRow({ node, depth, isOpen, onToggle, onRequestNew, onRequestFolder, 
         <span className="truncate">{node.name}</span>
       </button>
       <button
-        title="在此目录新建笔记"
-        aria-label="在此目录新建笔记"
+        title={t("tree.newHere")}
+        aria-label={t("tree.newHere")}
         className="tree-node-action shrink-0 rounded p-1 text-text-secondary opacity-0 transition-opacity hover:bg-bg-primary hover:text-accent group-hover:opacity-100"
         onClick={(event) => {
           event.stopPropagation();
@@ -162,8 +167,8 @@ function DirRow({ node, depth, isOpen, onToggle, onRequestNew, onRequestFolder, 
         <span className="tree-plus-icon" aria-hidden="true" />
       </button>
       <button
-        title="在此目录新建文件夹"
-        aria-label="在此目录新建文件夹"
+        title={t("tree.newFolderHere")}
+        aria-label={t("tree.newFolderHere")}
         className="tree-node-action shrink-0 rounded p-1 text-text-secondary opacity-0 transition-opacity hover:bg-bg-primary hover:text-accent group-hover:opacity-100"
         onClick={(event) => {
           event.stopPropagation();

@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { parseTheme, readStoredTheme, THEME_STORAGE_KEY, useUiStore } from "./ui.store";
+import { LOCALE_STORAGE_KEY, parseLocale, parseTheme, readStoredLocale, readStoredTheme, THEME_STORAGE_KEY, useUiStore } from "./ui.store";
 
 describe("ui.store 主题解析与持久化", () => {
   beforeEach(() => localStorage.clear());
-  afterEach(() => useUiStore.setState({ theme: "light" }));
+  afterEach(() => useUiStore.setState({ theme: "light", locale: "zh-CN" }));
 
   it("parseTheme 非法值回退亮色", () => {
     expect(parseTheme("dark")).toBe("dark");
@@ -24,5 +24,13 @@ describe("ui.store 主题解析与持久化", () => {
 
   it("无持久化偏好时默认亮色", () => {
     expect(readStoredTheme()).toBe("light");
+  });
+
+  it("解析并持久化显示语言", () => {
+    expect(parseLocale("en-US")).toBe("en-US");
+    expect(parseLocale("unknown")).toBe("zh-CN");
+    useUiStore.getState().setLocale("en-US");
+    expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("en-US");
+    expect(readStoredLocale()).toBe("en-US");
   });
 });

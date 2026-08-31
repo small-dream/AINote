@@ -4,6 +4,7 @@ import { Button } from "@/components/atoms/Button";
 import { Modal } from "@/components/molecules/Modal";
 import { useMoveNoteMutation } from "@/queries/note.queries";
 import { normalizeNotePath } from "../utils/path";
+import { useTranslation } from "@/i18n";
 
 interface MoveNoteDialogProps {
   path: string | null;
@@ -13,6 +14,7 @@ interface MoveNoteDialogProps {
 
 /** 重命名 / 移动笔记：输入目标路径。父组件以 key={path} 重建以重置草稿。 */
 export function MoveNoteDialog({ path, onClose, onMoved }: MoveNoteDialogProps) {
+  const { t } = useTranslation();
   const move = useMoveNoteMutation();
   const [to, setTo] = useState(path ?? "");
   const [error, setError] = useState<string | null>(null);
@@ -22,7 +24,7 @@ export function MoveNoteDialog({ path, onClose, onMoved }: MoveNoteDialogProps) 
     if (!path) return;
     const normalized = normalizeNotePath(to);
     if (!normalized) {
-      setError("请输入目标路径");
+      setError(t("note.targetRequired"));
       return;
     }
     if (normalized === path) {
@@ -35,7 +37,7 @@ export function MoveNoteDialog({ path, onClose, onMoved }: MoveNoteDialogProps) 
   const mutateMessage = move.isError ? messageOf(move.error) : null;
 
   return (
-    <Modal open={path !== null} title="重命名 / 移动" onClose={onClose}>
+    <Modal open={path !== null} title={t("note.moveTitle")} onClose={onClose}>
       <MoveNoteForm
         current={path}
         to={to}
@@ -74,13 +76,14 @@ function MoveNoteForm({
   onCancel,
   onSubmit,
 }: MoveNoteFormProps) {
+  const { t } = useTranslation();
   return (
     <form onSubmit={onSubmit}>
-      <p className="mb-3 text-xs text-text-secondary">当前：{current}</p>
+      <p className="mb-3 text-xs text-text-secondary">{t("note.current", { path: current ?? "" })}</p>
       <input
         autoFocus
         className="mb-2 w-full rounded-md border border-bg-secondary bg-bg-primary px-3 py-2 text-sm outline-none focus:border-accent"
-        placeholder="目标路径，如 daily/新名字.md"
+        placeholder={t("note.targetPath")}
         value={to}
         onChange={(e) => {
           onToChange(e.target.value);
@@ -91,10 +94,10 @@ function MoveNoteForm({
       {mutateMessage && <p className="mb-2 text-xs text-danger">{mutateMessage}</p>}
       <div className="flex justify-end gap-2">
         <Button type="button" variant="ghost" onClick={onCancel} disabled={pending}>
-          取消
+          {t("common.cancel")}
         </Button>
         <Button type="submit" variant="primary" disabled={pending}>
-          {pending ? "移动中…" : "确认"}
+          {pending ? t("common.moving") : t("common.confirm")}
         </Button>
       </div>
     </form>

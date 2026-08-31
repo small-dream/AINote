@@ -27,6 +27,7 @@ import { insertCodeBlock, insertDivider, insertImage, insertTable } from "../uti
 import { useFormatCommands } from "../hooks/useFormatCommands";
 import { ToolbarButton } from "./ToolbarButton";
 import { HeadingDropdown } from "./HeadingDropdown";
+import { useTranslation } from "@/i18n";
 
 interface FormatToolbarProps {
   viewRef: RefObject<EditorView | null>;
@@ -35,43 +36,44 @@ interface FormatToolbarProps {
 
 interface ButtonSpec {
   icon: LucideIcon;
-  label: string;
+  labelKey: "note.bold" | "note.italic" | "note.strikethrough" | "note.inlineCode" | "note.quote" | "note.bulletList" | "note.orderedList" | "note.taskList" | "note.image" | "note.codeBlock" | "note.table" | "note.divider";
   shortcut?: string | undefined;
   activeKey?: string | undefined;
   command: (s: EditorState) => FormatResult;
 }
 
 const INLINE_BUTTONS: ButtonSpec[] = [
-  { icon: Bold, label: "加粗", shortcut: "⌘B", activeKey: "bold", command: (s) => toggleInline(s, "bold") },
-  { icon: Italic, label: "斜体", shortcut: "⌘I", activeKey: "italic", command: (s) => toggleInline(s, "italic") },
-  { icon: Strikethrough, label: "删除线", shortcut: "⌘⇧X", activeKey: "strikethrough", command: (s) => toggleInline(s, "strikethrough") },
-  { icon: Code, label: "行内代码", shortcut: "⌘E", activeKey: "code", command: (s) => toggleInline(s, "code") },
+  { icon: Bold, labelKey: "note.bold", shortcut: "⌘B", activeKey: "bold", command: (s) => toggleInline(s, "bold") },
+  { icon: Italic, labelKey: "note.italic", shortcut: "⌘I", activeKey: "italic", command: (s) => toggleInline(s, "italic") },
+  { icon: Strikethrough, labelKey: "note.strikethrough", shortcut: "⌘⇧X", activeKey: "strikethrough", command: (s) => toggleInline(s, "strikethrough") },
+  { icon: Code, labelKey: "note.inlineCode", shortcut: "⌘E", activeKey: "code", command: (s) => toggleInline(s, "code") },
 ];
 
 const BLOCK_BUTTONS: ButtonSpec[] = [
-  { icon: TextQuote, label: "引用", activeKey: "quote", command: (s) => toggleBlock(s, "quote") },
-  { icon: List, label: "无序列表", activeKey: "bulletList", command: (s) => toggleBlock(s, "bullet") },
-  { icon: ListOrdered, label: "有序列表", activeKey: "orderedList", command: (s) => toggleBlock(s, "ordered") },
-  { icon: ListChecks, label: "任务列表", activeKey: "task", command: (s) => toggleBlock(s, "task") },
+  { icon: TextQuote, labelKey: "note.quote", activeKey: "quote", command: (s) => toggleBlock(s, "quote") },
+  { icon: List, labelKey: "note.bulletList", activeKey: "bulletList", command: (s) => toggleBlock(s, "bullet") },
+  { icon: ListOrdered, labelKey: "note.orderedList", activeKey: "orderedList", command: (s) => toggleBlock(s, "ordered") },
+  { icon: ListChecks, labelKey: "note.taskList", activeKey: "task", command: (s) => toggleBlock(s, "task") },
 ];
 
 const INSERT_BUTTONS: ButtonSpec[] = [
-  { icon: Image, label: "图片", command: insertImage },
-  { icon: SquareCode, label: "代码块", command: insertCodeBlock },
-  { icon: Table, label: "表格", command: insertTable },
-  { icon: Minus, label: "分割线", command: insertDivider },
+  { icon: Image, labelKey: "note.image", command: insertImage },
+  { icon: SquareCode, labelKey: "note.codeBlock", command: insertCodeBlock },
+  { icon: Table, labelKey: "note.table", command: insertTable },
+  { icon: Minus, labelKey: "note.divider", command: insertDivider },
 ];
 
 /** Markdown 格式工具栏：按编辑任务分组，紧凑且保持键盘焦点。 */
 export function FormatToolbar({ viewRef, active }: FormatToolbarProps) {
+  const { t } = useTranslation();
   const { run, runLink } = useFormatCommands(viewRef);
 
   const renderGroup = (buttons: ButtonSpec[]) =>
     buttons.map((b) => (
       <ToolbarButton
-        key={b.label}
+        key={b.labelKey}
         icon={b.icon}
-        label={b.label}
+        label={t(b.labelKey)}
         shortcut={b.shortcut}
         active={b.activeKey !== undefined && active.has(b.activeKey)}
         onClick={() => run(b.command)}
@@ -88,7 +90,7 @@ export function FormatToolbar({ viewRef, active }: FormatToolbarProps) {
       </div>
       <Divider />
       <div className="flex items-center gap-0.5">
-        <ToolbarButton icon={Link} label="链接" shortcut="⌘K" onClick={runLink} />
+        <ToolbarButton icon={Link} label={t("note.link")} shortcut="⌘K" onClick={runLink} />
         {renderGroup(INSERT_BUTTONS)}
       </div>
     </div>

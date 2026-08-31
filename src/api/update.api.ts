@@ -23,7 +23,7 @@ async function checkForUpdate(): Promise<UpdateInfo | null> {
 
 /** 下载、校验签名、安装并重启应用。 */
 async function installUpdate(): Promise<void> {
-  if (!pendingUpdate) throw new Error("没有可安装的更新");
+  if (!pendingUpdate) throw new Error("UPDATE_INSTALL_UNAVAILABLE");
   await pendingUpdate.downloadAndInstall();
   await pendingUpdate.close();
   pendingUpdate = null;

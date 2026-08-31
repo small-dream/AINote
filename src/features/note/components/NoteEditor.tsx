@@ -12,6 +12,7 @@ import { EditorToolbar, type ViewMode } from "./EditorToolbar";
 import { FormatToolbar } from "./FormatToolbar";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { SplitPane } from "./SplitPane";
+import { useTranslation } from "@/i18n";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -114,17 +115,19 @@ function EditorBody({
 }
 
 function EmptyState() {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full items-center justify-center text-sm text-text-secondary">
-      选择或新建一篇笔记开始写作
+      {t("note.empty")}
     </div>
   );
 }
 
 function ErrorState({ message }: { message: string }) {
+  const { t } = useTranslation();
   return (
     <div className="flex h-full items-center justify-center text-sm text-danger">
-      加载失败：{message}
+      {t("note.loadFailed", { message })}
     </div>
   );
 }

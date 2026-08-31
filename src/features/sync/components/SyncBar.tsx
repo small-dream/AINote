@@ -4,6 +4,7 @@ import { Button } from "@/components/atoms/Button";
 import { useSync } from "../hooks/useSync";
 import { deriveSyncHeader, type SyncOperation, type SyncTone } from "../utils/status";
 import { ConflictDialog } from "./ConflictDialog";
+import { useTranslation } from "@/i18n";
 
 const TONE_DOT: Record<SyncTone, string> = {
   synced: "bg-success",
@@ -26,10 +27,11 @@ interface SyncBarProps {
 
 /** 顶部同步状态条：状态点 + 文案 + 一键同步（P0-4/P0-5/P0-6） */
 export function SyncBar({ repoPath, startupSyncing = false }: SyncBarProps) {
+  const { locale, t } = useTranslation();
   const { online, syncNow, isSyncing, status, resolve, resolving, checkpoint, committing } = useSync(repoPath);
   const [conflictOpen, setConflictOpen] = useState(false);
   const operation = getOperation(startupSyncing, isSyncing, resolving);
-  const display = deriveSyncHeader(status, online, operation);
+  const display = deriveSyncHeader(status, online, operation, locale);
   const StatusIcon = TONE_ICON[display.tone];
 
   return (
@@ -40,7 +42,7 @@ export function SyncBar({ repoPath, startupSyncing = false }: SyncBarProps) {
         </span>
         <div className="min-w-0 leading-tight">
           <p className="truncate text-[13px] font-medium text-text-primary">{display.text}</p>
-          <p className="mt-0.5 truncate text-[11px] text-text-tertiary">{repoPath ? "本地知识库" : "尚未绑定知识库"}{!online && " · 离线可继续编辑"}</p>
+          <p className="mt-0.5 truncate text-[11px] text-text-tertiary">{repoPath ? t("sync.localLibrary") : t("sync.noLibrary")}{!online && t("sync.offlineEdit")}</p>
         </div>
       </div>
       <SyncActions
@@ -78,25 +80,26 @@ interface SyncActionsProps {
 }
 
 function SyncActions({ status, online, busy, buttonLabel, checkpoint, committing, syncNow, onConflict }: SyncActionsProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex shrink-0 items-center gap-1.5">
       {!status.conflicted && (
         <Button
           variant="ghost"
-          aria-label="保存版本"
-          title="将当前编辑保存为一个版本"
+          aria-label={t("sync.checkpoint")}
+          title={t("sync.checkpointHint")}
           className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border"
           onClick={() => checkpoint.mutate("note: checkpoint")}
           disabled={!status.hasUncommitted || committing || checkpoint.isPending}
         >
           <History size={14} />
-          <span>{checkpoint.isPending ? "保存中…" : "保存版本"}</span>
+          <span>{checkpoint.isPending ? t("common.saving") : t("sync.checkpoint")}</span>
         </Button>
       )}
       {status.conflicted ? (
         <Button variant="primary" className="inline-flex items-center gap-1.5 px-3 text-xs" onClick={onConflict}>
           <TriangleAlert size={14} />
-          解决冲突
+          {t("sync.resolveConflict")}
         </Button>
       ) : (
         <Button

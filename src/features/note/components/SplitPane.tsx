@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import type { PointerEvent as ReactPointerEvent, ReactNode } from "react";
+import { useTranslation } from "@/i18n";
 
 interface SplitPaneProps {
   left: ReactNode;
@@ -11,10 +12,10 @@ const MAX_RATIO = 0.8;
 
 /** 编辑/预览分栏：左侧面板 + 可拖拽分割线 + 右侧面板（默认等分 50%，P0-2） */
 export function SplitPane({ left, right }: SplitPaneProps) {
+  const { t } = useTranslation();
   const [ratio, setRatio] = useState(0.5);
   const [dragging, setDragging] = useState(false);
   const containerRef = useRef<HTMLDivElement | null>(null);
-
   const onPointerDown = useCallback((e: ReactPointerEvent<HTMLDivElement>) => {
     e.preventDefault();
     setDragging(true);
@@ -33,22 +34,19 @@ export function SplitPane({ left, right }: SplitPaneProps) {
     window.addEventListener("pointermove", onMove);
     window.addEventListener("pointerup", onUp);
   }, []);
-
-  return (
-    <div ref={containerRef} className="flex min-h-0 flex-1 overflow-hidden">
+  return (<div ref={containerRef} className="flex min-h-0 flex-1 overflow-hidden">
       <div style={{ width: `${ratio * 100}%` }} className="min-w-0 shrink-0 overflow-hidden">
         {left}
       </div>
       <div
         role="separator"
         aria-orientation="vertical"
-        aria-label="调整编辑/预览比例"
+        aria-label={t("note.resize")}
         className={`w-1 shrink-0 cursor-col-resize transition-colors hover:bg-accent ${
           dragging ? "bg-accent" : "bg-border"
         }`}
         onPointerDown={onPointerDown}
       />
       <div className="min-w-0 flex-1 overflow-hidden">{right}</div>
-    </div>
-  );
+    </div>);
 }
