@@ -3,6 +3,13 @@ import type { FormatResult } from "./format";
 
 const TABLE_TEMPLATE = "| 列1 | 列2 |\n| --- | --- |\n|  |  |";
 
+/** 插入标准 Callout，光标落在提示正文处。 */
+export function insertCallout(state: EditorState, kind: "NOTE" | "TIP" | "WARNING" | "DANGER" = "NOTE"): FormatResult {
+  const { from, to } = state.selection.main;
+  const insert = `> [!${kind}] `;
+  return { changes: { from, to, insert }, selection: { anchor: from + insert.length } };
+}
+
 /** 链接：有选区包成 [选区](url)，无选区插入 [文字](url)；未提供 url 时选中对应占位符 */
 export function insertLink(state: EditorState, url?: string): FormatResult {
   const { from, to, empty } = state.selection.main;

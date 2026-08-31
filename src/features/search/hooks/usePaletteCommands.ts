@@ -23,6 +23,12 @@ export function usePaletteCommands(actions: CommandPaletteActions) {
       { id: "new-folder", label: t("palette.newFolder"), keywords: ["folder", "mkdir", "新建文件夹"], run: () => { actions.onNewFolder(); closePalette(); } },
       { id: "sync-now", label: t("palette.syncNow"), keywords: ["sync", "push", "pull", "同步"], run: () => { syncNow.mutate(); closePalette(); } },
       { id: "checkpoint", label: t("palette.checkpoint"), keywords: ["version", "commit", "保存版本"], run: () => { checkpoint.mutate("note: checkpoint"); closePalette(); } },
+      ...(actions.onChangeMode ? [
+        { id: "mode-edit", label: t("palette.modeEdit"), keywords: ["edit", "source", "编辑"], run: () => { actions.onChangeMode?.("edit"); closePalette(); } },
+        { id: "mode-split", label: t("palette.modeSplit"), keywords: ["split", "编辑预览", "分栏"], run: () => { actions.onChangeMode?.("split"); closePalette(); } },
+        { id: "mode-preview", label: t("palette.modePreview"), keywords: ["preview", "阅读", "预览"], run: () => { actions.onChangeMode?.("preview"); closePalette(); } },
+      ] : []),
+      ...(actions.onInsertCallout ? [{ id: "insert-callout", label: t("palette.insertCallout"), keywords: ["callout", "tip", "warning", "提示", "引用"], run: () => { actions.onInsertCallout?.(); closePalette(); } }] : []),
       { id: "toggle-theme", label: t("palette.toggleTheme"), keywords: ["dark", "light", "theme", "主题"], run: () => { setTheme(theme === "dark" ? "light" : "dark"); closePalette(); } },
       { id: "toggle-language", label: t("palette.toggleLanguage"), keywords: ["language", "english", "中文", "语言"], run: () => { setLocale(locale === "zh-CN" ? "en-US" : "zh-CN"); closePalette(); } },
     ],

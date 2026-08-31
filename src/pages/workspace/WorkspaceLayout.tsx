@@ -54,6 +54,8 @@ export function WorkspaceLayout({
           onOpenNote: onSelect,
           onNewNote: () => actions.requestNew(""),
           onNewFolder: () => actions.requestNewFolder(""),
+          onChangeMode: (mode) => editorRef.current?.setMode(mode),
+          onInsertCallout: () => editorRef.current?.insertCallout(),
         }}
       />
     </div>

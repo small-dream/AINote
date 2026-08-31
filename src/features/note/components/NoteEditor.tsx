@@ -23,6 +23,8 @@ import { extractOutline, type OutlineItem } from "../utils/outline";
 import { useTranslation } from "@/i18n";
 import { useEditorPreferences } from "../hooks/useEditorPreferences";
 import { attachEditorScrollPersistence } from "../utils/editorScrollPersistence";
+import { dispatchFormat } from "../hooks/useFormatCommands";
+import { insertCallout } from "../utils/insert";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -53,17 +55,13 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const mode = editorPreferences.preferences.mode;
     useEffect(() => readyView ? attachEditorScrollPersistence(readyView, previewRef.current, editorPreferences.preferences, editorPreferences.setEditorScrollTop, editorPreferences.setPreviewScrollTop) : undefined, [readyView, editorPreferences.preferences, editorPreferences.setEditorScrollTop, editorPreferences.setPreviewScrollTop]);
     useSyncScroll(readyView, previewRef, mode);
-    useImperativeHandle(ref, () => ({ flush }), [flush]);
+    useImperativeHandle(ref, () => ({
+      flush,
+      setMode: editorPreferences.setMode,
+      insertCallout: () => { if (viewRef.current) dispatchFormat(viewRef.current, insertCallout); viewRef.current?.focus(); },
+    }), [editorPreferences.setMode, flush, viewRef]);
     const handleSave = () => { void flush().catch(() => undefined); };
-    const handleOutlineSelect = (item: OutlineItem) => {
-      if (mode !== "preview" && readyView) {
-        const line = readyView.state.doc.line(Math.min(item.line, readyView.state.doc.lines));
-        readyView.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: "center" }) });
-        readyView.focus();
-      }
-      if (mode !== "edit") scrollPreviewToHeading(previewRef.current, item.id);
-      setOutlineOpen(false);
-    };
+    const handleOutlineSelect = (item: OutlineItem) => { if (mode !== "preview" && readyView) { const line = readyView.state.doc.line(Math.min(item.line, readyView.state.doc.lines)); readyView.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: "center" }) }); readyView.focus(); } if (mode !== "edit") scrollPreviewToHeading(previewRef.current, item.id); setOutlineOpen(false); };
 
     if (!notePath) return <EmptyState />;
     if (loadError) return <ErrorState message={loadError.message} />;

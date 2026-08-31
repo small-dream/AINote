@@ -10,6 +10,8 @@ export const AUTOSAVE_DEBOUNCE_MS = 30_000;
 export interface NoteEditorHandle {
   /** 立即保存未保存的草稿（切换笔记前调用） */
   flush: () => Promise<void>;
+  setMode: (mode: "edit" | "split" | "preview") => void;
+  insertCallout: () => void;
 }
 
 /** 编辑器状态编排：读取笔记 → 草稿 → 30s 防抖自动保存（P0-2）

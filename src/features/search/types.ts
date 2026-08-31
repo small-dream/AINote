@@ -7,4 +7,6 @@ export interface CommandPaletteActions {
   onOpenNote: (path: string) => void;
   onNewNote: () => void;
   onNewFolder: () => void;
+  onChangeMode?: (mode: "edit" | "split" | "preview") => void;
+  onInsertCallout?: () => void;
 }
