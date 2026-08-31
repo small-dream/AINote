@@ -230,12 +230,57 @@ pre,
   font-size: 0.9em;
 }
 .markdown-body pre {
-  padding: 0.8em;
   overflow-x: auto;
-  border-radius: 6px;
+  margin: 0;
+  padding: 0.8em;
   background: var(--bg-secondary);
 }
 .markdown-body pre code { padding: 0; background: none; }
+.markdown-code-block {
+  margin: 0.8em 0;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+.markdown-code-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  min-height: 30px;
+  padding: 0 0.75rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-family: inherit;
+}
+.markdown-code-toolbar button {
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.markdown-code-toolbar button:hover { color: var(--accent); }
+.markdown-code-block .hljs-comment,
+.markdown-code-block .hljs-quote { color: var(--text-tertiary); }
+.markdown-code-block .hljs-keyword,
+.markdown-code-block .hljs-selector-tag,
+.markdown-code-block .hljs-literal,
+.markdown-code-block .hljs-type { color: var(--accent); }
+.markdown-code-block .hljs-string,
+.markdown-code-block .hljs-title,
+.markdown-code-block .hljs-name,
+.markdown-code-block .hljs-attribute { color: var(--success); }
+.markdown-code-block .hljs-number,
+.markdown-code-block .hljs-symbol,
+.markdown-code-block .hljs-bullet { color: var(--warning); }
+.markdown-code-block .hljs-built_in,
+.markdown-code-block .hljs-variable,
+.markdown-code-block .hljs-template-variable { color: var(--danger); }
+.markdown-table-wrap { width: 100%; overflow-x: auto; }
+.markdown-body table { min-width: 32rem; }
+.markdown-image { margin: 0.8em 0; }
+.markdown-image img { max-width: 100%; border-radius: 6px; }
+.markdown-image-loading { min-height: 3rem; background: var(--bg-secondary); }
+.markdown-image-error { color: var(--danger); font-size: 12px; }
 .markdown-body blockquote {
   padding-left: 0.9em;
   border-left: 3px solid var(--text-secondary);

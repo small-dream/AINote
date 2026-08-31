@@ -79,3 +79,29 @@ describe("MarkdownPreview 双链渲染（P1-5）", () => {
     expect(container.querySelector(".wiki-link")).toBeNull();
   });
 });
+
+describe("MarkdownPreview P1 预览增强", () => {
+  it("标题生成可跳转锚点", () => {
+    const { container } = render(<MarkdownPreview content={"# Hello, 世界!"} />);
+    expect(container.querySelector("h1")?.id).toBe("hello-世界");
+  });
+
+  it("代码块显示语言和复制操作", () => {
+    const { container } = render(<MarkdownPreview content={"```ts\nconst answer = 42;\n```"} />);
+    expect(container.querySelector(".markdown-code-toolbar")?.textContent).toContain("ts");
+    expect(container.querySelector("pre code")?.className).toContain("language-ts");
+    expect(container.querySelector(".markdown-code-toolbar button")).toBeTruthy();
+  });
+
+  it("外部链接使用新窗口安全属性", () => {
+    const { container } = render(<MarkdownPreview content={"[文档](https://example.com)"} />);
+    const link = container.querySelector("a:not(.wiki-link)");
+    expect(link?.getAttribute("target")).toBe("_blank");
+    expect(link?.getAttribute("rel")).toBe("noreferrer");
+  });
+
+  it("表格包裹横向滚动容器", () => {
+    const { container } = render(<MarkdownPreview content={"| A | B |\n| - | - |\n| 1 | 2 |"} />);
+    expect(container.querySelector(".markdown-table-wrap table")).toBeTruthy();
+  });
+});
