@@ -1,0 +1,31 @@
+import { fireEvent, render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it } from "vitest";
+import { THEME_STORAGE_KEY, useUiStore } from "@/stores/ui.store";
+import { ThemeSettings } from "./ThemeSettings";
+
+describe("ThemeSettings 主题切换", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useUiStore.setState({ theme: "light" });
+  });
+
+  it("渲染亮色 / 暗色两个选项", () => {
+    render(<ThemeSettings />);
+    expect(screen.getByText("亮色")).toBeTruthy();
+    expect(screen.getByText("暗色")).toBeTruthy();
+  });
+
+  it("当前主题高亮对应选项", () => {
+    render(<ThemeSettings />);
+    expect(screen.getByRole("radio", { name: "亮色" }).getAttribute("aria-checked")).toBe("true");
+    expect(screen.getByRole("radio", { name: "暗色" }).getAttribute("aria-checked")).toBe("false");
+  });
+
+  it("点击暗色切换主题并持久化", () => {
+    render(<ThemeSettings />);
+    fireEvent.click(screen.getByRole("radio", { name: "暗色" }));
+    expect(useUiStore.getState().theme).toBe("dark");
+    expect(localStorage.getItem(THEME_STORAGE_KEY)).toBe("dark");
+    expect(screen.getByRole("radio", { name: "暗色" }).getAttribute("aria-checked")).toBe("true");
+  });
+});
