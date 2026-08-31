@@ -7,6 +7,7 @@ import { Modal } from "@/components/molecules/Modal";
 import { ConflictDialog } from "@/features/sync/components/ConflictDialog";
 import { RepoManager } from "@/features/settings/components/RepoManager";
 import { ThemeSettings } from "@/features/settings/components/ThemeSettings";
+import { UpdateSettings } from "@/features/update/components/UpdateSettings";
 import { useSync } from "@/features/sync/hooks/useSync";
 import { deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
 import { useSessionStore } from "@/stores/session.store";
@@ -68,6 +69,8 @@ function SettingsNavButton() {
         <RepoManager />
         <hr className="my-5 border-border" />
         <ThemeSettings />
+        <hr className="my-5 border-border" />
+        <UpdateSettings />
         <hr className="my-5 border-border" />
         <div>
           <h3 className="mb-3 text-sm font-semibold">账户</h3>

@@ -27,6 +27,7 @@
   },
   "bundle": {
     "active": true,
+    "createUpdaterArtifacts": true,
     "targets": "all",
     "icon": [
       "icons/32x32.png",
@@ -39,6 +40,17 @@
     "macOS": {
       "entitlements": "entitlements/macOS.plist",
       "signingIdentity": "-"
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVBMTgwM0MzOUVGMjk4QQpSV1NLS2U4NVBJQ2hCYWNBU1F0ZlNQT2o0bVpOdGtkKy8xcGt6dzdRNHd3ZzBhMTZRV2dnajlWZgo=",
+      "endpoints": [
+        "https://github.com/small-dream/AINote/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
     }
   }
 }
