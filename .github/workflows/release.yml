@@ -48,13 +48,21 @@ jobs:
           release_body=$(cat <<'EOF'
           ## 更新内容
 
-          - 新增简体中文与 English 界面切换，可在设置中即时切换并在重启后保持。
-          - 统一应用界面文案与无障碍标签的中英文翻译。
+          - 新增全文搜索与 Cmd+K 命令面板：一键定位任意笔记（标题 + 正文，标题命中优先）。
+          - 新增 Git 版本历史 / Diff / 回滚：查看单篇笔记提交历史、对比改动、一键恢复历史版本。
+          - 新增图片/附件管理：拖放或工具栏选择导入到 `assets/`，自动插入 Markdown 引用并即时提交。
+          - 新增标签系统与双链：`#标签` 提取、`[[双链]]` 点击跳转、反向链接面板与侧边栏标签索引。
+          - 新增合并冲突图形化处理：本地 | 合并结果 | 远端三栏行级挑选，全部解决后自动同步。
+          - 新增软删除回收站：删除笔记/目录移入回收站（随仓库 Git 同步），可恢复 / 彻底删除 / 清空。
 
           ## What's new
 
-          - Added Simplified Chinese and English interface switching in Settings, with the preference preserved after restart.
-          - Localized application copy and accessibility labels consistently in both languages.
+          - Added full-text search and a Cmd+K command palette to jump to any note (title + body, title hits ranked first).
+          - Added Git version history, per-file diff, and one-click rollback to any historical version.
+          - Added image/attachment management: drag & drop or toolbar picker imports into `assets/`, inserts the Markdown reference, and commits immediately.
+          - Added tags and backlinks: `#tag` extraction, `[[wiki-link]]` click-to-jump, a backlinks panel, and a sidebar tag index.
+          - Added a graphical three-way merge for sync conflicts (Local | Merged | Remote with per-line picking), auto-syncing once all conflicts are resolved.
+          - Added a soft-delete recycle bin: deleted notes/folders move to trash (synced with the Git repo), with restore / permanent delete / empty.
 
           ## 安装与更新
 
