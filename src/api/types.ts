@@ -33,6 +33,16 @@ export interface SyncStatus {
   conflicted: boolean;
 }
 
+/** list_conflicts 返回：单个冲突文件的三栏合并素材（与 Rust domain/sync.rs 一致） */
+export interface ConflictFile {
+  /** 相对仓库根目录的路径，如 "daily/a.md" */
+  path: string;
+  /** 本地侧内容（index stage 2） */
+  local: string;
+  /** 远端侧内容（index stage 3） */
+  remote: string;
+}
+
 /** validate_token 返回 */
 export interface LoginDto {
   login: string;

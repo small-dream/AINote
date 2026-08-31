@@ -39,6 +39,8 @@ pub fn run() {
             commands::git::status::sync_status,
             commands::git::sync::sync_now,
             commands::git::resolve::resolve_conflict,
+            commands::git::conflicts::list_conflicts,
+            commands::git::resolve_file::resolve_file_conflict,
             commands::git::history::git_file_history,
             commands::git::diff::git_file_diff,
             commands::git::restore::git_restore_file,

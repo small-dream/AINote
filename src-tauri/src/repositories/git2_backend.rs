@@ -146,6 +146,18 @@ impl GitBackend for Git2Backend {
         git2_remote::resolve_conflicts(path, false)
     }
 
+    fn conflict_files(&self, path: &str) -> Result<Vec<crate::domain::sync::ConflictFile>, AppError> {
+        git2_remote::conflict_files(path)
+    }
+
+    fn resolve_conflict_file(&self, path: &str, rel: &str, content: &str) -> Result<bool, AppError> {
+        git2_remote::resolve_conflict_file(path, rel, content)
+    }
+
+    fn complete_merge(&self, path: &str, message: &str) -> Result<(), AppError> {
+        git2_remote::complete_merge(path, message)
+    }
+
     fn file_history(&self, path: &str, file: &str, limit: usize) -> Result<Vec<CommitInfo>, AppError> {
         git2_history::file_history(path, file, limit)
     }

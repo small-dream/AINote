@@ -3,7 +3,7 @@ import { Check, Cloud, CloudOff, History, RefreshCw, TriangleAlert } from "lucid
 import { Button } from "@/components/atoms/Button";
 import { useSync } from "../hooks/useSync";
 import { deriveSyncHeader, type SyncOperation, type SyncTone } from "../utils/status";
-import { ConflictDialog } from "./ConflictDialog";
+import { ConflictMergeDialog } from "./ConflictMergeDialog";
 import { useTranslation } from "@/i18n";
 
 const TONE_DOT: Record<SyncTone, string> = {
@@ -28,7 +28,7 @@ interface SyncBarProps {
 /** 顶部同步状态条：状态点 + 文案 + 一键同步（P0-4/P0-5/P0-6） */
 export function SyncBar({ repoPath, startupSyncing = false }: SyncBarProps) {
   const { locale, t } = useTranslation();
-  const { online, syncNow, isSyncing, status, resolve, resolving, checkpoint, committing } = useSync(repoPath);
+  const { online, syncNow, isSyncing, status, resolving, checkpoint, committing } = useSync(repoPath);
   const [conflictOpen, setConflictOpen] = useState(false);
   const operation = getOperation(startupSyncing, isSyncing, resolving);
   const display = deriveSyncHeader(status, online, operation, locale);
@@ -55,15 +55,7 @@ export function SyncBar({ repoPath, startupSyncing = false }: SyncBarProps) {
         syncNow={syncNow}
         onConflict={() => setConflictOpen(true)}
       />
-      <ConflictDialog
-        open={conflictOpen}
-        pending={resolving}
-        onClose={() => setConflictOpen(false)}
-        onResolve={(useLocal) => {
-          resolve.mutate(useLocal);
-          setConflictOpen(false);
-        }}
-      />
+      <ConflictMergeDialog repoPath={repoPath} open={conflictOpen} onClose={() => setConflictOpen(false)} />
     </div>
   );
 }

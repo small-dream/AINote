@@ -4,7 +4,7 @@ import { useNavigate } from "react-router";
 import { authApi } from "@/api";
 import { Button } from "@/components/atoms/Button";
 import { Modal } from "@/components/molecules/Modal";
-import { ConflictDialog } from "@/features/sync/components/ConflictDialog";
+import { ConflictMergeDialog } from "@/features/sync/components/ConflictMergeDialog";
 import { RepoManager } from "@/features/settings/components/RepoManager";
 import { ThemeSettings } from "@/features/settings/components/ThemeSettings";
 import { LanguageSettings } from "@/features/settings/components/LanguageSettings";
@@ -114,7 +114,7 @@ function SettingsNavButton() {
 
 function SyncNavButton({ repoPath, startupSyncing }: WorkspaceNavRailProps) {
   const { locale, t } = useTranslation();
-  const { online, syncNow, isSyncing, status, resolve, resolving } = useSync(repoPath);
+  const { online, syncNow, isSyncing, status, resolving } = useSync(repoPath);
   const [conflictOpen, setConflictOpen] = useState(false);
   const display = deriveSyncHeader(status, online, resolveSyncOperation(startupSyncing, isSyncing, resolving), locale);
   const hasConflict = display.tone === "conflict";
@@ -132,7 +132,7 @@ function SyncNavButton({ repoPath, startupSyncing }: WorkspaceNavRailProps) {
       >
         <Icon size={19} className={display.busy ? "animate-spin" : ""} />
       </button>
-      <ConflictDialog open={conflictOpen} pending={resolving} onClose={() => setConflictOpen(false)} onResolve={(useLocal) => { resolve.mutate(useLocal); setConflictOpen(false); }} />
+      <ConflictMergeDialog repoPath={repoPath} open={conflictOpen} onClose={() => setConflictOpen(false)} />
     </>
   );
 }

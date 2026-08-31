@@ -1,9 +1,11 @@
 pub mod commit;
+pub mod conflicts;
 pub mod diff;
 pub mod history;
 pub mod pull;
 pub mod push;
 pub mod resolve;
+pub mod resolve_file;
 pub mod restore;
 pub mod status;
 pub mod sync;

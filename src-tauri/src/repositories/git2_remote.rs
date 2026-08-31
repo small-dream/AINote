@@ -6,6 +6,8 @@ use git2::{
 };
 
 use crate::domain::error::AppError;
+use crate::domain::sync::ConflictFile;
+use crate::repositories::note_files::validate_rel_path;
 
 use super::git2_backend::{current_branch, open, signature, to_git};
 
@@ -116,6 +118,57 @@ pub fn resolve_conflicts(path: &str, use_ours: bool) -> Result<(), AppError> {
     }
     index.write().map_err(to_git)?;
     commit_merge(&repo, "note: resolve conflict")
+}
+
+/// 读取当前合并冲突文件（path + 本地 stage2 / 远端 stage3 内容），供三栏合并（P1-3）。
+pub fn conflict_files(path: &str) -> Result<Vec<ConflictFile>, AppError> {
+    let repo = open(path)?;
+    let index = repo.index().map_err(to_git)?;
+    let mut files = Vec::new();
+    for conflict in index.conflicts().map_err(to_git)? {
+        let entry = conflict.map_err(to_git)?;
+        let our = entry.our;
+        let their = entry.their;
+        let ancestor = entry.ancestor;
+        let rel_bytes = our
+            .as_ref()
+            .or(their.as_ref())
+            .or(ancestor.as_ref())
+            .map(|e| e.path.as_slice())
+            .ok_or_else(|| AppError::Io("conflict entry missing path".into()))?;
+        let rel = String::from_utf8_lossy(rel_bytes).into_owned();
+        let local = our.map(|e| read_blob(&repo, e.id)).transpose()?.unwrap_or_default();
+        let remote = their.map(|e| read_blob(&repo, e.id)).transpose()?.unwrap_or_default();
+        files.push(ConflictFile { path: rel, local, remote });
+    }
+    files.sort_by(|a, b| a.path.cmp(&b.path));
+    Ok(files)
+}
+
+/// 以指定内容解决单个冲突文件并写入 index；返回是否已无冲突（P1-3）。
+pub fn resolve_conflict_file(path: &str, rel: &str, content: &str) -> Result<bool, AppError> {
+    let repo = open(path)?;
+    let rel = validate_rel_path(rel)?;
+    let file_path = repo
+        .workdir()
+        .ok_or_else(|| AppError::Repo("no workdir".into()))?
+        .join(&rel);
+    std::fs::write(&file_path, content)?;
+    let mut index = repo.index().map_err(to_git)?;
+    index.add_path(&rel).map_err(to_git)?;
+    index.write().map_err(to_git)?;
+    Ok(!index.has_conflicts())
+}
+
+/// index 已无冲突时完成 merge commit（复用 commit_merge，P1-3）。
+pub fn complete_merge(path: &str, message: &str) -> Result<(), AppError> {
+    let repo = open(path)?;
+    commit_merge(&repo, message)
+}
+
+fn read_blob(repo: &Repository, oid: git2::Oid) -> Result<String, AppError> {
+    let blob = repo.find_blob(oid).map_err(to_git)?;
+    Ok(String::from_utf8_lossy(blob.content()).into_owned())
 }
 
 fn conflict_paths(repo: &Repository) -> Result<Vec<PathBuf>, AppError> {

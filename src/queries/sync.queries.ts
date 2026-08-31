@@ -54,3 +54,37 @@ export function useResolveConflictMutation() {
 }
 
 export type { SyncStatus };
+
+/** 冲突文件列表（P1-3）：仅在处于冲突且面板打开时查询 */
+export function useConflictsQuery(repoPath: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["conflicts", repoPath],
+    queryFn: () => syncApi.conflicts(),
+    enabled: repoPath !== null && enabled,
+  });
+}
+
+/** 按文件解决冲突（P1-3）：写回合并内容，全部解决后由面板触发 push */
+export function useResolveFileMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: ({ path, content }: { path: string; content: string }) =>
+      syncApi.resolveFile(path, content),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["conflicts"] });
+      invalidateSync(queryClient);
+    },
+  });
+}
+
+/** 推送本地提交（冲突全部解决后收尾，P1-3） */
+export function usePushMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => syncApi.push(),
+    onSuccess: () => {
+      invalidateSync(queryClient);
+      void queryClient.invalidateQueries({ queryKey: ["notes"] });
+    },
+  });
+}

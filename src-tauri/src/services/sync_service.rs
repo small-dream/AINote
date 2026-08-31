@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::domain::error::AppError;
+use crate::domain::sync::ConflictFile;
 use crate::domain::sync::SyncStatus;
 use crate::repositories::git_backend::GitBackend;
 
@@ -79,6 +80,29 @@ pub fn resolve<B: GitBackend>(
     status(backend, repo_path)
 }
 
+/// 用例：列出全部冲突文件（本地/远端内容），供三栏合并（P1-3）。
+pub fn list_conflicts<B: GitBackend>(
+    backend: &B,
+    repo_path: &Path,
+) -> Result<Vec<ConflictFile>, AppError> {
+    backend.conflict_files(&repo_path.to_string_lossy())
+}
+
+/// 用例：以指定内容解决单个冲突文件；全部解决后完成 merge commit，返回同步状态（P1-3）。
+pub fn resolve_file_conflict<B: GitBackend>(
+    backend: &B,
+    repo_path: &Path,
+    rel: &str,
+    content: &str,
+) -> Result<SyncStatus, AppError> {
+    let path = repo_path.to_string_lossy();
+    let all_resolved = backend.resolve_conflict_file(&path, rel, content)?;
+    if all_resolved {
+        backend.complete_merge(&path, "note: resolve conflict")?;
+    }
+    status(backend, repo_path)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -151,5 +175,45 @@ mod tests {
             mock.recorded(),
             vec!["resolve:ours", "push", "resolve:theirs", "push"]
         );
+    }
+
+    #[test]
+    fn resolve_file_completes_merge_when_all_resolved() {
+        let mock = MockGitBackend {
+            all_resolved_after_file: true,
+            ..Default::default()
+        };
+        let s = resolve_file_conflict(&mock, &root(), "daily/a.md", "merged").unwrap();
+        assert!(!s.conflicted);
+        assert_eq!(
+            mock.recorded(),
+            vec!["resolve_file:daily/a.md", "complete_merge"]
+        );
+    }
+
+    #[test]
+    fn resolve_file_skips_merge_while_conflicts_remain() {
+        let mock = MockGitBackend {
+            all_resolved_after_file: false,
+            ..Default::default()
+        };
+        resolve_file_conflict(&mock, &root(), "a.md", "x").unwrap();
+        assert_eq!(mock.recorded(), vec!["resolve_file:a.md"]);
+    }
+
+    #[test]
+    fn list_conflicts_forwards_from_backend() {
+        let mock = MockGitBackend {
+            conflicts: vec![ConflictFile {
+                path: "a.md".into(),
+                local: "l".into(),
+                remote: "r".into(),
+            }],
+            ..Default::default()
+        };
+        let files = list_conflicts(&mock, &root()).unwrap();
+        assert_eq!(files.len(), 1);
+        assert_eq!(files[0].path, "a.md");
+        assert_eq!(mock.recorded(), vec!["conflicts"]);
     }
 }
