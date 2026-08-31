@@ -38,7 +38,9 @@
     "react-markdown": "^10.1.0",
     "react-router": "^8.3.1",
     "rehype-highlight": "^7.0.2",
+    "remark-frontmatter": "^5.0.0",
     "remark-gfm": "^4.0.1",
+    "yaml": "^2.9.0",
     "zustand": "^5.0.15"
   },
   "devDependencies": {
@@ -46,6 +48,7 @@
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2.11.4",
     "@testing-library/react": "^16.3.3",
+    "@types/mdast": "^4.0.4",
     "@types/node": "^26.4.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
@@ -53,9 +56,11 @@
     "eslint": "^10.9.1",
     "eslint-plugin-react-hooks": "^7.1.1",
     "jsdom": "^30.0.1",
+    "remark-parse": "^11.0.0",
     "tailwindcss": "^4.3.3",
     "typescript": "~6.0.3",
     "typescript-eslint": "^8.68.0",
+    "unified": "^11.0.5",
     "vite": "^8.2.2",
     "vitest": "^4.1.11"
   }

@@ -2,6 +2,7 @@ import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
 import ReactMarkdown, { defaultUrlTransform, type Components, type ExtraProps } from "react-markdown";
 import type { ComponentType } from "react";
 import remarkGfm from "remark-gfm";
+import remarkFrontmatter from "remark-frontmatter";
 import rehypeHighlight from "rehype-highlight";
 import { assetUrl } from "@/api";
 import { resolveLocalAssetPath } from "@/features/asset/utils/asset";
@@ -10,8 +11,10 @@ import {
   transformWikiLinks,
   WIKI_PROTOCOL,
 } from "@/features/wiki/utils/wiki";
+import { parseMarkdownDocument, remarkCallouts, remarkRemoveFrontmatter, type CalloutKind } from "../utils/markdownPipeline";
 import { slugifyHeading, textContent } from "../utils/preview";
 import { useTranslation } from "@/i18n";
+import { MarkdownProperties } from "./MarkdownProperties";
 
 interface MarkdownPreviewProps {
   content: string;
@@ -26,7 +29,7 @@ const blockComponents: Components = {
   h1: Heading("h1"), h2: Heading("h2"), h3: Heading("h3"), h4: Heading("h4"), h5: Heading("h5"), h6: Heading("h6"),
   p: ({ node, ...props }) => <p data-line={node?.position?.start.line} {...props} />,
   pre: CodeBlock,
-  blockquote: ({ node, ...props }) => <blockquote data-line={node?.position?.start.line} {...props} />,
+  blockquote: CalloutBlockquote,
   li: ({ node, ...props }) => <li data-line={node?.position?.start.line} {...props} />,
   tr: ({ node, ...props }) => <tr data-line={node?.position?.start.line} {...props} />,
 };
@@ -72,6 +75,18 @@ function getNodeLine(node: ExtraProps["node"]): number | undefined {
   return position?.start?.line;
 }
 
+function CalloutBlockquote({ node, children, ...props }: ComponentProps<"blockquote"> & ExtraProps) {
+  const kind = getCalloutKind(node);
+  if (!kind) return <blockquote data-line={getNodeLine(node)} {...props}>{children}</blockquote>;
+  return <aside className={`markdown-callout markdown-callout-${kind}`} data-callout={kind} data-line={getNodeLine(node)} {...props}>{children}</aside>;
+}
+
+function getCalloutKind(node: ExtraProps["node"]): CalloutKind | null {
+  if (!node || !("properties" in node)) return null;
+  const value = (node as { properties?: Record<string, unknown> }).properties?.["data-callout"];
+  return value === "note" || value === "tip" || value === "warning" || value === "danger" ? value : null;
+}
+
 function getLanguage(children: ReactNode): string | null {
   if (!children || typeof children !== "object" || !("props" in children)) return null;
   const className = (children as { props?: { className?: string } }).props?.className ?? "";
@@ -97,6 +112,7 @@ function WikiLink({ href, children, onOpenWiki }: { href: string; children: Reac
 
 /** Markdown 渲染预览。react-markdown 默认不渲染原始 HTML（当作文本），天然防 XSS（安全红线）。 */
 export function MarkdownPreview({ content, repoPath, onOpenWiki }: MarkdownPreviewProps) {
+  const document = useMemo(() => parseMarkdownDocument(content), [content]);
   const components = useMemo<Components>(() => ({
     ...blockComponents,
     img: ({ node, src, alt, ...props }) => {
@@ -113,8 +129,9 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki }: MarkdownPrevi
   }), [onOpenWiki, repoPath]);
   return (
     <article className="markdown-body max-w-3xl">
+      {document.frontmatter.length > 0 ? <MarkdownProperties fields={document.frontmatter} /> : null}
       <ReactMarkdown
-        remarkPlugins={[remarkGfm]}
+        remarkPlugins={[remarkGfm, [remarkFrontmatter, ["yaml", "toml"]], remarkCallouts, remarkRemoveFrontmatter]}
         rehypePlugins={[rehypeHighlight]}
         components={components}
         urlTransform={(url) => (url.startsWith(WIKI_PROTOCOL) ? url : defaultUrlTransform(url))}

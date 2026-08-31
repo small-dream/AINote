@@ -104,4 +104,20 @@ describe("MarkdownPreview P1 预览增强", () => {
     const { container } = render(<MarkdownPreview content={"| A | B |\n| - | - |\n| 1 | 2 |"} />);
     expect(container.querySelector(".markdown-table-wrap table")).toBeTruthy();
   });
+
+  it("展示 frontmatter 属性且不把分隔线渲染到正文", () => {
+    const { container } = render(<MarkdownPreview content={"---\ntitle: Demo\ntags: [one, two]\n---\n正文"} />);
+    expect(container.querySelector(".markdown-properties")?.textContent).toContain("title");
+    expect(container.querySelector(".markdown-properties")?.textContent).toContain("one, two");
+    expect(container.querySelectorAll("hr")).toHaveLength(0);
+    expect(container.textContent).toContain("正文");
+  });
+
+  it("渲染 note/tip/warning/danger callout", () => {
+    const { container } = render(<MarkdownPreview content={"> [!TIP] 小提示\n> 内容"} />);
+    const callout = container.querySelector("[data-callout='tip']");
+    expect(callout?.className).toContain("markdown-callout-tip");
+    expect(callout?.textContent).toContain("小提示");
+    expect(callout?.textContent).not.toContain("[!TIP]");
+  });
 });

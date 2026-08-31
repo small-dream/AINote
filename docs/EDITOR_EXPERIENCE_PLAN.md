@@ -97,13 +97,13 @@ AINote 的核心体验目标是：用户打开一篇笔记后，可以立即、�
 
 1. [x] 代码块语法高亮、语言标签和一键复制。
 2. [x] 标题锚点、表格容器横向滚动、外部链接安全属性。
-3. [ ] Frontmatter/Properties 展示，明确哪些字段参与索引。
-4. [ ] Callout（note、tip、warning、danger）统一 AST 转换和主题样式。
+3. [x] Frontmatter/Properties 展示：读取文档顶部 YAML，展示标量与简单数组字段；复杂对象不参与展示/索引。
+4. [x] Callout（note、tip、warning、danger）统一 AST 转换和主题样式。
 5. [ ] 数学公式（块级和行内）。
 6. [ ] Mermaid 图表，渲染失败时显示源代码和错误原因。
 7. [x] 图片懒加载、加载失败状态和路径提示。
 
-本批实现使用 `rehype-highlight` + `highlight.js`，标题锚点、代码复制、表格滚动和图片加载状态已接入 `MarkdownPreview`。代码高亮主题、Frontmatter、Callout、数学公式和 Mermaid 将在统一 AST 管线中继续实现。
+本批实现使用 `rehype-highlight` + `highlight.js`，标题锚点、代码复制、表格滚动和图片加载状态已接入 `MarkdownPreview`。当前阶段新增 `remark-frontmatter` + `yaml`，并通过 `remarkCallouts` / `remarkRemoveFrontmatter` 建立统一转换入口；原始 HTML 仍默认不解析。
 
 建议管线：
 

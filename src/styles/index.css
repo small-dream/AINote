@@ -258,6 +258,42 @@ pre,
   color: var(--text-secondary);
   font-size: 11px;
 }
+
+.markdown-properties {
+  margin: 0 0 1.25rem;
+  border-bottom: 1px solid var(--border);
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.markdown-properties-title {
+  margin-bottom: 0.35rem;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.markdown-properties dl { margin: 0; }
+.markdown-property {
+  display: grid;
+  grid-template-columns: minmax(90px, 0.3fr) minmax(0, 1fr);
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-top: 1px solid var(--border);
+}
+.markdown-property dt { color: var(--text-tertiary); }
+.markdown-property dd { margin: 0; color: var(--text-primary); overflow-wrap: anywhere; }
+.markdown-callout {
+  margin: 0.8em 0;
+  padding: 0.65em 0.9em;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+}
+.markdown-callout-note { border-color: color-mix(in srgb, var(--accent) 45%, var(--border)); }
+.markdown-callout-tip { border-color: color-mix(in srgb, var(--success) 45%, var(--border)); }
+.markdown-callout-warning { border-color: color-mix(in srgb, var(--warning) 55%, var(--border)); }
+.markdown-callout-danger { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
 .markdown-code-toolbar button:hover { color: var(--accent); }
 .markdown-code-block .hljs-comment,
 .markdown-code-block .hljs-quote { color: var(--text-tertiary); }
