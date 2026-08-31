@@ -1,3 +1,4 @@
+pub mod asset_service;
 pub mod auth_service;
 pub mod auth_store;
 pub mod github_api;

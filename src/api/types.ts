@@ -87,6 +87,11 @@ export interface FileDiff {
   lines: DiffLine[];
 }
 
+/** import_asset / import_asset_bytes 返回：资产在仓库中的相对路径 */
+export interface AssetInfo {
+  path: string;
+}
+
 /** list_repos 返回的单仓库信息 */
 export interface RepoInfo {
   id: string;

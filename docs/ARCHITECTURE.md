@@ -123,6 +123,7 @@ AINote/
 │   │   ├── sync/
 │   │   ├── history/             # Git 版本历史 / Diff / 回滚
 │   │   ├── search/              # 全文搜索 + Cmd+K 命令面板
+│   │   ├── asset/               # 图片/附件导入 + 光标插入引用
 │   │   ├── auth/                 # 登录（Token 校验/保存）
 │   │   └── repo/                 # 绑定/创建仓库
 │   ├── components/               # 业务无关组件
@@ -131,7 +132,7 @@ AINote/
 │   ├── api/                      # IPC Client, 一领域一文件
 │   │   ├── client.ts             # invoke 薄封装 + 错误统一转换
 │   │   ├── types.ts              # 与 Rust DTO 结构一致的镜像类型
-│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts / search.api.ts / history.api.ts
+│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts / asset.api.ts / search.api.ts / history.api.ts
 │   ├── stores/                   # Zustand, 按领域切片（session / ui / command-palette …）
 │   ├── queries/                  # TanStack Query hooks (服务端/Git 状态)
 │   ├── hooks/                    # 跨领域通用 hooks（useNetworkStatus 等）
@@ -143,13 +144,14 @@ AINote/
 │   │   ├── main.rs               # 仅做 Command 注册, < 50 行
 │   │   ├── commands/             # Controller: 一命令一文件
 │   │   │   ├── mod.rs            # 仅 re-export
+│   │   │   ├── asset/            # import.rs / import_bytes.rs
 │   │   │   ├── note/             # create.rs / read.rs / update.rs / delete.rs / move.rs / tree.rs / list.rs / search.rs
 │   │   │   ├── git/              # commit.rs / pull.rs / push.rs / status.rs / sync.rs / resolve.rs / history.rs / diff.rs / restore.rs
 │   │   │   ├── repo/             # bind.rs / create.rs / list.rs / rename.rs / remove.rs / switch.rs / validate.rs / path.rs
 │   │   │   └── auth/             # save_token.rs / validate.rs / status.rs / logout.rs
-│   │   ├── services/             # 一用例一模块（含 search_service / history_service）
-│   │   ├── repositories/         # trait + 实现分离
-│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs）
+│   │   ├── services/             # 一用例一模块（含 search_service / history_service / asset_service）
+│   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / file_storage / note_files / file_tree / asset_files）
+│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs）
 │   │   └── config/            # mod.rs（持久化）+ repos.rs（仓库注册表纯逻辑）
 │   └── Cargo.toml
 ├── package.json / tsconfig.json (strict: true)
@@ -165,6 +167,7 @@ AINote/
 - **登录态**：`has_token` 这类非敏感状态存于 app config，路由守卫不直接解密 token。
 - **版本历史 / Diff / 回滚**：`features/history` 提供历史面板；编辑器工具栏入口。`git_file_history` 遍历提交过滤出修改过该文件的提交（时间倒序），`git_file_diff` 计算选中提交相对其父提交的单文件 diff（行级 +/-），`git_restore_file` 把文件恢复到指定提交并写回工作区，随后前端以 `note: restore <path>` 立即提交并让编辑器重载。实现位于 `repositories/git2_history.rs`（libgit2），Service 仅依赖 `GitBackend` trait。
 - **全文搜索与命令面板**：`features/search` 提供 Cmd+K 命令面板；输入经 150ms 防抖后调用 `search_notes`（Rust 侧 `spawn_blocking` 扫描仓库 Markdown 文件，忽略大小写匹配标题 + 正文，标题命中优先，最多 30 条，返回行号与上下文片段）。面板开关/查询/选择为全局 UI 态，存于 `stores/command-palette.store.ts`（Zustand）；搜索结果走 TanStack Query 缓存。
+- **图片/附件管理**：`features/asset` 提供资产导入编排——文件拖放到编辑器或工具栏图片按钮选择文件，前端经 `import_asset`（源路径）/ `import_asset_bytes`（字节）写入仓库 `assets/`（重名自动追加 `-1`，单文件 ≤ 20MB），随后以 `![文件名](assets/xxx.png)` 仓库相对路径在光标处插入引用（跨设备可移植），并以 `note: asset <path>` 立即提交版本化。预览层 `MarkdownPreview` 把仓库相对图片路径解析为本地绝对路径后经 `convertFileSrc` 渲染，外部 URL 保持原样。
 - **长耗时 IPC**：Git / 文件 / 网络类 Command 统一通过 `async command + spawn_blocking` 执行，避免阻塞前端渲染与交互。
 - **软件更新链路**：`features/update` → `src/api/update.api.ts` → Tauri updater 插件 → GitHub Releases。更新状态为局部 UI 态，不写入 Zustand 或业务仓库；私钥只存在 GitHub Actions Secret。
 - **界面语言**：`stores/ui.store.ts` 持久化 `zh-CN` / `en-US` 显示偏好；`i18n/` 集中维护翻译键与插值，不让组件散落硬编码文案。`AppProviders` 同步 `<html lang>`，保证屏幕阅读器使用正确语言。

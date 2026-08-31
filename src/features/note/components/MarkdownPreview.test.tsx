@@ -1,6 +1,14 @@
 import { render } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MarkdownPreview } from "./MarkdownPreview";
+
+const assetUrlMock = vi.hoisted(() => vi.fn((path: string) => `asset://${path}`));
+
+beforeEach(() => {
+  assetUrlMock.mockClear();
+});
+
+vi.mock("@/api", () => ({ assetUrl: assetUrlMock }));
 
 describe("MarkdownPreview data-line", () => {
   it("为块级元素注入 data-line（Markdown 起始行号）", () => {
@@ -18,5 +26,25 @@ describe("MarkdownPreview data-line", () => {
 
     const blockquote = container.querySelector("blockquote");
     expect(blockquote?.getAttribute("data-line")).toBe("7");
+  });
+});
+
+describe("MarkdownPreview 本地资产图片渲染（P1-4）", () => {
+  it("仓库相对路径转换为本地资产 URL", () => {
+    const { container } = render(
+      <MarkdownPreview content={"![图](assets/photo.png)"} repoPath="/repo" />
+    );
+    const img = container.querySelector("img");
+    expect(assetUrlMock).toHaveBeenCalledWith("/repo/assets/photo.png");
+    expect(img?.getAttribute("src")).toBe("asset:///repo/assets/photo.png");
+  });
+
+  it("外部 URL 图片保持原样", () => {
+    const { container } = render(
+      <MarkdownPreview content={"![logo](https://example.com/a.png)"} repoPath="/repo" />
+    );
+    const img = container.querySelector("img");
+    expect(img?.getAttribute("src")).toBe("https://example.com/a.png");
+    expect(assetUrlMock).not.toHaveBeenCalled();
   });
 });

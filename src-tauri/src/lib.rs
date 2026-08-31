@@ -53,6 +53,8 @@ pub fn run() {
             commands::auth::validate::validate_token,
             commands::auth::status::auth_status,
             commands::auth::logout::logout,
+            commands::asset::import::import_asset,
+            commands::asset::import_bytes::import_asset_bytes,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AINote");

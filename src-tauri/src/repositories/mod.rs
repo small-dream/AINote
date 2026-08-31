@@ -1,3 +1,4 @@
+pub mod asset_files;
 pub mod file_storage;
 pub mod file_tree;
 pub mod git2_backend;

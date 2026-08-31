@@ -1,8 +1,12 @@
 import ReactMarkdown, { type Components } from "react-markdown";
 import remarkGfm from "remark-gfm";
+import { assetUrl } from "@/api";
+import { resolveLocalAssetPath } from "@/features/asset/utils/asset";
 
 interface MarkdownPreviewProps {
   content: string;
+  /** 活动仓库绝对路径，用于把仓库相对图片路径解析为本地资产 URL（P1-4） */
+  repoPath?: string | null;
 }
 
 /** 为块级元素注入 data-line（Markdown 起始行号），供分栏同步滚动收集锚点 */
@@ -21,10 +25,24 @@ const blockComponents: Components = {
 };
 
 /** Markdown 渲染预览。react-markdown 默认不渲染原始 HTML（当作文本），天然防 XSS（安全红线）。 */
-export function MarkdownPreview({ content }: MarkdownPreviewProps) {
+export function MarkdownPreview({ content, repoPath }: MarkdownPreviewProps) {
+  const components: Components = {
+    ...blockComponents,
+    img: ({ node, src, alt, ...props }) => {
+      const local = resolveLocalAssetPath(repoPath ?? "", src ?? "");
+      return (
+        <img
+          {...props}
+          src={local ? assetUrl(local) : src}
+          alt={alt ?? ""}
+          data-line={node?.position?.start.line}
+        />
+      );
+    },
+  };
   return (
     <article className="markdown-body max-w-3xl">
-      <ReactMarkdown remarkPlugins={[remarkGfm]} components={blockComponents}>
+      <ReactMarkdown remarkPlugins={[remarkGfm]} components={components}>
         {content}
       </ReactMarkdown>
     </article>

@@ -9,6 +9,7 @@ import { useFocusTitleOnLoad } from "../hooks/useEditorFocus";
 import { useEditorExtensions } from "../hooks/useEditorExtensions";
 import { useEditorViewReady } from "../hooks/useEditorViewReady";
 import { useSyncScroll } from "../hooks/useSyncScroll";
+import { useAssetImport } from "@/features/asset/hooks/useAssetImport";
 import { HistoryPanel } from "@/features/history/components/HistoryPanel";
 import { EditorToolbar, type ViewMode } from "./EditorToolbar";
 import { FormatToolbar } from "./FormatToolbar";
@@ -35,9 +36,9 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const { extensions, activeFormats } = useEditorExtensions();
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
+    const asset = useAssetImport(readyView);
     const previewRef = useRef<HTMLDivElement | null>(null);
     useSyncScroll(readyView, previewRef, mode);
-
     useImperativeHandle(ref, () => ({ flush }), [flush]);
 
     if (!notePath) return <EmptyState />;
@@ -45,25 +46,9 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar
-          path={notePath}
-          mode={mode}
-          saving={saving}
-          dirty={dirty}
-          onModeChange={setMode}
-          onSave={flush}
-          onMove={() => onMove(notePath)}
-          onHistory={history.openHistory}
-        />
-        {mode !== "preview" && <FormatToolbar viewRef={viewRef} active={activeFormats} />}
-        <EditorBody
-          mode={mode}
-          draft={draft}
-          onChange={onChange}
-          extensions={extensions}
-          onCreateEditor={handleCreateEditor}
-          previewRef={previewRef}
-        />
+        <EditorToolbar path={notePath} mode={mode} saving={saving} dirty={dirty} onModeChange={setMode} onSave={flush} onMove={() => onMove(notePath)} onHistory={history.openHistory} />
+        {mode !== "preview" && <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={asset.handleFiles} status={asset.status} />}
+        <EditorBody mode={mode} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={handleCreateEditor} previewRef={previewRef} />
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
       </div>
     );
@@ -72,6 +57,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
 interface EditorBodyProps {
   mode: ViewMode;
+  repoPath: string | null;
   draft: string;
   onChange: (value: string) => void;
   extensions: Extension[];
@@ -81,6 +67,7 @@ interface EditorBodyProps {
 
 function EditorBody({
   mode,
+  repoPath,
   draft,
   onChange,
   extensions,
@@ -103,7 +90,7 @@ function EditorBody({
         left={editor}
         right={
           <div ref={previewRef} className="h-full overflow-y-auto p-6">
-            <MarkdownPreview content={draft} />
+            <MarkdownPreview content={draft} repoPath={repoPath} />
           </div>
         }
       />
@@ -112,7 +99,7 @@ function EditorBody({
   if (mode === "preview") {
     return (
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
-        <MarkdownPreview content={draft} />
+        <MarkdownPreview content={draft} repoPath={repoPath} />
       </div>
     );
   }
