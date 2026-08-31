@@ -1,8 +1,8 @@
 import CodeMirror from "@uiw/react-codemirror";
-import { forwardRef, useImperativeHandle, useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { Extension } from "@codemirror/state";
-import type { EditorView } from "@codemirror/view";
+import { EditorView } from "@codemirror/view";
 import { useNoteEditor, type NoteEditorHandle } from "../hooks/useNoteEditor";
 import { useNoteHistory } from "@/features/history/hooks/useNoteHistory";
 import { useFocusTitleOnLoad } from "../hooks/useEditorFocus";
@@ -17,6 +17,8 @@ import { EditorToolbar, type ViewMode } from "./EditorToolbar";
 import { FormatToolbar } from "./FormatToolbar";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { SplitPane } from "./SplitPane";
+import { NoteOutline } from "./NoteOutline";
+import { extractOutline, type OutlineItem } from "../utils/outline";
 import { useTranslation } from "@/i18n";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
@@ -36,23 +38,35 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
   function NoteEditor({ repoPath, notePath, onMove, onOpenNote, focusTitleOnLoad = false }, ref) {
     const history = useNoteHistory();
     const [mode, setMode] = useState<ViewMode>("edit");
+    const [outlineOpen, setOutlineOpen] = useState(false);
     const { draft, onChange, flush, saving, dirty, loadError, saveError } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const { extensions, activeFormats } = useEditorExtensions();
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
+    const outline = useMemo(() => extractOutline(draft), [draft]);
     const asset = useAssetImport(readyView);
     const wiki = useEditorWiki(repoPath, onOpenNote);
     const previewRef = useRef<HTMLDivElement | null>(null);
     useSyncScroll(readyView, previewRef, mode);
     useImperativeHandle(ref, () => ({ flush }), [flush]);
     const handleSave = () => { void flush().catch(() => undefined); };
+    const handleOutlineSelect = (item: OutlineItem) => {
+      if (mode !== "preview" && readyView) {
+        const line = readyView.state.doc.line(Math.min(item.line, readyView.state.doc.lines));
+        readyView.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: "center" }) });
+        readyView.focus();
+      }
+      if (mode !== "edit") scrollPreviewToHeading(previewRef.current, item.id);
+      setOutlineOpen(false);
+    };
 
     if (!notePath) return <EmptyState />;
     if (loadError) return <ErrorState message={loadError.message} />;
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar path={notePath} mode={mode} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} />
+        <EditorToolbar path={notePath} mode={mode} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((open) => !open)} />
+        {outlineOpen ? <NoteOutline items={outline} onSelect={handleOutlineSelect} /> : null}
         {mode !== "preview" && <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={asset.handleFiles} status={asset.status} />}
         <EditorBody mode={mode} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={handleCreateEditor} previewRef={previewRef} onOpenWiki={wiki.handleOpenWiki} />
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
@@ -98,12 +112,17 @@ function EditorBody({ mode, repoPath, draft, onChange, extensions, onCreateEdito
   }
   if (mode === "preview") {
     return (
-      <div className="min-h-0 flex-1 overflow-y-auto p-6">
+      <div ref={previewRef} className="min-h-0 flex-1 overflow-y-auto p-6">
         <MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} />
       </div>
     );
   }
   return <div className="min-h-0 flex-1 overflow-hidden">{editor}</div>;
+}
+
+function scrollPreviewToHeading(preview: HTMLDivElement | null, id: string): void {
+  const heading = preview ? Array.from(preview.querySelectorAll<HTMLElement>("[id]")).find((element) => element.id === id) : null;
+  heading?.scrollIntoView?.({ block: "center" });
 }
 
 function EmptyState() {
