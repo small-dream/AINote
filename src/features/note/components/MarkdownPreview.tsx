@@ -30,7 +30,6 @@ interface MarkdownPreviewProps {
 
 /** 为块级元素注入 data-line（Markdown 起始行号），供分栏同步滚动收集锚点 */
 const blockComponents: Components = {
-  h1: Heading("h1"), h2: Heading("h2"), h3: Heading("h3"), h4: Heading("h4"), h5: Heading("h5"), h6: Heading("h6"),
   p: ({ node, ...props }) => <p data-line={node?.position?.start.line} {...props} />,
   pre: CodeBlock,
   blockquote: CalloutBlockquote,
@@ -41,10 +40,14 @@ const blockComponents: Components = {
 type HeadingProps = ComponentProps<"h1"> & ExtraProps;
 type PreProps = ComponentProps<"pre"> & ExtraProps;
 
-function Heading(tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6"): ComponentType<HeadingProps> {
+function Heading(tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6", ids: Map<string, number>): ComponentType<HeadingProps> {
   return ({ node, children, ...props }: HeadingProps) => {
     const Component = tag;
-    return <Component id={slugifyHeading(textContent(children))} data-line={getNodeLine(node)} {...props}>{children}</Component>;
+    const base = slugifyHeading(textContent(children));
+    const count = ids.get(base) ?? 0;
+    ids.set(base, count + 1);
+    const id = count === 0 ? base : `${base}-${count + 1}`;
+    return <Component id={id} data-line={getNodeLine(node)} {...props}>{children}</Component>;
   };
 }
 
@@ -122,6 +125,7 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki }: MarkdownPrevi
   const document = useMemo(() => parseMarkdownDocument(content), [content]);
   const components = useMemo<Components>(() => ({
     ...blockComponents,
+    ...createHeadingComponents(),
     img: ({ node, src, alt, ...props }) => {
       const local = resolveLocalAssetPath(repoPath ?? "", src ?? "");
       return <PreviewImage src={local ? assetUrl(local) : src} alt={alt ?? ""} line={node?.position?.start.line} {...props} />;
@@ -147,6 +151,11 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki }: MarkdownPrevi
       </ReactMarkdown>
     </article>
   );
+}
+
+function createHeadingComponents(): Pick<Components, "h1" | "h2" | "h3" | "h4" | "h5" | "h6"> {
+  const ids = new Map<string, number>();
+  return { h1: Heading("h1", ids), h2: Heading("h2", ids), h3: Heading("h3", ids), h4: Heading("h4", ids), h5: Heading("h5", ids), h6: Heading("h6", ids) };
 }
 
 function PreviewImage({ src, alt, line, ...props }: { src: string | undefined; alt: string; line?: number | undefined } & Record<string, unknown>) {
