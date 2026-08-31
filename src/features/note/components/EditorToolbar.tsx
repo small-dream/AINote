@@ -1,5 +1,5 @@
 import { Button } from "@/components/atoms/Button";
-import { FilePenLine, FolderInput, Save, Split, Eye, Pencil } from "lucide-react";
+import { FilePenLine, FolderInput, History, Save, Split, Eye, Pencil } from "lucide-react";
 import { useTranslation } from "@/i18n";
 
 export type ViewMode = "edit" | "split" | "preview";
@@ -12,6 +12,7 @@ interface EditorToolbarProps {
   onModeChange: (mode: ViewMode) => void;
   onSave: () => void;
   onMove: () => void;
+  onHistory: () => void;
 }
 
 const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.preview" }[] = [
@@ -21,7 +22,7 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
 ];
 
 /** 笔记操作栏：标题与保存状态、视图切换、文件操作。 */
-export function EditorToolbar({ path, mode, saving, dirty, onModeChange, onSave, onMove }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, saving, dirty, onModeChange, onSave, onMove, onHistory }: EditorToolbarProps) {
   const { t } = useTranslation();
   const status = saving ? t("common.saving") : dirty ? t("note.unsaved") : t("note.saved");
   return (
@@ -42,6 +43,10 @@ export function EditorToolbar({ path, mode, saving, dirty, onModeChange, onSave,
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <ModeTabs mode={mode} onChange={onModeChange} />
+        <Button variant="ghost" aria-label={t("history.title")} title={t("history.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onHistory}>
+          <History size={14} />
+          <span className="hidden xl:inline">{t("history.title")}</span>
+        </Button>
         <Button variant="ghost" aria-label={t("note.moving")} title={t("note.moving")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onMove}>
           <FolderInput size={14} />
           <span className="hidden xl:inline">{t("note.moving")}</span>

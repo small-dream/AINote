@@ -4,10 +4,12 @@ import type { RefObject } from "react";
 import type { Extension } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import { useNoteEditor, type NoteEditorHandle } from "../hooks/useNoteEditor";
+import { useNoteHistory } from "@/features/history/hooks/useNoteHistory";
 import { useFocusTitleOnLoad } from "../hooks/useEditorFocus";
 import { useEditorExtensions } from "../hooks/useEditorExtensions";
 import { useEditorViewReady } from "../hooks/useEditorViewReady";
 import { useSyncScroll } from "../hooks/useSyncScroll";
+import { HistoryPanel } from "@/features/history/components/HistoryPanel";
 import { EditorToolbar, type ViewMode } from "./EditorToolbar";
 import { FormatToolbar } from "./FormatToolbar";
 import { MarkdownPreview } from "./MarkdownPreview";
@@ -27,8 +29,9 @@ interface NoteEditorProps {
 /** 笔记编辑器：格式工具栏 + 编辑/分栏/预览三模式 + 防抖自动保存（P0-2） */
 export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
   function NoteEditor({ repoPath, notePath, onMove, focusTitleOnLoad = false }, ref) {
-    const { draft, onChange, flush, saving, dirty, error } = useNoteEditor(repoPath, notePath);
+    const history = useNoteHistory();
     const [mode, setMode] = useState<ViewMode>("edit");
+    const { draft, onChange, flush, saving, dirty, error } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const { extensions, activeFormats } = useEditorExtensions();
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
@@ -50,6 +53,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
           onModeChange={setMode}
           onSave={flush}
           onMove={() => onMove(notePath)}
+          onHistory={history.openHistory}
         />
         {mode !== "preview" && <FormatToolbar viewRef={viewRef} active={activeFormats} />}
         <EditorBody
@@ -60,6 +64,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
           onCreateEditor={handleCreateEditor}
           previewRef={previewRef}
         />
+        <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
       </div>
     );
   }

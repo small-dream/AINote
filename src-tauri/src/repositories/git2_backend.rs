@@ -3,7 +3,9 @@ use std::path::Path;
 use git2::{Repository, Signature, StatusOptions};
 
 use crate::domain::error::AppError;
+use crate::domain::history::{CommitInfo, FileDiff};
 
+use super::git2_history;
 use super::git2_remote;
 use super::git_backend::GitBackend;
 
@@ -142,5 +144,17 @@ impl GitBackend for Git2Backend {
 
     fn resolve_conflict_theirs(&self, path: &str) -> Result<(), AppError> {
         git2_remote::resolve_conflicts(path, false)
+    }
+
+    fn file_history(&self, path: &str, file: &str, limit: usize) -> Result<Vec<CommitInfo>, AppError> {
+        git2_history::file_history(path, file, limit)
+    }
+
+    fn file_diff(&self, path: &str, file: &str, commit_id: &str) -> Result<FileDiff, AppError> {
+        git2_history::file_diff(path, file, commit_id)
+    }
+
+    fn restore_file(&self, path: &str, file: &str, commit_id: &str) -> Result<(), AppError> {
+        git2_history::restore_file(path, file, commit_id)
     }
 }

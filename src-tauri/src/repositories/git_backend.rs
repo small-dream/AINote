@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::domain::error::AppError;
+use crate::domain::history::{CommitInfo, FileDiff};
 
 /// Git 能力抽象（防腐化关键：Service 只依赖此 trait，不依赖 git2）。
 /// 实现：git2_backend.rs（本地）+ git2_remote.rs（网络）。测试注入 MockGitBackend。
@@ -27,6 +28,12 @@ pub trait GitBackend: Send + Sync {
     fn resolve_conflict_ours(&self, path: &str) -> Result<(), AppError>;
     /// 以远端侧解决全部冲突并完成 merge commit
     fn resolve_conflict_theirs(&self, path: &str) -> Result<(), AppError>;
+    /// 指定文件（相对仓库根）的提交历史，仅含修改过该文件的提交，按时间倒序
+    fn file_history(&self, path: &str, file: &str, limit: usize) -> Result<Vec<CommitInfo>, AppError>;
+    /// 选中提交相对其父提交的单文件 diff
+    fn file_diff(&self, path: &str, file: &str, commit_id: &str) -> Result<FileDiff, AppError>;
+    /// 把文件恢复到指定提交的版本（写入工作区，不提交）
+    fn restore_file(&self, path: &str, file: &str, commit_id: &str) -> Result<(), AppError>;
 }
 
 /// 测试用 Mock：通过字段编排行为，calls 记录调用序列。
@@ -111,6 +118,31 @@ impl GitBackend for MockGitBackend {
 
     fn resolve_conflict_theirs(&self, _path: &str) -> Result<(), AppError> {
         self.record("resolve:theirs".into());
+        Ok(())
+    }
+
+    fn file_history(&self, _path: &str, file: &str, _limit: usize) -> Result<Vec<CommitInfo>, AppError> {
+        self.record(format!("history:{file}"));
+        Ok(vec![CommitInfo {
+            id: "a1b2c3d4".into(),
+            short_id: "a1b2c3d".into(),
+            message: "mock commit".into(),
+            author: "mock".into(),
+            timestamp: 1,
+        }])
+    }
+
+    fn file_diff(&self, _path: &str, file: &str, commit_id: &str) -> Result<FileDiff, AppError> {
+        self.record(format!("diff:{file}@{commit_id}"));
+        Ok(FileDiff {
+            path: file.into(),
+            commit_id: commit_id.into(),
+            lines: vec![],
+        })
+    }
+
+    fn restore_file(&self, _path: &str, file: &str, commit_id: &str) -> Result<(), AppError> {
+        self.record(format!("restore:{file}@{commit_id}"));
         Ok(())
     }
 }

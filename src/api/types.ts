@@ -61,6 +61,32 @@ export interface SearchResult {
   updatedAt: number;
 }
 
+/** git_file_history 返回的单条提交（与 Rust domain/history.rs 一致） */
+export interface CommitInfo {
+  id: string;
+  shortId: string;
+  message: string;
+  author: string;
+  /** 提交时间（Unix 秒） */
+  timestamp: number;
+}
+
+/** diff 行类型 */
+export type DiffLineKind = "added" | "removed" | "context";
+
+/** git_file_diff 返回的单行（text 不含 +/- 前缀） */
+export interface DiffLine {
+  kind: DiffLineKind;
+  text: string;
+}
+
+/** git_file_diff 返回：选中提交相对其父提交的单文件 diff */
+export interface FileDiff {
+  path: string;
+  commitId: string;
+  lines: DiffLine[];
+}
+
 /** list_repos 返回的单仓库信息 */
 export interface RepoInfo {
   id: string;
