@@ -1,5 +1,4 @@
 import { useEffect, useRef, useState } from "react";
-import mermaid from "mermaid";
 import { useTranslation } from "@/i18n";
 
 interface MermaidBlockProps {
@@ -14,9 +13,11 @@ export function MermaidBlock({ source, line }: MermaidBlockProps) {
 
   useEffect(() => {
     let active = true;
-    mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "base" });
     const id = `mermaid-${Date.now()}-${Math.random().toString(36).slice(2)}`;
-    void mermaid.render(id, source).then(({ svg }) => {
+    void import("mermaid").then(({ default: mermaid }) => {
+      mermaid.initialize({ startOnLoad: false, securityLevel: "strict", theme: "base" });
+      return mermaid.render(id, source);
+    }).then(({ svg }) => {
       if (active && ref.current) ref.current.innerHTML = svg;
     }).catch(() => {
       if (active) setError(true);
