@@ -36,7 +36,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
   function NoteEditor({ repoPath, notePath, onMove, onOpenNote, focusTitleOnLoad = false }, ref) {
     const history = useNoteHistory();
     const [mode, setMode] = useState<ViewMode>("edit");
-    const { draft, onChange, flush, saving, dirty, error } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
+    const { draft, onChange, flush, saving, dirty, loadError, saveError } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const { extensions, activeFormats } = useEditorExtensions();
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
@@ -45,13 +45,14 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const previewRef = useRef<HTMLDivElement | null>(null);
     useSyncScroll(readyView, previewRef, mode);
     useImperativeHandle(ref, () => ({ flush }), [flush]);
+    const handleSave = () => { void flush().catch(() => undefined); };
 
     if (!notePath) return <EmptyState />;
-    if (error) return <ErrorState message={error.message} />;
+    if (loadError) return <ErrorState message={loadError.message} />;
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar path={notePath} mode={mode} saving={saving} dirty={dirty} onModeChange={setMode} onSave={flush} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} />
+        <EditorToolbar path={notePath} mode={mode} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} />
         {mode !== "preview" && <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={asset.handleFiles} status={asset.status} />}
         <EditorBody mode={mode} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={handleCreateEditor} previewRef={previewRef} onOpenWiki={wiki.handleOpenWiki} />
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />

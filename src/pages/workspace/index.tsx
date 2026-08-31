@@ -17,8 +17,8 @@ export function WorkspacePage() {
   const editorRef = useRef<NoteEditorHandle>(null);
   const actions = useWorkspaceActions(repoPath, handleSelect);
 
-  function handleSelect(path: string) {
-    editorRef.current?.flush();
+  async function handleSelect(path: string) {
+    await editorRef.current?.flush();
     openNote(path);
   }
 

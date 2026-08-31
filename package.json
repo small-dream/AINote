@@ -1,7 +1,7 @@
 {
   "name": "ainote",
   "private": true,
-  "version": "0.3.1",
+  "version": "0.4.0",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
@@ -17,8 +17,11 @@
     "release:check": "node scripts/check-release-version.mjs"
   },
   "dependencies": {
+    "@codemirror/autocomplete": "^6.20.3",
+    "@codemirror/commands": "^6.11.0",
     "@codemirror/lang-markdown": "^6.5.2",
     "@codemirror/language": "^6.12.4",
+    "@codemirror/search": "^6.7.1",
     "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.9",
     "@lezer/common": "^1.5.2",

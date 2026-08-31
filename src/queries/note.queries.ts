@@ -5,7 +5,7 @@ import { useWorkspaceActivityStore } from "@/stores/workspace-activity.store";
 
 export const noteKeys = {
   list: (repoPath: string | null) => ["notes", repoPath] as const,
-  content: (path: string | null) => ["note-content", path] as const,
+  content: (repoPath: string | null, path: string | null) => ["note-content", repoPath, path] as const,
 };
 
 /** 笔记列表（服务端/Git 状态的唯一权威来源） */
@@ -20,7 +20,7 @@ export function useNoteListQuery(repoPath: string | null) {
 /** 单篇笔记完整内容 */
 export function useNoteContentQuery(repoPath: string | null, path: string | null) {
   return useQuery({
-    queryKey: noteKeys.content(path),
+    queryKey: noteKeys.content(repoPath, path),
     queryFn: () => noteApi.read(path as string),
     enabled: repoPath !== null && path !== null,
   });
@@ -40,7 +40,7 @@ export function useCreateNoteMutation() {
     onSuccess: (_note, { path }) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
-      void queryClient.removeQueries({ queryKey: noteKeys.content(path) });
+      void queryClient.removeQueries({ queryKey: ["note-content"] });
       void syncApi.commit(`note: create ${path}`).finally(() => {
         void queryClient.invalidateQueries({ queryKey: ["sync"] });
       });
@@ -49,18 +49,18 @@ export function useCreateNoteMutation() {
 }
 
 /** 更新笔记内容（防抖自动保存由 Hook 层调用） */
-export function useUpdateNoteMutation() {
+export function useUpdateNoteMutation(repoPath: string | null = null) {
   const queryClient = useQueryClient();
   const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
   return useMutation({
     mutationFn: ({ path, content }: { path: string; content: string }) =>
       noteApi.update(path, content),
-    onSuccess: (_data, { path }) => {
+    onSuccess: (_data, { path, content }) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       markActivity();
-      void queryClient.setQueryData(noteKeys.content(path), (old: NoteContent | undefined) =>
-        old ? { ...old } : old
+      void queryClient.setQueryData(noteKeys.content(repoPath, path), (old: NoteContent | undefined) =>
+        old ? { ...old, content } : { path, content }
       );
     },
   });
@@ -82,7 +82,7 @@ export function useDeleteNoteMutation(onDeleted?: (path: string) => void) {
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       markActivity();
-      void queryClient.removeQueries({ queryKey: noteKeys.content(path) });
+      void queryClient.removeQueries({ queryKey: ["note-content"] });
       onDeleted?.(path);
     },
   });

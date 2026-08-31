@@ -48,6 +48,12 @@ jobs:
           release_body=$(cat <<'EOF'
           ## 更新内容
 
+          - Markdown 编辑器 P0 升级：查找/替换、撤销/重做、括号匹配、自动闭合、长行换行与列表续写。
+          - 保存可靠性升级：保存成功前保留未保存状态，失败可重试，切换笔记前等待异步保存完成。
+          - 多仓库缓存隔离：笔记内容缓存按仓库与路径区分，避免同路径串读。
+          - 编辑/分栏/预览切换采用标准 Tabs 语义并支持键盘方向键。
+          - 新增编辑器体验专项路线图 `docs/EDITOR_EXPERIENCE_PLAN.md`。
+
           - 新增全文搜索与 Cmd+K 命令面板：一键定位任意笔记（标题 + 正文，标题命中优先）。
           - 新增 Git 版本历史 / Diff / 回滚：查看单篇笔记提交历史、对比改动、一键恢复历史版本。
           - 新增图片/附件管理：拖放或工具栏选择导入到 `assets/`，自动插入 Markdown 引用并即时提交。
@@ -56,6 +62,12 @@ jobs:
           - 新增软删除回收站：删除笔记/目录移入回收站（随仓库 Git 同步），可恢复 / 彻底删除 / 清空。
 
           ## What's new
+
+          - Markdown editor P0 upgrade: find/replace, undo/redo, bracket matching, auto-closing, line wrapping, and list continuation.
+          - Hardened save reliability: dirty state is preserved until a successful save, failures can be retried, and note switching awaits async flush.
+          - Isolated multi-repository note caches by repository and path.
+          - Standardized Edit/Split/Preview tabs with keyboard arrow navigation.
+          - Added the editor experience roadmap at `docs/EDITOR_EXPERIENCE_PLAN.md`.
 
           - Added full-text search and a Cmd+K command palette to jump to any note (title + body, title hits ranked first).
           - Added Git version history, per-file diff, and one-click rollback to any historical version.

@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { historyApi, syncApi } from "@/api";
 import type { CommitInfo, FileDiff } from "@/api/types";
-import { noteKeys } from "./note.queries";
 
 /** 历史查询键：repo + 文件路径 */
 export const historyKeys = {
@@ -39,7 +38,7 @@ export function useRestoreFileMutation() {
     mutationFn: ({ file, commitId }: { file: string; commitId: string }) =>
       historyApi.restore(file, commitId),
     onSuccess: (_data, { file }) => {
-      void queryClient.invalidateQueries({ queryKey: noteKeys.content(file) });
+      void queryClient.invalidateQueries({ queryKey: ["note-content"] });
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
       void syncApi.commit(`note: restore ${file}`).finally(() => {
