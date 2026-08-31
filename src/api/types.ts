@@ -49,6 +49,18 @@ export interface RepoPathDto {
   repoPath: string;
 }
 
+/** search_notes 返回的单条搜索结果（与 Rust domain/search.rs 一致） */
+export interface SearchResult {
+  /** 相对仓库根目录的路径，如 "daily/2026-08-30.md" */
+  path: string;
+  title: string;
+  /** 首个命中行附近的上下文片段 */
+  snippet: string;
+  /** 首个命中所在行号（1 起） */
+  line: number;
+  updatedAt: number;
+}
+
 /** list_repos 返回的单仓库信息 */
 export interface RepoInfo {
   id: string;

@@ -5,5 +5,6 @@ pub mod delete_folder;
 pub mod list;
 pub mod r#move;
 pub mod read;
+pub mod search;
 pub mod tree;
 pub mod update;

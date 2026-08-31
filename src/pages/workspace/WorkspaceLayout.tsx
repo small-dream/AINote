@@ -8,6 +8,7 @@ import {
 } from "@/features/note/components/NoteEditor";
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
 import { WorkspaceNavRail } from "./WorkspaceNavRail";
+import { CommandPalette } from "@/features/search/components/CommandPalette";
 import type { WorkspaceActions } from "./useWorkspaceActions";
 import { useTranslation } from "@/i18n";
 
@@ -47,6 +48,14 @@ export function WorkspaceLayout({
         />
       </main>
       <LayoutDialogs actions={actions} onMoved={onMoved} />
+      <CommandPalette
+        repoPath={repoPath}
+        actions={{
+          onOpenNote: onSelect,
+          onNewNote: () => actions.requestNew(""),
+          onNewFolder: () => actions.requestNewFolder(""),
+        }}
+      />
     </div>
   );
 }

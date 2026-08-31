@@ -121,6 +121,7 @@ AINote/
 │   │   │   └── types.ts
 │   │   ├── file-tree/
 │   │   ├── sync/
+│   │   ├── search/              # 全文搜索 + Cmd+K 命令面板
 │   │   ├── auth/                 # 登录（Token 校验/保存）
 │   │   └── repo/                 # 绑定/创建仓库
 │   ├── components/               # 业务无关组件
@@ -129,8 +130,8 @@ AINote/
 │   ├── api/                      # IPC Client, 一领域一文件
 │   │   ├── client.ts             # invoke 薄封装 + 错误统一转换
 │   │   ├── types.ts              # 与 Rust DTO 结构一致的镜像类型
-│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts
-│   ├── stores/                   # Zustand, 按领域切片
+│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts / search.api.ts
+│   ├── stores/                   # Zustand, 按领域切片（session / ui / command-palette …）
 │   ├── queries/                  # TanStack Query hooks (服务端/Git 状态)
 │   ├── hooks/                    # 跨领域通用 hooks（useNetworkStatus 等）
 │   ├── lib/                      # 纯工具函数, 无 React 依赖
@@ -141,7 +142,7 @@ AINote/
 │   │   ├── main.rs               # 仅做 Command 注册, < 50 行
 │   │   ├── commands/             # Controller: 一命令一文件
 │   │   │   ├── mod.rs            # 仅 re-export
-│   │   │   ├── note/             # create.rs / read.rs / update.rs / delete.rs / move.rs / tree.rs / list.rs
+│   │   │   ├── note/             # create.rs / read.rs / update.rs / delete.rs / move.rs / tree.rs / list.rs / search.rs
 │   │   │   ├── git/              # commit.rs / pull.rs / push.rs / status.rs / sync.rs / resolve.rs
 │   │   │   ├── repo/             # bind.rs / create.rs / list.rs / rename.rs / remove.rs / switch.rs / validate.rs / path.rs
 │   │   │   └── auth/             # save_token.rs / validate.rs / status.rs / logout.rs
@@ -161,6 +162,7 @@ AINote/
 - **凭证流**：Token 存本地加密文件；Rust 层在使用时读取并解密，前端永远拿不到明文 Token。
 - **多仓库注册表**：config 维护 `repos` 列表与 `active_repo_id`；活动仓库即各 note/git Command 通过 `config::require_repo_path` 解析的当前仓库，切换活动仓库后工作区以 `workspaceEpoch` 触发整页重挂载加载新仓库。移除活动仓库后自动切换剩余仓库；旧版单仓库 `repoPath` 配置在加载时自动迁移。
 - **登录态**：`has_token` 这类非敏感状态存于 app config，路由守卫不直接解密 token。
+- **全文搜索与命令面板**：`features/search` 提供 Cmd+K 命令面板；输入经 150ms 防抖后调用 `search_notes`（Rust 侧 `spawn_blocking` 扫描仓库 Markdown 文件，忽略大小写匹配标题 + 正文，标题命中优先，最多 30 条，返回行号与上下文片段）。面板开关/查询/选择为全局 UI 态，存于 `stores/command-palette.store.ts`（Zustand）；搜索结果走 TanStack Query 缓存。
 - **长耗时 IPC**：Git / 文件 / 网络类 Command 统一通过 `async command + spawn_blocking` 执行，避免阻塞前端渲染与交互。
 - **软件更新链路**：`features/update` → `src/api/update.api.ts` → Tauri updater 插件 → GitHub Releases。更新状态为局部 UI 态，不写入 Zustand 或业务仓库；私钥只存在 GitHub Actions Secret。
 - **界面语言**：`stores/ui.store.ts` 持久化 `zh-CN` / `en-US` 显示偏好；`i18n/` 集中维护翻译键与插值，不让组件散落硬编码文案。`AppProviders` 同步 `<html lang>`，保证屏幕阅读器使用正确语言。

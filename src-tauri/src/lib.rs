@@ -31,6 +31,7 @@ pub fn run() {
             commands::note::r#move::move_note,
             commands::note::tree::note_tree,
             commands::note::list::list_notes,
+            commands::note::search::search_notes,
             commands::git::commit::git_commit,
             commands::git::pull::git_pull,
             commands::git::push::git_push,
