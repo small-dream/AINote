@@ -85,6 +85,7 @@ function EditorBody({
     <CodeMirror
       className="h-full"
       value={draft}
+      theme="none"
       onChange={onChange}
       extensions={extensions}
       onCreateEditor={onCreateEditor}
