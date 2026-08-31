@@ -1,6 +1,6 @@
 # AINote Release 发布步骤与规范
 
-本流程参考 AISwitch 的发布设计：先创建唯一 Draft Release，再由 macOS（Apple Silicon）、Linux、Windows 并行上传安装包和 updater 签名清单，全部成功后才公开 Release。Intel macOS 目标待可用的 macOS Intel runner 配置后再加入矩阵。
+本流程参考 AISwitch 的发布设计：先创建唯一 Draft Release，再由 macOS（仅 Apple Silicon）、Linux、Windows 并行上传安装包和 updater 签名清单，全部成功后才公开 Release。AINote 暂不提供 Intel macOS 安装包。
 
 ## 一次性配置
 
@@ -16,9 +16,26 @@
 1. 从 `main` 创建发布 PR，更新 `package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml` 三处版本，并更新变更日志。
 2. 本地执行 `pnpm build && pnpm test && pnpm lint && (cd src-tauri && cargo test)`。
 3. 创建并推送 SemVer 标签：`git tag vMAJOR.MINOR.PATCH && git push origin vMAJOR.MINOR.PATCH`。标签必须与三处版本完全一致。
-4. GitHub Actions 自动校验版本，创建/复用同标签 Draft Release，并执行四平台构建。不要手动上传未签名或未校验的安装包。
+4. GitHub Actions 自动校验版本，创建/复用同标签 Draft Release，并执行 Apple Silicon macOS、Linux、Windows 构建。不要手动上传未签名或未校验的安装包。
 5. 检查所有矩阵任务成功，确认 Release 包含 `latest.json` 及各平台 `.app.tar.gz`、`.AppImage`、`.deb`、`.msi`/`.exe` 资产；再由 `publish-release` 自动公开 Release。
 6. 在干净环境安装每个平台包，启动 AINote，进入「设置 → 软件更新」，验证能发现新版本、下载、安装并自动重启。
+
+## macOS 安装提示
+
+GitHub 提供的 macOS DMG 仅面向 Apple Silicon（Apple 芯片）Mac，且未使用 Apple Developer ID 签名与公证。首次打开时，macOS 可能提示“无法验证开发者”或“应用已损坏”，这是系统的 Gatekeeper 安全提示，不代表安装包下载不完整。
+
+安装步骤：
+
+1. 将 `AINote.app` 拖入“应用程序”目录。
+2. 若双击仍提示“应用已损坏”，打开“终端”执行：
+
+   ```bash
+   xattr -cr /Applications/AINote.app
+   ```
+
+3. 回到“应用程序”目录，右键 AINote.app，选择“打开”，并在系统提示中确认。
+
+也可以在“系统设置 → 隐私与安全性”中点击“仍要打开”。请确认下载来源为本项目 GitHub Releases，并只对你信任的安装包执行上述命令。
 
 ## 版本、签名与回滚规范
 

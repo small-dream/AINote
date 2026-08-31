@@ -45,11 +45,43 @@ jobs:
           TAG: ${{ steps.vars.outputs.tag }}
           REPO: ${{ github.repository }}
         run: |
+          release_body=$(cat <<'EOF'
+          ## 更新内容
+
+          - 新增简体中文与 English 界面切换，可在设置中即时切换并在重启后保持。
+          - 统一应用界面文案与无障碍标签的中英文翻译。
+
+          ## What's new
+
+          - Added Simplified Chinese and English interface switching in Settings, with the preference preserved after restart.
+          - Localized application copy and accessibility labels consistently in both languages.
+
+          ## 安装与更新
+
+          - Windows：下载 `.msi` 或 `.exe` 安装包。
+          - macOS：Apple Silicon（Apple 芯片）Mac 下载 `.dmg` 安装包。
+          - Linux：下载 `.AppImage`、`.deb` 或 `.rpm` 安装包。
+          - 本版本支持应用内更新；可在 **设置 → 软件更新** 中检查更新。
+          - macOS 安装包未签名。若浏览器下载后显示“已损坏”，将应用移至“应用程序”目录后执行 `xattr -cr /Applications/AINote.app`。
+          - Windows 安装包未签名，首次运行时可能出现 SmartScreen 提示；请确认下载来源为本 Release 页面。
+
+          ---
+
+          ## Install and update
+
+          - Windows: download the `.msi` or `.exe` installer.
+          - macOS: Apple Silicon Macs should download the `.dmg` installer.
+          - Linux: download the `.AppImage`, `.deb`, or `.rpm` package.
+          - In-app updates are available in **Settings → Software Updates**.
+          - The macOS package is unsigned. If macOS says the browser-downloaded app is damaged, move it to Applications and run `xattr -cr /Applications/AINote.app`.
+          - The Windows package is unsigned. SmartScreen may appear on first launch; verify that you downloaded it from this Release page.
+          EOF
+          )
           release_id=$(gh api "repos/$REPO/releases/tags/$TAG" --jq '.id' 2>/dev/null | grep -E '^[0-9]+$' || true)
           if [ -z "$release_id" ]; then
-            release_id=$(gh api --method POST "repos/$REPO/releases" -f tag_name="$TAG" -f name="AINote $TAG" -f body="安装包与 updater 签名清单由 CI 生成。" -F draft=true --jq '.id')
+            release_id=$(gh api --method POST "repos/$REPO/releases" -f tag_name="$TAG" -f name="AINote $TAG" -f body="$release_body" -F draft=true --jq '.id')
           else
-            gh api --method PATCH "repos/$REPO/releases/$release_id" -F draft=true >/dev/null
+            gh api --method PATCH "repos/$REPO/releases/$release_id" -F draft=true -f body="$release_body" >/dev/null
           fi
           echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
 
