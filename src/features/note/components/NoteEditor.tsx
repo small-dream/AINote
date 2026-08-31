@@ -41,11 +41,11 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const [outlineOpen, setOutlineOpen] = useState(false);
     const { draft, onChange, flush, saving, dirty, loadError, saveError } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
-    const { extensions, activeFormats } = useEditorExtensions();
+    const wiki = useEditorWiki(repoPath, onOpenNote);
+    const { extensions, activeFormats } = useEditorExtensions(wiki.notes);
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
     const outline = useMemo(() => extractOutline(draft), [draft]);
     const asset = useAssetImport(readyView);
-    const wiki = useEditorWiki(repoPath, onOpenNote);
     const previewRef = useRef<HTMLDivElement | null>(null);
     useSyncScroll(readyView, previewRef, mode);
     useImperativeHandle(ref, () => ({ flush }), [flush]);

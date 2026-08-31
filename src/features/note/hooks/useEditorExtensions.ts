@@ -8,10 +8,13 @@ import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirro
 import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
 import { bracketMatching, indentOnInput } from "@codemirror/language";
 import { useUiStore } from "@/stores/ui.store";
+import type { NoteWikiDto } from "@/api/types";
+import { autocompletion, type CompletionContext } from "@codemirror/autocomplete";
 import { dispatchFormat, dispatchLink } from "./useFormatCommands";
 import { getActiveFormats, toggleInline } from "../utils/format";
 import { getListContinuation } from "../utils/markdownInput";
 import { getAinoteEditorTheme } from "./editorTheme";
+import { buildCompletions, getCompletionContext } from "../utils/completion";
 
 /** 格式化快捷键（与工具栏按钮共用 dispatchFormat 逻辑） */
 const formatKeymap = Prec.high(
@@ -50,7 +53,7 @@ const markdownInputKeymap = Prec.high(
 );
 
 /** 编辑器扩展集合 + 光标激活格式集合（选择/文档变化时经 updateListener 刷新） */
-export function useEditorExtensions(): { extensions: Extension[]; activeFormats: Set<string> } {
+export function useEditorExtensions(notes: NoteWikiDto[] = []): { extensions: Extension[]; activeFormats: Set<string> } {
   const [activeFormats, setActiveFormats] = useState<Set<string>>(() => new Set());
   const theme = useUiStore((s) => s.theme);
   const extensions = useMemo(
@@ -64,6 +67,7 @@ export function useEditorExtensions(): { extensions: Extension[]; activeFormats:
       bracketMatching(),
       indentOnInput(),
       EditorView.lineWrapping,
+      autocompletion({ override: [(context) => completionSource(context, notes)] }),
       keymap.of([
         ...closeBracketsKeymap,
         ...defaultKeymap,
@@ -79,7 +83,13 @@ export function useEditorExtensions(): { extensions: Extension[]; activeFormats:
         }
       }),
     ],
-    [theme]
+    [theme, notes]
   );
   return { extensions, activeFormats };
+}
+
+function completionSource(context: CompletionContext, notes: Parameters<typeof buildCompletions>[0]) {
+  const info = getCompletionContext(context.state, context.pos);
+  if (!info) return null;
+  return { from: info.from, options: buildCompletions(notes, info), validFor: /^[\p{L}\p{N}_/-]*$/u };
 }

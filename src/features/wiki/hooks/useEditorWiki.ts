@@ -17,6 +17,7 @@ export function useEditorWiki(repoPath: string | null, onOpenNote: (path: string
   );
 
   return {
+    notes,
     open,
     openPanel: () => setOpen(true),
     closePanel: () => setOpen(false),
