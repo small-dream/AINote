@@ -18,6 +18,7 @@ import { parseMarkdownDocument, remarkCallouts, remarkRemoveFrontmatter, type Ca
 import { slugifyHeading, textContent } from "../utils/preview";
 import { useTranslation } from "@/i18n";
 import { MarkdownProperties } from "./MarkdownProperties";
+import { MermaidBlock } from "./MermaidBlock";
 
 interface MarkdownPreviewProps {
   content: string;
@@ -52,6 +53,9 @@ function CodeBlock({ node, children, ...props }: PreProps) {
   const [copied, setCopied] = useState(false);
   const code = textContent(children).replace(/\n$/, "");
   const language = getLanguage(children);
+  if (language?.toLocaleLowerCase() === "mermaid") {
+    return <MermaidBlock source={code} line={getNodeLine(node)} />;
+  }
   const handleCopy = async () => {
     try {
       await navigator.clipboard.writeText(code);

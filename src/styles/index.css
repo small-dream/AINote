@@ -294,6 +294,18 @@ pre,
 .markdown-callout-tip { border-color: color-mix(in srgb, var(--success) 45%, var(--border)); }
 .markdown-callout-warning { border-color: color-mix(in srgb, var(--warning) 55%, var(--border)); }
 .markdown-callout-danger { border-color: color-mix(in srgb, var(--danger) 55%, var(--border)); }
+.markdown-mermaid {
+  margin: 0.8em 0;
+  overflow-x: auto;
+  padding: 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  text-align: center;
+}
+.markdown-mermaid svg { max-width: 100%; height: auto; }
+.markdown-mermaid-error { color: var(--danger); text-align: left; }
+.markdown-mermaid-error pre { margin-top: 0.5rem; }
 .markdown-code-toolbar button:hover { color: var(--accent); }
 .markdown-code-block .hljs-comment,
 .markdown-code-block .hljs-quote { color: var(--text-tertiary); }

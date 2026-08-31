@@ -128,4 +128,9 @@ describe("MarkdownPreview properties and callouts", () => {
     expect(container.querySelector(".katex")).toBeTruthy();
     expect(container.querySelector(".katex-display")).toBeTruthy();
   });
+
+  it("识别 Mermaid 代码块", () => {
+    const { container } = render(<MarkdownPreview content={"```mermaid\ngraph TD\n A-->B\n```"} />);
+    expect(container.querySelector(".markdown-mermaid")).toBeTruthy();
+  });
 });

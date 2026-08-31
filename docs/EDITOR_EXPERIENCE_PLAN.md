@@ -100,7 +100,7 @@ AINote 的核心体验目标是：用户打开一篇笔记后，可以立即、�
 3. [x] Frontmatter/Properties 展示：读取文档顶部 YAML，展示标量与简单数组字段；复杂对象不参与展示/索引。
 4. [x] Callout（note、tip、warning、danger）统一 AST 转换和主题样式。
 5. [x] 数学公式（块级和行内），使用 `remark-math` + `rehype-katex`，样式随预览主题加载。
-6. [ ] Mermaid 图表，渲染失败时显示源代码和错误原因。
+6. [x] Mermaid 图表，渲染失败时显示源代码和错误原因；启用 Mermaid strict 安全级别。
 7. [x] 图片懒加载、加载失败状态和路径提示。
 
 本批实现使用 `rehype-highlight` + `highlight.js`，标题锚点、代码复制、表格滚动和图片加载状态已接入 `MarkdownPreview`。当前阶段新增 `remark-frontmatter` + `yaml`，并通过 `remarkCallouts` / `remarkRemoveFrontmatter` 建立统一转换入口；原始 HTML 仍默认不解析。
