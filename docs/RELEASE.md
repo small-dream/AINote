@@ -1,6 +1,6 @@
 # AINote Release 发布步骤与规范
 
-本流程参考 AISwitch 的发布设计：先创建唯一 Draft Release，再由 macOS（Intel/Apple Silicon）、Linux、Windows 并行上传安装包和 updater 签名清单，全部成功后才公开 Release。
+本流程参考 AISwitch 的发布设计：先创建唯一 Draft Release，再由 macOS（Apple Silicon）、Linux、Windows 并行上传安装包和 updater 签名清单，全部成功后才公开 Release。Intel macOS 目标待可用的 macOS Intel runner 配置后再加入矩阵。
 
 ## 一次性配置
 
