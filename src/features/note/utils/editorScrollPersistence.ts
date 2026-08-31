@@ -4,7 +4,7 @@ import type { EditorPreferences } from "./editorPreferences";
 export function attachEditorScrollPersistence(
   view: EditorView,
   preview: HTMLDivElement | null,
-  preferences: EditorPreferences,
+  preferences: Pick<EditorPreferences, "editorScrollTop" | "previewScrollTop">,
   onEditorScroll: (value: number) => void,
   onPreviewScroll: (value: number) => void,
 ): () => void {

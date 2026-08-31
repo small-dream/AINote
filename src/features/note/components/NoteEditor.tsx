@@ -52,8 +52,8 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const outline = useMemo(() => extractOutline(draft), [draft]);
     const asset = useAssetImport(readyView);
     const previewRef = useRef<HTMLDivElement | null>(null);
-    const mode = editorPreferences.preferences.mode;
-    useEffect(() => readyView ? attachEditorScrollPersistence(readyView, previewRef.current, editorPreferences.preferences, editorPreferences.setEditorScrollTop, editorPreferences.setPreviewScrollTop) : undefined, [readyView, editorPreferences.preferences, editorPreferences.setEditorScrollTop, editorPreferences.setPreviewScrollTop]);
+    const { mode, editorScrollTop, previewScrollTop } = editorPreferences.preferences;
+    useEffect(() => readyView ? attachEditorScrollPersistence(readyView, previewRef.current, { editorScrollTop, previewScrollTop }, editorPreferences.setEditorScrollTop, editorPreferences.setPreviewScrollTop) : undefined, [readyView, mode, editorScrollTop, previewScrollTop, editorPreferences.setEditorScrollTop, editorPreferences.setPreviewScrollTop]);
     useSyncScroll(readyView, previewRef, mode);
     useImperativeHandle(ref, () => ({
       flush,

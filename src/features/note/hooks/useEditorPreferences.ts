@@ -1,22 +1,45 @@
-import { useCallback, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { EditorPreferences } from "../utils/editorPreferences";
 import { readEditorPreferences, writeEditorPreferences } from "../utils/editorPreferences";
 
 export function useEditorPreferences(repoPath: string | null, notePath: string | null) {
-  const [, setRevision] = useState(0);
-  const preferences = readEditorPreferences(repoPath, notePath);
+  const preferenceKey = `${repoPath ?? ""}\u0000${notePath ?? ""}`;
+  const [stored, setStored] = useState(() => ({
+    key: preferenceKey,
+    value: readEditorPreferences(repoPath, notePath),
+  }));
+  const preferences = useMemo(
+    () => stored.key === preferenceKey ? stored.value : readEditorPreferences(repoPath, notePath),
+    [preferenceKey, repoPath, notePath, stored]
+  );
 
   const update = useCallback((patch: Partial<EditorPreferences>) => {
     const next = { ...readEditorPreferences(repoPath, notePath), ...patch };
     writeEditorPreferences(repoPath, notePath, next);
-    setRevision((value) => value + 1);
+    setStored({ key: preferenceKey, value: next });
+  }, [preferenceKey, repoPath, notePath]);
+
+  const persistScroll = useCallback((patch: Partial<EditorPreferences>) => {
+    const next = { ...readEditorPreferences(repoPath, notePath), ...patch };
+    writeEditorPreferences(repoPath, notePath, next);
   }, [repoPath, notePath]);
+
+  const setMode = useCallback((mode: EditorPreferences["mode"]) => update({ mode }), [update]);
+  const setRatio = useCallback((ratio: number) => update({ ratio }), [update]);
+  const setEditorScrollTop = useCallback(
+    (editorScrollTop: number) => persistScroll({ editorScrollTop }),
+    [persistScroll]
+  );
+  const setPreviewScrollTop = useCallback(
+    (previewScrollTop: number) => persistScroll({ previewScrollTop }),
+    [persistScroll]
+  );
 
   return {
     preferences,
-    setMode: (mode: EditorPreferences["mode"]) => update({ mode }),
-    setRatio: (ratio: number) => update({ ratio }),
-    setEditorScrollTop: (editorScrollTop: number) => update({ editorScrollTop }),
-    setPreviewScrollTop: (previewScrollTop: number) => update({ previewScrollTop }),
+    setMode,
+    setRatio,
+    setEditorScrollTop,
+    setPreviewScrollTop,
   };
 }

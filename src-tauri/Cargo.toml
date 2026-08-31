@@ -1,6 +1,6 @@
 [package]
 name = "ainote-core"
-version = "0.5.0"
+version = "0.5.1"
 edition = "2021"
 description = "AINote - Git-native cross-platform markdown notes"
 
