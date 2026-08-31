@@ -223,6 +223,11 @@ pre,
 .markdown-body ul { list-style: disc; }
 .markdown-body ol { list-style: decimal; }
 .markdown-body a { color: var(--accent); text-decoration: underline; }
+.markdown-body .wiki-link { text-decoration-style: solid; text-decoration-thickness: 1px; text-underline-offset: 2px; }
+.markdown-body .wiki-link-unresolved {
+  color: var(--warning);
+  text-decoration-style: dashed;
+}
 .markdown-body code {
   padding: 0.15em 0.35em;
   border-radius: 4px;

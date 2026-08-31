@@ -2,6 +2,7 @@ import CodeMirror from "@uiw/react-codemirror";
 import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 import type { RefObject } from "react";
 import type { Extension } from "@codemirror/state";
+import type { NoteWikiDto } from "@/api/types";
 import { EditorView } from "@codemirror/view";
 import { useNoteEditor, type NoteEditorHandle } from "../hooks/useNoteEditor";
 import { useNoteHistory } from "@/features/history/hooks/useNoteHistory";
@@ -68,7 +69,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
         <EditorToolbar path={notePath} mode={mode} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((open) => !open)} />
         {outlineOpen ? <NoteOutline items={outline} onSelect={handleOutlineSelect} /> : null}
         {mode !== "preview" && <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={asset.handleFiles} status={asset.status} />}
-        <EditorBody mode={mode} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={handleCreateEditor} previewRef={previewRef} onOpenWiki={wiki.handleOpenWiki} />
+        <EditorBody mode={mode} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={handleCreateEditor} previewRef={previewRef} onOpenWiki={wiki.handleOpenWiki} wikiNotes={wiki.notes} />
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
         <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
       </div>
@@ -85,9 +86,10 @@ interface EditorBodyProps {
   onCreateEditor: (view: EditorView) => void;
   previewRef: RefObject<HTMLDivElement | null>;
   onOpenWiki: (name: string) => void;
+  wikiNotes: NoteWikiDto[];
 }
 
-function EditorBody({ mode, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki }: EditorBodyProps) {
+function EditorBody({ mode, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes }: EditorBodyProps) {
   const editor = (
     <CodeMirror
       className="h-full"
@@ -104,7 +106,7 @@ function EditorBody({ mode, repoPath, draft, onChange, extensions, onCreateEdito
         left={editor}
         right={
           <div ref={previewRef} className="h-full overflow-y-auto p-6">
-            <MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} />
+            <MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} />
           </div>
         }
       />
@@ -113,7 +115,7 @@ function EditorBody({ mode, repoPath, draft, onChange, extensions, onCreateEdito
   if (mode === "preview") {
     return (
       <div ref={previewRef} className="min-h-0 flex-1 overflow-y-auto p-6">
-        <MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} />
+        <MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} />
       </div>
     );
   }

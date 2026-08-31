@@ -78,6 +78,16 @@ describe("MarkdownPreview 双链渲染（P1-5）", () => {
     );
     expect(container.querySelector(".wiki-link")).toBeNull();
   });
+
+  it("根据索引标记未解析双链并提供状态提示", () => {
+    const { container } = render(
+      <MarkdownPreview content={"[[已存在]] [[待创建]]"} wikiNotes={[{ path: "exists.md", title: "已存在", tags: [], links: [] }]} />
+    );
+    expect(container.querySelector(".wiki-link:not(.wiki-link-unresolved)")?.textContent).toBe("已存在");
+    const unresolved = container.querySelector(".wiki-link-unresolved");
+    expect(unresolved?.textContent).toBe("待创建");
+    expect(unresolved?.getAttribute("title")).toBe("未创建");
+  });
 });
 
 describe("MarkdownPreview P1 预览增强", () => {

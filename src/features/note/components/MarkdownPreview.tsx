@@ -11,9 +11,11 @@ import { assetUrl } from "@/api";
 import { resolveLocalAssetPath } from "@/features/asset/utils/asset";
 import {
   decodeWikiHref,
+  resolveWikiTarget,
   transformWikiLinks,
   WIKI_PROTOCOL,
 } from "@/features/wiki/utils/wiki";
+import type { NoteWikiDto } from "@/api/types";
 import { parseMarkdownDocument, remarkCallouts, remarkRemoveFrontmatter, type CalloutKind } from "../utils/markdownPipeline";
 import { slugifyHeading, textContent } from "../utils/preview";
 import { useTranslation } from "@/i18n";
@@ -26,6 +28,8 @@ interface MarkdownPreviewProps {
   repoPath?: string | null;
   /** 点击 `[[双链]]` 时回调目标名（P1-5） */
   onOpenWiki?: (name: string) => void;
+  /** 当前仓库索引，用于区分已解析与未解析双链。 */
+  wikiNotes?: NoteWikiDto[];
 }
 
 /** 为块级元素注入 data-line（Markdown 起始行号），供分栏同步滚动收集锚点 */
@@ -104,12 +108,16 @@ function getLanguage(children: ReactNode): string | null {
 }
 
 /** 渲染单个双链：拦截 wiki: 协议链接，点击回调目标名 */
-function WikiLink({ href, children, onOpenWiki }: { href: string; children: React.ReactNode; onOpenWiki?: ((name: string) => void) | undefined }) {
+function WikiLink({ href, children, onOpenWiki, resolved }: { href: string; children: React.ReactNode; onOpenWiki?: ((name: string) => void) | undefined; resolved?: boolean | undefined }) {
+  const { t } = useTranslation();
   const name = decodeWikiHref(href);
+  const unresolved = resolved === false;
   return (
     <a
       href="#"
-      className="wiki-link"
+      className={`wiki-link${unresolved ? " wiki-link-unresolved" : ""}`}
+      aria-label={unresolved ? `${name} · ${t("wiki.notCreated")}` : undefined}
+      title={unresolved ? t("wiki.notCreated") : undefined}
       onClick={(event) => {
         event.preventDefault();
         onOpenWiki?.(name);
@@ -121,7 +129,7 @@ function WikiLink({ href, children, onOpenWiki }: { href: string; children: Reac
 }
 
 /** Markdown 渲染预览。react-markdown 默认不渲染原始 HTML（当作文本），天然防 XSS（安全红线）。 */
-export function MarkdownPreview({ content, repoPath, onOpenWiki }: MarkdownPreviewProps) {
+export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes }: MarkdownPreviewProps) {
   const document = useMemo(() => parseMarkdownDocument(content), [content]);
   const components = useMemo<Components>(() => ({
     ...blockComponents,
@@ -131,13 +139,14 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki }: MarkdownPrevi
       return <PreviewImage src={local ? assetUrl(local) : src} alt={alt ?? ""} line={node?.position?.start.line} {...props} />;
     },
     table: ({ node, children, ...props }) => <div className="markdown-table-wrap"><table data-line={node?.position?.start.line} {...props}>{children}</table></div>,
-    a: ({ href, children, ...props }) => {
+      a: ({ href, children, ...props }) => {
       if (href?.startsWith(WIKI_PROTOCOL)) {
-        return <WikiLink href={href} onOpenWiki={onOpenWiki}>{children}</WikiLink>;
+        const resolved = wikiNotes ? resolveWikiTarget(wikiNotes, decodeWikiHref(href)) !== null : undefined;
+        return <WikiLink href={href} onOpenWiki={onOpenWiki} resolved={resolved}>{children}</WikiLink>;
       }
       return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>;
     },
-  }), [onOpenWiki, repoPath]);
+  }), [onOpenWiki, repoPath, wikiNotes]);
   return (
     <article className="markdown-body max-w-3xl">
       {document.frontmatter.length > 0 ? <MarkdownProperties fields={document.frontmatter} /> : null}
