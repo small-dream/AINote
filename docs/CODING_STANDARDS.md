@@ -1,4 +1,4 @@
-# MyNote — 编码规范与防腐化指南 (CODING_STANDARDS)
+# AINote — 编码规范与防腐化指南 (CODING_STANDARDS)
 
 > 版本：v0.1 · 状态：已确认 · 维护：Tech Lead
 > 本文档为活文档，是所有代码（人类或 AI 编写）的强制约束。能机器强制的规则一律进 ESLint / Clippy，不靠自觉。

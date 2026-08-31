@@ -1,4 +1,4 @@
-# MyNote — 架构文档 (ARCHITECTURE)
+# AINote — 架构文档 (ARCHITECTURE)
 
 > 版本：v0.1 · 状态：已确认 · 维护：架构师
 > 本文档为活文档。任何技术选型或分层规则的变更必须先更新本文档。
@@ -98,7 +98,7 @@ View → Hooks/Queries → api/ → IPC → commands → services → repositori
 ## 4. 目录结构
 
 ```text
-MyNote/
+AINote/
 ├── docs/
 │   ├── PRD.md
 │   ├── ARCHITECTURE.md

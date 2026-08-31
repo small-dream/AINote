@@ -1,11 +1,11 @@
 [package]
-name = "mynote-core"
+name = "ainote-core"
 version = "0.1.0"
 edition = "2021"
-description = "MyNote - Git-native cross-platform markdown notes"
+description = "AINote - Git-native cross-platform markdown notes"
 
 [lib]
-name = "mynote_core_lib"
+name = "ainote_core_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

@@ -1,11 +1,11 @@
-# AGENTS.md — MyNote 项目协作指南
+# AGENTS.md — AINote 项目协作指南
 
 > 本文件是所有 AI Agent / 开发者在本仓库工作的**首要约束**。
 > 详细规范见 `docs/` 三份活文档，冲突时以更具体的文档为准。
 
 ## 项目概述
 
-MyNote 是「Git 即数据库」的跨平台 Markdown 笔记软件：笔记 = Git 仓库内的 `.md` 文件，同步走 Git 协议，远端托管在 GitHub。
+AINote 是「Git 即数据库」的跨平台 Markdown 笔记软件：笔记 = Git 仓库内的 `.md` 文件，同步走 Git 协议，远端托管在 GitHub。
 
 - 前端：React 19 + TypeScript (strict) + Vite 8 + Tailwind CSS 4
 - 后端/原生层：Rust + Tauri 2（Git 操作走 `git2`，凭证存系统钥匙串）

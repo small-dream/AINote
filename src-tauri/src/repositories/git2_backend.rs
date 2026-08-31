@@ -23,10 +23,10 @@ pub(crate) fn signature(repo: &Repository) -> Result<Signature<'static>, AppErro
     let cfg = repo.config().map_err(to_git)?;
     let name = cfg
         .get_string("user.name")
-        .unwrap_or_else(|_| "MyNote".into());
+        .unwrap_or_else(|_| "AINote".into());
     let email = cfg
         .get_string("user.email")
-        .unwrap_or_else(|_| "mynote@localhost".into());
+        .unwrap_or_else(|_| "ainote@localhost".into());
     Signature::now(&name, &email).map_err(to_git)
 }
 

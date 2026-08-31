@@ -4,7 +4,7 @@
 use crate::domain::error::AppError;
 
 const API: &str = "https://api.github.com";
-const UA: &str = "mynote";
+const UA: &str = "AINote";
 
 fn agent() -> ureq::Agent {
     let config = ureq::Agent::config_builder()

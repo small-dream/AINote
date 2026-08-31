@@ -1,6 +1,6 @@
 use std::fs;
 
-use mynote_core_lib::AuthStore;
+use ainote_core_lib::AuthStore;
 use tempfile::tempdir;
 
 #[test]

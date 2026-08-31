@@ -31,10 +31,10 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
       <div
         role="dialog"
         aria-modal="true"
-        aria-labelledby="mynote-modal-title"
+        aria-labelledby="ainote-modal-title"
         className="w-full max-w-md rounded-lg bg-bg-primary p-6 shadow-lg"
       >
-        <h2 id="mynote-modal-title" className="mb-4 text-lg font-semibold">
+        <h2 id="ainote-modal-title" className="mb-4 text-lg font-semibold">
           {title}
         </h2>
         {children}

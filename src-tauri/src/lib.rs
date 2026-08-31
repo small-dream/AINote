@@ -38,5 +38,5 @@ pub fn run() {
             commands::auth::logout::logout,
         ])
         .run(tauri::generate_context!())
-        .expect("error while running MyNote");
+        .expect("error while running AINote");
 }

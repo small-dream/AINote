@@ -3,7 +3,7 @@
 # 用法：pnpm desktop:sign  （需在编译后运行；每次重新编译后需重跑一次）
 set -euo pipefail
 
-BIN="${1:-src-tauri/target/debug/mynote-core}"
+BIN="${1:-src-tauri/target/debug/ainote-core}"
 if [ ! -f "$BIN" ]; then
   echo "未找到二进制: $BIN（请先编译）"
   exit 1
