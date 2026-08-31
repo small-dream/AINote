@@ -104,7 +104,9 @@ describe("MarkdownPreview P1 预览增强", () => {
     const { container } = render(<MarkdownPreview content={"| A | B |\n| - | - |\n| 1 | 2 |"} />);
     expect(container.querySelector(".markdown-table-wrap table")).toBeTruthy();
   });
+});
 
+describe("MarkdownPreview properties and callouts", () => {
   it("展示 frontmatter 属性且不把分隔线渲染到正文", () => {
     const { container } = render(<MarkdownPreview content={"---\ntitle: Demo\ntags: [one, two]\n---\n正文"} />);
     expect(container.querySelector(".markdown-properties")?.textContent).toContain("title");
@@ -119,5 +121,11 @@ describe("MarkdownPreview P1 预览增强", () => {
     expect(callout?.className).toContain("markdown-callout-tip");
     expect(callout?.textContent).toContain("小提示");
     expect(callout?.textContent).not.toContain("[!TIP]");
+  });
+
+  it("渲染行内与块级数学公式", () => {
+    const { container } = render(<MarkdownPreview content={"行内 $x^2$\n\n$$\n\\frac{1}{2}\n$$"} />);
+    expect(container.querySelector(".katex")).toBeTruthy();
+    expect(container.querySelector(".katex-display")).toBeTruthy();
   });
 });

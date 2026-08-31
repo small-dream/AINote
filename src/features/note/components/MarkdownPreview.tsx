@@ -4,6 +4,9 @@ import type { ComponentType } from "react";
 import remarkGfm from "remark-gfm";
 import remarkFrontmatter from "remark-frontmatter";
 import rehypeHighlight from "rehype-highlight";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import { assetUrl } from "@/api";
 import { resolveLocalAssetPath } from "@/features/asset/utils/asset";
 import {
@@ -131,8 +134,8 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki }: MarkdownPrevi
     <article className="markdown-body max-w-3xl">
       {document.frontmatter.length > 0 ? <MarkdownProperties fields={document.frontmatter} /> : null}
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, [remarkFrontmatter, ["yaml", "toml"]], remarkCallouts, remarkRemoveFrontmatter]}
-        rehypePlugins={[rehypeHighlight]}
+        remarkPlugins={[remarkGfm, remarkMath, [remarkFrontmatter, ["yaml", "toml"]], remarkCallouts, remarkRemoveFrontmatter]}
+        rehypePlugins={[rehypeHighlight, rehypeKatex]}
         components={components}
         urlTransform={(url) => (url.startsWith(WIKI_PROTOCOL) ? url : defaultUrlTransform(url))}
       >
