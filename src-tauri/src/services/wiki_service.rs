@@ -2,7 +2,7 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::domain::error::AppError;
-use crate::domain::wiki::NoteWiki;
+use crate::domain::wiki::{NoteWiki, WikiLinkContext};
 use crate::repositories::file_storage;
 use crate::services::note_service::extract_title;
 
@@ -23,9 +23,43 @@ pub fn wiki_index(repo_path: &Path) -> Result<Vec<NoteWiki>, AppError> {
             title: extract_title(&content, &fallback),
             tags: extract_tags(&content),
             links: extract_links(&content),
+            link_contexts: extract_link_contexts(&content),
         });
     }
     Ok(notes)
+}
+
+/// 纯函数：提取双链所在行的简短上下文，供反向链接预览使用。
+pub fn extract_link_contexts(content: &str) -> Vec<WikiLinkContext> {
+    let mut contexts = Vec::new();
+    let mut seen = BTreeSet::new();
+    for line in content.lines() {
+        let bytes = line.as_bytes();
+        let mut i = 0;
+        while i + 1 < bytes.len() {
+            if bytes[i] == b'[' && bytes[i + 1] == b'[' {
+                if let Some(close) = find_close(bytes, i + 2) {
+                    let raw = &line[i + 2..close];
+                    let target = raw.split('|').next().unwrap_or("").trim();
+                    if !target.is_empty() && seen.insert(target.to_string()) {
+                        contexts.push(WikiLinkContext { target: target.to_string(), snippet: shorten_context(line) });
+                    }
+                    i = close + 2;
+                    continue;
+                }
+            }
+            i += 1;
+        }
+    }
+    contexts
+}
+
+fn shorten_context(line: &str) -> String {
+    const MAX: usize = 120;
+    let trimmed = line.trim();
+    if trimmed.chars().count() <= MAX { return trimmed.to_string(); }
+    let clipped: String = trimmed.chars().take(MAX - 1).collect();
+    format!("{clipped}…")
 }
 
 /// 纯函数：提取 `#标签`（行首或空白后紧贴字母/数字/CJK/`_`/`-`/`/`），去重并小写归一化。
@@ -127,6 +161,15 @@ mod tests {
     }
 
     #[test]
+    fn link_contexts_capture_unique_line_snippets() {
+        let contexts = extract_link_contexts("前文 [[A]] 后文\n再次 [[A]]\n[[B|别名]]");
+        assert_eq!(contexts.len(), 2);
+        assert_eq!(contexts[0].target, "A");
+        assert_eq!(contexts[0].snippet, "前文 [[A]] 后文");
+        assert_eq!(contexts[1].target, "B");
+    }
+
+    #[test]
     fn wiki_index_scans_all_notes() {
         let tmp = tempfile::tempdir().unwrap();
         let root = tmp.path();
@@ -142,6 +185,7 @@ mod tests {
         assert_eq!(by_path["a.md"].title, "A 笔记");
         assert_eq!(by_path["a.md"].tags, vec!["tag"]);
         assert_eq!(by_path["a.md"].links, vec!["B 笔记"]);
+        assert_eq!(by_path["a.md"].link_contexts[0].target, "B 笔记");
         assert_eq!(by_path["sub/b.md"].links, vec!["A 笔记"]);
     }
 }

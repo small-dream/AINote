@@ -11,4 +11,12 @@ pub struct NoteWiki {
     pub tags: Vec<String>,
     /// 内容中 [[双链]] 目标（已去重，保留原始书写）
     pub links: Vec<String>,
+    pub link_contexts: Vec<WikiLinkContext>,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct WikiLinkContext {
+    pub target: String,
+    pub snippet: String,
 }

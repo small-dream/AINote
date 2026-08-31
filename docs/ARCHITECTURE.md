@@ -172,7 +172,7 @@ AINote/
 - **图片/附件管理**：`features/asset` 提供资产导入编排——文件拖放到编辑器或工具栏图片按钮选择文件，前端经 `import_asset`（源路径）/ `import_asset_bytes`（字节）写入仓库 `assets/`（重名自动追加 `-1`，单文件 ≤ 20MB），随后以 `![文件名](assets/xxx.png)` 仓库相对路径在光标处插入引用（跨设备可移植），并以 `note: asset <path>` 立即提交版本化。预览层 `MarkdownPreview` 把仓库相对图片路径解析为本地绝对路径后经 `convertFileSrc` 渲染，外部 URL 保持原样。
 - **软删除回收站**：`features/trash` 提供回收站面板。删除笔记/目录不再硬删除，改为移入仓库隐藏目录 `.trash/`（`.trash/<id>.md` 存正文，`.trash/manifest.json` 记录原路径 / 删除时间 / 标题；隐藏目录被搜索、wiki、文件树扫描自动忽略，并随仓库 Git 版本化同步）。删除经 `note_files` → `trash_files` 软删除，回收站恢复 / 彻底删除 / 清空走 `trash_service` → `trash_files`；恢复时原路径被占用自动追加 `-1`/`-2`…。侧边栏「目录 / 标签 / 回收站」tab 切换。
 - **标签与双链**：`features/wiki` 提供标签系统与 `[[wiki-link]]`。Rust `wiki_index` 一次全仓扫描返回每篇笔记的标题 / `#标签` / `[[双链]]`（纯函数字节级解析，`# 标题` 不误判，支持 `[[目标|别名]]`），前端纯函数聚合标签云、反链与出链目标（标题 / 文件名双轨匹配）。预览层把 `[[...]]` 转为 `wiki:` 协议链接拦截点击跳转；编辑器工具栏「双链与标签」面板展示当前笔记标签 / 出链 / 反链，未创建目标标记；侧边栏新增「目录 / 标签」tab，标签可展开其下笔记。
-- **编辑器补全**：CodeMirror 自动补全从 `useWikiIndexQuery` 的缓存索引读取笔记标题与标签；纯函数仅识别光标所在行的未闭合 `[[...` 或标签上下文，标题行 `# ` 不误触发，补全不直接调用 IPC。
+- **编辑器补全**：CodeMirror 自动补全从 `useWikiIndexQuery` 的缓存索引读取笔记标题与标签；纯函数仅识别光标所在行的未闭合 `[[...` 或标签上下文，标题行 `# ` 不误触发，补全不直接调用 IPC。预览复用同一索引区分已解析/未解析双链，wiki 索引同时提供去重的行级上下文片段供反向链接展示。
 - **长耗时 IPC**：Git / 文件 / 网络类 Command 统一通过 `async command + spawn_blocking` 执行，避免阻塞前端渲染与交互。
 - **Markdown 预览管线**：`MarkdownPreview` 统一使用 `remark-gfm`、`remark-frontmatter` 与自定义 `remarkCallouts` / `remarkRemoveFrontmatter` 插件；Frontmatter 仅展示标量/简单数组 Properties，不进入正文与索引，Callout 通过 `data-callout` 映射主题样式。原始 HTML 默认不解析，扩展必须先经过安全边界评审。
 - **预览同步滚动**：分栏模式通过 `MutationObserver` 与 `ResizeObserver` 更新 Markdown 行号锚点，滚动事件在浏览器中用 `requestAnimationFrame` 合帧，并保留 jsdom/不支持 RAF 环境的同步回退以保证可测试性。

@@ -108,13 +108,14 @@ function BacklinksSection({ backlinks, onOpenNote }: { backlinks: NoteWikiDto[];
   return (
     <SectionBlock title={t("wiki.backlinks")}>
       <ul className="space-y-1">
-        {backlinks.map((note) => (
-          <li key={note.path}>
-            <button type="button" onClick={() => onOpenNote(note.path)} className="text-sm text-accent hover:underline">
-              {note.title}
-            </button>
-            <span className="ml-2 text-[11px] text-text-tertiary">{note.path}</span>
-          </li>
+          {backlinks.map((note) => (
+            <li key={note.path}>
+              <button type="button" onClick={() => onOpenNote(note.path)} className="text-sm text-accent hover:underline">
+                {note.title}
+              </button>
+              <span className="ml-2 text-[11px] text-text-tertiary">{note.path}</span>
+              {note.linkContexts?.[0]?.snippet ? <p className="mt-0.5 truncate text-xs text-text-secondary">{note.linkContexts[0].snippet}</p> : null}
+            </li>
         ))}
       </ul>
     </SectionBlock>

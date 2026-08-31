@@ -111,6 +111,13 @@ export interface NoteWikiDto {
   tags: string[];
   /** 内容中 [[双链]] 目标（已去重，保留原始书写） */
   links: string[];
+  /** 双链所在行的简短上下文，用于反向链接预览。 */
+  linkContexts?: WikiLinkContext[];
+}
+
+export interface WikiLinkContext {
+  target: string;
+  snippet: string;
 }
 
 /** list_repos 返回的单仓库信息 */
