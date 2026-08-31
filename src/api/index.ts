@@ -4,6 +4,7 @@ export { repoApi } from "./repo.api";
 export { syncApi } from "./sync.api";
 export { authApi } from "./auth.api";
 export { assetApi, assetUrl, onDropPaths } from "./asset.api";
+export { wikiApi } from "./wiki.api";
 export { historyApi } from "./history.api";
 export { searchApi } from "./search.api";
 export { updateApi } from "./update.api";
@@ -20,6 +21,7 @@ export type {
   NodeKind,
   NoteContent,
   NoteMeta,
+  NoteWikiDto,
   RepoInfo,
   RepoPathDto,
   SearchResult,

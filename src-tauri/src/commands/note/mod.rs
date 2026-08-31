@@ -8,3 +8,4 @@ pub mod read;
 pub mod search;
 pub mod tree;
 pub mod update;
+pub mod wiki;

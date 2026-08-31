@@ -10,7 +10,9 @@ import { useEditorExtensions } from "../hooks/useEditorExtensions";
 import { useEditorViewReady } from "../hooks/useEditorViewReady";
 import { useSyncScroll } from "../hooks/useSyncScroll";
 import { useAssetImport } from "@/features/asset/hooks/useAssetImport";
+import { useEditorWiki } from "@/features/wiki/hooks/useEditorWiki";
 import { HistoryPanel } from "@/features/history/components/HistoryPanel";
+import { WikiPanel } from "@/features/wiki/components/WikiPanel";
 import { EditorToolbar, type ViewMode } from "./EditorToolbar";
 import { FormatToolbar } from "./FormatToolbar";
 import { MarkdownPreview } from "./MarkdownPreview";
@@ -23,13 +25,15 @@ interface NoteEditorProps {
   repoPath: string | null;
   notePath: string | null;
   onMove: (from: string) => void;
+  /** 打开笔记（双链跳转目标） */
+  onOpenNote: (path: string) => void;
   /** 新建打开时自动聚焦首行标题（P2） */
   focusTitleOnLoad?: boolean;
 }
 
 /** 笔记编辑器：格式工具栏 + 编辑/分栏/预览三模式 + 防抖自动保存（P0-2） */
 export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
-  function NoteEditor({ repoPath, notePath, onMove, focusTitleOnLoad = false }, ref) {
+  function NoteEditor({ repoPath, notePath, onMove, onOpenNote, focusTitleOnLoad = false }, ref) {
     const history = useNoteHistory();
     const [mode, setMode] = useState<ViewMode>("edit");
     const { draft, onChange, flush, saving, dirty, error } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
@@ -37,6 +41,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const { extensions, activeFormats } = useEditorExtensions();
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
     const asset = useAssetImport(readyView);
+    const wiki = useEditorWiki(repoPath, onOpenNote);
     const previewRef = useRef<HTMLDivElement | null>(null);
     useSyncScroll(readyView, previewRef, mode);
     useImperativeHandle(ref, () => ({ flush }), [flush]);
@@ -46,10 +51,11 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar path={notePath} mode={mode} saving={saving} dirty={dirty} onModeChange={setMode} onSave={flush} onMove={() => onMove(notePath)} onHistory={history.openHistory} />
+        <EditorToolbar path={notePath} mode={mode} saving={saving} dirty={dirty} onModeChange={setMode} onSave={flush} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} />
         {mode !== "preview" && <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={asset.handleFiles} status={asset.status} />}
-        <EditorBody mode={mode} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={handleCreateEditor} previewRef={previewRef} />
+        <EditorBody mode={mode} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={handleCreateEditor} previewRef={previewRef} onOpenWiki={wiki.handleOpenWiki} />
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
+        <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
       </div>
     );
   }
@@ -63,17 +69,10 @@ interface EditorBodyProps {
   extensions: Extension[];
   onCreateEditor: (view: EditorView) => void;
   previewRef: RefObject<HTMLDivElement | null>;
+  onOpenWiki: (name: string) => void;
 }
 
-function EditorBody({
-  mode,
-  repoPath,
-  draft,
-  onChange,
-  extensions,
-  onCreateEditor,
-  previewRef,
-}: EditorBodyProps) {
+function EditorBody({ mode, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki }: EditorBodyProps) {
   const editor = (
     <CodeMirror
       className="h-full"
@@ -90,7 +89,7 @@ function EditorBody({
         left={editor}
         right={
           <div ref={previewRef} className="h-full overflow-y-auto p-6">
-            <MarkdownPreview content={draft} repoPath={repoPath} />
+            <MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} />
           </div>
         }
       />
@@ -99,7 +98,7 @@ function EditorBody({
   if (mode === "preview") {
     return (
       <div className="min-h-0 flex-1 overflow-y-auto p-6">
-        <MarkdownPreview content={draft} repoPath={repoPath} />
+        <MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} />
       </div>
     );
   }

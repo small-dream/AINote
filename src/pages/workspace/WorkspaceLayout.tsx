@@ -97,6 +97,7 @@ function WorkspaceColumns({
           repoPath={repoPath}
           notePath={currentNotePath}
           onMove={onSetMove}
+          onOpenNote={onSelect}
           focusTitleOnLoad={currentNotePath === createdPath}
         />
       </section>

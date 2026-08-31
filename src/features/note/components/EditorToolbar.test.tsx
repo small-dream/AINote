@@ -12,6 +12,7 @@ function renderToolbar(overrides: Partial<Parameters<typeof EditorToolbar>[0]> =
     onSave: vi.fn(),
     onMove: vi.fn(),
     onHistory: vi.fn(),
+    onWiki: vi.fn(),
     ...overrides,
   };
   return render(<EditorToolbar {...props} />);

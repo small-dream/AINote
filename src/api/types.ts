@@ -92,6 +92,17 @@ export interface AssetInfo {
   path: string;
 }
 
+/** wiki_index 返回的单篇笔记（与 Rust domain/wiki.rs 一致） */
+export interface NoteWikiDto {
+  /** 相对仓库根目录的路径，如 "daily/2026-08-30.md" */
+  path: string;
+  title: string;
+  /** 内容中提取的标签（已去重、小写归一化） */
+  tags: string[];
+  /** 内容中 [[双链]] 目标（已去重，保留原始书写） */
+  links: string[];
+}
+
 /** list_repos 返回的单仓库信息 */
 export interface RepoInfo {
   id: string;

@@ -1,4 +1,4 @@
-import { render } from "@testing-library/react";
+import { fireEvent, render } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MarkdownPreview } from "./MarkdownPreview";
 
@@ -46,5 +46,36 @@ describe("MarkdownPreview 本地资产图片渲染（P1-4）", () => {
     const img = container.querySelector("img");
     expect(img?.getAttribute("src")).toBe("https://example.com/a.png");
     expect(assetUrlMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("MarkdownPreview 双链渲染（P1-5）", () => {
+  it("[[目标]] 渲染为可点击链接并回调目标名", () => {
+    const onOpenWiki = vi.fn();
+    const { container } = render(
+      <MarkdownPreview content={"见 [[项目计划]] 继续"} onOpenWiki={onOpenWiki} />
+    );
+    const link = container.querySelector(".wiki-link");
+    expect(link?.textContent).toBe("项目计划");
+    fireEvent.click(link as HTMLElement);
+    expect(onOpenWiki).toHaveBeenCalledWith("项目计划");
+  });
+
+  it("[[目标|别名]] 显示别名并回调原始目标", () => {
+    const onOpenWiki = vi.fn();
+    const { container } = render(
+      <MarkdownPreview content={"[[plan|计划]]"} onOpenWiki={onOpenWiki} />
+    );
+    const link = container.querySelector(".wiki-link");
+    expect(link?.textContent).toBe("计划");
+    fireEvent.click(link as HTMLElement);
+    expect(onOpenWiki).toHaveBeenCalledWith("plan");
+  });
+
+  it("普通链接不受影响", () => {
+    const { container } = render(
+      <MarkdownPreview content={"[外部](https://example.com)"} />
+    );
+    expect(container.querySelector(".wiki-link")).toBeNull();
   });
 });
