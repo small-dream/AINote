@@ -6,8 +6,8 @@ import {
   NoteEditor,
   type NoteEditorHandle,
 } from "@/features/note/components/NoteEditor";
-import { SyncBar } from "@/features/sync/components/SyncBar";
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
+import { WorkspaceNavRail } from "./WorkspaceNavRail";
 import type { WorkspaceActions } from "./useWorkspaceActions";
 
 interface WorkspaceLayoutProps {
@@ -31,18 +31,20 @@ export function WorkspaceLayout({
   onMoved,
 }: WorkspaceLayoutProps) {
   return (
-    <div className="flex h-screen flex-col overflow-hidden bg-bg-primary">
-      <SyncBar repoPath={repoPath} startupSyncing={startupSyncing} />
-      <WorkspaceColumns
-        repoPath={repoPath}
-        currentNotePath={currentNotePath}
-        createdPath={actions.createdPath}
-        editorRef={editorRef}
-        onSelect={onSelect}
-        onRequestNew={actions.requestNew}
-        onRequestFolder={actions.requestNewFolder}
-        onSetMove={actions.setMoveTarget}
-      />
+    <div className="flex h-dvh min-h-0 overflow-hidden bg-bg-tertiary/55">
+      <WorkspaceNavRail repoPath={repoPath} startupSyncing={startupSyncing} />
+      <main className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary">
+        <WorkspaceColumns
+          repoPath={repoPath}
+          currentNotePath={currentNotePath}
+          createdPath={actions.createdPath}
+          editorRef={editorRef}
+          onSelect={onSelect}
+          onRequestNew={actions.requestNew}
+          onRequestFolder={actions.requestNewFolder}
+          onSetMove={actions.setMoveTarget}
+        />
+      </main>
       <LayoutDialogs actions={actions} onMoved={onMoved} />
     </div>
   );
@@ -70,7 +72,7 @@ function WorkspaceColumns({
   onSetMove,
 }: WorkspaceColumnsProps) {
   return (
-    <div className="flex min-h-0 flex-1 overflow-hidden">
+    <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <WorkspaceSidebar
         repoPath={repoPath}
         onSelect={onSelect}
@@ -78,7 +80,7 @@ function WorkspaceColumns({
         onRequestFolder={onRequestFolder}
         onRequestMove={onSetMove}
       />
-      <main className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary">
+      <section className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary" aria-label="笔记内容">
         <NoteEditor
           ref={editorRef}
           repoPath={repoPath}
@@ -86,7 +88,7 @@ function WorkspaceColumns({
           onMove={onSetMove}
           focusTitleOnLoad={currentNotePath === createdPath}
         />
-      </main>
+      </section>
     </div>
   );
 }

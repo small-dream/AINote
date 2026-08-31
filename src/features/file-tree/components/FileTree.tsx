@@ -40,9 +40,9 @@ function TreeContent({ tree, expanded, toggle, onSelect, onRequestNew, onRequest
   const contextMenu = useTreeContextMenu();
   const requestDelete = (path: string, isFolder: boolean) => { setDeleteError(null); setPendingDelete({ path, isFolder, name: contextMenu.menu?.node.name ?? path }); };
   const confirmDelete = async () => { if (!pendingDelete) return; try { if (pendingDelete.isFolder) await removeFolder.mutateAsync(pendingDelete.path); else await remove.mutateAsync(pendingDelete.path); setPendingDelete(null); } catch (error) { setDeleteError(messageOf(error)); } };
-  return <div className="flex h-full flex-col">
+  return <div className="flex h-full min-h-0 flex-col">
     <TreeToolbar onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} />
-    <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-3" aria-label="笔记目录树"><TreeNodeItem node={tree} depth={0} expanded={expanded} currentNotePath={currentNotePath} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onContextMenu={contextMenu.open} /></nav>
+    <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2" aria-label="笔记目录树"><TreeNodeItem node={tree} depth={0} expanded={expanded} currentNotePath={currentNotePath} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onContextMenu={contextMenu.open} /></nav>
     {deleteError && <div className="tree-error" role="alert">删除失败：{deleteError}</div>}
     <ContextMenuSlot menu={contextMenu.menu} copied={contextMenu.copied} onClose={contextMenu.close} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} onDelete={(path) => requestDelete(path, false)} onDeleteFolder={(path) => requestDelete(path, true)} onCopy={contextMenu.copy} />
     <DeleteConfirmDialog pending={pendingDelete} busy={remove.isPending || removeFolder.isPending} onClose={() => setPendingDelete(null)} onConfirm={confirmDelete} />

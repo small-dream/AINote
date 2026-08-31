@@ -40,7 +40,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     if (error) return <ErrorState message={error.message} />;
 
     return (
-      <div className="flex h-full flex-col bg-bg-primary">
+      <div className="flex h-full min-h-0 flex-col bg-bg-primary">
         <EditorToolbar
           path={notePath}
           mode={mode}

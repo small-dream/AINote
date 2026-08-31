@@ -62,7 +62,7 @@ const INSERT_BUTTONS: ButtonSpec[] = [
   { icon: Minus, label: "分割线", command: insertDivider },
 ];
 
-/** Markdown 格式工具栏：行内 / 段落 / 插入三组，仅编辑模式渲染 */
+/** Markdown 格式工具栏：按编辑任务分组，紧凑且保持键盘焦点。 */
 export function FormatToolbar({ viewRef, active }: FormatToolbarProps) {
   const { run, runLink } = useFormatCommands(viewRef);
 
@@ -79,7 +79,7 @@ export function FormatToolbar({ viewRef, active }: FormatToolbarProps) {
     ));
 
   return (
-    <div className="flex h-10 items-center border-b border-border px-6">
+    <div className="flex h-10 items-center gap-1 border-b border-border bg-bg-secondary/60 px-6">
       <div className="flex items-center gap-0.5">{renderGroup(INLINE_BUTTONS)}</div>
       <Divider />
       <div className="flex items-center gap-0.5">
