@@ -29,19 +29,63 @@ pub fn bind_repo<B: GitBackend>(
     Ok(dest.to_string_lossy().into_owned())
 }
 
-/// 用例：在 GitHub 建仓后走绑定流程，返回本地路径。
+/// 用例：在 GitHub 建仓后走绑定流程，返回 (本地路径, 远端 URL)。
 pub fn create_and_bind_repo<B: GitBackend>(
     backend: &B,
     token: &str,
     name: &str,
     is_private: bool,
     dest: &Path,
-) -> Result<String, AppError> {
+) -> Result<(String, String), AppError> {
     if name.trim().is_empty() {
         return Err(AppError::Repo("仓库名不能为空".into()));
     }
     let url = github_api::create_repo(token, name, is_private)?;
-    bind_repo(backend, &url, dest, token)
+    let path = bind_repo(backend, &url, dest, token)?;
+    Ok((path, url))
+}
+
+/// 纯函数：从 URL / 名称推导展示名 —— 取最后一段路径并去掉 `.git` 后缀。
+pub fn derive_name(seed: &str) -> String {
+    let trimmed = seed.trim();
+    if trimmed.is_empty() {
+        return "notes".to_string();
+    }
+    let seg = trimmed.rsplit(['/', '\\']).next().unwrap_or(trimmed);
+    let seg = seg.strip_suffix(".git").unwrap_or(seg).trim();
+    if seg.is_empty() {
+        "notes".to_string()
+    } else {
+        seg.to_string()
+    }
+}
+
+/// 纯函数：生成唯一克隆目录 `notes_dir/<slug>`，冲突时追加 `-2`/`-3`…（确定性、可单测）。
+pub fn unique_clone_dir(notes_dir: &Path, seed: &str) -> Result<std::path::PathBuf, AppError> {
+    let base = slugify(seed);
+    let mut candidate = notes_dir.join(&base);
+    let mut n = 2u32;
+    while candidate.exists() {
+        candidate = notes_dir.join(format!("{base}-{n}"));
+        n += 1;
+    }
+    Ok(candidate)
+}
+
+fn slugify(seed: &str) -> String {
+    let mut slug: String = seed
+        .chars()
+        .map(|c| if c.is_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
+        .collect();
+    while slug.contains("--") {
+        slug = slug.replace("--", "-");
+    }
+    let slug = slug.trim_matches('-').to_string();
+    if slug.is_empty() {
+        "notes".to_string()
+    } else {
+        slug
+    }
 }
 
 #[cfg(test)]
@@ -76,5 +120,22 @@ mod tests {
         let err =
             create_and_bind_repo(&MockGitBackend::default(), "t", "  ", true, &dest).unwrap_err();
         assert!(matches!(err, AppError::Repo(_)));
+    }
+
+    #[test]
+    fn derive_name_strips_git_suffix_and_path() {
+        assert_eq!(derive_name("https://github.com/u/my-notes.git"), "my-notes");
+        assert_eq!(derive_name("  daily/工作  "), "工作");
+        assert_eq!(derive_name("  "), "notes");
+    }
+
+    #[test]
+    fn unique_clone_dir_appends_suffix_on_collision() {
+        let tmp = tempfile::tempdir().unwrap();
+        let first = unique_clone_dir(tmp.path(), "My Notes").unwrap();
+        std::fs::create_dir_all(&first).unwrap();
+        let second = unique_clone_dir(tmp.path(), "My Notes").unwrap();
+        assert_eq!(first, tmp.path().join("my-notes"));
+        assert_eq!(second, tmp.path().join("my-notes-2"));
     }
 }

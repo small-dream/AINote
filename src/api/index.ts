@@ -11,6 +11,7 @@ export type {
   NodeKind,
   NoteContent,
   NoteMeta,
+  RepoInfo,
   RepoPathDto,
   SyncStatus,
   TreeNode,

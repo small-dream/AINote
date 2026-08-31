@@ -21,3 +21,13 @@ pub struct AuthStatusDto {
 pub struct RepoPathDto {
     pub repo_path: String,
 }
+
+/// list_repos 返回的单仓库信息
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoInfoDto {
+    pub id: String,
+    pub name: String,
+    pub path: String,
+    pub remote_url: Option<String>,
+}

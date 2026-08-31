@@ -141,12 +141,12 @@ AINote/
 │   │   │   ├── mod.rs            # 仅 re-export
 │   │   │   ├── note/             # create.rs / read.rs / update.rs / delete.rs / move.rs / tree.rs / list.rs
 │   │   │   ├── git/              # commit.rs / pull.rs / push.rs / status.rs / sync.rs / resolve.rs
-│   │   │   ├── repo/             # bind.rs / create.rs / validate.rs / path.rs
+│   │   │   ├── repo/             # bind.rs / create.rs / list.rs / rename.rs / remove.rs / switch.rs / validate.rs / path.rs
 │   │   │   └── auth/             # save_token.rs / validate.rs / status.rs / logout.rs
 │   │   ├── services/             # 一用例一模块
 │   │   ├── repositories/         # trait + 实现分离
 │   │   ├── domain/               # 实体、值对象、AppError
-│   │   └── config/
+│   │   └── config/            # mod.rs（持久化）+ repos.rs（仓库注册表纯逻辑）
 │   └── Cargo.toml
 ├── package.json / tsconfig.json (strict: true)
 └── 根级配置 (eslint / prettier / tailwind)
@@ -157,5 +157,6 @@ AINote/
 - **批量提交与推送**：编辑器变更 → 前端 30s 防抖落盘；`useSync` 观察到工作区有未提交变更后启动默认 5 分钟空闲计时器，到期调用 `git_commit`，把所有笔记/删除/移动汇总成单条 `note: auto commit`。一键同步仍执行“汇总提交 → Pull → Push”；手动「保存版本」调用同一提交接口生成 `note: checkpoint`，不自动 Push。新建笔记保留即时 `note: create <path>` 提交。策略细节由 Service 层实现，Controller 不感知。
 - **离线优先**：所有读写只操作本地仓库；Push/Pull 失败进入待同步状态，网络恢复事件触发重试（前端 `online` 事件 + Query 重取）。
 - **凭证流**：Token 存本地加密文件；Rust 层在使用时读取并解密，前端永远拿不到明文 Token。
+- **多仓库注册表**：config 维护 `repos` 列表与 `active_repo_id`；活动仓库即各 note/git Command 通过 `config::require_repo_path` 解析的当前仓库，切换活动仓库后工作区以 `workspaceEpoch` 触发整页重挂载加载新仓库。移除活动仓库后自动切换剩余仓库；旧版单仓库 `repoPath` 配置在加载时自动迁移。
 - **登录态**：`has_token` 这类非敏感状态存于 app config，路由守卫不直接解密 token。
 - **长耗时 IPC**：Git / 文件 / 网络类 Command 统一通过 `async command + spawn_blocking` 执行，避免阻塞前端渲染与交互。

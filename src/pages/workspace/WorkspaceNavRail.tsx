@@ -5,6 +5,7 @@ import { authApi } from "@/api";
 import { Button } from "@/components/atoms/Button";
 import { Modal } from "@/components/molecules/Modal";
 import { ConflictDialog } from "@/features/sync/components/ConflictDialog";
+import { RepoManager } from "@/features/settings/components/RepoManager";
 import { useSync } from "@/features/sync/hooks/useSync";
 import { deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
 import { useSessionStore } from "@/stores/session.store";
@@ -63,11 +64,15 @@ function SettingsNavButton() {
         <span>设置</span>
       </button>
       <Modal open={open} title="设置" onClose={() => setOpen(false)}>
-        <p className="mb-4 text-sm text-text-secondary">管理当前工作区账户与应用设置。</p>
-        <Button variant="ghost" className="inline-flex items-center gap-2 border border-border text-sm" onClick={() => void handleLogout()} disabled={busy}>
-          <LogOut size={15} />
-          {busy ? "退出中…" : "退出登录"}
-        </Button>
+        <RepoManager />
+        <hr className="my-5 border-border" />
+        <div>
+          <h3 className="mb-3 text-sm font-semibold">账户</h3>
+          <Button variant="ghost" className="inline-flex items-center gap-2 border border-border text-sm" onClick={() => void handleLogout()} disabled={busy}>
+            <LogOut size={15} />
+            {busy ? "退出中…" : "退出登录"}
+          </Button>
+        </div>
       </Modal>
     </>
   );

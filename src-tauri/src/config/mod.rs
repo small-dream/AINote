@@ -1,4 +1,7 @@
-//! 应用配置持久化：已绑定仓库路径与非敏感认证状态存于 app config dir 下的 mynote.json。
+//! 应用配置持久化：仓库注册表与非敏感认证状态存于 app config dir 下的 ainote.json。
+//! 注册表纯逻辑见 config/repos.rs（可单测）。
+
+pub(crate) mod repos;
 
 use std::fs;
 use std::path::PathBuf;
@@ -8,15 +11,35 @@ use tauri::{AppHandle, Manager};
 
 use crate::domain::error::AppError;
 
-const CONFIG_FILE: &str = "mynote.json";
+const CONFIG_FILE: &str = "ainote.json";
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
-struct AppConfig {
+pub(crate) struct AppConfig {
     #[serde(default)]
-    repo_path: Option<String>,
+    pub(crate) repos: Vec<repos::RepoConfig>,
     #[serde(default)]
-    has_token: Option<bool>,
+    pub(crate) active_repo_id: Option<String>,
+    #[serde(default)]
+    pub(crate) has_token: Option<bool>,
+    /// 旧版单仓库字段（repoPath），加载时迁移进 repos。
+    #[serde(default, rename = "repoPath")]
+    legacy_repo_path: Option<String>,
+}
+
+impl AppConfig {
+    /// 兼容旧版单仓库配置：将 repoPath 迁移为首个仓库并设为活动仓库。
+    fn migrate(&mut self) {
+        let Some(path) = self.legacy_repo_path.take() else { return };
+        if !self.repos.is_empty() {
+            return;
+        }
+        let name = PathBuf::from(&path)
+            .file_name()
+            .map(|s| s.to_string_lossy().into_owned())
+            .unwrap_or_else(|| path.clone());
+        repos::register_cfg(self, &name, &path, None);
+    }
 }
 
 fn config_path(app: &AppHandle) -> Result<PathBuf, AppError> {
@@ -33,8 +56,9 @@ fn load_config(app: &AppHandle) -> Result<AppConfig, AppError> {
     if !path.is_file() {
         return Ok(AppConfig::default());
     }
-    let cfg: AppConfig = serde_json::from_str(&fs::read_to_string(path)?)
+    let mut cfg: AppConfig = serde_json::from_str(&fs::read_to_string(path)?)
         .map_err(|e| AppError::Io(e.to_string()))?;
+    cfg.migrate();
     Ok(cfg)
 }
 
@@ -43,28 +67,22 @@ fn save_config(app: &AppHandle, cfg: &AppConfig) -> Result<(), AppError> {
     Ok(fs::write(config_path(app)?, json)?)
 }
 
-/// 当前绑定的仓库路径；未绑定返回 Ok(None)。
+/// 当前活动仓库路径；未绑定返回 Ok(None)。
 pub fn load_repo_path(app: &AppHandle) -> Result<Option<String>, AppError> {
-    Ok(load_config(app)?.repo_path)
+    repos::active_path(app)
 }
 
-/// 当前认证状态与绑定状态（启动守卫使用）。
+/// 当前认证状态与活动仓库路径（启动守卫使用）。
 pub fn load_auth_status(app: &AppHandle) -> Result<(bool, Option<String>), AppError> {
     let cfg = load_config(app)?;
-    Ok((cfg.has_token.unwrap_or(false), cfg.repo_path))
+    Ok((cfg.has_token.unwrap_or(false), repos::active_path_cfg(&cfg)))
 }
 
-/// 读取绑定路径，未绑定时报 REPO_3001（供各 Command 统一前置校验）。
+/// 读取活动仓库路径，未绑定时报 REPO_3001（供各 Command 统一前置校验）。
 pub fn require_repo_path(app: &AppHandle) -> Result<PathBuf, AppError> {
-    load_repo_path(app)?
+    repos::active_path(app)?
         .map(PathBuf::from)
         .ok_or_else(|| AppError::Repo("尚未绑定笔记仓库".into()))
-}
-
-pub fn save_repo_path(app: &AppHandle, repo_path: &str) -> Result<(), AppError> {
-    let mut cfg = load_config(app)?;
-    cfg.repo_path = Some(repo_path.to_string());
-    save_config(app, &cfg)
 }
 
 /// 标记当前已保存 token（只记录存在性，不记录明文）。
@@ -74,7 +92,7 @@ pub fn save_token_present(app: &AppHandle, has_token: bool) -> Result<(), AppErr
     save_config(app, &cfg)
 }
 
-/// 清除绑定（logout 时调用）。
+/// 清除全部配置（logout 时调用）。
 pub fn clear(app: &AppHandle) -> Result<(), AppError> {
     let path = config_path(app)?;
     if path.is_file() {

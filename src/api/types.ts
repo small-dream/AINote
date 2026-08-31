@@ -48,3 +48,14 @@ export interface AuthStatusDto {
 export interface RepoPathDto {
   repoPath: string;
 }
+
+/** list_repos 返回的单仓库信息 */
+export interface RepoInfo {
+  id: string;
+  /** 展示名（可重命名） */
+  name: string;
+  /** 本地克隆路径 */
+  path: string;
+  /** 远端 HTTPS 地址（bind 时记录） */
+  remoteUrl: string | null;
+}
