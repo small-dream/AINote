@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { FileTree } from "@/features/file-tree/components/FileTree";
 import { TagIndex } from "@/features/wiki/components/TagIndex";
+import { TrashPanel } from "@/features/trash/components/TrashPanel";
 import { useTranslation } from "@/i18n";
 
 interface WorkspaceSidebarProps {
@@ -11,11 +12,12 @@ interface WorkspaceSidebarProps {
   onRequestMove: (path: string) => void;
 }
 
-type SidebarTab = "tree" | "tags";
+type SidebarTab = "tree" | "tags" | "trash";
 
-const TABS: { key: SidebarTab; labelKey: "tree.label" | "wiki.tags" }[] = [
+const TABS: { key: SidebarTab; labelKey: "tree.label" | "wiki.tags" | "trash.title" }[] = [
   { key: "tree", labelKey: "tree.label" },
   { key: "tags", labelKey: "wiki.tags" },
+  { key: "trash", labelKey: "trash.title" },
 ];
 
 /** 侧边栏：目录树 / 标签索引切换（P0-3 / P1-5） */
@@ -32,8 +34,10 @@ export function WorkspaceSidebar({
       <SidebarTabs tab={tab} onChange={setTab} />
       {tab === "tree" ? (
         <FileTree repoPath={repoPath} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} />
-      ) : (
+      ) : tab === "tags" ? (
         <TagIndex repoPath={repoPath} onSelect={onSelect} />
+      ) : (
+        <TrashPanel repoPath={repoPath} onSelect={onSelect} />
       )}
     </div>
   );

@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::domain::error::AppError;
 use crate::domain::note::{NoteContent, NoteMeta};
 use crate::domain::sync::TreeNode;
-use crate::repositories::{file_storage, file_tree, note_files};
+use crate::repositories::{file_storage, file_tree, note_files, trash_files};
 
 const NEW_NOTE_TEMPLATE: &str = "# 未命名\n";
 
@@ -46,14 +46,14 @@ pub fn update_note(repo_path: &Path, rel: &str, content: &str) -> Result<(), App
     note_files::write_note(repo_path, rel, content)
 }
 
-/// 用例：删除笔记
+/// 用例：删除笔记（软删除：移入回收站 `.trash`，可恢复，P2）
 pub fn delete_note(repo_path: &Path, rel: &str) -> Result<(), AppError> {
-    note_files::delete_note(repo_path, rel)
+    trash_files::soft_delete_note(repo_path, rel).map(|_| ())
 }
 
-/// 用例：递归删除目录及其中的笔记
+/// 用例：递归删除目录及其中的笔记（软删除：全部移入回收站，P2）
 pub fn delete_folder(repo_path: &Path, rel: &str) -> Result<(), AppError> {
-    note_files::delete_folder(repo_path, rel)
+    trash_files::soft_delete_folder(repo_path, rel).map(|_| ())
 }
 
 /// 用例：移动/重命名笔记
@@ -66,19 +66,8 @@ pub fn list_tree(repo_path: &Path) -> Result<TreeNode, AppError> {
     file_tree::list_tree(repo_path)
 }
 
-/// 纯函数：取内容中首个 ATX 一级标题（`# xxx`），无则回退文件名。
-pub fn extract_title(content: &str, fallback: &str) -> String {
-    for line in content.lines() {
-        if let Some(title) = line.strip_prefix("# ") {
-            let title = title.trim();
-            if !title.is_empty() {
-                return title.to_string();
-            }
-        }
-    }
-    fallback.to_string()
-}
-
+/// re-export：纯函数取首个 ATX 一级标题（自 domain/note.rs，供 search/wiki 复用）
+pub use crate::domain::note::extract_title;
 fn to_meta(root: &Path, file: &Path) -> Result<NoteMeta, AppError> {
     let rel = file
         .strip_prefix(root)

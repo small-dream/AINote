@@ -8,3 +8,4 @@ pub mod repo_service;
 pub mod search_service;
 pub mod sync_service;
 pub mod wiki_service;
+pub mod trash_service;

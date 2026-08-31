@@ -35,22 +35,6 @@ pub fn write_note(root: &Path, rel: &str, content: &str) -> Result<(), AppError>
     Ok(fs::write(path, content)?)
 }
 
-pub fn delete_note(root: &Path, rel: &str) -> Result<(), AppError> {
-    let path = root.join(validate_rel_path(rel)?);
-    if !path.is_file() {
-        return Err(AppError::NoteNotFound(rel.to_string()));
-    }
-    Ok(fs::remove_file(path)?)
-}
-
-pub fn delete_folder(root: &Path, rel: &str) -> Result<(), AppError> {
-    let path = root.join(validate_rel_path(rel)?);
-    if !path.is_dir() {
-        return Err(AppError::Io(format!("folder not found: {rel}")));
-    }
-    Ok(fs::remove_dir_all(path)?)
-}
-
 pub fn move_note(root: &Path, from: &str, to: &str) -> Result<(), AppError> {
     let src = root.join(validate_rel_path(from)?);
     let dst = root.join(validate_rel_path(to)?);
@@ -105,12 +89,11 @@ mod tests {
     }
 
     #[test]
-    fn delete_and_move() {
+    fn move_roundtrip_moves_file_between_folders() {
         let (_t, root) = setup();
         write_note(&root, "old.md", "x").unwrap();
         move_note(&root, "old.md", "sub/new.md").unwrap();
         assert_eq!(read_note(&root, "sub/new.md").unwrap(), "x");
-        delete_note(&root, "sub/new.md").unwrap();
-        assert!(read_note(&root, "sub/new.md").is_err());
+        assert!(read_note(&root, "old.md").is_err());
     }
 }

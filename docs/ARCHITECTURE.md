@@ -75,7 +75,7 @@ flowchart TB
 
 - `commands/`（Controller）：一命令一文件。只做参数反序列化、调用 Service、把 `Result<T, AppError>` 返回给前端。**禁止出现业务逻辑**。
 - `services/`（Service）：一个业务用例一个文件/模块。编排 Repository，实现 PRD 中的业务规则（如防抖提交策略）。
-- `repositories/`：trait 与实现分离。`git_backend.rs` 定义 `GitBackend` trait，`git2_backend.rs`（本地操作）+ `git2_remote.rs`（网络操作）是 libgit2 实现；`file_storage.rs` / `note_files.rs` / `file_tree.rs` 为文件系统访问（受 200 行上限拆分）。未来可换实现，Service 零感知。
+- `repositories/`：trait 与实现分离。`git_backend.rs` 定义 `GitBackend` trait，`git2_backend.rs`（本地操作）+ `git2_remote.rs`（网络操作）是 libgit2 实现；`file_storage.rs` / `note_files.rs` / `file_tree.rs` / `trash_files.rs` 为文件系统访问（受 200 行上限拆分）。未来可换实现，Service 零感知。
 - `domain/`：实体（`Note`）、值对象、统一错误 `AppError`。**零外部依赖**，不 import git2 / tauri。
 
 ### 前端
@@ -149,10 +149,11 @@ AINote/
 │   │   │   ├── note/             # create.rs / read.rs / update.rs / delete.rs / move.rs / tree.rs / list.rs / search.rs / wiki.rs
 │   │   │   ├── git/              # commit.rs / pull.rs / push.rs / status.rs / sync.rs / resolve.rs / history.rs / diff.rs / restore.rs
 │   │   │   ├── repo/             # bind.rs / create.rs / list.rs / rename.rs / remove.rs / switch.rs / validate.rs / path.rs
-│   │   │   └── auth/             # save_token.rs / validate.rs / status.rs / logout.rs
-│   │   ├── services/             # 一用例一模块（含 search_service / history_service / asset_service / wiki_service）
-│   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / file_storage / note_files / file_tree / asset_files）
-│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs / wiki.rs）
+│   │   │   ├── auth/             # save_token.rs / validate.rs / status.rs / logout.rs
+│   │   │   └── trash/            # list.rs / restore.rs / delete.rs / empty.rs
+│   │   ├── services/             # 一用例一模块（含 search_service / history_service / asset_service / wiki_service / trash_service）
+│   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / file_storage / note_files / file_tree / asset_files / trash_files）
+│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs / wiki.rs / trash.rs）
 │   │   └── config/            # mod.rs（持久化）+ repos.rs（仓库注册表纯逻辑）
 │   └── Cargo.toml
 ├── package.json / tsconfig.json (strict: true)
@@ -169,6 +170,7 @@ AINote/
 - **版本历史 / Diff / 回滚**：`features/history` 提供历史面板；编辑器工具栏入口。`git_file_history` 遍历提交过滤出修改过该文件的提交（时间倒序），`git_file_diff` 计算选中提交相对其父提交的单文件 diff（行级 +/-），`git_restore_file` 把文件恢复到指定提交并写回工作区，随后前端以 `note: restore <path>` 立即提交并让编辑器重载。实现位于 `repositories/git2_history.rs`（libgit2），Service 仅依赖 `GitBackend` trait。
 - **全文搜索与命令面板**：`features/search` 提供 Cmd+K 命令面板；输入经 150ms 防抖后调用 `search_notes`（Rust 侧 `spawn_blocking` 扫描仓库 Markdown 文件，忽略大小写匹配标题 + 正文，标题命中优先，最多 30 条，返回行号与上下文片段）。面板开关/查询/选择为全局 UI 态，存于 `stores/command-palette.store.ts`（Zustand）；搜索结果走 TanStack Query 缓存。
 - **图片/附件管理**：`features/asset` 提供资产导入编排——文件拖放到编辑器或工具栏图片按钮选择文件，前端经 `import_asset`（源路径）/ `import_asset_bytes`（字节）写入仓库 `assets/`（重名自动追加 `-1`，单文件 ≤ 20MB），随后以 `![文件名](assets/xxx.png)` 仓库相对路径在光标处插入引用（跨设备可移植），并以 `note: asset <path>` 立即提交版本化。预览层 `MarkdownPreview` 把仓库相对图片路径解析为本地绝对路径后经 `convertFileSrc` 渲染，外部 URL 保持原样。
+- **软删除回收站**：`features/trash` 提供回收站面板。删除笔记/目录不再硬删除，改为移入仓库隐藏目录 `.trash/`（`.trash/<id>.md` 存正文，`.trash/manifest.json` 记录原路径 / 删除时间 / 标题；隐藏目录被搜索、wiki、文件树扫描自动忽略，并随仓库 Git 版本化同步）。删除经 `note_files` → `trash_files` 软删除，回收站恢复 / 彻底删除 / 清空走 `trash_service` → `trash_files`；恢复时原路径被占用自动追加 `-1`/`-2`…。侧边栏「目录 / 标签 / 回收站」tab 切换。
 - **标签与双链**：`features/wiki` 提供标签系统与 `[[wiki-link]]`。Rust `wiki_index` 一次全仓扫描返回每篇笔记的标题 / `#标签` / `[[双链]]`（纯函数字节级解析，`# 标题` 不误判，支持 `[[目标|别名]]`），前端纯函数聚合标签云、反链与出链目标（标题 / 文件名双轨匹配）。预览层把 `[[...]]` 转为 `wiki:` 协议链接拦截点击跳转；编辑器工具栏「双链与标签」面板展示当前笔记标签 / 出链 / 反链，未创建目标标记；侧边栏新增「目录 / 标签」tab，标签可展开其下笔记。
 - **长耗时 IPC**：Git / 文件 / 网络类 Command 统一通过 `async command + spawn_blocking` 执行，避免阻塞前端渲染与交互。
 - **软件更新链路**：`features/update` → `src/api/update.api.ts` → Tauri updater 插件 → GitHub Releases。更新状态为局部 UI 态，不写入 Zustand 或业务仓库；私钥只存在 GitHub Actions Secret。

@@ -8,6 +8,7 @@ export { wikiApi } from "./wiki.api";
 export { historyApi } from "./history.api";
 export { searchApi } from "./search.api";
 export { updateApi } from "./update.api";
+export { trashApi } from "./trash.api";
 export { isAppError, messageOf } from "./error";
 export type { AppError, ErrorKind } from "./error";
 export type {
@@ -26,5 +27,6 @@ export type {
   RepoPathDto,
   SearchResult,
   SyncStatus,
+  TrashItem,
   TreeNode,
 } from "./types";

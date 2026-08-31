@@ -123,3 +123,15 @@ export interface RepoInfo {
   /** 远端 HTTPS 地址（bind 时记录） */
   remoteUrl: string | null;
 }
+
+/** trash_list 返回：回收站条目（与 Rust domain/trash.rs 一致） */
+export interface TrashItem {
+  /** 唯一标识 */
+  id: string;
+  /** 删除前的原始相对路径（恢复目标） */
+  path: string;
+  /** 删除时间（Unix 秒） */
+  deletedAt: number;
+  /** 删除时解析的笔记标题 */
+  title: string;
+}
