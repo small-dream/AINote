@@ -55,38 +55,76 @@ function scrollTo(el: HTMLElement, top: number, target: ScrollTarget): void {
 }
 
 export function attachSyncScroll(view: EditorView, preview: HTMLDivElement): () => void {
+  const runtime = createSyncRuntime(view, preview);
+  view.scrollDOM.addEventListener("scroll", runtime.fromEditor);
+  preview.addEventListener("scroll", runtime.fromPreview);
+  return () => {
+    runtime.dispose();
+    view.scrollDOM.removeEventListener("scroll", runtime.fromEditor);
+    preview.removeEventListener("scroll", runtime.fromPreview);
+  };
+}
+
+function createSyncRuntime(view: EditorView, preview: HTMLDivElement) {
   const editorTarget: ScrollTarget = { value: null };
   const previewTarget: ScrollTarget = { value: null };
   let anchors: ScrollAnchor[] = [];
+  let frame: number | null = null;
+  let disposed = false;
 
-  const fromEditor = () => {
-    if (isProgrammaticEcho(editorTarget, view.scrollDOM.scrollTop)) return;
-    const block = view.lineBlockAtHeight(view.scrollDOM.scrollTop);
-    const line = view.state.doc.lineAt(block.from).number;
-    const target = previewScrollTopForLine(anchors, line);
-    if (target === null) return;
-    scrollTo(preview, target, previewTarget);
-  };
+  const syncFromEditor = () => syncEditor(view, preview, anchors, editorTarget, previewTarget);
+  const syncFromPreview = () => syncPreview(view, preview, anchors, previewTarget, editorTarget);
 
-  const fromPreview = () => {
-    if (isProgrammaticEcho(previewTarget, preview.scrollTop)) return;
-    const line = lineForPreviewScrollTop(anchors, preview.scrollTop);
-    if (line === null) return;
-    const block = view.lineBlockAt(view.state.doc.line(line).from);
-    scrollTo(view.scrollDOM, block.top, editorTarget);
-  };
+  const schedule = (callback: () => void) => scheduleFrame(callback, () => { frame = null; }, () => disposed, (id) => { frame = id; }, frame);
+  const fromEditor = () => schedule(syncFromEditor);
+  const fromPreview = () => schedule(syncFromPreview);
 
   anchors = collectAnchors(preview);
-  const observer = new MutationObserver(() => {
-    anchors = collectAnchors(preview);
-  });
+  const observer = new MutationObserver(() => { anchors = collectAnchors(preview); });
   observer.observe(preview, { childList: true, subtree: true });
-  view.scrollDOM.addEventListener("scroll", fromEditor);
-  preview.addEventListener("scroll", fromPreview);
-
-  return () => {
+  const resizeObserver = observeResize(preview, () => { anchors = collectAnchors(preview); });
+  return {
+    fromEditor,
+    fromPreview,
+    dispose: () => {
+    disposed = true;
+    if (frame !== null) {
+      const cancel = globalThis.cancelAnimationFrame ?? globalThis.clearTimeout;
+      cancel(frame);
+    }
     observer.disconnect();
-    view.scrollDOM.removeEventListener("scroll", fromEditor);
-    preview.removeEventListener("scroll", fromPreview);
+    resizeObserver?.disconnect();
+    },
   };
+}
+
+function scheduleFrame(callback: () => void, clear: () => void, isDisposed: () => boolean, set: (id: number) => void, frame: number | null): void {
+  if (frame !== null) return;
+  const isTestRuntime = typeof navigator !== "undefined" && navigator.userAgent.includes("jsdom");
+  if (!globalThis.requestAnimationFrame || isTestRuntime) { callback(); return; }
+  const id = globalThis.requestAnimationFrame(() => { clear(); if (!isDisposed()) callback(); });
+  set(id);
+}
+
+function observeResize(element: HTMLDivElement, callback: () => void): ResizeObserver | null {
+  if (typeof ResizeObserver === "undefined") return null;
+  const observer = new ResizeObserver(callback);
+  observer.observe(element);
+  return observer;
+}
+
+function syncEditor(view: EditorView, preview: HTMLDivElement, anchors: ScrollAnchor[], source: ScrollTarget, target: ScrollTarget): void {
+  if (isProgrammaticEcho(source, view.scrollDOM.scrollTop)) return;
+  const block = view.lineBlockAtHeight(view.scrollDOM.scrollTop);
+  const line = view.state.doc.lineAt(block.from).number;
+  const top = previewScrollTopForLine(anchors, line);
+  if (top !== null) scrollTo(preview, top, target);
+}
+
+function syncPreview(view: EditorView, preview: HTMLDivElement, anchors: ScrollAnchor[], source: ScrollTarget, target: ScrollTarget): void {
+  if (isProgrammaticEcho(source, preview.scrollTop)) return;
+  const line = lineForPreviewScrollTop(anchors, preview.scrollTop);
+  if (line === null) return;
+  const block = view.lineBlockAt(view.state.doc.line(line).from);
+  scrollTo(view.scrollDOM, block.top, target);
 }

@@ -129,8 +129,8 @@ Markdown 源文
 
 ### P1：同步滚动、响应式与性能（1–2 周）
 
-- `MutationObserver + ResizeObserver` 同时维护锚点。
-- 滚动处理通过 `requestAnimationFrame` 节流，避免双向回声和高频布局读取。
+- [x] `MutationObserver + ResizeObserver` 同时维护锚点。
+- [x] 滚动处理通过 `requestAnimationFrame` 节流，避免双向回声和高频布局读取（测试环境保留同步回退）。
 - 连续文本也生成稳定锚点；优先使用 AST 行号而非脆弱的 DOM 推断。
 - 分割线支持键盘左右调整，并提供 `aria-valuemin/max/now`。
 - ≥1200px 默认可选分栏；900–1199px 保留分栏但降低默认密度；<900px 自动切换单栏模式。
