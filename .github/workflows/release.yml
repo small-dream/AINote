@@ -20,7 +20,7 @@ jobs:
       release_id: ${{ steps.create.outputs.release_id }}
       tag: ${{ steps.vars.outputs.tag }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ inputs.tag || github.ref_name }}
       - id: vars
@@ -28,10 +28,10 @@ jobs:
           INPUT_TAG: ${{ inputs.tag }}
           REF_TAG: ${{ github.ref_name }}
         run: echo "tag=${INPUT_TAG:-$REF_TAG}" >> "$GITHUB_OUTPUT"
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.33.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -107,13 +107,13 @@ jobs:
           - platform: windows-latest
             args: ""
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           ref: ${{ needs.create-release.outputs.tag }}
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10.33.0
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
