@@ -23,7 +23,6 @@ export interface EditorExtensionsInput {
   onOpenWiki?: (name: string) => void;
   /** Markdown 编辑是否启用软渲染（WYSIWYG），false = 源码模式 */
   softRenderEnabled?: boolean;
-  onToggleSoftRender?: () => void;
 }
 
 /** 格式化快捷键（与工具栏按钮共用 dispatchFormat 逻辑） */
@@ -64,7 +63,7 @@ const markdownInputKeymap = Prec.high(
 
 /** 编辑器扩展集合 + 光标激活格式集合（选择/文档变化时经 updateListener 刷新） */
 export function useEditorExtensions(input: EditorExtensionsInput = {}): { extensions: Extension[]; activeFormats: Set<string> } {
-  const { notes = [], repoPath = null, onOpenWiki, softRenderEnabled = true, onToggleSoftRender } = input;
+  const { notes = [], repoPath = null, onOpenWiki, softRenderEnabled = true } = input;
   const [activeFormats, setActiveFormats] = useState<Set<string>>(() => new Set());
   const theme = useUiStore((s) => s.theme);
   const extensions = useMemo(() => [
@@ -81,25 +80,12 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
     markdownInputKeymap,
     formatKeymap,
-    softRenderToggleKeymap(onToggleSoftRender),
     ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki) : []),
     EditorView.updateListener.of((update) => {
       if (update.selectionSet || update.docChanged) setActiveFormats(getActiveFormats(update.state));
     }),
-  ], [theme, notes, repoPath, onOpenWiki, softRenderEnabled, onToggleSoftRender]);
+  ], [theme, notes, repoPath, onOpenWiki, softRenderEnabled]);
   return { extensions, activeFormats };
-}
-
-function softRenderToggleKeymap(onToggle: (() => void) | undefined): Extension {
-  return Prec.high(
-    keymap.of([{
-      key: "Mod-/",
-      run: () => {
-        onToggle?.();
-        return true;
-      },
-    }])
-  );
 }
 
 function softRenderExtension(repoPath: string | null, onOpenWiki: ((name: string) => void) | undefined): Extension[] {

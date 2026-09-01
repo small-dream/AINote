@@ -21,7 +21,7 @@ describe("useEditorExtensions", () => {
     expect(result.current.extensions.length).toBe(lightExtensions.length);
   });
 
-  it("软渲染开关改变扩展数组长度", () => {
+  it("软渲染参数改变扩展数组长度", () => {
     const { result, rerender } = renderHook(
       ({ softRender }) => useEditorExtensions({ softRenderEnabled: softRender }),
       { initialProps: { softRender: true } }

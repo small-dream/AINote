@@ -28,10 +28,6 @@ export function useEditorPreferences(repoPath: string | null, notePath: string |
   const setRatio = useCallback((ratio: number) => update({ ratio }), [update]);
   const setEditorScrollTop = useCallback((editorScrollTop: number) => persistScroll({ editorScrollTop }), [persistScroll]);
   const setPreviewScrollTop = useCallback((previewScrollTop: number) => persistScroll({ previewScrollTop }), [persistScroll]);
-  const toggleSoftRender = useCallback(
-    () => update({ softRender: !readEditorPreferences(repoPath, notePath).softRender }),
-    [update, repoPath, notePath]
-  );
 
   return {
     preferences,
@@ -39,6 +35,5 @@ export function useEditorPreferences(repoPath: string | null, notePath: string |
     setRatio,
     setEditorScrollTop,
     setPreviewScrollTop,
-    toggleSoftRender,
   };
 }
