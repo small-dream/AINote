@@ -1,0 +1,107 @@
+/* 编辑器 / 预览主题。通过局部变量映射，不影响应用其他页面。 */
+:root {
+  --note-bg: var(--bg-primary);
+  --note-surface: var(--bg-secondary);
+  --note-muted: var(--bg-tertiary);
+  --note-ink: var(--text-primary);
+  --note-secondary: var(--text-secondary);
+  --note-tertiary: var(--text-tertiary);
+  --note-border: var(--border);
+  --note-accent: var(--accent);
+  --note-accent-soft: var(--accent-soft);
+  --note-success: var(--success);
+  --note-warning: var(--warning);
+  --note-danger: var(--danger);
+}
+
+[data-note-theme="paper"] {
+  --note-bg: #fbf7ef;
+  --note-surface: #f3ecdf;
+  --note-muted: #e9decd;
+  --note-ink: #3f3528;
+  --note-secondary: #75634d;
+  --note-tertiary: #9a8569;
+  --note-border: #ddcdb7;
+  --note-accent: #b45309;
+  --note-accent-soft: #f7dfc3;
+  --note-success: #3f7d58;
+  --note-warning: #a16207;
+  --note-danger: #b94a48;
+}
+
+[data-note-theme="midnight"] {
+  --note-bg: #111827;
+  --note-surface: #172235;
+  --note-muted: #22324a;
+  --note-ink: #e5edf8;
+  --note-secondary: #a8b8cf;
+  --note-tertiary: #7185a1;
+  --note-border: #30425e;
+  --note-accent: #7dd3fc;
+  --note-accent-soft: #183d58;
+  --note-success: #8bd5a6;
+  --note-warning: #f4c56a;
+  --note-danger: #ff9b9b;
+}
+
+[data-note-theme="forest"] {
+  --note-bg: #f1f7f2;
+  --note-surface: #e3efe5;
+  --note-muted: #d3e5d7;
+  --note-ink: #244239;
+  --note-secondary: #537265;
+  --note-tertiary: #789486;
+  --note-border: #c3d8c8;
+  --note-accent: #2f855a;
+  --note-accent-soft: #cfe8d6;
+  --note-success: #2f855a;
+  --note-warning: #a66a1f;
+  --note-danger: #b94a48;
+}
+
+.note-theme-surface {
+  --bg-primary: var(--note-bg);
+  --bg-secondary: var(--note-surface);
+  --bg-tertiary: var(--note-muted);
+  --text-primary: var(--note-ink);
+  --text-secondary: var(--note-secondary);
+  --text-tertiary: var(--note-tertiary);
+  --border: var(--note-border);
+  --accent: var(--note-accent);
+  --accent-soft: var(--note-accent-soft);
+  --success: var(--note-success);
+  --warning: var(--note-warning);
+  --danger: var(--note-danger);
+  min-width: 0;
+  background: var(--note-bg);
+  color: var(--note-ink);
+}
+
+.note-theme-surface .cm-editor,
+.note-theme-surface .note-preview-pane {
+  background: var(--note-bg);
+  color: var(--note-ink);
+}
+
+.note-theme-surface .cm-editor .cm-content {
+  caret-color: var(--note-accent);
+}
+
+.note-theme-surface .markdown-body {
+  max-width: 72ch;
+}
+
+.note-theme-surface .markdown-body h1 {
+  letter-spacing: -0.025em;
+  color: var(--note-ink);
+}
+
+.note-theme-surface .markdown-body h2,
+.note-theme-surface .markdown-body h3,
+.note-theme-surface .markdown-body h4 {
+  color: var(--note-ink);
+}
+
+.note-theme-surface .markdown-body hr {
+  border-top-color: var(--note-border);
+}

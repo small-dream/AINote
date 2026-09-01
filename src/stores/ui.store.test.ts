@@ -1,9 +1,9 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { LOCALE_STORAGE_KEY, parseLocale, parseTheme, readStoredLocale, readStoredTheme, THEME_STORAGE_KEY, useUiStore } from "./ui.store";
+import { LOCALE_STORAGE_KEY, NOTE_THEME_STORAGE_KEY, parseLocale, parseNoteTheme, parseTheme, readStoredLocale, readStoredTheme, THEME_STORAGE_KEY, useUiStore } from "./ui.store";
 
 describe("ui.store 主题解析与持久化", () => {
   beforeEach(() => localStorage.clear());
-  afterEach(() => useUiStore.setState({ theme: "light", locale: "zh-CN" }));
+  afterEach(() => useUiStore.setState({ theme: "light", noteTheme: "classic", locale: "zh-CN" }));
 
   it("parseTheme 非法值回退亮色", () => {
     expect(parseTheme("dark")).toBe("dark");
@@ -32,5 +32,12 @@ describe("ui.store 主题解析与持久化", () => {
     useUiStore.getState().setLocale("en-US");
     expect(localStorage.getItem(LOCALE_STORAGE_KEY)).toBe("en-US");
     expect(readStoredLocale()).toBe("en-US");
+  });
+
+  it("解析并持久化笔记主题", () => {
+    expect(parseNoteTheme("forest")).toBe("forest");
+    expect(parseNoteTheme("unknown")).toBe("classic");
+    useUiStore.getState().setNoteTheme("midnight");
+    expect(localStorage.getItem(NOTE_THEME_STORAGE_KEY)).toBe("midnight");
   });
 });

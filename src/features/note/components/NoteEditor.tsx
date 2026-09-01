@@ -25,6 +25,7 @@ import { useEditorPreferences } from "../hooks/useEditorPreferences";
 import { attachEditorScrollPersistence } from "../utils/editorScrollPersistence";
 import { dispatchFormat } from "../hooks/useFormatCommands";
 import { insertCallout } from "../utils/insert";
+import { useUiStore, type NoteTheme } from "@/stores/ui.store";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -47,6 +48,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const wiki = useEditorWiki(repoPath, onOpenNote);
     const { extensions, activeFormats } = useEditorExtensions(wiki.notes);
+    const noteTheme = useUiStore((state) => state.noteTheme);
     const editorPreferences = useEditorPreferences(repoPath, notePath);
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
     const outline = useMemo(() => extractOutline(draft), [draft]);
@@ -71,7 +73,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
         <EditorToolbar path={notePath} mode={mode} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} onModeChange={editorPreferences.setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((open) => !open)} />
         {outlineOpen ? <NoteOutline items={outline} onSelect={handleOutlineSelect} /> : null}
         {mode !== "preview" && <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={asset.handleFiles} status={asset.status} />}
-        <EditorBody mode={mode} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={handleCreateEditor} previewRef={previewRef} onOpenWiki={wiki.handleOpenWiki} wikiNotes={wiki.notes} ratio={editorPreferences.preferences.ratio} onRatioChange={editorPreferences.setRatio} />
+        <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={handleCreateEditor} previewRef={previewRef} onOpenWiki={wiki.handleOpenWiki} wikiNotes={wiki.notes} ratio={editorPreferences.preferences.ratio} onRatioChange={editorPreferences.setRatio} />
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
         <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
       </div>
@@ -81,6 +83,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
 interface EditorBodyProps {
   mode: ViewMode;
+  noteTheme: NoteTheme;
   repoPath: string | null;
   draft: string;
   onChange: (value: string) => void;
@@ -93,7 +96,7 @@ interface EditorBodyProps {
   onRatioChange: (ratio: number) => void;
 }
 
-function EditorBody({ mode, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange }: EditorBodyProps) {
+function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange }: EditorBodyProps) {
   const editor = (
     <CodeMirror
       className="h-full"
@@ -106,26 +109,28 @@ function EditorBody({ mode, repoPath, draft, onChange, extensions, onCreateEdito
   );
   if (mode === "split") {
     return (
-      <SplitPane
-        ratio={ratio}
-        onRatioChange={onRatioChange}
-        left={editor}
-        right={
-          <div ref={previewRef} className="h-full overflow-y-auto p-6">
-            <MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} />
-          </div>
-        }
-      />
+      <div data-note-theme={noteTheme} className="note-theme-surface min-h-0 flex-1 overflow-hidden">
+        <SplitPane
+          ratio={ratio}
+          onRatioChange={onRatioChange}
+          left={editor}
+          right={
+            <div ref={previewRef} className="note-preview-pane h-full overflow-y-auto p-6">
+              <MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} />
+            </div>
+          }
+        />
+      </div>
     );
   }
   if (mode === "preview") {
     return (
-      <div ref={previewRef} className="min-h-0 flex-1 overflow-y-auto p-6">
+      <div ref={previewRef} data-note-theme={noteTheme} className="note-theme-surface note-preview-pane min-h-0 flex-1 overflow-y-auto p-6">
         <MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} />
       </div>
     );
   }
-  return <div className="min-h-0 flex-1 overflow-hidden">{editor}</div>;
+  return <div data-note-theme={noteTheme} className="note-theme-surface min-h-0 flex-1 overflow-hidden">{editor}</div>;
 }
 
 function scrollPreviewToHeading(preview: HTMLDivElement | null, id: string): void {

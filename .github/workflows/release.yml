@@ -48,13 +48,13 @@ jobs:
           release_body=$(cat <<'EOF'
           ## 更新内容
 
-          - 修复隐藏标题栏模式下无法从顶部空白区域拖动窗口的问题。
-          - 左侧功能导航栏由 88px 收窄至 72px，在保留操作热区的同时增加内容空间。
+          - 增加经典、纸张、夜航、森林四套 Markdown 编辑器与预览主题。
+          - 主题可从编辑器工具栏即时切换，并在重启后保持。
 
           ## What's new
 
-          - Fixed window dragging from empty top areas when using the hidden overlay title bar.
-          - Reduced the left navigation rail from 88px to 72px while preserving its interaction targets.
+          - Added four Markdown editor and preview themes: Classic, Paper, Midnight, and Forest.
+          - Themes can be switched from the editor toolbar and persist across restarts.
 
           ## 安装与更新
 

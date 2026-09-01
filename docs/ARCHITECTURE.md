@@ -176,6 +176,6 @@ AINote/
 - **长耗时 IPC**：Git / 文件 / 网络类 Command 统一通过 `async command + spawn_blocking` 执行，避免阻塞前端渲染与交互。
 - **Markdown 预览管线**：`MarkdownPreview` 统一使用 `remark-gfm`、`remark-frontmatter` 与自定义 `remarkCallouts` / `remarkRemoveFrontmatter` 插件；Frontmatter 仅展示标量/简单数组 Properties，不进入正文与索引，Callout 通过 `data-callout` 映射主题样式。原始 HTML 默认不解析，扩展必须先经过安全边界评审。
 - **预览同步滚动**：分栏模式通过 `MutationObserver` 与 `ResizeObserver` 更新 Markdown 行号锚点，滚动事件在浏览器中用 `requestAnimationFrame` 合帧，并保留 jsdom/不支持 RAF 环境的同步回退以保证可测试性。
-- **编辑器工作区偏好**：`features/note/utils/editorPreferences.ts` 按仓库路径 + 笔记路径隔离保存视图模式、分栏比例及两侧滚动位置；`useEditorPreferences` 仅负责本地 UI 偏好，不进入 TanStack Query 或笔记正文。
+- **编辑器工作区偏好**：`features/note/utils/editorPreferences.ts` 按仓库路径 + 笔记路径隔离保存视图模式、分栏比例及两侧滚动位置；`useEditorPreferences` 仅负责本地 UI 偏好，不进入 TanStack Query 或笔记正文。编辑器 / 预览的阅读主题由 `stores/ui.store.ts` 持久化，使用局部 CSS 变量映射到当前笔记工作区，不影响应用其他页面。
 - **软件更新链路**：`features/update` → `src/api/update.api.ts` → Tauri updater 插件 → GitHub Releases。更新状态为局部 UI 态，不写入 Zustand 或业务仓库；私钥只存在 GitHub Actions Secret。
 - **界面语言**：`stores/ui.store.ts` 持久化 `zh-CN` / `en-US` 显示偏好；`i18n/` 集中维护翻译键与插值，不让组件散落硬编码文案。`AppProviders` 同步 `<html lang>`，保证屏幕阅读器使用正确语言。

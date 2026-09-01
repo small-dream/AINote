@@ -1,6 +1,7 @@
 import { Button } from "@/components/atoms/Button";
 import { FilePenLine, FolderInput, History, Network, Save, Split, Eye, Pencil, List } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { NoteThemePicker } from "./NoteThemePicker";
 
 export type ViewMode = "edit" | "split" | "preview";
 
@@ -46,6 +47,7 @@ export function EditorToolbar({ path, mode, saving, dirty, saveError, onModeChan
       </div>
       <div className="flex shrink-0 items-center gap-2">
         <ModeTabs mode={mode} onChange={onModeChange} />
+        <NoteThemePicker />
         <Button variant="ghost" aria-label={t("history.title")} title={t("history.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onHistory}><History size={14} /><span className="hidden xl:inline">{t("history.title")}</span></Button>
         <Button variant="ghost" aria-label={t("wiki.title")} title={t("wiki.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onWiki}><Network size={14} /><span className="hidden xl:inline">{t("wiki.title")}</span></Button>
         <Button variant="ghost" aria-label={t("note.outline")} title={t("note.outline")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={() => onOutline?.()}><List size={14} /><span className="hidden xl:inline">{t("note.outline")}</span></Button>
