@@ -1,50 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
-  <defs>
-    <linearGradient id="surface" x1="80" y1="40" x2="944" y2="984" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#4F46E5"/>
-      <stop offset="0.52" stop-color="#2563EB"/>
-      <stop offset="1" stop-color="#0891B2"/>
-    </linearGradient>
-    <linearGradient id="paper" x1="302" y1="216" x2="760" y2="814" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#FFFFFF"/>
-      <stop offset="1" stop-color="#E0F2FE"/>
-    </linearGradient>
-    <linearGradient id="fold" x1="678" y1="214" x2="770" y2="306" gradientUnits="userSpaceOnUse">
-      <stop offset="0" stop-color="#BFDBFE"/>
-      <stop offset="1" stop-color="#93C5FD"/>
-    </linearGradient>
-    <filter id="shadow" x="238" y="166" width="568" height="694" filterUnits="userSpaceOnUse">
-      <feDropShadow dx="0" dy="24" stdDeviation="22" flood-color="#0F172A" flood-opacity="0.24"/>
-    </filter>
-  </defs>
-
-  <rect x="24" y="24" width="976" height="976" rx="224" fill="url(#surface)"/>
-  <path d="M24 694C191 840 351 905 547 905C727 905 882 850 1000 754V1000H24V694Z" fill="#0F766E" opacity="0.16"/>
-  <circle cx="188" cy="184" r="116" fill="#A5B4FC" opacity="0.16"/>
-  <circle cx="850" cy="810" r="152" fill="#67E8F9" opacity="0.12"/>
-
-  <g filter="url(#shadow)">
-    <path d="M332 194H674L764 284V798C764 819 747 836 726 836H332C311 836 294 819 294 798V232C294 211 311 194 332 194Z" fill="url(#paper)"/>
-    <path d="M674 194V270C674 290 690 306 710 306H764" fill="url(#fold)"/>
-    <path d="M674 194L764 284H712C691 284 674 267 674 246V194Z" fill="#DBEAFE"/>
-    <path d="M388 404H632" stroke="#2563EB" stroke-width="24" stroke-linecap="round" opacity="0.86"/>
-    <path d="M388 484H594" stroke="#60A5FA" stroke-width="24" stroke-linecap="round" opacity="0.78"/>
-    <path d="M388 564H548" stroke="#93C5FD" stroke-width="24" stroke-linecap="round" opacity="0.76"/>
-    <path d="M388 692H470" stroke="#CBD5E1" stroke-width="22" stroke-linecap="round"/>
-  </g>
-
-  <g fill="none" stroke="#FFFFFF" stroke-width="22" stroke-linecap="round" stroke-linejoin="round">
-    <path d="M506 654V722C506 752 530 776 560 776H624"/>
-    <path d="M506 654V596C506 566 530 542 560 542H624"/>
-  </g>
-  <g fill="#FFFFFF">
-    <circle cx="486" cy="654" r="34"/>
-    <circle cx="642" cy="542" r="34"/>
-    <circle cx="642" cy="776" r="34"/>
-  </g>
-  <g fill="#2563EB">
-    <circle cx="486" cy="654" r="12"/>
-    <circle cx="642" cy="542" r="12"/>
-    <circle cx="642" cy="776" r="12"/>
+  <!-- 简约风格：品牌蓝圆角方底 + 白色几何 N 字标（无 Git 元素） -->
+  <rect x="24" y="24" width="976" height="976" rx="232" fill="#3F6FE5"/>
+  <g fill="none" stroke="#FFFFFF" stroke-width="150" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M336 324V700"/>
+    <path d="M688 324V700"/>
+    <path d="M336 324L688 700"/>
   </g>
 </svg>
