@@ -10,7 +10,7 @@ import { useAssetImport } from "@/features/asset/hooks/useAssetImport";
 import { useEditorWiki } from "@/features/wiki/hooks/useEditorWiki";
 import { HistoryPanel } from "@/features/history/components/HistoryPanel";
 import { WikiPanel } from "@/features/wiki/components/WikiPanel";
-import { EditorToolbar } from "./EditorToolbar";
+import { EditorToolbar, type ViewMode } from "./EditorToolbar";
 import { MarkdownEditorSurface, type MarkdownEditorSurfaceProps } from "./MarkdownEditorSurface";
 import { extractOutline, type OutlineItem } from "../utils/outline";
 import { useTranslation } from "@/i18n";
@@ -44,19 +44,19 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const wiki = useEditorWiki(repoPath, onOpenNote);
     const noteTheme = useUiStore((state) => state.noteTheme);
-    const softRender = editorPreferences.preferences.softRender;
+    const { mode, editorScrollTop, previewScrollTop } = editorPreferences.preferences;
+    const softRenderEnabled = isSoftRenderEnabled(editorPreferences.preferences.softRender, mode);
     const { extensions, activeFormats } = useEditorExtensions({
       notes: wiki.notes,
       repoPath,
       onOpenWiki: wiki.handleOpenWiki,
-      softRenderEnabled: softRender,
+      softRenderEnabled,
       onToggleSoftRender: editorPreferences.toggleSoftRender,
     });
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
     const outline = useMemo(() => extractOutline(draft), [draft]);
     const asset = useAssetImport(readyView);
     const previewRef = useRef<HTMLDivElement | null>(null);
-    const { mode, editorScrollTop, previewScrollTop } = editorPreferences.preferences;
     const { handleConvertNote, handleConvertToRichText } = useNoteConversion({ notePath, draft, flush, onOpenNote });
     useEffect(() => { if (readyView) attachEditorScrollPersistence(readyView, previewRef.current, { editorScrollTop, previewScrollTop }, editorPreferences.setEditorScrollTop, editorPreferences.setPreviewScrollTop); }, [readyView, mode, editorScrollTop, previewScrollTop, editorPreferences]);
     useSyncScroll(readyView, previewRef, mode);
@@ -67,11 +67,11 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     if (!notePath) return <EmptyState />;
     if (loadError) return <ErrorState message={loadError.message} />;
     const isRichText = kind === "richText";
-    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio: editorPreferences.preferences.ratio, onRatioChange: editorPreferences.setRatio, outline, outlineOpen, onOutlineSelect: handleOutlineSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender };
+    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio: editorPreferences.preferences.ratio, onRatioChange: editorPreferences.setRatio, outline, outlineOpen, onOutlineSelect: handleOutlineSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar path={notePath} mode={mode} richText={isRichText} saveError={saveError?.message ?? null} onModeChange={editorPreferences.setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} onConvertToRichText={handleConvertToRichText} softRender={softRender} onToggleSoftRender={editorPreferences.toggleSoftRender} />
+        <EditorToolbar path={notePath} mode={mode} richText={isRichText} saveError={saveError?.message ?? null} onModeChange={editorPreferences.setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} onConvertToRichText={handleConvertToRichText} softRender={softRenderEnabled} onToggleSoftRender={editorPreferences.toggleSoftRender} softRenderToggleHidden={mode === "split"} />
         {isRichText ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} /> : <MarkdownEditorSurface {...surfaceProps} />}
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
         <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
@@ -79,6 +79,11 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     );
   }
 );
+
+/** 分栏视图下编辑侧固定为源码编辑，软渲染仅用于单栏编辑视图 */
+function isSoftRenderEnabled(softRender: boolean, mode: ViewMode): boolean {
+  return softRender && mode !== "split";
+}
 
 function scrollPreviewToHeading(preview: HTMLDivElement | null, id: string): void {
   const heading = preview ? Array.from(preview.querySelectorAll<HTMLElement>("[id]")).find((element) => element.id === id) : null;

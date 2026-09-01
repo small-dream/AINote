@@ -22,6 +22,8 @@ interface EditorToolbarProps {
   /** 软渲染开关（Markdown）：true = 所见即所得，false = 源码 */
   softRender?: boolean;
   onToggleSoftRender?: () => void;
+  /** 分栏模式下隐藏软渲染开关（编辑侧固定源码） */
+  softRenderToggleHidden?: boolean;
 }
 
 const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.preview" }[] = [
@@ -31,7 +33,7 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
 ];
 
 /** 笔记操作栏：标题与保存状态、视图切换、文件操作。 */
-export function EditorToolbar({ path, mode, richText = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onOutline, onConvertToRichText, softRender = true, onToggleSoftRender }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, richText = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onOutline, onConvertToRichText, softRender = true, onToggleSoftRender, softRenderToggleHidden = false }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -45,7 +47,7 @@ export function EditorToolbar({ path, mode, richText = false, saveError, onModeC
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {!richText && <ModeTabs mode={mode} onChange={onModeChange} />}
-        {!richText && <SoftRenderToggle softRender={softRender} onToggle={onToggleSoftRender} />}
+        {!richText && <SoftRenderToggle softRender={softRender} onToggle={onToggleSoftRender} hidden={softRenderToggleHidden} />}
         {!richText && <NoteThemePicker />}
         <Button variant="ghost" aria-label={t("history.title")} title={t("history.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onHistory}><History size={14} /><span className="hidden xl:inline">{t("history.title")}</span></Button>
         <Button variant="ghost" aria-label={t("wiki.title")} title={t("wiki.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onWiki}><Network size={14} /><span className="hidden xl:inline">{t("wiki.title")}</span></Button>
@@ -58,9 +60,9 @@ export function EditorToolbar({ path, mode, richText = false, saveError, onModeC
   );
 }
 
-function SoftRenderToggle({ softRender, onToggle }: { softRender: boolean; onToggle: (() => void) | undefined }) {
+function SoftRenderToggle({ softRender, onToggle, hidden }: { softRender: boolean; onToggle: (() => void) | undefined; hidden: boolean }) {
   const { t } = useTranslation();
-  if (!onToggle) return null;
+  if (!onToggle || hidden) return null;
   const label = softRender ? t("note.sourceMode") : t("note.softRender");
   return (
     <Button variant="ghost" aria-label={label} title={`${label}（${softRenderShortcut()}）`} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onToggle}>
