@@ -99,16 +99,45 @@ function handleClick(event: MouseEvent, view: EditorView, options: SoftRenderOpt
     return true;
   }
   if (enterWidgetAt(event, view)) return true;
+  // 软渲染可能改变行内元素的实际高度，CodeMirror 仅按鼠标 Y 坐标换算时会把行底部点击误判到下一行。
+  // 将单击的 Y 坐标固定到命中行的中心，保留 X 坐标用于计算列位置。
+  correctSelectionToClickedLine(event, view);
   if (!isModifierClick(event)) return false;
-  const link = (target as HTMLElement | null)?.closest<HTMLElement>(".cm-sr-link, .cm-sr-wikilink, .cm-sr-autolink");
+  const link = closestElement(target, ".cm-sr-link, .cm-sr-wikilink, .cm-sr-autolink");
   if (!link) return false;
   event.preventDefault();
   return openFromLink(link, options);
 }
 
+function correctSelectionToClickedLine(event: MouseEvent, view: EditorView): void {
+  if (!isPlainSingleClick(event)) return;
+  const line = lineElementForTarget(event.target);
+  if (!line) return;
+  const rect = line.getBoundingClientRect();
+  // 多行折行时同一个 .cm-line 包含多个视觉行，不能把点击统一吸附到整块中心。
+  if (rect.height <= 0 || rect.height > view.defaultLineHeight * 1.5) return;
+  const pos = view.posAtCoords({ x: event.clientX, y: rect.top + rect.height / 2 }, false);
+  if (pos === null) return;
+  view.dispatch({ selection: { anchor: pos } });
+}
+
+function isPlainSingleClick(event: MouseEvent): boolean {
+  return event.detail === 1 && !(event.shiftKey || event.altKey || event.ctrlKey || event.metaKey);
+}
+
+function lineElementForTarget(target: EventTarget | null): HTMLElement | null {
+  return closestElement(target, ".cm-line");
+}
+
+function closestElement(target: EventTarget | null, selector: string): HTMLElement | null {
+  if (target instanceof HTMLElement) return target.closest<HTMLElement>(selector);
+  if (target instanceof Node) return target.parentElement?.closest<HTMLElement>(selector) ?? null;
+  return null;
+}
+
 /** 点击已渲染 widget（代码块/表格/图片/列表等）时把光标移入其源码区间，进入就地编辑。 */
 function enterWidgetAt(event: MouseEvent, view: EditorView): boolean {
-  const el = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-sr-from]");
+  const el = closestElement(event.target, "[data-sr-from]");
   if (!el) return false;
   const from = Number(el.dataset.srFrom);
   const to = Number(el.dataset.srTo);

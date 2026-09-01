@@ -2,7 +2,7 @@ import { markdown } from "@codemirror/lang-markdown";
 import { GFM } from "@lezer/markdown";
 import { EditorState } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
-import { beforeEach, describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { softRender } from "./plugin";
 
 async function createView(doc: string, anchor = 0): Promise<EditorView> {
@@ -18,13 +18,17 @@ async function createView(doc: string, anchor = 0): Promise<EditorView> {
 
 beforeEach(() => {
   document.body.innerHTML = "";
+  globalThis.ResizeObserver = createResizeObserverStub();
+});
+
+function createResizeObserverStub(): typeof ResizeObserver {
   class ResizeObserverStub {
     observe() {}
     unobserve() {}
     disconnect() {}
   }
-  globalThis.ResizeObserver = ResizeObserverStub as unknown as typeof ResizeObserver;
-});
+  return ResizeObserverStub as unknown as typeof ResizeObserver;
+}
 
 describe("softRender 渲染", () => {
   it("光标在标题外时隐藏 # 标记", async () => {
@@ -58,6 +62,31 @@ describe("softRender 渲染", () => {
     expect(img).toBeDefined();
     expect(img?.alt).toBe("alt");
     expect(img?.src).toContain("https://example.com/a.png");
+    view.destroy();
+  });
+
+});
+
+describe("softRender 点击定位", () => {
+  it("单击软渲染行时按命中行中心定位，避免落到下一行", async () => {
+    const view = await createView("first\nsecond", 0);
+    const lines = view.contentDOM.querySelectorAll<HTMLElement>(".cm-line");
+    const secondLine = lines[1];
+    if (!secondLine) throw new Error("second line not rendered");
+    Object.defineProperty(secondLine, "getBoundingClientRect", { value: () => ({
+      top: 20,
+      bottom: 40,
+      height: 20,
+      left: 0,
+      right: 200,
+      width: 200,
+      x: 0,
+      y: 20,
+      toJSON: () => ({}),
+    } as DOMRect) });
+    vi.spyOn(view, "posAtCoords").mockReturnValue(7);
+    secondLine.firstChild?.dispatchEvent(new MouseEvent("click", { bubbles: true, detail: 1, clientX: 20, clientY: 39 }));
+    expect(view.state.selection.main.head).toBe(7);
     view.destroy();
   });
 });
