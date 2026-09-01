@@ -8,11 +8,13 @@ import { AinoteImage } from "../extensions/image";
 import { WikiLink } from "../extensions/wikiLink";
 import { TagMark } from "../extensions/tag";
 import { SlashCommand } from "../extensions/slashCommand";
+import { CodeBlock } from "../extensions/codeBlock";
 
 /** 富文本编辑器扩展集合：useRichTextEditor 与 markdown→JSON 互转共用 */
 export function createRichTextExtensions(repoPath: string | null): Extensions {
   return [
-    StarterKit,
+    StarterKit.configure({ codeBlock: false }),
+    CodeBlock,
     AinoteImage.configure({ repoPath }),
     Table.configure({ resizable: true }),
     TableRow,
