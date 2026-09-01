@@ -48,13 +48,15 @@ jobs:
           release_body=$(cat <<'EOF'
           ## 更新内容
 
-          - 重新设计应用图标：简约扁平风格，品牌蓝纯色圆角方底 + 白色几何 `N` 字标，移除 Git 分支元素。
-          - 同步更新 Windows、macOS、iOS、Android 各平台图标。
+          - Markdown 编辑默认启用 CodeMirror 软渲染（Typora 式所见即所得）：标题（ATX 与 Setext）、加粗/斜体/删除线、行内代码、代码块（语法高亮）、引用/Callout、列表与任务勾选、链接/双链、图片、表格、分割线、数学公式（KaTeX）与 Mermaid 图表直接在编辑区渲染。
+          - 光标或选区命中的元素淡显原始标记，点击已渲染的代码块/表格/图片可进入源码编辑；任务项支持点击或空格键切换。
+          - `Ctrl+/` 或工具栏按钮在「软渲染 / 源码」间切换，偏好按笔记持久化；源码 100% 原样保存，Git 保真、全文搜索与 wiki 索引不受影响。
 
           ## What's new
 
-          - Redesigned the app icon with a minimal flat style: a brand-blue rounded square with a white geometric "N", dropping the Git branch motif.
-          - Updated the full icon set for Windows, macOS, iOS, and Android.
+          - Markdown editing now defaults to CodeMirror soft rendering (Typora-style WYSIWYG): headings (ATX & Setext), bold/italic/strikethrough, inline code, highlighted code blocks, quotes/callouts, lists with task checkboxes, links/wikilinks, images, tables, dividers, KaTeX math, and Mermaid diagrams render inline.
+          - Source markers fade in for the element under the cursor or selection; click a rendered code block/table/image to edit its source, and toggle tasks with a click or the Space key.
+          - Toggle between soft render and source with `Ctrl+/` or the toolbar button; the preference is persisted per note and the source is saved verbatim, keeping Git, full-text search, and wiki indexes intact.
 
           ## 安装与更新
 
