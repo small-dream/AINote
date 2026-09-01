@@ -48,13 +48,13 @@ jobs:
           release_body=$(cat <<'EOF'
           ## 更新内容
 
-          - 增加经典、纸张、夜航、森林四套 Markdown 编辑器与预览主题。
-          - 主题可从编辑器工具栏即时切换，并在重启后保持。
+          - 重新设计应用图标：简约扁平风格，品牌蓝纯色圆角方底 + 白色几何 `N` 字标，移除 Git 分支元素。
+          - 同步更新 Windows、macOS、iOS、Android 各平台图标。
 
           ## What's new
 
-          - Added four Markdown editor and preview themes: Classic, Paper, Midnight, and Forest.
-          - Themes can be switched from the editor toolbar and persist across restarts.
+          - Redesigned the app icon with a minimal flat style: a brand-blue rounded square with a white geometric "N", dropping the Git branch motif.
+          - Updated the full icon set for Windows, macOS, iOS, and Android.
 
           ## 安装与更新
 
