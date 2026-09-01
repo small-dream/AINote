@@ -1,0 +1,57 @@
+/* 真富文本编辑器（TipTap）排版：引用设计 Token，随全局主题切换 */
+.rich-text-editor .ProseMirror {
+  outline: none;
+  min-height: 100%;
+  color: var(--text-primary);
+  font-size: 15px;
+  line-height: 1.75;
+  caret-color: var(--accent);
+}
+.rich-text-editor .ProseMirror > * + * {
+  margin-top: 0.5em;
+}
+.rich-text-editor .ProseMirror h1,
+.rich-text-editor .ProseMirror h2,
+.rich-text-editor .ProseMirror h3 {
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1.3;
+}
+.rich-text-editor .ProseMirror h1 { font-size: 1.7rem; margin: 0.6em 0 0.3em; }
+.rich-text-editor .ProseMirror h2 { font-size: 1.35rem; margin: 0.6em 0 0.3em; }
+.rich-text-editor .ProseMirror h3 { font-size: 1.12rem; margin: 0.6em 0 0.3em; }
+.rich-text-editor .ProseMirror p { margin: 0.4em 0; }
+.rich-text-editor .ProseMirror ul { list-style: disc; padding-left: 1.4rem; }
+.rich-text-editor .ProseMirror ol { list-style: decimal; padding-left: 1.4rem; }
+.rich-text-editor .ProseMirror li { margin: 0.15em 0; }
+.rich-text-editor .ProseMirror blockquote {
+  border-left: 3px solid var(--accent);
+  padding-left: 1rem;
+  color: var(--text-secondary);
+  margin: 0.5em 0;
+}
+.rich-text-editor .ProseMirror pre {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 13px;
+  overflow-x: auto;
+}
+.rich-text-editor .ProseMirror code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  background: var(--bg-tertiary);
+  padding: 0.1em 0.35em;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+.rich-text-editor .ProseMirror pre code { background: none; padding: 0; }
+.rich-text-editor .ProseMirror hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1em 0;
+}
+.rich-text-editor .ProseMirror .ProseMirror-selectednode {
+  outline: 2px solid var(--accent);
+  border-radius: 4px;
+}

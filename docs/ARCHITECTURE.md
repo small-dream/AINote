@@ -22,7 +22,7 @@
 | 跨平台壳 | **Tauri 2** | 一套代码覆盖 macOS/Windows/Linux/iOS/Android；Web 前端 + Rust 后端边界清晰；包体小、性能好 |
 | 前端框架 | **React 18 + TypeScript (strict)** | 生态最大、AI 语料最丰富；`strict` 让 AI 改动被编译器即时校验 |
 | 构建 | **Vite** | 快，配置声明式 |
-| 编辑器 | **CodeMirror 6** | 模块化按需引入（拒绝 Monaco 巨石），Markdown 高亮/快捷键成熟 |
+| 编辑器 | **CodeMirror 6（Markdown）+ TipTap（真富文本）** | CodeMirror 模块化按需引入、Markdown 高亮成熟；TipTap（ProseMirror）提供 Notion 式所见即所得块编辑；按笔记类型（`.md` / `.ainote`）路由，两者共享保存 / 索引 / Git 链路 |
 | 样式 | **Tailwind CSS 4（CSS-first 配置）+ CSS Variables** | 原子类声明式，设计 Token 集中管理（`src/styles/tokens.css` + `@theme` 映射） |
 | Git 引擎 | **Rust 后端 `git2` (libgit2)** | 完整离线 Git 能力（commit/pull/push/merge），移动端可用 |
 | 前后端桥 | **Tauri Commands (IPC) + `serde`** | Rust 强类型入参/出参，TS 侧镜像类型，双向类型安全 |
@@ -115,6 +115,7 @@ AINote/
 │   │   └── setup/index.tsx
 │   ├── features/                 # 按领域垂直切分 (核心防腐化手段)
 │   │   ├── note/
+│   │   ├── richtext/            # 真富文本编辑器（TipTap），读写 `.ainote` JSON
 │   │   │   ├── components/       # 每个组件 < 150 行
 │   │   │   ├── hooks/            # 状态/副作用/IPC 编排全部在此
 │   │   │   ├── utils/            # 纯函数
@@ -153,7 +154,7 @@ AINote/
 │   │   │   └── trash/            # list.rs / restore.rs / delete.rs / empty.rs
 │   │   ├── services/             # 一用例一模块（含 search_service / history_service / asset_service / wiki_service / trash_service）
 │   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / file_storage / note_files / file_tree / asset_files / trash_files）
-│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs / wiki.rs / trash.rs）
+│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs / wiki.rs / trash.rs / rich_text.rs）
 │   │   └── config/            # mod.rs（持久化）+ repos.rs（仓库注册表纯逻辑）
 │   └── Cargo.toml
 ├── package.json / tsconfig.json (strict: true)
@@ -173,6 +174,7 @@ AINote/
 - **软删除回收站**：`features/trash` 提供回收站面板。删除笔记/目录不再硬删除，改为移入仓库隐藏目录 `.trash/`（`.trash/<id>.md` 存正文，`.trash/manifest.json` 记录原路径 / 删除时间 / 标题；隐藏目录被搜索、wiki、文件树扫描自动忽略，并随仓库 Git 版本化同步）。删除经 `note_files` → `trash_files` 软删除，回收站恢复 / 彻底删除 / 清空走 `trash_service` → `trash_files`；恢复时原路径被占用自动追加 `-1`/`-2`…。侧边栏「目录 / 标签 / 回收站」tab 切换。
 - **标签与双链**：`features/wiki` 提供标签系统与 `[[wiki-link]]`。Rust `wiki_index` 一次全仓扫描返回每篇笔记的标题 / `#标签` / `[[双链]]`（纯函数字节级解析，`# 标题` 不误判，支持 `[[目标|别名]]`），前端纯函数聚合标签云、反链与出链目标（标题 / 文件名双轨匹配）。预览层把 `[[...]]` 转为 `wiki:` 协议链接拦截点击跳转；编辑器工具栏「双链与标签」面板展示当前笔记标签 / 出链 / 反链，未创建目标标记；侧边栏新增「目录 / 标签」tab，标签可展开其下笔记。
 - **编辑器补全**：CodeMirror 自动补全从 `useWikiIndexQuery` 的缓存索引读取笔记标题与标签；纯函数仅识别光标所在行的未闭合 `[[...` 或标签上下文，标题行 `# ` 不误触发，补全不直接调用 IPC。预览复用同一索引区分已解析/未解析双链，wiki 索引同时提供去重的行级上下文片段供反向链接展示。
+- **笔记类型与富文本**：笔记文件按扩展名区分类型——`.md`（Markdown）与 `.ainote`（TipTap JSON），`domain/note.rs` 的 `NoteKind` 是权威判定（前端 `features/note/utils/noteKind.ts` 镜像一致）。新建入口先选类型再选模板，路径按类型补扩展名；`NoteEditor` 按 `kind` 路由到 CodeMirror（Markdown）或 `features/richtext` 的 TipTap 编辑器（富文本），富文本草稿即 TipTap JSON 字符串，复用同一套 30s 防抖自动保存。索引走双管道：`domain/rich_text.rs` 把 TipTap JSON 提取为纯文本/标题，`search_service` 与 `wiki_service` 据此让富文本笔记进入全文搜索、`#标签` 与 `[[双链]]` 索引；`file_storage` / `file_tree` / `trash_files` 均按 `NoteKind` 收集两类文件。
 - **长耗时 IPC**：Git / 文件 / 网络类 Command 统一通过 `async command + spawn_blocking` 执行，避免阻塞前端渲染与交互。
 - **Markdown 预览管线**：`MarkdownPreview` 统一使用 `remark-gfm`、`remark-frontmatter` 与自定义 `remarkCallouts` / `remarkRemoveFrontmatter` 插件；Frontmatter 仅展示标量/简单数组 Properties，不进入正文与索引，Callout 通过 `data-callout` 映射主题样式。原始 HTML 默认不解析，扩展必须先经过安全边界评审。
 - **预览同步滚动**：分栏模式通过 `MutationObserver` 与 `ResizeObserver` 更新 Markdown 行号锚点，滚动事件在浏览器中用 `requestAnimationFrame` 合帧，并保留 jsdom/不支持 RAF 环境的同步回退以保证可测试性。

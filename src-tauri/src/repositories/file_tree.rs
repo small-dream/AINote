@@ -5,6 +5,7 @@ use crate::domain::error::AppError;
 use crate::domain::sync::{NodeKind, TreeNode};
 
 use super::file_storage::is_hidden;
+use crate::domain::note::is_note_file;
 
 /// 用例支撑：列出仓库的笔记文件树（目录优先、按名称排序，跳过隐藏项）。
 pub fn list_tree(root: &Path) -> Result<TreeNode, AppError> {
@@ -26,7 +27,7 @@ fn build_node(root: &Path, dir: &Path) -> Result<TreeNode, AppError> {
         }
         if path.is_dir() {
             children.push(build_node(root, &path)?);
-        } else if path.extension().is_some_and(|ext| ext == "md") {
+        } else if is_note_file(&path) {
             children.push(leaf(root, &path));
         }
     }
@@ -73,6 +74,7 @@ mod tests {
         create_dir_all(root.join(".git")).unwrap();
         File::create(root.join("b.md")).unwrap();
         File::create(root.join("daily/a.md")).unwrap();
+        File::create(root.join("daily/c.ainote")).unwrap();
         File::create(root.join(".git/x.md")).unwrap();
         File::create(root.join("note.txt")).unwrap();
 
@@ -82,6 +84,7 @@ mod tests {
         assert_eq!(tree.children[0].name, "daily");
         assert_eq!(tree.children[0].node_type, NodeKind::Dir);
         assert_eq!(tree.children[0].children[0].path, "daily/a.md");
+        assert_eq!(tree.children[0].children[1].path, "daily/c.ainote");
         assert_eq!(tree.children[1].name, "b.md");
     }
 }

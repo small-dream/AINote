@@ -2,14 +2,15 @@ use std::collections::BTreeSet;
 use std::path::Path;
 
 use crate::domain::error::AppError;
+use crate::domain::note::{extract_title, NoteKind};
+use crate::domain::rich_text;
 use crate::domain::wiki::{NoteWiki, WikiLinkContext};
 use crate::repositories::file_storage;
-use crate::services::note_service::extract_title;
 
 /// 用例：扫描仓库全部笔记的标签与双链（P1-5）。一次全仓扫描，前端本地聚合反链/标签云。
 pub fn wiki_index(repo_path: &Path) -> Result<Vec<NoteWiki>, AppError> {
     let mut notes = Vec::new();
-    for file in file_storage::collect_markdown_files(repo_path)? {
+    for file in file_storage::collect_note_files(repo_path)? {
         let content = std::fs::read_to_string(&file)?;
         let rel = file
             .strip_prefix(repo_path)
@@ -18,12 +19,30 @@ pub fn wiki_index(repo_path: &Path) -> Result<Vec<NoteWiki>, AppError> {
             .file_stem()
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_default();
+        let kind = NoteKind::of_path(&file).unwrap_or(NoteKind::Markdown);
+        let (title, tags, links, link_contexts) = match kind {
+            NoteKind::Markdown => (
+                extract_title(&content, &fallback),
+                extract_tags(&content),
+                extract_links(&content),
+                extract_link_contexts(&content),
+            ),
+            NoteKind::RichText => {
+                let text = rich_text::plain_text(&content);
+                (
+                    rich_text::extract_title(&content).unwrap_or(fallback),
+                    extract_tags(&text),
+                    extract_links(&text),
+                    extract_link_contexts(&text),
+                )
+            }
+        };
         notes.push(NoteWiki {
             path: rel.to_string_lossy().into_owned(),
-            title: extract_title(&content, &fallback),
-            tags: extract_tags(&content),
-            links: extract_links(&content),
-            link_contexts: extract_link_contexts(&content),
+            title,
+            tags,
+            links,
+            link_contexts,
         });
     }
     Ok(notes)
@@ -187,5 +206,23 @@ mod tests {
         assert_eq!(by_path["a.md"].links, vec!["B 笔记"]);
         assert_eq!(by_path["a.md"].link_contexts[0].target, "B 笔记");
         assert_eq!(by_path["sub/b.md"].links, vec!["A 笔记"]);
+    }
+
+    #[test]
+    fn wiki_index_extracts_tags_and_links_from_rich_text() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        fs::write(
+            root.join("r.ainote"),
+            r##"{"type":"doc","content":[{"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"富文本笔记"}]},{"type":"paragraph","content":[{"type":"text","text":"#项目 见 [[Markdown 笔记]]"}]}]}"##,
+        )
+        .unwrap();
+        let notes = wiki_index(root).unwrap();
+        assert_eq!(notes.len(), 1);
+        assert_eq!(notes[0].path, "r.ainote");
+        assert_eq!(notes[0].title, "富文本笔记");
+        assert_eq!(notes[0].tags, vec!["项目"]);
+        assert_eq!(notes[0].links, vec!["Markdown 笔记"]);
+        assert_eq!(notes[0].link_contexts[0].target, "Markdown 笔记");
     }
 }

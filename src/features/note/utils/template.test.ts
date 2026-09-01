@@ -15,25 +15,34 @@ describe("formatDate", () => {
 
 describe("defaultNoteFileName", () => {
   it("daily 用日期文件名", () => {
-    expect(defaultNoteFileName("daily", NOW)).toBe("2026-08-30.md");
+    expect(defaultNoteFileName("markdown", "daily", NOW)).toBe("2026-08-30.md");
+    expect(defaultNoteFileName("richText", "daily", NOW)).toBe("2026-08-30.ainote");
   });
 
   it("default/blank 用未命名", () => {
-    expect(defaultNoteFileName("default", NOW)).toBe("未命名.md");
-    expect(defaultNoteFileName("blank", NOW)).toBe("未命名.md");
+    expect(defaultNoteFileName("markdown", "default", NOW)).toBe("未命名.md");
+    expect(defaultNoteFileName("richText", "blank", NOW)).toBe("未命名.ainote");
   });
 });
 
 describe("renderNoteTemplate", () => {
-  it("daily 渲染日期标题", () => {
-    expect(renderNoteTemplate("daily", NOW)).toBe("# 2026-08-30\n\n");
+  it("markdown daily 渲染日期标题", () => {
+    expect(renderNoteTemplate("markdown", "daily", NOW)).toBe("# 2026-08-30\n\n");
   });
 
-  it("blank 渲染空内容", () => {
-    expect(renderNoteTemplate("blank", NOW)).toBe("");
+  it("markdown blank 渲染空内容", () => {
+    expect(renderNoteTemplate("markdown", "blank", NOW)).toBe("");
   });
 
-  it("default 返回 null（后端默认模板）", () => {
-    expect(renderNoteTemplate("default", NOW)).toBeNull();
+  it("markdown default 返回 null（后端默认模板）", () => {
+    expect(renderNoteTemplate("markdown", "default", NOW)).toBeNull();
+  });
+
+  it("富文本渲染合法 JSON 文档", () => {
+    const doc = renderNoteTemplate("richText", "default", NOW);
+    expect(JSON.parse(doc as string).type).toBe("doc");
+    expect(JSON.parse(doc as string).content[0].type).toBe("heading");
+    const blank = renderNoteTemplate("richText", "blank", NOW);
+    expect(JSON.parse(blank as string).content).toHaveLength(1);
   });
 });

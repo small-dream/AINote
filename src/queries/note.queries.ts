@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { noteApi, syncApi } from "@/api";
-import type { NoteContent, NoteMeta } from "@/api/types";
+import type { NoteContent, NoteKind, NoteMeta } from "@/api/types";
 import { useWorkspaceActivityStore } from "@/stores/workspace-activity.store";
 
 export const noteKeys = {
@@ -28,6 +28,7 @@ export function useNoteContentQuery(repoPath: string | null, path: string | null
 
 interface CreateNoteInput {
   path: string;
+  kind: NoteKind;
   /** 模板内容；null 表示后端默认模板 */
   content: string | null;
 }
@@ -36,7 +37,7 @@ interface CreateNoteInput {
 export function useCreateNoteMutation() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: ({ path, content }: CreateNoteInput) => noteApi.create(path, content),
+    mutationFn: ({ path, kind, content }: CreateNoteInput) => noteApi.create(path, kind, content),
     onSuccess: (_note, { path }) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });

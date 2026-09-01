@@ -3,6 +3,7 @@ import type { AppError } from "@/api";
 import { useNoteContentQuery } from "@/queries/note.queries";
 import { useNoteReload } from "./useNoteReload";
 import { useNoteSaveQueue } from "./useNoteSaveQueue";
+import { noteKindOfPath } from "../utils/noteKind";
 
 /** 自动保存防抖时长（PRD：默认 30s） */
 export const AUTOSAVE_DEBOUNCE_MS = 30_000;
@@ -25,6 +26,7 @@ export function useNoteEditor(repoPath: string | null, notePath: string | null, 
     setDirty(false);
   }, []);
   const isLoaded = useNoteReload({ notePath, data: contentQuery.data, reloadToken, applyContent });
+  const kind = contentQuery.data?.kind ?? (notePath ? noteKindOfPath(notePath) : "markdown");
 
   const queue = useNoteSaveQueue({ repoPath, notePath, draft, dirty, setDirty, isLoaded, debounceMs: AUTOSAVE_DEBOUNCE_MS });
 
@@ -36,6 +38,7 @@ export function useNoteEditor(repoPath: string | null, notePath: string | null, 
 
   return {
     draft,
+    kind,
     onChange,
     flush: queue.flush,
     saving: queue.saving,

@@ -1,9 +1,13 @@
 /** 与 Rust 侧 domain/*.rs 的 DTO 保持结构一致（serde camelCase） */
 
+/** 笔记类型：Markdown 源码 / 真富文本（TipTap JSON，`.ainote`） */
+export type NoteKind = "markdown" | "richText";
+
 /** list_notes / create_note 返回的笔记元数据 */
 export interface NoteMeta {
   /** 相对仓库根目录的路径，如 "daily/2026-08-30.md" */
   path: string;
+  kind: NoteKind;
   title: string;
   updatedAt: number;
 }
@@ -11,6 +15,7 @@ export interface NoteMeta {
 /** read_note 返回的完整笔记内容 */
 export interface NoteContent {
   path: string;
+  kind: NoteKind;
   content: string;
 }
 

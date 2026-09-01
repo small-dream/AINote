@@ -1,10 +1,13 @@
+import type { NoteKind } from "@/api/types";
+import { noteExtension } from "./noteKind";
+
 /** 笔记路径输入纯函数 */
 
-/** 规范化用户输入的笔记路径：去首尾斜杠、补 .md 后缀；空输入返回 null */
-export function normalizeNotePath(input: string): string | null {
+/** 规范化用户输入的笔记路径：去首尾斜杠；未带扩展名时按类型补后缀；空输入返回 null */
+export function normalizeNotePath(input: string, kind: NoteKind): string | null {
   const trimmed = input.trim().replace(/^\/+|\/+$/g, "");
   if (!trimmed) return null;
-  return /\.md$/i.test(trimmed) ? trimmed : `${trimmed}.md`;
+  return /\.(md|ainote)$/i.test(trimmed) ? trimmed : `${trimmed}.${noteExtension(kind)}`;
 }
 
 /** 拼接目录前缀与文件名：目录去斜杠；目录为空时直接返回文件名 */

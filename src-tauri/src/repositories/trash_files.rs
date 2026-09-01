@@ -3,7 +3,8 @@ use std::path::{Path, PathBuf};
 use std::time::{SystemTime, UNIX_EPOCH};
 
 use crate::domain::error::AppError;
-use crate::domain::note::extract_title;
+use crate::domain::note::{extract_title, is_note_file, NoteKind};
+use crate::domain::rich_text;
 use crate::domain::trash::TrashItem;
 
 use super::file_storage::is_hidden;
@@ -47,11 +48,16 @@ pub fn soft_delete_note(root: &Path, rel: &str) -> Result<TrashItem, AppError> {
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_default();
+    let kind = NoteKind::of_path(&src).unwrap_or(NoteKind::Markdown);
+    let title = match kind {
+        NoteKind::Markdown => extract_title(&content, &fallback),
+        NoteKind::RichText => rich_text::extract_title(&content).unwrap_or(fallback),
+    };
     let item = TrashItem {
         id: new_id(&rel.to_string_lossy()),
         path: rel.to_string_lossy().into_owned(),
         deleted_at: now_secs(),
-        title: extract_title(&content, &fallback),
+        title,
     };
     let mut items = read_manifest(root)?;
     fs::create_dir_all(root.join(TRASH_DIR))?;
@@ -62,9 +68,9 @@ pub fn soft_delete_note(root: &Path, rel: &str) -> Result<TrashItem, AppError> {
     Ok(item)
 }
 
-/// 软删除目录：递归移入其内全部 `.md` 笔记到回收站，随后移除该目录。
+/// 软删除目录：递归移入其内全部笔记到回收站，随后移除该目录。
 pub fn soft_delete_folder(root: &Path, rel: &str) -> Result<Vec<TrashItem>, AppError> {
-    let files = collect_md_files(root, rel)?;
+    let files = collect_note_files(root, rel)?;
     let mut items = Vec::new();
     for file in &files {
         let file_rel = file
@@ -132,27 +138,27 @@ pub fn empty(root: &Path) -> Result<(), AppError> {
     Ok(())
 }
 
-/// 递归收集目录内的 `.md` 文件（跳过隐藏项），供目录软删除。
-fn collect_md_files(root: &Path, rel: &str) -> Result<Vec<PathBuf>, AppError> {
+/// 递归收集目录内的笔记文件（跳过隐藏项），供目录软删除。
+fn collect_note_files(root: &Path, rel: &str) -> Result<Vec<PathBuf>, AppError> {
     let dir = root.join(validate_rel_path(rel)?);
     if !dir.is_dir() {
         return Err(AppError::Io(format!("folder not found: {rel}")));
     }
     let mut files = Vec::new();
-    walk_md(&dir, &mut files)?;
+    walk_notes(&dir, &mut files)?;
     files.sort();
     Ok(files)
 }
 
-fn walk_md(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AppError> {
+fn walk_notes(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AppError> {
     for entry in fs::read_dir(dir)? {
         let path = entry?.path();
         if is_hidden(&path) {
             continue;
         }
         if path.is_dir() {
-            walk_md(&path, out)?;
-        } else if path.extension().is_some_and(|ext| ext == "md") {
+            walk_notes(&path, out)?;
+        } else if is_note_file(&path) {
             out.push(path);
         }
     }

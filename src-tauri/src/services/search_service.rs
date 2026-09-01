@@ -1,9 +1,10 @@
 use std::path::Path;
 
 use crate::domain::error::AppError;
+use crate::domain::note::{extract_title, NoteKind};
+use crate::domain::rich_text;
 use crate::domain::search::SearchResult;
 use crate::repositories::file_storage;
-use crate::services::note_service::extract_title;
 
 const MAX_RESULTS: usize = 30;
 const MAX_QUERY_CHARS: usize = 100;
@@ -17,7 +18,7 @@ pub fn search_notes(repo_path: &Path, query: &str) -> Result<Vec<SearchResult>, 
         return Ok(Vec::new());
     }
     let mut results = Vec::new();
-    for file in file_storage::collect_markdown_files(repo_path)? {
+    for file in file_storage::collect_note_files(repo_path)? {
         let content = std::fs::read_to_string(&file)?;
         let rel = file
             .strip_prefix(repo_path)
@@ -27,8 +28,16 @@ pub fn search_notes(repo_path: &Path, query: &str) -> Result<Vec<SearchResult>, 
             .file_stem()
             .map(|s| s.to_string_lossy().into_owned())
             .unwrap_or_default();
-        let title = extract_title(&content, &fallback);
-        if let Some(mut result) = match_note(&path, &title, &content, query) {
+        let kind = NoteKind::of_path(&file).unwrap_or(NoteKind::Markdown);
+        let title = match kind {
+            NoteKind::Markdown => extract_title(&content, &fallback),
+            NoteKind::RichText => rich_text::extract_title(&content).unwrap_or(fallback),
+        };
+        let hay = match kind {
+            NoteKind::Markdown => content.clone(),
+            NoteKind::RichText => rich_text::plain_text(&content),
+        };
+        if let Some(mut result) = match_note(&path, &title, &hay, query) {
             result.updated_at = file
                 .metadata()?
                 .modified()?
@@ -152,5 +161,20 @@ mod tests {
         fs::write(root.join("x.md"), "unique token abc").unwrap();
         let results = search_notes(root, "abc").unwrap();
         assert!(results[0].updated_at > 0);
+    }
+
+    #[test]
+    fn search_finds_rich_text_plain_text() {
+        let tmp = setup();
+        let root = tmp.path();
+        fs::write(
+            root.join("r.ainote"),
+            r#"{"type":"doc","content":[{"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"富文本标题"}]},{"type":"paragraph","content":[{"type":"text","text":"关于 RustLang 的富文本"}]}]}"#,
+        )
+        .unwrap();
+        let results = search_notes(root, "rustlang").unwrap();
+        assert_eq!(results.len(), 1);
+        assert_eq!(results[0].path, "r.ainote");
+        assert!(results[0].snippet.contains("RustLang"));
     }
 }

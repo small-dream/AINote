@@ -3,19 +3,27 @@ import { joinNotePath, normalizeNotePath } from "./path";
 
 describe("normalizeNotePath", () => {
   it("补全 .md 后缀", () => {
-    expect(normalizeNotePath("daily/note")).toBe("daily/note.md");
+    expect(normalizeNotePath("daily/note", "markdown")).toBe("daily/note.md");
   });
 
   it("保留已有 .md 后缀", () => {
-    expect(normalizeNotePath("a.md")).toBe("a.md");
+    expect(normalizeNotePath("a.md", "markdown")).toBe("a.md");
+  });
+
+  it("补全 .ainote 后缀", () => {
+    expect(normalizeNotePath("daily/note", "richText")).toBe("daily/note.ainote");
+  });
+
+  it("保留已有 .ainote 后缀", () => {
+    expect(normalizeNotePath("a.ainote", "richText")).toBe("a.ainote");
   });
 
   it("去首尾斜杠", () => {
-    expect(normalizeNotePath("/daily/note/")).toBe("daily/note.md");
+    expect(normalizeNotePath("/daily/note/", "markdown")).toBe("daily/note.md");
   });
 
   it("空输入返回 null", () => {
-    expect(normalizeNotePath("   ")).toBeNull();
+    expect(normalizeNotePath("   ", "markdown")).toBeNull();
   });
 });
 

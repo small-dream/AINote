@@ -4,6 +4,7 @@ import { Button } from "@/components/atoms/Button";
 import { Modal } from "@/components/molecules/Modal";
 import { useMoveNoteMutation } from "@/queries/note.queries";
 import { normalizeNotePath } from "../utils/path";
+import { noteKindOfPath } from "../utils/noteKind";
 import { useTranslation } from "@/i18n";
 
 interface MoveNoteDialogProps {
@@ -22,7 +23,7 @@ export function MoveNoteDialog({ path, onClose, onMoved }: MoveNoteDialogProps) 
   function submit(event: FormEvent) {
     event.preventDefault();
     if (!path) return;
-    const normalized = normalizeNotePath(to);
+    const normalized = normalizeNotePath(to, noteKindOfPath(path));
     if (!normalized) {
       setError(t("note.targetRequired"));
       return;

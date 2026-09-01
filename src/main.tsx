@@ -5,6 +5,7 @@ import { AppProviders } from "@/app/providers";
 import { router } from "@/app/router";
 import { readStoredLocale, readStoredTheme } from "@/stores/ui.store";
 import "@/styles/index.css";
+import "@/features/richtext/rich-text.css";
 
 // 在 React 渲染前写入 data-theme，避免暗色偏好下首屏闪烁
 document.documentElement.dataset.theme = readStoredTheme();

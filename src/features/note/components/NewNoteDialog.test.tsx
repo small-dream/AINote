@@ -6,6 +6,8 @@ vi.mock("@/api", () => ({
   messageOf: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 
+const PLACEHOLDER = "如：daily/我的笔记（自动补扩展名）";
+
 function renderDialog(overrides: Partial<Parameters<typeof NewNoteDialog>[0]> = {}) {
   const props = {
     open: true,
@@ -19,17 +21,21 @@ function renderDialog(overrides: Partial<Parameters<typeof NewNoteDialog>[0]> = 
 }
 
 describe("NewNoteDialog", () => {
-  it("提交创建时传入规范化路径与默认模板（content 为 null）", async () => {
+  it("提交创建时传入规范化路径、类型与默认模板（content 为 null）", async () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
     renderDialog({ onCreate });
 
-    fireEvent.change(screen.getByPlaceholderText("如：daily/我的笔记（自动补 .md）"), {
+    fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), {
       target: { value: "daily/foo" },
     });
     fireEvent.click(screen.getByText("创建"));
 
     await waitFor(() => {
-      expect(onCreate).toHaveBeenCalledWith({ path: "daily/foo.md", content: null });
+      expect(onCreate).toHaveBeenCalledWith({
+        path: "daily/foo.md",
+        kind: "markdown",
+        content: null,
+      });
     });
   });
 
@@ -42,7 +48,7 @@ describe("NewNoteDialog", () => {
     const onCreate = vi.fn().mockRejectedValue(new Error("invalid path: ../x.md"));
     renderDialog({ onCreate });
 
-    fireEvent.change(screen.getByPlaceholderText("如：daily/我的笔记（自动补 .md）"), {
+    fireEvent.change(screen.getByPlaceholderText(PLACEHOLDER), {
       target: { value: "../x" },
     });
     fireEvent.click(screen.getByText("创建"));
@@ -56,9 +62,23 @@ describe("NewNoteDialog", () => {
 
     fireEvent.click(screen.getByLabelText("每日（日期标题）"));
 
-    const input = screen.getByPlaceholderText(
-      "如：daily/我的笔记（自动补 .md）"
-    ) as HTMLInputElement;
+    const input = screen.getByPlaceholderText(PLACEHOLDER) as HTMLInputElement;
     expect(input.value).toMatch(/^\d{4}-\d{2}-\d{2}\.md$/);
+  });
+});
+
+describe("NewNoteDialog 富文本类型", () => {
+  it("切换富文本类型时路径更新为 .ainote 并携带类型", async () => {
+    const onCreate = vi.fn().mockResolvedValue(undefined);
+    renderDialog({ onCreate });
+
+    fireEvent.click(screen.getByLabelText("富文本"));
+    fireEvent.click(screen.getByText("创建"));
+
+    await waitFor(() => {
+      expect(onCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ path: "未命名.ainote", kind: "richText" })
+      );
+    });
   });
 });

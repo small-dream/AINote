@@ -32,7 +32,11 @@ export function useNewNote(repoPath: string | null, onOpen: (path: string) => vo
 
   const handleCreate = useCallback(
     async (input: NewNoteInput) => {
-      const note = await create.mutateAsync({ path: input.path, content: input.content });
+      const note = await create.mutateAsync({
+        path: input.path,
+        kind: input.kind,
+        content: input.content,
+      });
       setCreatedPath(note.path);
       onOpen(note.path);
       close();

@@ -15,7 +15,7 @@ AINote 的核心体验目标是：用户打开一篇笔记后，可以立即、�
 | 竞品 | 借鉴 | 不照搬 |
 |---|---|---|
 | Obsidian | 大纲、双链补全、反向链接、快捷命令、专注写作 | 不引入插件优先或私有 Block 数据模型 |
-| Typora | 阅读感、所见即所得般的排版连续性、低干扰工具栏 | MVP 仍保留 Markdown 源码编辑，不做富文本覆盖编辑 |
+| Typora | 阅读感、所见即所得般的排版连续性、低干扰工具栏 | Markdown 保持源码编辑；另提供可选「真富文本」笔记类型（TipTap），但默认不强制 |
 | VS Code | CodeMirror 可实现的编辑可靠性：查找替换、快捷键、输入规则、状态反馈 | 不引入 Monaco 的体积和复杂度 |
 | GitHub Markdown | GFM 表格、任务列表、代码块、链接语义和安全边界 | 不把 GitHub CSS 直接当作 AINote 设计系统 |
 | Notion | 空间层级、响应式布局、渐进式操作 | 不牺牲文件可迁移性换取私有数据结构 |
@@ -43,6 +43,7 @@ AINote 的核心体验目标是：用户打开一篇笔记后，可以立即、�
 | Markdown 预览 | `src/features/note/components/MarkdownPreview.tsx` | `react-markdown` + `remark-gfm`，图片和双链转换 |
 | 保存编排 | `src/features/note/hooks/useNoteEditor.ts` | 读取草稿、dirty、30 秒防抖和 flush |
 | 编辑器扩展 | `src/features/note/hooks/useEditorExtensions.ts` | Markdown、GFM、快捷键、主题和活动格式 |
+| 富文本编辑器 | `src/features/richtext/` | TipTap 所见即所得，读写 `.ainote` JSON；按笔记类型路由 |
 | 同步滚动 | `src/features/note/hooks/useSyncScroll.ts` | DOM 锚点收集、双向滚动和 MutationObserver |
 | 预览样式 | `src/styles/index.css` | `.markdown-body` 基础排版 |
 | 设计 Token | `src/styles/tokens.css` | 亮色/暗色主题变量 |
@@ -234,6 +235,7 @@ P1 导航与知识流 ────────┘
 ## 8. 设计决策记录
 
 - **继续使用 CodeMirror 6**：已满足模块化、Markdown 解析和 Tauri WebView 体积要求；当前缺口主要是扩展配置，而非编辑器内核替换。
+- **富文本为可选类型而非默认**：真富文本（TipTap JSON，`.ainote`）与 Markdown 并存，新建时选择；Markdown 仍是默认且对 Git 工作流最友好的格式。
 - **继续使用普通 Markdown 文件**：预览能力通过 AST 扩展提升，不引入私有 Block 数据格式。
 - **本地保存优先于 Git 提交**：编辑器的“已保存”表示内容已写入本地文件；Git commit/push 是独立的版本化与同步反馈。
 - **预览默认安全**：不解析原始 HTML；所有未来扩展先定义安全边界，再实现视觉能力。

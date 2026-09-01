@@ -3,6 +3,7 @@ pub mod dto;
 pub mod error;
 pub mod history;
 pub mod note;
+pub mod rich_text;
 pub mod search;
 pub mod sync;
 pub mod wiki;
