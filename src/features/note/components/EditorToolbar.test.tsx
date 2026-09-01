@@ -19,6 +19,12 @@ function renderToolbar(overrides: Partial<Parameters<typeof EditorToolbar>[0]> =
 }
 
 describe("EditorToolbar", () => {
+  it("将工具栏空白区域标记为窗口拖拽区", () => {
+    const { container } = renderToolbar();
+
+    expect(container.firstElementChild?.getAttribute("data-tauri-drag-region")).toBe("deep");
+  });
+
   it("展示三种视图模式并支持分栏切换", () => {
     const onModeChange = vi.fn();
     renderToolbar({ onModeChange });

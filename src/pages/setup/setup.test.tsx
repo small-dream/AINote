@@ -54,6 +54,12 @@ describe("SetupPage 登录并保存 Token", () => {
     authApiMock.status.mockResolvedValue({ hasToken: false, repoPath: null });
   });
 
+  it("允许从页面顶部空白区域拖动窗口", () => {
+    const { container } = renderSetup();
+
+    expect(container.firstElementChild?.hasAttribute("data-tauri-drag-region")).toBe(true);
+  });
+
   it("校验通过后点「确认并继续」保存 token 并切换到仓库绑定", async () => {
     authApiMock.validateToken.mockResolvedValue({ login: "small-dream" });
     authApiMock.saveToken.mockResolvedValue(null);

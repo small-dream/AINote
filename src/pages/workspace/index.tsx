@@ -56,7 +56,7 @@ function useWorkspaceGate() {
 function LoadingScreen() {
   const { t } = useTranslation();
   return (
-    <div className="flex h-screen items-center justify-center text-sm text-text-secondary">
+    <div data-tauri-drag-region className="flex h-screen items-center justify-center text-sm text-text-secondary">
       {t("common.loading")}
     </div>
   );

@@ -16,7 +16,7 @@ export function SetupPage() {
   if (!data) return <LoadFailed onRetry={() => void refetch()} />;
 
   return (
-    <div className="flex h-screen items-center justify-center bg-bg-secondary">
+    <div data-tauri-drag-region className="flex h-screen items-center justify-center bg-bg-secondary">
       <div className="w-full max-w-md rounded-lg bg-bg-primary p-8 shadow">
         {data.hasToken ? <RepoSetup onBound={handleBound} /> : <LoginForm onSuccess={handleAuthed} />}
       </div>
@@ -54,7 +54,7 @@ function useSetupGate() {
 function LoadingScreen() {
   const { t } = useTranslation();
   return (
-    <div className="flex h-screen items-center justify-center text-sm text-text-secondary">
+    <div data-tauri-drag-region className="flex h-screen items-center justify-center text-sm text-text-secondary">
       {t("common.loading")}
     </div>
   );
@@ -63,7 +63,7 @@ function LoadingScreen() {
 function LoadFailed({ onRetry }: { onRetry: () => void }) {
   const { t } = useTranslation();
   return (
-    <div className="flex h-screen flex-col items-center justify-center gap-3 text-sm text-danger">
+    <div data-tauri-drag-region className="flex h-screen flex-col items-center justify-center gap-3 text-sm text-danger">
       <span>{t("app.authLoadFailed")}</span>
       <Button variant="ghost" onClick={onRetry}>
         {t("common.retry")}

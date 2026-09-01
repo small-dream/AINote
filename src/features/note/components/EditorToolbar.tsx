@@ -28,7 +28,10 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
 export function EditorToolbar({ path, mode, saving, dirty, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onOutline }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
-    <div className="flex min-h-14 items-center justify-between gap-4 border-b border-border bg-bg-primary px-6 py-2.5">
+    <div
+      data-tauri-drag-region="deep"
+      className="flex min-h-14 items-center justify-between gap-4 border-b border-border bg-bg-primary px-6 py-2.5"
+    >
       <div className="flex min-w-0 items-center gap-3">
         <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-accent-soft text-accent">
           <FilePenLine size={16} />

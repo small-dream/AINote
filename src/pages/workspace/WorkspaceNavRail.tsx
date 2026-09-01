@@ -33,7 +33,8 @@ const SYNC_COLOR = { synced: "bg-success", pending: "bg-warning", conflict: "bg-
 export function WorkspaceNavRail({ repoPath, startupSyncing }: WorkspaceNavRailProps) {
   const { t } = useTranslation();
   return (
-    <nav className="flex w-[88px] shrink-0 flex-col items-center border-r border-border bg-bg-tertiary/55 px-2 pb-3 pt-11" aria-label={t("app.workspaceNavigation")}>
+    <nav className="flex w-[72px] shrink-0 flex-col items-center border-r border-border bg-bg-tertiary/55 px-2 pb-3" aria-label={t("app.workspaceNavigation")}>
+      <div data-tauri-drag-region className="h-11 w-full shrink-0" aria-hidden="true" />
       <SyncNavButton repoPath={repoPath} startupSyncing={startupSyncing} />
       <SearchNavButton />
       <NavigationItems />
