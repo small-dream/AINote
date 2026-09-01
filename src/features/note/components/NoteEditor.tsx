@@ -63,7 +63,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
         <EditorToolbar path={notePath} mode={mode} richText={isRichText} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} onModeChange={editorPreferences.setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} />
-        {isRichText ? <RichTextEditor key={`${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} /> : <MarkdownEditorSurface {...surfaceProps} />}
+        {isRichText ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} /> : <MarkdownEditorSurface {...surfaceProps} />}
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
         <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
       </div>

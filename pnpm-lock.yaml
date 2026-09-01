@@ -47,6 +47,15 @@ importers:
       '@tauri-apps/plugin-updater':
         specifier: ^2.10.1
         version: 2.10.1
+      '@tiptap/core':
+        specifier: ^3.30.6
+        version: 3.30.6(@tiptap/pm@3.30.6)
+      '@tiptap/extension-image':
+        specifier: ^3.30.6
+        version: 3.30.6(@tiptap/core@3.30.6(@tiptap/pm@3.30.6))
+      '@tiptap/extension-table':
+        specifier: ^3.30.6
+        version: 3.30.6(@tiptap/core@3.30.6(@tiptap/pm@3.30.6))(@tiptap/pm@3.30.6)
       '@tiptap/pm':
         specifier: ^3.30.6
         version: 3.30.6
@@ -846,6 +855,11 @@ packages:
       '@tiptap/core': 3.30.6
       '@tiptap/pm': 3.30.6
 
+  '@tiptap/extension-image@3.30.6':
+    resolution: {integrity: sha512-Y4oWgODXa+Jd/JiWWCxnr7v+1qtK1CzgliLHTk0x/H6RTuzduvL5/zTt0P4+inh7s/vQewliDyg/iagj+gBpXg==}
+    peerDependencies:
+      '@tiptap/core': 3.30.6
+
   '@tiptap/extension-italic@3.30.6':
     resolution: {integrity: sha512-vbltMPEePHWsGhvPH01yfT9GNJNMs2oUwPhqC0z/Brychu/oFe+0FR4RKFBVXnZg8oRfGQEOJ6OjD9jKDAZ0zQ==}
     peerDependencies:
@@ -887,6 +901,12 @@ packages:
     resolution: {integrity: sha512-aRtyDDS88+eT6r3krn94ajLTVccxaukEHWJoDwq0devAqFq9d0ftaYU9aNSSKzG/TAsIObXX/1MKSiJQC+Z/Rw==}
     peerDependencies:
       '@tiptap/core': 3.30.6
+
+  '@tiptap/extension-table@3.30.6':
+    resolution: {integrity: sha512-O3y8ncZ0+2vTLXJ19W8UDg2hR+oV5QMojOGMqMX4dZ+cv55j2q1R3DZODY1D7PtVFFfScd6aWSMcXSn8TtMVmw==}
+    peerDependencies:
+      '@tiptap/core': 3.30.6
+      '@tiptap/pm': 3.30.6
 
   '@tiptap/extension-text@3.30.6':
     resolution: {integrity: sha512-N55Mf9Xo3Zl5f7MSlBpxIYWktYIgE7yY3QT9IGrhm6VBSF9bAHToVDOEWCkgTEinerBcWraPFMDl8NMtX7Cdqw==}
@@ -3459,6 +3479,10 @@ snapshots:
       '@tiptap/core': 3.30.6(@tiptap/pm@3.30.6)
       '@tiptap/pm': 3.30.6
 
+  '@tiptap/extension-image@3.30.6(@tiptap/core@3.30.6(@tiptap/pm@3.30.6))':
+    dependencies:
+      '@tiptap/core': 3.30.6(@tiptap/pm@3.30.6)
+
   '@tiptap/extension-italic@3.30.6(@tiptap/core@3.30.6(@tiptap/pm@3.30.6))':
     dependencies:
       '@tiptap/core': 3.30.6(@tiptap/pm@3.30.6)
@@ -3493,6 +3517,11 @@ snapshots:
   '@tiptap/extension-strike@3.30.6(@tiptap/core@3.30.6(@tiptap/pm@3.30.6))':
     dependencies:
       '@tiptap/core': 3.30.6(@tiptap/pm@3.30.6)
+
+  '@tiptap/extension-table@3.30.6(@tiptap/core@3.30.6(@tiptap/pm@3.30.6))(@tiptap/pm@3.30.6)':
+    dependencies:
+      '@tiptap/core': 3.30.6(@tiptap/pm@3.30.6)
+      '@tiptap/pm': 3.30.6
 
   '@tiptap/extension-text@3.30.6(@tiptap/core@3.30.6(@tiptap/pm@3.30.6))':
     dependencies:

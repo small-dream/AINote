@@ -1,3 +1,4 @@
+import type { ChangeEvent } from "react";
 import type { Editor } from "@tiptap/react";
 import {
   Bold,
@@ -5,6 +6,7 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Image as ImageIcon,
   Italic,
   List,
   ListOrdered,
@@ -12,7 +14,9 @@ import {
   Redo,
   SquareCode,
   Strikethrough,
+  Table as TableIcon,
   TextQuote,
+  Trash2,
   Undo,
   type LucideIcon,
 } from "lucide-react";
@@ -20,12 +24,14 @@ import { useTranslation } from "@/i18n";
 
 interface RichTextToolbarProps {
   editor: Editor | null;
+  onImagePicked?: (files: File[]) => void;
+  status?: string | null;
 }
 
 interface ToolButton {
   key: string;
   icon: LucideIcon;
-  labelKey: "richtext.h1" | "richtext.h2" | "richtext.h3" | "richtext.bold" | "richtext.italic" | "richtext.strike" | "richtext.inlineCode" | "richtext.quote" | "richtext.bulletList" | "richtext.orderedList" | "richtext.codeBlock" | "richtext.divider";
+  labelKey: "richtext.h1" | "richtext.h2" | "richtext.h3" | "richtext.bold" | "richtext.italic" | "richtext.strike" | "richtext.inlineCode" | "richtext.quote" | "richtext.bulletList" | "richtext.orderedList" | "richtext.codeBlock" | "richtext.divider" | "richtext.table" | "richtext.deleteTable";
   active: (editor: Editor) => boolean;
   run: (editor: Editor) => void;
 }
@@ -44,6 +50,7 @@ const BUTTONS: ToolButton[] = [
   { key: "orderedList", icon: ListOrdered, labelKey: "richtext.orderedList", active: (e) => e.isActive("orderedList"), run: (e) => void e.chain().focus().toggleOrderedList().run() },
   { key: "codeBlock", icon: SquareCode, labelKey: "richtext.codeBlock", active: (e) => e.isActive("codeBlock"), run: (e) => void e.chain().focus().toggleCodeBlock().run() },
   { key: "divider", icon: Minus, labelKey: "richtext.divider", active: () => false, run: (e) => void e.chain().focus().setHorizontalRule().run() },
+  { key: "table", icon: TableIcon, labelKey: "richtext.table", active: (e) => e.isActive("table"), run: (e) => void e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
 ];
 
 function ToolbarButton({ icon: Icon, label, active, disabled, onClick }: { icon: LucideIcon; label: string; active?: boolean; disabled?: boolean; onClick: () => void }) {
@@ -65,8 +72,22 @@ function ToolbarButton({ icon: Icon, label, active, disabled, onClick }: { icon:
   );
 }
 
+function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (files: File[]) => void }) {
+  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files ?? []);
+    event.target.value = "";
+    if (files.length > 0) onPicked(files);
+  };
+  return (
+    <label title={label} aria-label={label} className="grid h-7 w-7 cursor-pointer place-items-center rounded-md text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary">
+      <ImageIcon size={15} />
+      <input type="file" accept="image/*" multiple className="hidden" onChange={handleChange} />
+    </label>
+  );
+}
+
 /** 真富文本编辑器的行内格式工具栏 */
-export function RichTextToolbar({ editor }: RichTextToolbarProps) {
+export function RichTextToolbar({ editor, onImagePicked, status }: RichTextToolbarProps) {
   const { t } = useTranslation();
   if (!editor) return <div className="flex items-center gap-0.5 border-b border-border bg-bg-secondary px-3 py-1.5" />;
   return (
@@ -74,9 +95,12 @@ export function RichTextToolbar({ editor }: RichTextToolbarProps) {
       {BUTTONS.map(({ key, icon, labelKey, active, run }) => (
         <ToolbarButton key={key} icon={icon} label={t(labelKey)} active={active(editor)} onClick={() => run(editor)} />
       ))}
+      {onImagePicked ? <ImagePickerButton label={t("richtext.image")} onPicked={onImagePicked} /> : null}
+      {editor.isActive("table") ? <ToolbarButton icon={Trash2} label={t("richtext.deleteTable")} onClick={() => editor.chain().focus().deleteTable().run()} /> : null}
       <span className="mx-1 h-4 w-px bg-border" />
       <ToolbarButton icon={Undo} label={t("richtext.undo")} disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()} />
       <ToolbarButton icon={Redo} label={t("richtext.redo")} disabled={!editor.can().redo()} onClick={() => editor.chain().focus().redo().run()} />
+      {status ? <span role="status" className="ml-2 truncate text-xs text-text-secondary">{status}</span> : null}
     </div>
   );
 }
