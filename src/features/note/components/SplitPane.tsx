@@ -45,7 +45,7 @@ export function SplitPane({ left, right, ratio: controlledRatio, onRatioChange }
 interface PaneLayoutProps { containerRef: React.RefObject<HTMLDivElement | null>; ratio: number; dragging: boolean; onPointerDown: (event: ReactPointerEvent<HTMLDivElement>) => void; label: string; left: ReactNode; right: ReactNode; }
 
 function PaneLayout({ containerRef, ratio, dragging, onPointerDown, label, left, right }: PaneLayoutProps) {
-  return (<div ref={containerRef} className="flex min-h-0 flex-1 overflow-hidden">
+  return (<div ref={containerRef} className="flex h-full min-h-0 flex-1 overflow-hidden">
       <div style={{ width: `${ratio * 100}%` }} className="min-w-0 shrink-0 overflow-hidden">
         {left}
       </div>
