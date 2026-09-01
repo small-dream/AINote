@@ -29,7 +29,7 @@ AINote 的核心体验目标是：用户打开一篇笔记后，可以立即、�
 - `@uiw/react-codemirror` + CodeMirror 6，使用 Markdown/GFM 语法解析和主题扩展。
 - 编辑、预览、左右分栏三种模式；分栏支持拖拽调整，默认 50/50。
 - 编辑器与预览按 Markdown 行号双向同步滚动。
-- 30 秒防抖自动保存，手动保存和 Git 检查点已接入。
+- 3 秒防抖自动保存，Cmd/Ctrl+S 强制保存，Git 检查点已接入。
 - 格式工具栏支持粗体、斜体、删除线、行内代码、标题、列表、任务列表、链接、图片、代码块、表格和分割线。
 - 图片导入到仓库 `assets/`，预览可渲染本地资产；`[[双链]]` 可点击跳转。
 - Git 版本历史、Diff、恢复、全文搜索、标签索引和回收站已存在。
@@ -41,7 +41,7 @@ AINote 的核心体验目标是：用户打开一篇笔记后，可以立即、�
 |---|---|---|
 | 编辑器组装 | `src/features/note/components/NoteEditor.tsx` | 组装编辑器、工具栏、预览、面板和模式 |
 | Markdown 预览 | `src/features/note/components/MarkdownPreview.tsx` | `react-markdown` + `remark-gfm`，图片和双链转换 |
-| 保存编排 | `src/features/note/hooks/useNoteEditor.ts` | 读取草稿、dirty、30 秒防抖和 flush |
+| 保存编排 | `src/features/note/hooks/useNoteEditor.ts` | 读取草稿、dirty、3 秒防抖和 flush |
 | 编辑器扩展 | `src/features/note/hooks/useEditorExtensions.ts` | Markdown、GFM、快捷键、主题和活动格式 |
 | 富文本编辑器 | `src/features/richtext/` | TipTap 所见即所得，读写 `.ainote` JSON；按笔记类型路由 |
 | 同步滚动 | `src/features/note/hooks/useSyncScroll.ts` | DOM 锚点收集、双向滚动和 MutationObserver |
@@ -70,7 +70,7 @@ AINote 的核心体验目标是：用户打开一篇笔记后，可以立即、�
 - [x] 将保存流程建模为 `clean → dirty → saving → clean`，失败进入 `saveError` 并保留 dirty。
 - [x] `flush()` 改为返回 `Promise<void>`；切换笔记前等待 flush 完成。
 - [x] 保存失败时在编辑器工具栏内联展示错误和“重试”，不替换编辑器内容。
-- [ ] 本地文件保存与 Git commit 解耦：本地保存接近即时，Git 仍遵循 5 分钟空闲批量提交策略。（现有 Git 提交策略保持不变，进一步拆分留待后续 PR）
+- [x] 本地文件保存与 Git commit 解耦：本地保存 3 秒防抖，Git 遵循 15 分钟空闲批量提交策略；Cmd/Ctrl+S 可立即保存。
 - [x] query key 改为包含 `repoPath`，并补充保存队列与多仓库隔离逻辑。
 - [x] 增加连续输入、切换笔记和保存失败测试；离线/网络恢复场景沿用同步层测试，后续补充端到端覆盖。
 

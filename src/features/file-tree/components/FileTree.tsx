@@ -1,5 +1,6 @@
 import type { ComponentProps, MouseEvent } from "react";
 import { useState } from "react";
+import { FilePenLine, FileText } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
 import type { TreeNode } from "@/api/types";
 import { messageOf } from "@/api";
@@ -11,6 +12,7 @@ import { useTreeContextMenu } from "../hooks/useTreeContextMenu";
 import { TreeContextMenu as TreeContextMenuView } from "./TreeContextMenu";
 import { DeleteConfirmDialog, type PendingDelete } from "./DeleteConfirmDialog";
 import { useTranslation } from "@/i18n";
+import { noteKindOfPath } from "@/features/note/utils/noteKind";
 
 interface FileTreeProps {
   repoPath: string | null;
@@ -86,6 +88,7 @@ function TreeNodeItem(props: TreeNodeItemProps) {
 
 function FileNode({ node, depth, currentNotePath, onSelect, onContextMenu }: TreeNodeItemProps) {
   const active = node.path === currentNotePath;
+  const RichTextIcon = noteKindOfPath(node.path) === "richText" ? FilePenLine : FileText;
   return (
     <button
       className={`flex min-h-8 w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${active ? "bg-accent-soft font-medium text-accent" : "text-text-primary hover:bg-bg-tertiary"}`}
@@ -93,7 +96,7 @@ function FileNode({ node, depth, currentNotePath, onSelect, onContextMenu }: Tre
       onClick={() => onSelect(node.path)}
       onContextMenu={(event) => onContextMenu(event, node)}
     >
-      <span className={`tree-file flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border text-[9px] font-semibold ${active ? "border-accent/40 text-accent" : "border-text-tertiary text-text-tertiary"}`} aria-hidden="true">M</span>
+      <RichTextIcon size={15} strokeWidth={active ? 2.2 : 1.8} className={active ? "text-accent" : "text-text-tertiary"} aria-hidden="true" />
       <span className="truncate">{node.name}</span>
     </button>
   );

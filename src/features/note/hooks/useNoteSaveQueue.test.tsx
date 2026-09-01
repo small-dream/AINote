@@ -31,6 +31,19 @@ beforeEach(() => {
 });
 
 describe("useNoteSaveQueue", () => {
+  it("防抖到期后自动保存最新内容", async () => {
+    vi.useFakeTimers();
+    try {
+      setup({ debounceMs: 3_000 });
+      await act(async () => { vi.advanceTimersByTime(2_999); });
+      expect(mutateAsync).not.toHaveBeenCalled();
+      await act(async () => { vi.advanceTimersByTime(1); });
+      expect(mutateAsync).toHaveBeenCalledWith({ path: "note.md", content: "# hello" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("保存成功后才清除 dirty，并传递最新内容", async () => {
     const { result, setDirty } = setup();
 

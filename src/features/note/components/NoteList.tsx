@@ -8,6 +8,7 @@ import {
 import { useSessionStore } from "@/stores/session.store";
 import { MoveNoteDialog } from "./MoveNoteDialog";
 import { useTranslation } from "@/i18n";
+import { noteDisplayName } from "../utils/displayName";
 
 interface NoteListProps {
   repoPath: string | null;
@@ -123,7 +124,7 @@ function NoteListItem({ note, active, onSelect, onMove, onDelete }: NoteListItem
         className="min-w-0 flex-1 truncate text-left text-sm text-text-primary"
         onClick={() => onSelect(note.path)}
       >
-        <span className="block truncate">{note.title}</span>
+        <span className="block truncate">{noteDisplayName(note.title)}</span>
         <span className="mt-0.5 block truncate text-[11px] text-text-tertiary">{formatUpdatedAt(note.updatedAt, locale)}</span>
       </button>
       <button

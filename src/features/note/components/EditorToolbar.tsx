@@ -1,7 +1,8 @@
 import { Button } from "@/components/atoms/Button";
-import { ArrowLeftRight, FilePenLine, FolderInput, History, Network, Save, Split, Eye, Pencil, List } from "lucide-react";
+import { ArrowLeftRight, FolderInput, History, Network, Split, Eye, Pencil, List } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { NoteThemePicker } from "./NoteThemePicker";
+import { noteDisplayName } from "../utils/displayName";
 
 export type ViewMode = "edit" | "split" | "preview";
 
@@ -10,8 +11,6 @@ interface EditorToolbarProps {
   mode: ViewMode;
   /** 富文本笔记：隐藏视图切换、主题与大纲（所见即所得无需分栏） */
   richText?: boolean;
-  saving: boolean;
-  dirty: boolean;
   saveError?: string | null;
   onModeChange: (mode: ViewMode) => void;
   onSave: () => void;
@@ -29,7 +28,7 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
 ];
 
 /** 笔记操作栏：标题与保存状态、视图切换、文件操作。 */
-export function EditorToolbar({ path, mode, richText = false, saving, dirty, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onOutline, onConvertToRichText }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, richText = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onOutline, onConvertToRichText }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -37,15 +36,8 @@ export function EditorToolbar({ path, mode, richText = false, saving, dirty, sav
       className="flex min-h-14 items-center justify-between gap-4 border-b border-border bg-bg-primary px-6 py-2.5"
     >
       <div className="flex min-w-0 items-center gap-3">
-        <span className="grid h-8 w-8 shrink-0 place-items-center rounded-md bg-accent-soft text-accent">
-          <FilePenLine size={16} />
-        </span>
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className="truncate text-[15px] font-semibold tracking-[-0.01em]">{path.split("/").at(-1)}</span>
-            <SaveStatus saving={saving} dirty={dirty} saveError={saveError} />
-          </div>
-          <p className="mt-0.5 truncate text-[11px] text-text-tertiary">{path}</p>
+          <span className="truncate text-[15px] font-semibold tracking-[-0.01em]">{noteDisplayName(path.split("/").at(-1) ?? path)}</span>
         </div>
       </div>
       <div className="flex shrink-0 items-center gap-2">
@@ -56,26 +48,16 @@ export function EditorToolbar({ path, mode, richText = false, saving, dirty, sav
         {!richText && <Button variant="ghost" aria-label={t("note.outline")} title={t("note.outline")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={() => onOutline?.()}><List size={14} /><span className="hidden xl:inline">{t("note.outline")}</span></Button>}
         {!richText && onConvertToRichText ? <Button variant="ghost" aria-label={t("note.convertToRichText")} title={t("note.convertToRichText")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onConvertToRichText}><ArrowLeftRight size={14} /><span className="hidden xl:inline">{t("note.convertToRichText")}</span></Button> : null}
         <Button variant="ghost" aria-label={t("note.moving")} title={t("note.moving")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onMove}><FolderInput size={14} /><span className="hidden xl:inline">{t("note.moving")}</span></Button>
-        <Button variant="primary" className="inline-flex items-center gap-1.5 px-3.5 text-xs font-medium" onClick={() => void onSave()} disabled={saving || !dirty}>
-          <Save size={14} />
-          {t("common.save")}
-        </Button>
       </div>
-      <SaveErrorMessage message={saveError} />
+      <SaveErrorMessage message={saveError} onRetry={onSave} />
     </div>
   );
 }
 
-function SaveStatus({ saving, dirty, saveError }: { saving: boolean; dirty: boolean; saveError: string | null | undefined }) {
+function SaveErrorMessage({ message, onRetry }: { message: string | null | undefined; onRetry: () => void }) {
   const { t } = useTranslation();
-  const status = saving ? t("common.saving") : saveError ? t("note.saveFailed") : dirty ? t("note.unsaved") : t("note.saved");
-  const tone = saving || dirty || saveError ? "bg-warning/10 text-warning" : "bg-success/10 text-success";
-  return <span className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${tone}`}>{status}</span>;
-}
-
-function SaveErrorMessage({ message }: { message: string | null | undefined }) {
   if (!message) return null;
-  return <span role="status" className="max-w-56 truncate text-xs text-danger" title={message}>{message}</span>;
+  return <span role="status" className="flex max-w-72 items-center gap-2 text-xs text-danger"><span className="truncate" title={message}>{message}</span><button type="button" className="shrink-0 underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={onRetry}>{t("note.retrySave")}</button></span>;
 }
 
 function ModeTabs({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) => void }) {
