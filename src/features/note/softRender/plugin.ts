@@ -1,10 +1,11 @@
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
 import type { SyntaxNode } from "@lezer/common";
-import { StateField, type EditorState, type Extension, type Range } from "@codemirror/state";
-import { Decoration, type DecorationSet, EditorView, keymap } from "@codemirror/view";
+import { EditorSelection, StateField, type EditorState, type Extension, type Range } from "@codemirror/state";
+import { Decoration, type DecorationSet, EditorView, keymap, type MouseSelectionStyle } from "@codemirror/view";
 import { assetUrl, openExternal } from "@/api";
 import { resolveLocalAssetPath } from "@/features/asset/utils/asset";
 import type { WidgetRange } from "./types";
+import { clickedLinePosition, debugClick, debugMouseDown, debugViewUpdate } from "./clickDebug";
 import { planSoftRender } from "./utils/plan";
 import {
   BulletWidget,
@@ -23,6 +24,8 @@ export interface SoftRenderOptions {
   repoPath: string | null;
   /** 点击 [[双链]] 时回调目标名 */
   onOpenWiki?: (name: string) => void;
+  /** 开发诊断：输出点击坐标与 selection 映射日志。 */
+  debugClick?: boolean;
 }
 
 /** Markdown 软渲染扩展：源码保持不变，仅用 decoration/widget 覆盖显示（Typora 式 WYSIWYG）。 */
@@ -38,7 +41,9 @@ export function softRender(options: SoftRenderOptions): Extension {
   return [
     field,
     keymap.of([{ key: "Space", run: toggleTaskAtCursor }]),
+    EditorView.mouseSelectionStyle.of((view, event) => createLineSelectionStyle(view, event, options)),
     EditorView.domEventHandlers({ click: (event, view) => handleClick(event, view, options) }),
+    EditorView.updateListener.of((update) => debugViewUpdate(update, options)),
   ];
 }
 
@@ -92,6 +97,7 @@ const WIDGET_BUILDERS: Record<WidgetRange["kind"], (widget: WidgetRange, options
 
 function handleClick(event: MouseEvent, view: EditorView, options: SoftRenderOptions): boolean {
   const target = event.target;
+  debugClick("click:before", event, view, options);
   const checkbox = getCheckbox(target);
   if (checkbox) {
     event.preventDefault();
@@ -99,9 +105,8 @@ function handleClick(event: MouseEvent, view: EditorView, options: SoftRenderOpt
     return true;
   }
   if (enterWidgetAt(event, view)) return true;
-  // 软渲染可能改变行内元素的实际高度，CodeMirror 仅按鼠标 Y 坐标换算时会把行底部点击误判到下一行。
-  // 将单击的 Y 坐标固定到命中行的中心，保留 X 坐标用于计算列位置。
   correctSelectionToClickedLine(event, view);
+  debugClick("click:after", event, view, options);
   if (!isModifierClick(event)) return false;
   const link = closestElement(target, ".cm-sr-link, .cm-sr-wikilink, .cm-sr-autolink");
   if (!link) return false;
@@ -111,22 +116,30 @@ function handleClick(event: MouseEvent, view: EditorView, options: SoftRenderOpt
 
 function correctSelectionToClickedLine(event: MouseEvent, view: EditorView): void {
   if (!isPlainSingleClick(event)) return;
-  const line = lineElementForTarget(event.target);
-  if (!line) return;
-  const rect = line.getBoundingClientRect();
-  // 多行折行时同一个 .cm-line 包含多个视觉行，不能把点击统一吸附到整块中心。
-  if (rect.height <= 0 || rect.height > view.defaultLineHeight * 1.5) return;
-  const pos = view.posAtCoords({ x: event.clientX, y: rect.top + rect.height / 2 }, false);
-  if (pos === null) return;
+  const pos = clickedLinePosition(view, event);
+  if (pos === null || view.state.selection.main.head === pos) return;
   view.dispatch({ selection: { anchor: pos } });
+}
+
+function createLineSelectionStyle(view: EditorView, event: MouseEvent, options: SoftRenderOptions): MouseSelectionStyle | null {
+  debugMouseDown(event, view, options);
+  if (!isPlainSingleClick(event)) return null;
+  const start = clickedLinePosition(view, event);
+  if (start === null) return null;
+  return {
+    update: (update) => {
+      if (update.docChanged) return false;
+      return false;
+    },
+    get: (currentEvent) => {
+      const pos = clickedLinePosition(view, currentEvent) ?? start;
+      return EditorSelection.create([EditorSelection.cursor(pos)]);
+    },
+  };
 }
 
 function isPlainSingleClick(event: MouseEvent): boolean {
   return event.detail === 1 && !(event.shiftKey || event.altKey || event.ctrlKey || event.metaKey);
-}
-
-function lineElementForTarget(target: EventTarget | null): HTMLElement | null {
-  return closestElement(target, ".cm-line");
 }
 
 function closestElement(target: EventTarget | null, selector: string): HTMLElement | null {

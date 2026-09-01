@@ -54,7 +54,7 @@ dependencies = [
 
 [[package]]
 name = "ainote-core"
-version = "0.10.1"
+version = "0.10.2"
 dependencies = [
  "aes-gcm",
  "getrandom 0.2.17",
