@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "./tokens.css";
 @import "./markdown-themes.css";
+@import "../features/note/softRender/softrender.css";
 
 /* 设计 Token 映射为 Tailwind 色板（见 docs/ARCHITECTURE.md / tokens.css） */
 @theme inline {

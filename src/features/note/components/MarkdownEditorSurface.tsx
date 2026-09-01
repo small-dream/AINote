@@ -31,15 +31,17 @@ export interface MarkdownEditorSurfaceProps {
   activeFormats: Set<string>;
   onImagePicked: (files: File[]) => void;
   assetStatus: string | null;
+  /** 是否启用软渲染（WYSIWYG），false = 源码模式 */
+  softRender?: boolean;
 }
 
 /** Markdown 编辑器主体：大纲 + 格式工具栏 + 编辑/分栏/预览三模式（P0-2） */
-export function MarkdownEditorSurface({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineSelect, viewRef, activeFormats, onImagePicked, assetStatus }: MarkdownEditorSurfaceProps) {
+export function MarkdownEditorSurface({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineSelect, viewRef, activeFormats, onImagePicked, assetStatus, softRender = true }: MarkdownEditorSurfaceProps) {
   return (
     <>
       {outlineOpen ? <NoteOutline items={outline} onSelect={onOutlineSelect} /> : null}
       {mode !== "preview" ? <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={onImagePicked} status={assetStatus} /> : null}
-      <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} previewRef={previewRef} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} ratio={ratio} onRatioChange={onRatioChange} />
+      <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} previewRef={previewRef} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} ratio={ratio} onRatioChange={onRatioChange} softRender={softRender} />
     </>
   );
 }
@@ -57,10 +59,11 @@ interface EditorBodyProps {
   wikiNotes: NoteWikiDto[];
   ratio: number;
   onRatioChange: (ratio: number) => void;
+  softRender: boolean;
 }
 
-function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange }: EditorBodyProps) {
-  const editor = <CodeMirror className="h-full" value={draft} theme="none" onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} />;
+function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, softRender }: EditorBodyProps) {
+  const editor = <CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} />;
   if (mode === "split") {
     return (
       <div data-note-theme={noteTheme} className="note-theme-surface min-h-0 flex-1 overflow-hidden">

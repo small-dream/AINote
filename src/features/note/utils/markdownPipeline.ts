@@ -1,7 +1,7 @@
 import type { Root, Paragraph, Text } from "mdast";
 import { parse as parseYaml } from "yaml";
 
-export type CalloutKind = "note" | "tip" | "warning" | "danger";
+export type CalloutKind = "note" | "tip" | "important" | "warning" | "caution" | "danger";
 
 export interface FrontmatterField {
   key: string;
@@ -61,7 +61,7 @@ function markCallout(node: Root["children"][number]): void {
 function getMarker(paragraph: Paragraph): { kind: CalloutKind } | null {
   const first = paragraph.children[0];
   if (!first || first.type !== "text") return null;
-  const match = /^\[!(NOTE|TIP|WARNING|DANGER)\]\s*/i.exec(first.value);
+  const match = /^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|DANGER)\]\s*/i.exec(first.value);
   if (!match) return null;
   return { kind: (match[1] ?? "note").toLocaleLowerCase() as CalloutKind };
 }

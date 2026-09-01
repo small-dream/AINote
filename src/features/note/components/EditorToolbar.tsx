@@ -1,5 +1,5 @@
 import { Button } from "@/components/atoms/Button";
-import { ArrowLeftRight, FolderInput, History, Network, Split, Eye, Pencil, List } from "lucide-react";
+import { ArrowLeftRight, FolderInput, History, Network, Split, Eye, Pencil, List, Code2 } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { NoteThemePicker } from "./NoteThemePicker";
 import { noteDisplayName } from "../utils/displayName";
@@ -19,6 +19,9 @@ interface EditorToolbarProps {
   onWiki: () => void;
   onOutline?: () => void;
   onConvertToRichText?: () => void;
+  /** 软渲染开关（Markdown）：true = 所见即所得，false = 源码 */
+  softRender?: boolean;
+  onToggleSoftRender?: () => void;
 }
 
 const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.preview" }[] = [
@@ -28,7 +31,7 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
 ];
 
 /** 笔记操作栏：标题与保存状态、视图切换、文件操作。 */
-export function EditorToolbar({ path, mode, richText = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onOutline, onConvertToRichText }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, richText = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onOutline, onConvertToRichText, softRender = true, onToggleSoftRender }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -42,16 +45,45 @@ export function EditorToolbar({ path, mode, richText = false, saveError, onModeC
       </div>
       <div className="flex shrink-0 items-center gap-2">
         {!richText && <ModeTabs mode={mode} onChange={onModeChange} />}
+        {!richText && <SoftRenderToggle softRender={softRender} onToggle={onToggleSoftRender} />}
         {!richText && <NoteThemePicker />}
         <Button variant="ghost" aria-label={t("history.title")} title={t("history.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onHistory}><History size={14} /><span className="hidden xl:inline">{t("history.title")}</span></Button>
         <Button variant="ghost" aria-label={t("wiki.title")} title={t("wiki.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onWiki}><Network size={14} /><span className="hidden xl:inline">{t("wiki.title")}</span></Button>
-        {!richText && <Button variant="ghost" aria-label={t("note.outline")} title={t("note.outline")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={() => onOutline?.()}><List size={14} /><span className="hidden xl:inline">{t("note.outline")}</span></Button>}
-        {!richText && onConvertToRichText ? <Button variant="ghost" aria-label={t("note.convertToRichText")} title={t("note.convertToRichText")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onConvertToRichText}><ArrowLeftRight size={14} /><span className="hidden xl:inline">{t("note.convertToRichText")}</span></Button> : null}
+        <OutlineButton richText={richText} onOutline={onOutline} />
+        <ConvertButton richText={richText} onConvert={onConvertToRichText} />
         <Button variant="ghost" aria-label={t("note.moving")} title={t("note.moving")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onMove}><FolderInput size={14} /><span className="hidden xl:inline">{t("note.moving")}</span></Button>
       </div>
       <SaveErrorMessage message={saveError} onRetry={onSave} />
     </div>
   );
+}
+
+function SoftRenderToggle({ softRender, onToggle }: { softRender: boolean; onToggle: (() => void) | undefined }) {
+  const { t } = useTranslation();
+  if (!onToggle) return null;
+  const label = softRender ? t("note.sourceMode") : t("note.softRender");
+  return (
+    <Button variant="ghost" aria-label={label} title={`${label}（${softRenderShortcut()}）`} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onToggle}>
+      <Code2 size={14} />
+      <span className="hidden 2xl:inline">{label}</span>
+    </Button>
+  );
+}
+
+function softRenderShortcut(): string {
+  return typeof navigator !== "undefined" && /Mac|iPhone|iPad|iPod/.test(navigator.platform) ? "⌘/" : "Ctrl+/";
+}
+
+function OutlineButton({ richText, onOutline }: { richText: boolean; onOutline: (() => void) | undefined }) {
+  const { t } = useTranslation();
+  if (richText || !onOutline) return null;
+  return <Button variant="ghost" aria-label={t("note.outline")} title={t("note.outline")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onOutline}><List size={14} /><span className="hidden xl:inline">{t("note.outline")}</span></Button>;
+}
+
+function ConvertButton({ richText, onConvert }: { richText: boolean; onConvert: (() => void) | undefined }) {
+  const { t } = useTranslation();
+  if (richText || !onConvert) return null;
+  return <Button variant="ghost" aria-label={t("note.convertToRichText")} title={t("note.convertToRichText")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onConvert}><ArrowLeftRight size={14} /><span className="hidden xl:inline">{t("note.convertToRichText")}</span></Button>;
 }
 
 function SaveErrorMessage({ message, onRetry }: { message: string | null | undefined; onRetry: () => void }) {

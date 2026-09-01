@@ -20,4 +20,16 @@ describe("useEditorExtensions", () => {
     expect(result.current.extensions).not.toBe(lightExtensions);
     expect(result.current.extensions.length).toBe(lightExtensions.length);
   });
+
+  it("软渲染开关改变扩展数组长度", () => {
+    const { result, rerender } = renderHook(
+      ({ softRender }) => useEditorExtensions({ softRenderEnabled: softRender }),
+      { initialProps: { softRender: true } }
+    );
+    const withSoftRender = result.current.extensions.length;
+
+    rerender({ softRender: false });
+
+    expect(result.current.extensions.length).toBeLessThan(withSoftRender);
+  });
 });

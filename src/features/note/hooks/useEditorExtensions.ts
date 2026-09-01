@@ -15,6 +15,16 @@ import { getActiveFormats, toggleInline } from "../utils/format";
 import { getListContinuation } from "../utils/markdownInput";
 import { getAinoteEditorTheme } from "./editorTheme";
 import { buildCompletions, getCompletionContext } from "../utils/completion";
+import { softRender } from "../softRender/plugin";
+
+export interface EditorExtensionsInput {
+  notes?: NoteWikiDto[];
+  repoPath?: string | null;
+  onOpenWiki?: (name: string) => void;
+  /** Markdown 编辑是否启用软渲染（WYSIWYG），false = 源码模式 */
+  softRenderEnabled?: boolean;
+  onToggleSoftRender?: () => void;
+}
 
 /** 格式化快捷键（与工具栏按钮共用 dispatchFormat 逻辑） */
 const formatKeymap = Prec.high(
@@ -53,39 +63,47 @@ const markdownInputKeymap = Prec.high(
 );
 
 /** 编辑器扩展集合 + 光标激活格式集合（选择/文档变化时经 updateListener 刷新） */
-export function useEditorExtensions(notes: NoteWikiDto[] = []): { extensions: Extension[]; activeFormats: Set<string> } {
+export function useEditorExtensions(input: EditorExtensionsInput = {}): { extensions: Extension[]; activeFormats: Set<string> } {
+  const { notes = [], repoPath = null, onOpenWiki, softRenderEnabled = true, onToggleSoftRender } = input;
   const [activeFormats, setActiveFormats] = useState<Set<string>>(() => new Set());
   const theme = useUiStore((s) => s.theme);
-  const extensions = useMemo(
-    () => [
-      getAinoteEditorTheme(theme === "dark"),
-      markdown({ extensions: [GFM] }),
-      history(),
-      search({ top: true }),
-      highlightSelectionMatches(),
-      closeBrackets(),
-      bracketMatching(),
-      indentOnInput(),
-      EditorView.lineWrapping,
-      autocompletion({ override: [(context) => completionSource(context, notes)] }),
-      keymap.of([
-        ...closeBracketsKeymap,
-        ...defaultKeymap,
-        ...historyKeymap,
-        ...searchKeymap,
-        indentWithTab,
-      ]),
-      markdownInputKeymap,
-      formatKeymap,
-      EditorView.updateListener.of((update) => {
-        if (update.selectionSet || update.docChanged) {
-          setActiveFormats(getActiveFormats(update.state));
-        }
-      }),
-    ],
-    [theme, notes]
-  );
+  const extensions = useMemo(() => [
+    getAinoteEditorTheme(theme === "dark"),
+    markdown({ extensions: [GFM] }),
+    history(),
+    search({ top: true }),
+    highlightSelectionMatches(),
+    closeBrackets(),
+    bracketMatching(),
+    indentOnInput(),
+    EditorView.lineWrapping,
+    autocompletion({ override: [(context) => completionSource(context, notes)] }),
+    keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
+    markdownInputKeymap,
+    formatKeymap,
+    softRenderToggleKeymap(onToggleSoftRender),
+    ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki) : []),
+    EditorView.updateListener.of((update) => {
+      if (update.selectionSet || update.docChanged) setActiveFormats(getActiveFormats(update.state));
+    }),
+  ], [theme, notes, repoPath, onOpenWiki, softRenderEnabled, onToggleSoftRender]);
   return { extensions, activeFormats };
+}
+
+function softRenderToggleKeymap(onToggle: (() => void) | undefined): Extension {
+  return Prec.high(
+    keymap.of([{
+      key: "Mod-/",
+      run: () => {
+        onToggle?.();
+        return true;
+      },
+    }])
+  );
+}
+
+function softRenderExtension(repoPath: string | null, onOpenWiki: ((name: string) => void) | undefined): Extension[] {
+  return onOpenWiki ? [softRender({ repoPath, onOpenWiki })] : [softRender({ repoPath })];
 }
 
 function completionSource(context: CompletionContext, notes: Parameters<typeof buildCompletions>[0]) {

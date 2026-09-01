@@ -40,11 +40,18 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const history = useNoteHistory();
     const [outlineOpen, setOutlineOpen] = useState(false);
     const { draft, kind, onChange, flush, loadError, saveError } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
+    const editorPreferences = useEditorPreferences(repoPath, notePath);
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const wiki = useEditorWiki(repoPath, onOpenNote);
-    const { extensions, activeFormats } = useEditorExtensions(wiki.notes);
     const noteTheme = useUiStore((state) => state.noteTheme);
-    const editorPreferences = useEditorPreferences(repoPath, notePath);
+    const softRender = editorPreferences.preferences.softRender;
+    const { extensions, activeFormats } = useEditorExtensions({
+      notes: wiki.notes,
+      repoPath,
+      onOpenWiki: wiki.handleOpenWiki,
+      softRenderEnabled: softRender,
+      onToggleSoftRender: editorPreferences.toggleSoftRender,
+    });
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
     const outline = useMemo(() => extractOutline(draft), [draft]);
     const asset = useAssetImport(readyView);
@@ -60,11 +67,11 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     if (!notePath) return <EmptyState />;
     if (loadError) return <ErrorState message={loadError.message} />;
     const isRichText = kind === "richText";
-    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio: editorPreferences.preferences.ratio, onRatioChange: editorPreferences.setRatio, outline, outlineOpen, onOutlineSelect: handleOutlineSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status };
+    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio: editorPreferences.preferences.ratio, onRatioChange: editorPreferences.setRatio, outline, outlineOpen, onOutlineSelect: handleOutlineSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender };
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar path={notePath} mode={mode} richText={isRichText} saveError={saveError?.message ?? null} onModeChange={editorPreferences.setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} onConvertToRichText={handleConvertToRichText} />
+        <EditorToolbar path={notePath} mode={mode} richText={isRichText} saveError={saveError?.message ?? null} onModeChange={editorPreferences.setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} onConvertToRichText={handleConvertToRichText} softRender={softRender} onToggleSoftRender={editorPreferences.toggleSoftRender} />
         {isRichText ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} /> : <MarkdownEditorSurface {...surfaceProps} />}
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
         <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />

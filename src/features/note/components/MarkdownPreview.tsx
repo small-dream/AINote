@@ -95,10 +95,12 @@ function CalloutBlockquote({ node, children, ...props }: ComponentProps<"blockqu
   return <aside className={`markdown-callout markdown-callout-${kind}`} data-callout={kind} data-line={getNodeLine(node)} {...props}>{children}</aside>;
 }
 
+const CALLOUT_KINDS = new Set<CalloutKind>(["note", "tip", "important", "warning", "caution", "danger"]);
+
 function getCalloutKind(node: ExtraProps["node"]): CalloutKind | null {
   if (!node || !("properties" in node)) return null;
   const value = (node as { properties?: Record<string, unknown> }).properties?.["data-callout"];
-  return value === "note" || value === "tip" || value === "warning" || value === "danger" ? value : null;
+  return typeof value === "string" && CALLOUT_KINDS.has(value as CalloutKind) ? (value as CalloutKind) : null;
 }
 
 function getLanguage(children: ReactNode): string | null {
