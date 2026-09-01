@@ -23,7 +23,7 @@ interface RichTextEditorProps {
 
 /** 真富文本所见即所得编辑器：TipTap 读写 TipTap JSON。
  * 支持图片/表格/任务列表、斜杠命令、双链与标签 mark、Markdown 互转导出。
- * 通过父组件 key 重挂载以切换/重载笔记，content 仅在首次创建时解析。 */
+ * 通过父组件 key 重挂载以切换笔记；异步加载的 content 会由 hook 同步到编辑器。 */
 export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, onConvert }: RichTextEditorProps) {
   const { editor, handleFiles, status, exportMarkdown, importMarkdown } = useRichTextEditor({ content, onChange, repoPath });
   const openTagIndex = useUiStore((s) => s.openTagIndex);

@@ -1,4 +1,5 @@
 import { useEditor } from "@tiptap/react";
+import { useEffect } from "react";
 import { parseRichTextContent } from "../utils/richText";
 import { createRichTextExtensions } from "../utils/extensions";
 import { useRichTextAssets } from "./useRichTextAssets";
@@ -21,6 +22,12 @@ export function useRichTextEditor({ content, onChange, repoPath }: UseRichTextEd
     content: parseRichTextContent(content),
     onUpdate: ({ editor: e }) => onChange(JSON.stringify(e.getJSON())),
   });
+  useEffect(() => {
+    if (!editor) return;
+    const nextContent = parseRichTextContent(content);
+    if (JSON.stringify(editor.getJSON()) === JSON.stringify(nextContent)) return;
+    editor.commands.setContent(nextContent, { emitUpdate: false });
+  }, [content, editor]);
   const { handleFiles, status, showStatus } = useRichTextAssets(editor);
 
   const exportMarkdown = () => {
