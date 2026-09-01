@@ -97,6 +97,18 @@ describe("planSoftRender 分割线与表格", () => {
 });
 
 describe("planSoftRender 有序列表编号", () => {
+  it("列表 widget 一并替换标记后的分隔空格", () => {
+    const bullet = planFor("-  item", 0).widgets.find((w) => w.kind === "bullet");
+    const ordered = planFor("1.   item", 0).widgets.find((w) => w.kind === "number");
+    expect(bullet).toMatchObject({ from: 0, to: 3 });
+    expect(ordered).toMatchObject({ from: 0, to: 5 });
+  });
+
+  it("任务列表隐藏标记和分隔空格", () => {
+    const plan = planFor("- [ ] todo", 0);
+    expect(plan.hides).toContainEqual({ from: 0, to: 2, reveal: false });
+  });
+
   it("读取起始编号并顺序递增", () => {
     const text = "5. a\n6. b";
     const numbers = planFor(text, 0).widgets.filter((w) => w.kind === "number").map((w) => w.index);

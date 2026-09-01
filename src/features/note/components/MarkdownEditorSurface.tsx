@@ -63,7 +63,7 @@ interface EditorBodyProps {
 }
 
 function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, softRender }: EditorBodyProps) {
-  const editor = <CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} />;
+  const editor = <CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" basicSetup={{ syntaxHighlighting: !softRender }} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} />;
   if (mode === "split") {
     return (
       <div data-note-theme={noteTheme} className="note-theme-surface min-h-0 flex-1 overflow-hidden">

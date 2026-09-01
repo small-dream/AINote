@@ -119,7 +119,7 @@ export function planList(
   if (items.length === 0) return;
   const firstMark = items[0]?.mark;
   const base = kind === "ordered" && firstMark ? parseOrderedMarker(doc.slice(firstMark.from, firstMark.to)) : null;
-  items.forEach((item, index) => emitListItem(item, kind, cursor, plan, selectionTo, base, index));
+  items.forEach((item, index) => emitListItem(item, doc, kind, cursor, plan, selectionTo, base, index));
 }
 
 interface ListItemInfo {
@@ -140,6 +140,7 @@ function collectListItems(node: SyntaxNode): ListItemInfo[] {
 
 function emitListItem(
   item: ListItemInfo,
+  doc: string,
   kind: "bullet" | "ordered",
   cursor: number,
   plan: SoftRenderPlan,
@@ -152,12 +153,19 @@ function emitListItem(
   const number = base !== null ? base + ordinal - 1 : ordinal;
   const inItem = isActiveRange(child.from, child.to, cursor, selectionTo);
   if (child.getChild("Task")) {
-    plan.hides.push({ from: mark.from, to: mark.to, reveal: false });
+    plan.hides.push({ from: mark.from, to: listMarkEnd(mark, doc), reveal: false });
   } else if (inItem) {
-    plan.hides.push({ from: mark.from, to: mark.to, reveal: true });
+    plan.hides.push({ from: mark.from, to: listMarkEnd(mark, doc), reveal: true });
   } else {
-    plan.widgets.push(toListWidget(kind, mark, number));
+    plan.widgets.push(toListWidget(kind, mark, listMarkEnd(mark, doc), number));
   }
+}
+
+/** ListMark 不包含标记后的分隔空格；软渲染时一并替换，避免源码空格叠加 widget 宽度。 */
+function listMarkEnd(mark: SyntaxNode, doc: string): number {
+  let end = mark.to;
+  while (doc[end] === " " || doc[end] === "\t") end += 1;
+  return end;
 }
 
 function parseOrderedMarker(text: string): number {
@@ -205,10 +213,10 @@ function findCallout(node: SyntaxNode, doc: string): { from: number; to: number;
   return { from: para.from, to: para.from + match[0].length, kind: match[1]?.toLocaleLowerCase() ?? "" };
 }
 
-function toListWidget(kind: "bullet" | "ordered", mark: SyntaxNode, index: number): WidgetRange {
+function toListWidget(kind: "bullet" | "ordered", mark: SyntaxNode, to: number, index: number): WidgetRange {
   return kind === "ordered"
-    ? { kind: "number", from: mark.from, to: mark.to, index }
-    : { kind: "bullet", from: mark.from, to: mark.to };
+    ? { kind: "number", from: mark.from, to, index }
+    : { kind: "bullet", from: mark.from, to };
 }
 
 export type { BlockRange, HideRange };
