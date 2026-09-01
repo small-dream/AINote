@@ -2,13 +2,16 @@ import type { ChangeEvent } from "react";
 import type { Editor } from "@tiptap/react";
 import {
   Bold,
+  ClipboardPaste,
   Code,
+  Download,
   Heading1,
   Heading2,
   Heading3,
   Image as ImageIcon,
   Italic,
   List,
+  ListChecks,
   ListOrdered,
   Minus,
   Redo,
@@ -26,12 +29,14 @@ interface RichTextToolbarProps {
   editor: Editor | null;
   onImagePicked?: (files: File[]) => void;
   status?: string | null;
+  onExportMarkdown?: () => void;
+  onImportMarkdown?: () => void;
 }
 
 interface ToolButton {
   key: string;
   icon: LucideIcon;
-  labelKey: "richtext.h1" | "richtext.h2" | "richtext.h3" | "richtext.bold" | "richtext.italic" | "richtext.strike" | "richtext.inlineCode" | "richtext.quote" | "richtext.bulletList" | "richtext.orderedList" | "richtext.codeBlock" | "richtext.divider" | "richtext.table" | "richtext.deleteTable";
+  labelKey: "richtext.h1" | "richtext.h2" | "richtext.h3" | "richtext.bold" | "richtext.italic" | "richtext.strike" | "richtext.inlineCode" | "richtext.quote" | "richtext.bulletList" | "richtext.orderedList" | "richtext.taskList" | "richtext.codeBlock" | "richtext.divider" | "richtext.table" | "richtext.deleteTable";
   active: (editor: Editor) => boolean;
   run: (editor: Editor) => void;
 }
@@ -48,6 +53,7 @@ const BUTTONS: ToolButton[] = [
   { key: "quote", icon: TextQuote, labelKey: "richtext.quote", active: (e) => e.isActive("blockquote"), run: (e) => void e.chain().focus().toggleBlockquote().run() },
   { key: "bulletList", icon: List, labelKey: "richtext.bulletList", active: (e) => e.isActive("bulletList"), run: (e) => void e.chain().focus().toggleBulletList().run() },
   { key: "orderedList", icon: ListOrdered, labelKey: "richtext.orderedList", active: (e) => e.isActive("orderedList"), run: (e) => void e.chain().focus().toggleOrderedList().run() },
+  { key: "taskList", icon: ListChecks, labelKey: "richtext.taskList", active: (e) => e.isActive("taskList"), run: (e) => void e.chain().focus().toggleTaskList().run() },
   { key: "codeBlock", icon: SquareCode, labelKey: "richtext.codeBlock", active: (e) => e.isActive("codeBlock"), run: (e) => void e.chain().focus().toggleCodeBlock().run() },
   { key: "divider", icon: Minus, labelKey: "richtext.divider", active: () => false, run: (e) => void e.chain().focus().setHorizontalRule().run() },
   { key: "table", icon: TableIcon, labelKey: "richtext.table", active: (e) => e.isActive("table"), run: (e) => void e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
@@ -87,7 +93,7 @@ function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (file
 }
 
 /** 真富文本编辑器的行内格式工具栏 */
-export function RichTextToolbar({ editor, onImagePicked, status }: RichTextToolbarProps) {
+export function RichTextToolbar({ editor, onImagePicked, status, onExportMarkdown, onImportMarkdown }: RichTextToolbarProps) {
   const { t } = useTranslation();
   if (!editor) return <div className="flex items-center gap-0.5 border-b border-border bg-bg-secondary px-3 py-1.5" />;
   return (
@@ -98,6 +104,8 @@ export function RichTextToolbar({ editor, onImagePicked, status }: RichTextToolb
       {onImagePicked ? <ImagePickerButton label={t("richtext.image")} onPicked={onImagePicked} /> : null}
       {editor.isActive("table") ? <ToolbarButton icon={Trash2} label={t("richtext.deleteTable")} onClick={() => editor.chain().focus().deleteTable().run()} /> : null}
       <span className="mx-1 h-4 w-px bg-border" />
+      {onExportMarkdown ? <ToolbarButton icon={Download} label={t("richtext.exportMarkdown")} onClick={onExportMarkdown} /> : null}
+      {onImportMarkdown ? <ToolbarButton icon={ClipboardPaste} label={t("richtext.importMarkdown")} onClick={() => void onImportMarkdown()} /> : null}
       <ToolbarButton icon={Undo} label={t("richtext.undo")} disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()} />
       <ToolbarButton icon={Redo} label={t("richtext.redo")} disabled={!editor.can().redo()} onClick={() => editor.chain().focus().redo().run()} />
       {status ? <span role="status" className="ml-2 truncate text-xs text-text-secondary">{status}</span> : null}

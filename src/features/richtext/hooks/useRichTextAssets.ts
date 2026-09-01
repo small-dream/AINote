@@ -38,5 +38,5 @@ export function useRichTextAssets(editor: Editor | null) {
     }
   }, [importBytes, insertImage, showStatus, t]);
 
-  return { handleFiles, status };
+  return { handleFiles, status, showStatus };
 }

@@ -1,12 +1,8 @@
 import type { MouseEvent } from "react";
-import { EditorContent, useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
-import { AinoteImage } from "../extensions/image";
-import { WikiLink } from "../extensions/wikiLink";
+import { EditorContent } from "@tiptap/react";
 import { RichTextToolbar } from "./RichTextToolbar";
-import { useRichTextAssets } from "../hooks/useRichTextAssets";
-import { parseRichTextContent } from "../utils/richText";
+import { RichTextBubbleMenu } from "./RichTextBubbleMenu";
+import { useRichTextEditor } from "../hooks/useRichTextEditor";
 
 interface RichTextEditorProps {
   /** TipTap JSON 字符串（.ainote 文件内容） */
@@ -19,23 +15,11 @@ interface RichTextEditorProps {
   onOpenWiki?: (name: string) => void;
 }
 
-/** 真富文本所见即所得编辑器：TipTap 读写 TipTap JSON（图片/表格/双链）。
+/** 真富文本所见即所得编辑器：TipTap 读写 TipTap JSON。
+ * 支持图片/表格/任务列表、斜杠命令、双链与标签 mark、Markdown 互转导出。
  * 通过父组件 key 重挂载以切换/重载笔记，content 仅在首次创建时解析。 */
 export function RichTextEditor({ content, onChange, repoPath, onOpenWiki }: RichTextEditorProps) {
-  const editor = useEditor({
-    extensions: [
-      StarterKit,
-      AinoteImage.configure({ repoPath }),
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      WikiLink,
-    ],
-    content: parseRichTextContent(content),
-    onUpdate: ({ editor }) => onChange(JSON.stringify(editor.getJSON())),
-  });
-  const { handleFiles, status } = useRichTextAssets(editor);
+  const { editor, handleFiles, status, exportMarkdown, importMarkdown } = useRichTextEditor({ content, onChange, repoPath });
 
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
     const element = (event.target as HTMLElement).closest("[data-wiki-target]");
@@ -45,7 +29,8 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki }: Rich
 
   return (
     <div className="rich-text-editor flex h-full min-h-0 flex-col" onClick={handleClick}>
-      <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} />
+      <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} onExportMarkdown={exportMarkdown} onImportMarkdown={importMarkdown} />
+      <RichTextBubbleMenu editor={editor} />
       <EditorContent editor={editor} className="rich-text-scroll min-h-0 flex-1 overflow-y-auto px-8 py-4" />
     </div>
   );
