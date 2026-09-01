@@ -3,6 +3,7 @@ import { create } from "zustand";
 export type Theme = "light" | "dark";
 export type Locale = "zh-CN" | "en-US";
 export type NoteTheme = "classic" | "paper" | "midnight" | "forest";
+export type SidebarTab = "tree" | "tags" | "trash";
 
 /** 主题偏好持久化键（localStorage，纯前端全局 UI 态） */
 export const THEME_STORAGE_KEY = "ainote.theme";
@@ -70,10 +71,14 @@ export function writeStoredNoteTheme(noteTheme: NoteTheme): void {
 
 interface UiState {
   sidebarCollapsed: boolean;
+  sidebarTab: SidebarTab;
+  focusedTag: string | null;
   theme: Theme;
   noteTheme: NoteTheme;
   locale: Locale;
   toggleSidebar: () => void;
+  setSidebarTab: (tab: SidebarTab) => void;
+  openTagIndex: (tag: string) => void;
   setTheme: (theme: Theme) => void;
   setNoteTheme: (noteTheme: NoteTheme) => void;
   setLocale: (locale: Locale) => void;
@@ -81,10 +86,14 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set) => ({
   sidebarCollapsed: false,
+  sidebarTab: "tree",
+  focusedTag: null,
   theme: readStoredTheme(),
   noteTheme: readStoredNoteTheme(),
   locale: readStoredLocale(),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+  setSidebarTab: (sidebarTab) => set({ sidebarTab }),
+  openTagIndex: (tag) => set({ sidebarTab: "tags", focusedTag: tag }),
   setTheme: (theme) => {
     writeStoredTheme(theme);
     set({ theme });

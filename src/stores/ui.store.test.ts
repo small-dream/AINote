@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { LOCALE_STORAGE_KEY, NOTE_THEME_STORAGE_KEY, parseLocale, parseNoteTheme, parseTheme, readStoredLocale, readStoredTheme, THEME_STORAGE_KEY, useUiStore } from "./ui.store";
 
+afterEach(() => useUiStore.setState({ theme: "light", noteTheme: "classic", locale: "zh-CN", sidebarTab: "tree", focusedTag: null }));
+
 describe("ui.store 主题解析与持久化", () => {
   beforeEach(() => localStorage.clear());
-  afterEach(() => useUiStore.setState({ theme: "light", noteTheme: "classic", locale: "zh-CN" }));
 
   it("parseTheme 非法值回退亮色", () => {
     expect(parseTheme("dark")).toBe("dark");
@@ -39,5 +40,18 @@ describe("ui.store 主题解析与持久化", () => {
     expect(parseNoteTheme("unknown")).toBe("classic");
     useUiStore.getState().setNoteTheme("midnight");
     expect(localStorage.getItem(NOTE_THEME_STORAGE_KEY)).toBe("midnight");
+  });
+});
+
+describe("ui.store 侧边栏 Tab 与标签聚焦", () => {
+  it("setSidebarTab 切换侧边栏 Tab", () => {
+    useUiStore.getState().setSidebarTab("tags");
+    expect(useUiStore.getState().sidebarTab).toBe("tags");
+  });
+
+  it("openTagIndex 切到标签 Tab 并聚焦标签", () => {
+    useUiStore.getState().openTagIndex("project");
+    expect(useUiStore.getState().sidebarTab).toBe("tags");
+    expect(useUiStore.getState().focusedTag).toBe("project");
   });
 });

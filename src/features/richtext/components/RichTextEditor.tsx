@@ -3,6 +3,7 @@ import { EditorContent } from "@tiptap/react";
 import { RichTextToolbar } from "./RichTextToolbar";
 import { RichTextBubbleMenu } from "./RichTextBubbleMenu";
 import { useRichTextEditor } from "../hooks/useRichTextEditor";
+import { useUiStore } from "@/stores/ui.store";
 
 interface RichTextEditorProps {
   /** TipTap JSON 字符串（.ainote 文件内容） */
@@ -20,11 +21,19 @@ interface RichTextEditorProps {
  * 通过父组件 key 重挂载以切换/重载笔记，content 仅在首次创建时解析。 */
 export function RichTextEditor({ content, onChange, repoPath, onOpenWiki }: RichTextEditorProps) {
   const { editor, handleFiles, status, exportMarkdown, importMarkdown } = useRichTextEditor({ content, onChange, repoPath });
+  const openTagIndex = useUiStore((s) => s.openTagIndex);
 
   const handleClick = (event: MouseEvent<HTMLDivElement>) => {
-    const element = (event.target as HTMLElement).closest("[data-wiki-target]");
-    const target = element?.getAttribute("data-wiki-target");
-    if (target) onOpenWiki?.(target);
+    const element = event.target as HTMLElement;
+    const wikiElement = element.closest("[data-wiki-target]");
+    const target = wikiElement?.getAttribute("data-wiki-target");
+    if (target) {
+      onOpenWiki?.(target);
+      return;
+    }
+    const tagElement = element.closest("[data-tag]");
+    const tag = tagElement?.getAttribute("data-tag");
+    if (tag) openTagIndex(tag);
   };
 
   return (

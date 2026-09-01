@@ -1,8 +1,8 @@
-import { useState } from "react";
 import { FileTree } from "@/features/file-tree/components/FileTree";
 import { TagIndex } from "@/features/wiki/components/TagIndex";
 import { TrashPanel } from "@/features/trash/components/TrashPanel";
 import { useTranslation } from "@/i18n";
+import { useUiStore, type SidebarTab } from "@/stores/ui.store";
 
 interface WorkspaceSidebarProps {
   repoPath: string | null;
@@ -11,8 +11,6 @@ interface WorkspaceSidebarProps {
   onRequestFolder: (dir: string) => void;
   onRequestMove: (path: string) => void;
 }
-
-type SidebarTab = "tree" | "tags" | "trash";
 
 const TABS: { key: SidebarTab; labelKey: "tree.label" | "wiki.tags" | "trash.title" }[] = [
   { key: "tree", labelKey: "tree.label" },
@@ -28,7 +26,8 @@ export function WorkspaceSidebar({
   onRequestFolder,
   onRequestMove,
 }: WorkspaceSidebarProps) {
-  const [tab, setTab] = useState<SidebarTab>("tree");
+  const tab = useUiStore((s) => s.sidebarTab);
+  const setTab = useUiStore((s) => s.setSidebarTab);
   return (
     <div className="flex min-h-0 w-[248px] shrink-0 flex-col border-r border-border bg-bg-secondary/80">
       <SidebarTabs tab={tab} onChange={setTab} />

@@ -1,7 +1,8 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { TagIndex } from "./TagIndex";
+import { useUiStore } from "@/stores/ui.store";
 
 const wikiApiMock = vi.hoisted(() => ({ index: vi.fn() }));
 vi.mock("@/api", () => ({ wikiApi: wikiApiMock }));
@@ -24,6 +25,8 @@ function renderIndex() {
 }
 
 describe("TagIndex", () => {
+  afterEach(() => useUiStore.setState({ focusedTag: null, sidebarTab: "tree" }));
+
   it("展示标签云并点击展开对应笔记", async () => {
     wikiApiMock.index.mockResolvedValue(NOTES);
     const { onSelect } = renderIndex();
@@ -36,6 +39,24 @@ describe("TagIndex", () => {
     expect(screen.getByText("B 笔记")).toBeTruthy();
     fireEvent.click(screen.getByText("B 笔记"));
     expect(onSelect).toHaveBeenCalledWith("b.md");
+  });
+
+  it("挂载时按 focusedTag 自动展开对应标签", async () => {
+    useUiStore.setState({ focusedTag: "x", sidebarTab: "tags" });
+    wikiApiMock.index.mockResolvedValue(NOTES);
+    renderIndex();
+
+    expect(await screen.findByText("A 笔记")).toBeTruthy();
+    expect(screen.getByText("B 笔记")).toBeTruthy();
+  });
+
+  it("focusedTag 变化后展开新标签", async () => {
+    wikiApiMock.index.mockResolvedValue(NOTES);
+    renderIndex();
+    await screen.findByText("z");
+
+    useUiStore.setState({ focusedTag: "z" });
+    expect(await screen.findByText("C 笔记")).toBeTruthy();
   });
 
   it("无标签时展示空态", async () => {

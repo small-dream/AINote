@@ -4,6 +4,7 @@ import { useTranslation } from "@/i18n";
 import { useWikiIndexQuery } from "@/queries/wiki.queries";
 import type { NoteWikiDto } from "@/api/types";
 import { buildTagCloud, type TagCloudItem } from "../utils/wiki";
+import { useUiStore } from "@/stores/ui.store";
 
 interface TagIndexProps {
   repoPath: string | null;
@@ -14,7 +15,13 @@ interface TagIndexProps {
 export function TagIndex({ repoPath, onSelect }: TagIndexProps) {
   const { t } = useTranslation();
   const { data: notes = [], isLoading } = useWikiIndexQuery(repoPath);
-  const [selected, setSelected] = useState<string | null>(null);
+  const focusedTag = useUiStore((s) => s.focusedTag);
+  const [selected, setSelected] = useState<string | null>(focusedTag);
+  const [prevFocused, setPrevFocused] = useState<string | null>(focusedTag);
+  if (focusedTag !== prevFocused) {
+    setPrevFocused(focusedTag);
+    if (focusedTag) setSelected(focusedTag);
+  }
 
   if (isLoading) {
     return <div className="p-4 text-sm text-text-secondary">{t("common.loading")}</div>;
@@ -36,6 +43,7 @@ export function TagIndex({ repoPath, onSelect }: TagIndexProps) {
             tag={tag}
             notes={notes}
             expanded={selected === tag.name}
+            focused={focusedTag === tag.name}
             onToggle={() => setSelected(selected === tag.name ? null : tag.name)}
             onSelect={onSelect}
           />
@@ -49,18 +57,20 @@ interface TagRowProps {
   tag: TagCloudItem;
   notes: NoteWikiDto[];
   expanded: boolean;
+  focused: boolean;
   onToggle: () => void;
   onSelect: (path: string) => void;
 }
 
-function TagRow({ tag, notes, expanded, onToggle, onSelect }: TagRowProps) {
+function TagRow({ tag, notes, expanded, focused, onToggle, onSelect }: TagRowProps) {
   const taggedNotes = notes.filter((n) => n.tags.includes(tag.name));
   return (
     <div>
       <button
         type="button"
         onClick={onToggle}
-        className="flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm text-text-primary transition-colors hover:bg-bg-secondary"
+        aria-current={focused && expanded ? "true" : undefined}
+        className={`flex w-full items-center gap-1.5 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-bg-secondary ${focused ? "bg-accent/10 text-accent" : "text-text-primary"}`}
       >
         <Hash size={13} className="shrink-0 text-text-tertiary" />
         <span className="truncate">{tag.name}</span>
