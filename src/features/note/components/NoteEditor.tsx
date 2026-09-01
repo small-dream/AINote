@@ -1,10 +1,11 @@
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { EditorView } from "@codemirror/view";
 import { useNoteEditor, type NoteEditorHandle } from "../hooks/useNoteEditor";
 import { useNoteHistory } from "@/features/history/hooks/useNoteHistory";
 import { useFocusTitleOnLoad } from "../hooks/useEditorFocus";
 import { useEditorExtensions } from "../hooks/useEditorExtensions";
 import { useEditorViewReady } from "../hooks/useEditorViewReady";
+import { useEditorScrollPersistence } from "../hooks/useEditorScrollPersistence";
 import { useSyncScroll } from "../hooks/useSyncScroll";
 import { useAssetImport } from "@/features/asset/hooks/useAssetImport";
 import { useEditorWiki } from "@/features/wiki/hooks/useEditorWiki";
@@ -15,7 +16,6 @@ import { MarkdownEditorSurface, type MarkdownEditorSurfaceProps } from "./Markdo
 import { extractOutline, type OutlineItem } from "../utils/outline";
 import { useTranslation } from "@/i18n";
 import { useEditorPreferences } from "../hooks/useEditorPreferences";
-import { attachEditorScrollPersistence } from "../utils/editorScrollPersistence";
 import { dispatchFormat } from "../hooks/useFormatCommands";
 import { insertCallout } from "../utils/insert";
 import { useUiStore } from "@/stores/ui.store";
@@ -44,7 +44,8 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const wiki = useEditorWiki(repoPath, onOpenNote);
     const noteTheme = useUiStore((state) => state.noteTheme);
-    const { mode, editorScrollTop, previewScrollTop } = editorPreferences.preferences;
+    const { mode, editorScrollTop, previewScrollTop, ratio } = editorPreferences.preferences;
+    const { setMode, setRatio, setEditorScrollTop, setPreviewScrollTop } = editorPreferences;
     // Markdown 编辑视图固定软渲染（WYSIWYG）；分栏视图编辑侧固定源码 + 右侧实时预览
     const softRenderEnabled = mode !== "split";
     const { extensions, activeFormats } = useEditorExtensions({
@@ -58,20 +59,20 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const asset = useAssetImport(readyView);
     const previewRef = useRef<HTMLDivElement | null>(null);
     const { handleConvertNote, handleConvertToRichText } = useNoteConversion({ notePath, draft, flush, onOpenNote });
-    useEffect(() => { if (readyView) attachEditorScrollPersistence(readyView, previewRef.current, { editorScrollTop, previewScrollTop }, editorPreferences.setEditorScrollTop, editorPreferences.setPreviewScrollTop); }, [readyView, mode, editorScrollTop, previewScrollTop, editorPreferences]);
+    useEditorScrollPersistence(readyView, previewRef, mode, { editorScrollTop, previewScrollTop, setEditorScrollTop, setPreviewScrollTop });
     useSyncScroll(readyView, previewRef, mode);
-    useImperativeHandle(ref, () => ({ flush, setMode: editorPreferences.setMode, insertCallout: () => { if (viewRef.current) dispatchFormat(viewRef.current, insertCallout); viewRef.current?.focus(); } }), [editorPreferences, flush, viewRef]);
+    useImperativeHandle(ref, () => ({ flush, setMode, insertCallout: () => { if (viewRef.current) dispatchFormat(viewRef.current, insertCallout); viewRef.current?.focus(); } }), [flush, setMode, viewRef]);
     const handleSave = () => { void flush().catch(() => undefined); };
     const handleOutlineSelect = (item: OutlineItem) => { if (mode !== "preview" && readyView) { const line = readyView.state.doc.line(Math.min(item.line, readyView.state.doc.lines)); readyView.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: "center" }) }); readyView.focus(); } if (mode !== "edit") scrollPreviewToHeading(previewRef.current, item.id); setOutlineOpen(false); };
 
     if (!notePath) return <EmptyState />;
     if (loadError) return <ErrorState message={loadError.message} />;
     const isRichText = kind === "richText";
-    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio: editorPreferences.preferences.ratio, onRatioChange: editorPreferences.setRatio, outline, outlineOpen, onOutlineSelect: handleOutlineSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
+    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineSelect: handleOutlineSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar path={notePath} mode={mode} richText={isRichText} saveError={saveError?.message ?? null} onModeChange={editorPreferences.setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} onConvertToRichText={handleConvertToRichText} />
+        <EditorToolbar path={notePath} mode={mode} richText={isRichText} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} onConvertToRichText={handleConvertToRichText} />
         {isRichText ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} /> : <MarkdownEditorSurface {...surfaceProps} />}
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
         <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
