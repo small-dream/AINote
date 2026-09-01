@@ -2,7 +2,6 @@ import type { MouseEvent } from "react";
 import { EditorContent } from "@tiptap/react";
 import { RichTextToolbar } from "./RichTextToolbar";
 import { RichTextBubbleMenu } from "./RichTextBubbleMenu";
-import { CodeBlockMenu } from "./CodeBlockMenu";
 import { useRichTextEditor } from "../hooks/useRichTextEditor";
 import { useUiStore } from "@/stores/ui.store";
 import { swapNoteExtension } from "@/features/note/utils/noteKind";
@@ -53,7 +52,6 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
     <div className="rich-text-editor flex h-full min-h-0 flex-col" onClick={handleClick}>
       <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} onExportMarkdown={exportMarkdown} onImportMarkdown={importMarkdown} onConvertToMarkdown={handleConvertToMarkdown} />
       <RichTextBubbleMenu editor={editor} />
-      <CodeBlockMenu editor={editor} />
       <EditorContent editor={editor} className="rich-text-scroll min-h-0 flex-1 overflow-y-auto px-8 py-4" />
     </div>
   );

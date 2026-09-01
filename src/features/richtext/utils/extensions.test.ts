@@ -3,30 +3,42 @@ import { describe, expect, it } from "vitest";
 import { createRichTextExtensions } from "./extensions";
 import { CODE_LANGUAGES } from "../extensions/codeBlock";
 
-function renderRichText(markdown: string) {
+function createTestEditor(markdown: string) {
   const element = document.createElement("div");
-  const editor = new Editor({ element, extensions: createRichTextExtensions(null), content: markdown });
-  const html = editor.view.dom.innerHTML;
-  editor.destroy();
-  return html;
+  return new Editor({ element, extensions: createRichTextExtensions(null), content: markdown });
 }
 
 describe("代码块语法高亮", () => {
-  it("带语言的代码块渲染 data-language 与 language 类", () => {
-    const html = renderRichText("```ts\nconst n: number = 1\n```");
-    expect(html).toContain('data-language="ts"');
-    expect(html).toContain('class="language-ts"');
+  it("带语言的代码块渲染头部语言下拉与 language 类", () => {
+    const editor = createTestEditor("```ts\nconst n: number = 1\n```");
+    const select = editor.view.dom.querySelector<HTMLSelectElement>(".code-block-language");
+    expect(select?.value).toBe("ts");
+    expect(editor.view.dom.querySelector("code")?.className).toContain("language-ts");
+    editor.destroy();
   });
 
   it("代码块由 Lowlight 添加 hljs token 高亮", () => {
-    const html = renderRichText("```ts\nconst n: number = 1\n```");
+    const editor = createTestEditor("```ts\nconst n: number = 1\n```");
+    const html = editor.view.dom.innerHTML;
     expect(html).toContain("hljs-keyword");
     expect(html).toContain("hljs-number");
+    editor.destroy();
   });
 
   it("未指定语言的代码块自动检测语言并高亮", () => {
-    const html = renderRichText("```\nconst n: number = 1\n```");
+    const editor = createTestEditor("```\nconst n: number = 1\n```");
+    const html = editor.view.dom.innerHTML;
     expect(html).toMatch(/hljs-[a-z-]+/);
+    expect(editor.view.dom.querySelector<HTMLSelectElement>(".code-block-language")?.value).toBe("");
+    editor.destroy();
+  });
+
+  it("getHTML 序列化保留 data-language 与语言类", () => {
+    const editor = createTestEditor("```ts\nconst n: number = 1\n```");
+    const html = editor.getHTML();
+    expect(html).toContain('data-language="ts"');
+    expect(html).toContain('class="language-ts"');
+    editor.destroy();
   });
 });
 
@@ -39,11 +51,11 @@ describe("代码块语言选择", () => {
   });
 
   it("updateAttributes 可切换代码块语言", () => {
-    const element = document.createElement("div");
-    const editor = new Editor({ element, extensions: createRichTextExtensions(null), content: "```\nfn main() {}\n```" });
+    const editor = createTestEditor("```\nfn main() {}\n```");
     editor.chain().focus().updateAttributes("codeBlock", { language: "rust" }).run();
     const codeBlock = editor.getJSON().content?.[0] as { attrs?: { language?: string } } | undefined;
     expect(codeBlock?.attrs?.language).toBe("rust");
+    expect(editor.view.dom.querySelector<HTMLSelectElement>(".code-block-language")?.value).toBe("rust");
     editor.destroy();
   });
 });
