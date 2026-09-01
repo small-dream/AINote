@@ -14,5 +14,7 @@ export const noteApi = {
   remove: (path: string) => call<null>("delete_note", { path }),
   removeFolder: (path: string) => call<null>("delete_folder", { path }),
   move: (from: string, to: string) => call<null>("move_note", { from, to }),
+  /** 转换笔记类型（.md ↔ .ainote）；content 为前端已转换的新类型内容 */
+  convert: (from: string, to: string, content: string) => call<null>("convert_note", { from, to, content }),
   tree: () => call<TreeNode>("note_tree"),
 };

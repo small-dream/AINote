@@ -19,3 +19,9 @@ export function noteKindOfPath(path: string): NoteKind {
 export function isRichTextPath(path: string): boolean {
   return noteKindOfPath(path) === "richText";
 }
+
+/** 替换路径扩展名为目标类型扩展名（用于 .md ↔ .ainote 一键互转） */
+export function swapNoteExtension(path: string, kind: NoteKind): string {
+  const target = noteExtension(kind);
+  return path.replace(/\.(md|ainote)$/i, `.${target}`);
+}

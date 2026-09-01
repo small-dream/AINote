@@ -1,14 +1,6 @@
 import { useEditor } from "@tiptap/react";
-import StarterKit from "@tiptap/starter-kit";
-import { Table, TableCell, TableHeader, TableRow } from "@tiptap/extension-table";
-import TaskList from "@tiptap/extension-task-list";
-import TaskItem from "@tiptap/extension-task-item";
-import { Markdown } from "tiptap-markdown";
-import { AinoteImage } from "../extensions/image";
-import { WikiLink } from "../extensions/wikiLink";
-import { TagMark } from "../extensions/tag";
-import { SlashCommand } from "../extensions/slashCommand";
 import { parseRichTextContent } from "../utils/richText";
+import { createRichTextExtensions } from "../utils/extensions";
 import { useRichTextAssets } from "./useRichTextAssets";
 import { useTranslation } from "@/i18n";
 
@@ -25,20 +17,7 @@ interface UseRichTextEditorOptions {
 export function useRichTextEditor({ content, onChange, repoPath }: UseRichTextEditorOptions) {
   const { t } = useTranslation();
   const editor = useEditor({
-    extensions: [
-      StarterKit,
-      AinoteImage.configure({ repoPath }),
-      Table.configure({ resizable: true }),
-      TableRow,
-      TableHeader,
-      TableCell,
-      TaskList,
-      TaskItem.configure({ nested: true }),
-      Markdown.configure({ transformPastedText: true, transformCopiedText: true, breaks: false, tightLists: true }),
-      WikiLink,
-      TagMark,
-      SlashCommand,
-    ],
+    extensions: createRichTextExtensions(repoPath),
     content: parseRichTextContent(content),
     onUpdate: ({ editor: e }) => onChange(JSON.stringify(e.getJSON())),
   });

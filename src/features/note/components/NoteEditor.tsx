@@ -20,6 +20,7 @@ import { dispatchFormat } from "../hooks/useFormatCommands";
 import { insertCallout } from "../utils/insert";
 import { useUiStore } from "@/stores/ui.store";
 import { RichTextEditor } from "@/features/richtext/components/RichTextEditor";
+import { useNoteConversion } from "../hooks/useNoteConversion";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -49,6 +50,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const asset = useAssetImport(readyView);
     const previewRef = useRef<HTMLDivElement | null>(null);
     const { mode, editorScrollTop, previewScrollTop } = editorPreferences.preferences;
+    const { handleConvertNote, handleConvertToRichText } = useNoteConversion({ notePath, draft, flush, onOpenNote });
     useEffect(() => { if (readyView) attachEditorScrollPersistence(readyView, previewRef.current, { editorScrollTop, previewScrollTop }, editorPreferences.setEditorScrollTop, editorPreferences.setPreviewScrollTop); }, [readyView, mode, editorScrollTop, previewScrollTop, editorPreferences]);
     useSyncScroll(readyView, previewRef, mode);
     useImperativeHandle(ref, () => ({ flush, setMode: editorPreferences.setMode, insertCallout: () => { if (viewRef.current) dispatchFormat(viewRef.current, insertCallout); viewRef.current?.focus(); } }), [editorPreferences, flush, viewRef]);
@@ -62,8 +64,8 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar path={notePath} mode={mode} richText={isRichText} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} onModeChange={editorPreferences.setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} />
-        {isRichText ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} /> : <MarkdownEditorSurface {...surfaceProps} />}
+        <EditorToolbar path={notePath} mode={mode} richText={isRichText} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} onModeChange={editorPreferences.setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} onConvertToRichText={handleConvertToRichText} />
+        {isRichText ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} /> : <MarkdownEditorSurface {...surfaceProps} />}
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
         <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
       </div>

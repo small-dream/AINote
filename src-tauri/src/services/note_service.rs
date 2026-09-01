@@ -76,6 +76,16 @@ pub fn move_note(repo_path: &Path, from: &str, to: &str) -> Result<(), AppError>
     note_files::move_note(repo_path, from, to)
 }
 
+/// 用例：转换笔记类型（`.md` ↔ `.ainote`）；content 为前端已转换的新内容
+pub fn convert_note_kind(
+    repo_path: &Path,
+    from: &str,
+    to: &str,
+    content: &str,
+) -> Result<(), AppError> {
+    note_files::convert_note(repo_path, from, to, content)
+}
+
 /// 用例：列出笔记文件树
 pub fn list_tree(repo_path: &Path) -> Result<TreeNode, AppError> {
     file_tree::list_tree(repo_path)

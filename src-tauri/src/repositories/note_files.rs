@@ -47,6 +47,21 @@ pub fn move_note(root: &Path, from: &str, to: &str) -> Result<(), AppError> {
     Ok(fs::rename(src, dst)?)
 }
 
+/// 转换笔记类型：把旧路径内容替换为新扩展名文件后删除旧文件（内容已由前端转换好）。
+pub fn convert_note(root: &Path, from: &str, to: &str, content: &str) -> Result<(), AppError> {
+    let src = root.join(validate_rel_path(from)?);
+    let dst = root.join(validate_rel_path(to)?);
+    if !src.is_file() {
+        return Err(AppError::NoteNotFound(from.to_string()));
+    }
+    if let Some(parent) = dst.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    fs::write(&dst, content)?;
+    fs::remove_file(&src)?;
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -95,5 +110,23 @@ mod tests {
         move_note(&root, "old.md", "sub/new.md").unwrap();
         assert_eq!(read_note(&root, "sub/new.md").unwrap(), "x");
         assert!(read_note(&root, "old.md").is_err());
+    }
+
+    #[test]
+    fn convert_replaces_content_and_removes_source() {
+        let (_t, root) = setup();
+        write_note(&root, "a.md", "# 旧内容").unwrap();
+        convert_note(&root, "a.md", "a.ainote", "{\"type\":\"doc\"}").unwrap();
+        assert_eq!(read_note(&root, "a.ainote").unwrap(), "{\"type\":\"doc\"}");
+        assert!(read_note(&root, "a.md").is_err());
+    }
+
+    #[test]
+    fn convert_missing_source_returns_not_found() {
+        let (_t, root) = setup();
+        assert!(matches!(
+            convert_note(&root, "nope.md", "nope.ainote", "{}"),
+            Err(AppError::NoteNotFound(_))
+        ));
     }
 }

@@ -23,6 +23,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             commands::note::create::create_note,
+            commands::note::convert::convert_note,
             commands::note::create_folder::create_folder,
             commands::note::read::read_note,
             commands::note::update::update_note,

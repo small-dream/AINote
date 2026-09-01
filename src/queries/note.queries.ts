@@ -104,4 +104,20 @@ export function useMoveNoteMutation() {
   });
 }
 
+/** 转换笔记类型（.md ↔ .ainote），成功后提交 Git 并让调用方刷新当前笔记 */
+export function useConvertNoteMutation() {
+  const queryClient = useQueryClient();
+  const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
+  return useMutation({
+    mutationFn: ({ from, to, content }: { from: string; to: string; content: string }) =>
+      noteApi.convert(from, to, content),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["notes"] });
+      void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
+      markActivity();
+    },
+  });
+}
+
 export type { NoteMeta };

@@ -5,6 +5,7 @@ import {
   ClipboardPaste,
   Code,
   Download,
+  ArrowLeftRight,
   Heading1,
   Heading2,
   Heading3,
@@ -31,6 +32,7 @@ interface RichTextToolbarProps {
   status?: string | null;
   onExportMarkdown?: () => void;
   onImportMarkdown?: () => void;
+  onConvertToMarkdown?: () => void;
 }
 
 interface ToolButton {
@@ -93,7 +95,7 @@ function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (file
 }
 
 /** 真富文本编辑器的行内格式工具栏 */
-export function RichTextToolbar({ editor, onImagePicked, status, onExportMarkdown, onImportMarkdown }: RichTextToolbarProps) {
+export function RichTextToolbar({ editor, onImagePicked, status, onExportMarkdown, onImportMarkdown, onConvertToMarkdown }: RichTextToolbarProps) {
   const { t } = useTranslation();
   if (!editor) return <div className="flex items-center gap-0.5 border-b border-border bg-bg-secondary px-3 py-1.5" />;
   return (
@@ -104,6 +106,7 @@ export function RichTextToolbar({ editor, onImagePicked, status, onExportMarkdow
       {onImagePicked ? <ImagePickerButton label={t("richtext.image")} onPicked={onImagePicked} /> : null}
       {editor.isActive("table") ? <ToolbarButton icon={Trash2} label={t("richtext.deleteTable")} onClick={() => editor.chain().focus().deleteTable().run()} /> : null}
       <span className="mx-1 h-4 w-px bg-border" />
+      {onConvertToMarkdown ? <ToolbarButton icon={ArrowLeftRight} label={t("richtext.convertToMarkdown")} onClick={onConvertToMarkdown} /> : null}
       {onExportMarkdown ? <ToolbarButton icon={Download} label={t("richtext.exportMarkdown")} onClick={onExportMarkdown} /> : null}
       {onImportMarkdown ? <ToolbarButton icon={ClipboardPaste} label={t("richtext.importMarkdown")} onClick={() => void onImportMarkdown()} /> : null}
       <ToolbarButton icon={Undo} label={t("richtext.undo")} disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()} />

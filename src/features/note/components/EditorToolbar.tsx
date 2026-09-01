@@ -1,5 +1,5 @@
 import { Button } from "@/components/atoms/Button";
-import { FilePenLine, FolderInput, History, Network, Save, Split, Eye, Pencil, List } from "lucide-react";
+import { ArrowLeftRight, FilePenLine, FolderInput, History, Network, Save, Split, Eye, Pencil, List } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { NoteThemePicker } from "./NoteThemePicker";
 
@@ -19,6 +19,7 @@ interface EditorToolbarProps {
   onHistory: () => void;
   onWiki: () => void;
   onOutline?: () => void;
+  onConvertToRichText?: () => void;
 }
 
 const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.preview" }[] = [
@@ -28,7 +29,7 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
 ];
 
 /** 笔记操作栏：标题与保存状态、视图切换、文件操作。 */
-export function EditorToolbar({ path, mode, richText = false, saving, dirty, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onOutline }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, richText = false, saving, dirty, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onOutline, onConvertToRichText }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -53,6 +54,7 @@ export function EditorToolbar({ path, mode, richText = false, saving, dirty, sav
         <Button variant="ghost" aria-label={t("history.title")} title={t("history.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onHistory}><History size={14} /><span className="hidden xl:inline">{t("history.title")}</span></Button>
         <Button variant="ghost" aria-label={t("wiki.title")} title={t("wiki.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onWiki}><Network size={14} /><span className="hidden xl:inline">{t("wiki.title")}</span></Button>
         {!richText && <Button variant="ghost" aria-label={t("note.outline")} title={t("note.outline")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={() => onOutline?.()}><List size={14} /><span className="hidden xl:inline">{t("note.outline")}</span></Button>}
+        {!richText && onConvertToRichText ? <Button variant="ghost" aria-label={t("note.convertToRichText")} title={t("note.convertToRichText")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onConvertToRichText}><ArrowLeftRight size={14} /><span className="hidden xl:inline">{t("note.convertToRichText")}</span></Button> : null}
         <Button variant="ghost" aria-label={t("note.moving")} title={t("note.moving")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onMove}><FolderInput size={14} /><span className="hidden xl:inline">{t("note.moving")}</span></Button>
         <Button variant="primary" className="inline-flex items-center gap-1.5 px-3.5 text-xs font-medium" onClick={() => void onSave()} disabled={saving || !dirty}>
           <Save size={14} />
