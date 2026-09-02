@@ -1,5 +1,22 @@
 # 更新日志
 
+## v0.13.0 — 2026-09-02
+
+### 导入 Markdown 笔记
+
+- 统一「+」创建菜单新增「导入 Markdown 笔记」：通过系统文件选择器导入 `.md` / `.markdown` 文件，作为笔记写入当前选中目录。
+- 导入时扩展名统一归一化为 `.md`，同目录重名自动追加 `-1`/`-2`… 序号；导入成功后立即 `note: import <path>` 提交版本化并自动打开新笔记。
+- 导入的笔记进入笔记列表 / 目录树 / 搜索与双链索引，与「导入文件」（存 `assets/` 附件）分流；路径穿越与隐藏目录仍由后端路径校验拦截。
+
+### 导出 PDF
+
+- Markdown 与富文本笔记的编辑器工具栏新增「导出 PDF」：打开 A4 浅色打印预览（Markdown 复用预览管线，富文本把 TipTap JSON 序列化为 HTML），点击「打印」经 Rust `print_current_page` 命令调用系统原生打印对话框选择「存储为 PDF」导出；打印前自动保存草稿，不落中间文件、不写入 Git。
+- 修复 macOS 隐藏标题栏下导出预览的「返回」按钮与系统窗口按钮重叠：预览顶部预留拖拽区。
+
+### 工程质量
+
+- Rust 侧新增 `import_note` 用例、`unique_note_path` 仓库函数与 `print_current_page` 打印命令及单测；前端新增 `useImportNoteMutation`、`useCreateMenu.importNotes`、`features/export`（PdfExportOverlay / usePdfExport / richTextJsonToHtml）及打印样式与测试；`pnpm build` / `pnpm test` / `pnpm lint` / `cargo test` 全量通过。
+
 ## v0.12.5 — 2026-09-02
 
 ### 设置界面重构
