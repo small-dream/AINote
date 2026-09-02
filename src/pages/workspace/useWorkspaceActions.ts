@@ -1,17 +1,15 @@
 import { useState } from "react";
 import type { NewFolderDialogState } from "@/features/file-tree/hooks/useNewFolder";
 import { useNewFolder } from "@/features/file-tree/hooks/useNewFolder";
-import type { NewNoteDialogState } from "@/features/note/hooks/useNewNote";
+import type { CreateNote } from "@/features/note/hooks/useNewNote";
 import { useNewNote } from "@/features/note/hooks/useNewNote";
-import type { NewNoteInput } from "@/features/note/types";
+import { useImportAssetBytesMutation } from "@/queries/asset.queries";
 
 export interface WorkspaceActions {
-  dialog: NewNoteDialogState;
   existingPaths: ReadonlySet<string>;
   createdPath: string | null;
-  requestNew: (dir: string) => void;
-  closeNew: () => void;
-  handleCreate: (input: NewNoteInput) => Promise<void>;
+  requestNew: CreateNote;
+  importFiles: (files: File[]) => Promise<void>;
   folderDialog: NewFolderDialogState;
   existingDirs: ReadonlySet<string>;
   requestNewFolder: (dir: string) => void;
@@ -25,15 +23,21 @@ export interface WorkspaceActions {
 export function useWorkspaceActions(repoPath: string | null, onOpen: (path: string) => void) {
   const newNote = useNewNote(repoPath, onOpen);
   const newFolder = useNewFolder(repoPath);
+  const importAsset = useImportAssetBytesMutation();
   const [moveTarget, setMoveTarget] = useState<string | null>(null);
 
   return {
-    dialog: newNote.dialog,
     existingPaths: newNote.existingPaths,
     createdPath: newNote.createdPath,
     requestNew: newNote.requestNew,
-    closeNew: newNote.close,
-    handleCreate: newNote.handleCreate,
+    importFiles: async (files: File[]) => {
+      await Promise.all(
+        files.map(async (file) => {
+          const bytes = new Uint8Array(await file.arrayBuffer());
+          await importAsset.mutateAsync({ bytes, fileName: file.name });
+        }),
+      );
+    },
     folderDialog: newFolder.dialog,
     existingDirs: newFolder.existingDirs,
     requestNewFolder: newFolder.requestNewFolder,

@@ -1,6 +1,5 @@
 import type { RefObject } from "react";
 import { NewFolderDialog } from "@/features/file-tree/components/NewFolderDialog";
-import { NewNoteDialog } from "@/features/note/components/NewNoteDialog";
 import { MoveNoteDialog } from "@/features/note/components/MoveNoteDialog";
 import {
   NoteEditor,
@@ -11,6 +10,7 @@ import { WorkspaceNavRail } from "./WorkspaceNavRail";
 import { CommandPalette } from "@/features/search/components/CommandPalette";
 import type { WorkspaceActions } from "./useWorkspaceActions";
 import { useTranslation } from "@/i18n";
+import { getDirectoryPath } from "@/features/file-tree/utils/path";
 
 interface WorkspaceLayoutProps {
   repoPath: string | null;
@@ -44,6 +44,8 @@ export function WorkspaceLayout({
           onSelect={onSelect}
           onRequestNew={actions.requestNew}
           onRequestFolder={actions.requestNewFolder}
+          onRequestImport={actions.importFiles}
+          createDir={currentNotePath ? getDirectoryPath(currentNotePath) : ""}
           onSetMove={actions.setMoveTarget}
         />
       </main>
@@ -52,7 +54,7 @@ export function WorkspaceLayout({
         repoPath={repoPath}
         actions={{
           onOpenNote: onSelect,
-          onNewNote: () => actions.requestNew(""),
+          onNewNote: () => { void actions.requestNew(""); },
           onNewFolder: () => actions.requestNewFolder(""),
           onChangeMode: (mode) => editorRef.current?.setMode(mode),
           onInsertCallout: () => editorRef.current?.insertCallout(),
@@ -68,8 +70,10 @@ interface WorkspaceColumnsProps {
   createdPath: string | null;
   editorRef: RefObject<NoteEditorHandle | null>;
   onSelect: (path: string) => void;
-  onRequestNew: (dir: string) => void;
+  onRequestNew: (dir: string, kind?: import("@/api/types").NoteKind) => void;
   onRequestFolder: (dir: string) => void;
+  onRequestImport: (files: File[]) => Promise<void>;
+  createDir: string;
   onSetMove: (path: string | null) => void;
 }
 
@@ -81,6 +85,8 @@ function WorkspaceColumns({
   onSelect,
   onRequestNew,
   onRequestFolder,
+  onRequestImport,
+  createDir,
   onSetMove,
 }: WorkspaceColumnsProps) {
   const { t } = useTranslation();
@@ -91,6 +97,8 @@ function WorkspaceColumns({
         onSelect={onSelect}
         onRequestNew={onRequestNew}
         onRequestFolder={onRequestFolder}
+        onRequestImport={onRequestImport}
+        createDir={createDir}
         onRequestMove={onSetMove}
       />
       <section className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary" aria-label={t("app.noteContent")}>
@@ -115,14 +123,6 @@ interface LayoutDialogsProps {
 function LayoutDialogs({ actions, onMoved }: LayoutDialogsProps) {
   return (
     <>
-      <NewNoteDialog
-        key={actions.dialog.open ? actions.dialog.dir : "closed"}
-        open={actions.dialog.open}
-        dir={actions.dialog.dir}
-        existingPaths={actions.existingPaths}
-        onClose={actions.closeNew}
-        onCreate={actions.handleCreate}
-      />
       <NewFolderDialog
         key={actions.folderDialog.open ? actions.folderDialog.dir : "closed"}
         open={actions.folderDialog.open}

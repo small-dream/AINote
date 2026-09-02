@@ -1,8 +1,8 @@
 import type { ComponentProps, MouseEvent } from "react";
 import { useState } from "react";
 import { FilePenLine } from "lucide-react";
-import { Button } from "@/components/atoms/Button";
 import type { TreeNode } from "@/api/types";
+import type { NoteKind } from "@/api/types";
 import { messageOf } from "@/api";
 import { useDeleteNoteMutation } from "@/queries/note.queries";
 import { useDeleteFolderMutation } from "@/queries/tree.queries";
@@ -14,17 +14,20 @@ import { DeleteConfirmDialog, type PendingDelete } from "./DeleteConfirmDialog";
 import { useTranslation } from "@/i18n";
 import { noteKindOfPath } from "@/features/note/utils/noteKind";
 import { noteDisplayName } from "@/features/note/utils/displayName";
+import { CreateMenu } from "./CreateMenu";
 
 interface FileTreeProps {
   repoPath: string | null;
   onSelect: (path: string) => void;
-  onRequestNew: (dir: string) => void;
+  onRequestNew: (dir: string, kind?: NoteKind) => void;
   onRequestFolder: (dir: string) => void;
+  onRequestImport: (files: File[]) => Promise<void>;
+  createDir?: string;
   onRequestMove: (path: string) => void;
 }
 
 /** 目录树（P0-3）：目录可折叠、可在目录内新建笔记/文件夹；文件点击打开 */
-export function FileTree({ repoPath, onSelect, onRequestNew, onRequestFolder, onRequestMove }: FileTreeProps) {
+export function FileTree({ repoPath, onSelect, onRequestNew, onRequestFolder, onRequestImport, createDir = "", onRequestMove }: FileTreeProps) {
   const { t } = useTranslation();
   const { tree, isLoading, expanded, toggle } = useFileTree(repoPath);
 
@@ -32,10 +35,10 @@ export function FileTree({ repoPath, onSelect, onRequestNew, onRequestFolder, on
     return <div className="p-4 text-sm text-text-secondary">{t("common.loading")}</div>;
   }
 
-  return <TreeContent tree={tree} expanded={expanded} toggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} />;
+  return <TreeContent tree={tree} expanded={expanded} toggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} createDir={createDir} onRequestMove={onRequestMove} />;
 }
 
-function TreeContent({ tree, expanded, toggle, onSelect, onRequestNew, onRequestFolder, onRequestMove }: { tree: TreeNode; expanded: Set<string>; toggle: (path: string) => void; onSelect: (path: string) => void; onRequestNew: (dir: string) => void; onRequestFolder: (dir: string) => void; onRequestMove: (path: string) => void }) {
+function TreeContent({ tree, expanded, toggle, onSelect, onRequestNew, onRequestFolder, onRequestImport, createDir, onRequestMove }: { tree: TreeNode; expanded: Set<string>; toggle: (path: string) => void; onSelect: (path: string) => void; onRequestNew: (dir: string, kind?: NoteKind) => void; onRequestFolder: (dir: string) => void; onRequestImport: (files: File[]) => Promise<void>; createDir: string; onRequestMove: (path: string) => void }) {
   const { t } = useTranslation();
   const currentNotePath = useSessionStore((s) => s.currentNotePath);
   const openNote = useSessionStore((s) => s.openNote);
@@ -47,22 +50,19 @@ function TreeContent({ tree, expanded, toggle, onSelect, onRequestNew, onRequest
   const requestDelete = (path: string, isFolder: boolean) => { setDeleteError(null); setPendingDelete({ path, isFolder, name: contextMenu.menu?.node.name ?? path }); };
   const confirmDelete = async () => { if (!pendingDelete) return; try { if (pendingDelete.isFolder) await removeFolder.mutateAsync(pendingDelete.path); else await remove.mutateAsync(pendingDelete.path); setPendingDelete(null); } catch (error) { setDeleteError(messageOf(error)); } };
   return <div className="flex h-full min-h-0 flex-col">
-    <TreeToolbar onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} />
-    <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2" aria-label={t("tree.navigation")}><TreeNodeItem node={tree} depth={0} expanded={expanded} currentNotePath={currentNotePath} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onContextMenu={contextMenu.open} /></nav>
+    <TreeToolbar createDir={createDir} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} />
+    <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2" aria-label={t("tree.navigation")}><TreeNodeItem node={tree} depth={0} expanded={expanded} currentNotePath={currentNotePath} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onContextMenu={contextMenu.open} /></nav>
     {deleteError && <div className="tree-error" role="alert">{t("tree.deleteFailed", { message: deleteError })}</div>}
     <ContextMenuSlot menu={contextMenu.menu} copied={contextMenu.copied} onClose={contextMenu.close} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} onDelete={(path) => requestDelete(path, false)} onDeleteFolder={(path) => requestDelete(path, true)} onCopy={contextMenu.copy} />
     <DeleteConfirmDialog pending={pendingDelete} busy={remove.isPending || removeFolder.isPending} onClose={() => setPendingDelete(null)} onConfirm={confirmDelete} />
   </div>;
 }
 
-function TreeToolbar({ onRequestNew, onRequestFolder }: Pick<FileTreeProps, "onRequestNew" | "onRequestFolder">) {
+function TreeToolbar({ createDir, onRequestNew, onRequestFolder, onRequestImport }: Pick<FileTreeProps, "onRequestNew" | "onRequestFolder" | "onRequestImport"> & { createDir: string }) {
   const { t } = useTranslation();
   return <div className="flex shrink-0 items-center justify-between border-b border-border px-3 py-2">
     <span className="text-xs font-medium uppercase tracking-wide text-text-tertiary">{t("tree.label")}</span>
-    <div className="flex items-center gap-0.5">
-      <Button aria-label={t("tree.newNote")} title={t("tree.newNote")} variant="ghost" className="tree-action h-7 w-7 p-0" onClick={() => onRequestNew("")}><span className="tree-plus-icon" aria-hidden="true" /></Button>
-      <Button aria-label={t("tree.newFolder")} title={t("tree.newFolder")} variant="ghost" className="tree-action h-7 w-7 p-0" onClick={() => onRequestFolder("")}><span className="tree-new-folder-icon" aria-hidden="true"><span className="tree-new-folder-shape" /><span className="tree-new-folder-plus">+</span></span></Button>
-    </div>
+    <CreateMenu onCreateNote={async (kind: NoteKind) => { await onRequestNew(createDir, kind); }} onCreateFolder={() => onRequestFolder(createDir)} onImportFiles={onRequestImport} />
   </div>;
 }
 
@@ -78,8 +78,9 @@ interface TreeNodeItemProps {
   currentNotePath: string | null;
   onToggle: (path: string) => void;
   onSelect: (path: string) => void;
-  onRequestNew: (dir: string) => void;
+  onRequestNew: (dir: string, kind?: NoteKind) => void;
   onRequestFolder: (dir: string) => void;
+  onRequestImport: (files: File[]) => Promise<void>;
   onContextMenu: (event: MouseEvent, node: TreeNode) => void;
 }
 
@@ -107,7 +108,7 @@ function FileNode({ node, depth, currentNotePath, onSelect, onContextMenu }: Tre
   );
 }
 
-function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, onRequestNew, onRequestFolder, onContextMenu }: TreeNodeItemProps) {
+function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, onRequestNew, onRequestFolder, onRequestImport, onContextMenu }: TreeNodeItemProps) {
   const isOpen = expanded.has(node.path);
   return (
     <div>
@@ -118,6 +119,7 @@ function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, o
         onToggle={onToggle}
         onRequestNew={onRequestNew}
         onRequestFolder={onRequestFolder}
+        onRequestImport={onRequestImport}
         onContextMenu={onContextMenu}
       />
       {isOpen &&
@@ -132,6 +134,7 @@ function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, o
             onSelect={onSelect}
             onRequestNew={onRequestNew}
             onRequestFolder={onRequestFolder}
+            onRequestImport={onRequestImport}
             onContextMenu={onContextMenu}
           />
         ))}
@@ -144,13 +147,13 @@ interface DirRowProps {
   depth: number;
   isOpen: boolean;
   onToggle: (path: string) => void;
-  onRequestNew: (dir: string) => void;
+  onRequestNew: (dir: string, kind?: NoteKind) => void;
   onRequestFolder: (dir: string) => void;
+  onRequestImport: (files: File[]) => Promise<void>;
   onContextMenu: (event: MouseEvent, node: TreeNode) => void;
 }
 
-function DirRow({ node, depth, isOpen, onToggle, onRequestNew, onRequestFolder, onContextMenu }: DirRowProps) {
-  const { t } = useTranslation();
+function DirRow({ node, depth, isOpen, onToggle, onRequestNew, onRequestFolder, onRequestImport, onContextMenu }: DirRowProps) {
   return (
     <div className="group flex items-center" style={{ paddingLeft: `${depth * 16 + 4}px` }}>
       <button
@@ -163,28 +166,13 @@ function DirRow({ node, depth, isOpen, onToggle, onRequestNew, onRequestFolder, 
         <span className={`tree-folder ${isOpen ? "tree-folder-open" : ""}`} aria-hidden="true" />
         <span className="truncate">{node.name}</span>
       </button>
-      <button
-        title={t("tree.newHere")}
-        aria-label={t("tree.newHere")}
-        className="tree-node-action shrink-0 rounded p-1 text-text-secondary opacity-0 transition-opacity hover:bg-bg-primary hover:text-accent group-hover:opacity-100"
-        onClick={(event) => {
-          event.stopPropagation();
-          onRequestNew(node.path);
-        }}
-      >
-        <span className="tree-plus-icon" aria-hidden="true" />
-      </button>
-      <button
-        title={t("tree.newFolderHere")}
-        aria-label={t("tree.newFolderHere")}
-        className="tree-node-action shrink-0 rounded p-1 text-text-secondary opacity-0 transition-opacity hover:bg-bg-primary hover:text-accent group-hover:opacity-100"
-        onClick={(event) => {
-          event.stopPropagation();
-          onRequestFolder(node.path);
-        }}
-      >
-        <span className="tree-new-folder-icon" aria-hidden="true"><span className="tree-new-folder-shape" /><span className="tree-new-folder-plus">+</span></span>
-      </button>
+      <CreateMenu
+        compact
+        className="pointer-events-none opacity-0 transition-opacity duration-150 group-hover:pointer-events-auto group-hover:opacity-100 group-focus-within:pointer-events-auto group-focus-within:opacity-100"
+        onCreateNote={(kind) => Promise.resolve(onRequestNew(node.path, kind))}
+        onCreateFolder={() => onRequestFolder(node.path)}
+        onImportFiles={onRequestImport}
+      />
     </div>
   );
 }

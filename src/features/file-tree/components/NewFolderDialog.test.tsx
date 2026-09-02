@@ -23,7 +23,7 @@ describe("NewFolderDialog", () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
     renderDialog({ onCreate });
 
-    fireEvent.change(screen.getByPlaceholderText("如：daily/2026（自动建父目录）"), {
+    fireEvent.change(screen.getByPlaceholderText("请输入文件夹名称"), {
       target: { value: "/daily/2026/" },
     });
     fireEvent.click(screen.getByText("创建"));
@@ -36,7 +36,7 @@ describe("NewFolderDialog", () => {
   it("已存在目录时给出提示", () => {
     renderDialog({ existingDirs: new Set(["daily"]) });
 
-    fireEvent.change(screen.getByPlaceholderText("如：daily/2026（自动建父目录）"), {
+    fireEvent.change(screen.getByPlaceholderText("请输入文件夹名称"), {
       target: { value: "daily" },
     });
 
@@ -47,7 +47,7 @@ describe("NewFolderDialog", () => {
     const onCreate = vi.fn().mockResolvedValue(undefined);
     renderDialog({ onCreate });
 
-    fireEvent.change(screen.getByPlaceholderText("如：daily/2026（自动建父目录）"), {
+    fireEvent.change(screen.getByPlaceholderText("请输入文件夹名称"), {
       target: { value: "daily/foo.md" },
     });
     fireEvent.click(screen.getByText("创建"));
@@ -60,7 +60,7 @@ describe("NewFolderDialog", () => {
     const onCreate = vi.fn().mockRejectedValue(new Error("invalid path"));
     renderDialog({ onCreate });
 
-    fireEvent.change(screen.getByPlaceholderText("如：daily/2026（自动建父目录）"), {
+    fireEvent.change(screen.getByPlaceholderText("请输入文件夹名称"), {
       target: { value: "../x" },
     });
     fireEvent.click(screen.getByText("创建"));

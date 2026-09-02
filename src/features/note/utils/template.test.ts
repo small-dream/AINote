@@ -3,6 +3,7 @@ import {
   defaultNoteFileName,
   formatDate,
   renderNoteTemplate,
+  uniqueDateNotePath,
 } from "./template";
 
 const NOW = new Date(2026, 7, 30);
@@ -44,5 +45,13 @@ describe("renderNoteTemplate", () => {
     expect(JSON.parse(doc as string).content[0].type).toBe("heading");
     const blank = renderNoteTemplate("richText", "blank", NOW);
     expect(JSON.parse(blank as string).content).toHaveLength(1);
+  });
+});
+
+describe("uniqueDateNotePath", () => {
+  it("按本地日期生成路径并为重复名称追加序号", () => {
+    const existing = new Set(["daily/2026-08-30.md", "daily/2026-08-30-2.md"]);
+    expect(uniqueDateNotePath("daily", "markdown", existing, NOW)).toBe("daily/2026-08-30-3.md");
+    expect(uniqueDateNotePath("", "richText", new Set(), NOW)).toBe("2026-08-30.ainote");
   });
 });

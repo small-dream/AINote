@@ -1,5 +1,6 @@
 import type { NoteKind } from "@/api/types";
 import { noteExtension } from "./noteKind";
+import { joinNotePath } from "./path";
 
 /** 笔记新建模板：内容与默认文件名的纯函数 */
 
@@ -17,6 +18,19 @@ export function formatDate(date: Date): string {
 export function defaultNoteFileName(kind: NoteKind, template: NoteTemplate, date: Date): string {
   const ext = `.${noteExtension(kind)}`;
   return template === "daily" ? `${formatDate(date)}${ext}` : `未命名${ext}`;
+}
+
+/** 生成当前目录下不冲突的日期笔记路径。 */
+export function uniqueDateNotePath(dir: string, kind: NoteKind, existingPaths: ReadonlySet<string>, date: Date): string {
+  const ext = `.${noteExtension(kind)}`;
+  const baseName = `${formatDate(date)}${ext}`;
+  let path = joinNotePath(dir, baseName);
+  let suffix = 2;
+  while (existingPaths.has(path)) {
+    path = joinNotePath(dir, `${formatDate(date)}-${suffix}${ext}`);
+    suffix += 1;
+  }
+  return path;
 }
 
 /** 富文本 TipTap JSON 文档：heading 为 null 时生成空段落文档 */

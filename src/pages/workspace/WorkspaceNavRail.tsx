@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, LogOut, Search, Settings, Star, TriangleAlert } from "lucide-react";
+import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, LogOut, Search, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
 import { useNavigate } from "react-router";
 import { authApi } from "@/api";
 import { Button } from "@/components/atoms/Button";
@@ -23,13 +23,17 @@ interface WorkspaceNavRailProps {
 }
 
 const NAV_ITEMS = [
-  { key: "app.notes", icon: FileText, active: true },
-  { key: "app.recent", icon: Clock3, active: false },
-  { key: "app.favorites", icon: Star, active: false },
+  { key: "app.notes", icon: FileText, sidebarTab: "tree" },
+  { key: "app.recent", icon: Clock3, sidebarTab: undefined },
+  { key: "app.favorites", icon: Star, sidebarTab: undefined },
+  { key: "wiki.tags", icon: Tags, sidebarTab: "tags" },
+  { key: "trash.title", icon: Trash2, sidebarTab: "trash" },
 ] as const;
 
 const SYNC_ICON = { synced: CloudCheck, pending: CloudSync, conflict: TriangleAlert, offline: CloudOff } as const;
 const SYNC_COLOR = { synced: "bg-success", pending: "bg-warning", conflict: "bg-danger", offline: "bg-text-secondary" } as const;
+const NAV_BUTTON_CLASS = "group relative grid h-10 w-10 shrink-0 place-items-center rounded-lg text-text-tertiary transition-colors hover:bg-bg-primary/70 hover:text-text-secondary focus-visible:text-text-secondary";
+const NAV_TOOLTIP_CLASS = "pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-bg-primary px-2 py-1 text-xs text-text-primary opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100";
 
 /** 独立于 App Shell 主体的功能导航轨道。 */
 export function WorkspaceNavRail({ repoPath, startupSyncing }: WorkspaceNavRailProps) {
@@ -47,11 +51,14 @@ export function WorkspaceNavRail({ repoPath, startupSyncing }: WorkspaceNavRailP
 
 function NavigationItems() {
   const { t } = useTranslation();
+  const sidebarTab = useUiStore((state) => state.sidebarTab);
+  const setSidebarTab = useUiStore((state) => state.setSidebarTab);
   return (
     <div className="flex w-full flex-col items-center gap-1.5">
-      {NAV_ITEMS.map(({ key, icon: Icon, active }) => {
+      {NAV_ITEMS.map(({ key, icon: Icon, sidebarTab: targetTab }) => {
         const label = t(key);
-        return <button key={key} type="button" aria-label={label} title={label} className={`flex w-14 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[11px] transition-colors ${active ? "bg-bg-primary text-accent shadow-sm" : "text-text-tertiary hover:bg-bg-primary/70 hover:text-text-secondary"}`}><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /><span>{label}</span></button>;
+        const active = targetTab !== undefined && sidebarTab === targetTab;
+        return <button key={key} type="button" aria-label={label} aria-current={active ? "page" : undefined} title={label} onClick={() => targetTab && setSidebarTab(targetTab)} className={`${NAV_BUTTON_CLASS} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /><span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{label}</span></button>;
       })}
     </div>
   );
@@ -66,10 +73,10 @@ function SearchNavButton() {
       aria-label={t("palette.searchNotes")}
       title={t("palette.searchNotes")}
       onClick={openPalette}
-      className="mb-1 flex w-14 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[11px] text-text-tertiary transition-colors hover:bg-bg-primary/70 hover:text-text-secondary"
+      className={`${NAV_BUTTON_CLASS} mb-1`}
     >
       <Search size={18} strokeWidth={1.9} />
-      <span>{t("palette.searchNotes")}</span>
+      <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{t("palette.searchNotes")}</span>
     </button>
   );
 }
@@ -79,9 +86,9 @@ function SettingsNavButton() {
   const open = useUiStore((s) => s.settingsOpen);
   const close = useUiStore((s) => s.closeSettings);
   return (<>
-      <button type="button" aria-label={t("settings.title")} title={t("settings.title")} onClick={() => useUiStore.getState().openSettings()} className="mt-auto flex w-14 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[11px] text-text-tertiary transition-colors hover:bg-bg-primary/70 hover:text-text-secondary">
+      <button type="button" aria-label={t("settings.title")} title={t("settings.title")} onClick={() => useUiStore.getState().openSettings()} className={`${NAV_BUTTON_CLASS} mt-auto`}>
         <Settings size={18} />
-        <span>{t("settings.title")}</span>
+        <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{t("settings.title")}</span>
       </button>
       <SettingsModal open={open} onClose={close} />
     </>);
@@ -141,9 +148,10 @@ function SyncNavButton({ repoPath, startupSyncing }: WorkspaceNavRailProps) {
         title={display.text}
         onClick={() => (hasConflict ? setConflictOpen(true) : syncNow.mutate())}
         disabled={display.busy || (!online && !hasConflict)}
-        className={`mb-4 grid h-10 w-10 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${SYNC_COLOR[display.tone]}`}
+        className={`group relative mb-4 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${SYNC_COLOR[display.tone]}`}
       >
         <Icon size={19} className={display.busy ? "animate-spin" : ""} />
+        <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{display.text}</span>
       </button>
       <ConflictMergeDialog repoPath={repoPath} open={conflictOpen} onClose={() => setConflictOpen(false)} />
     </>

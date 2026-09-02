@@ -3,18 +3,15 @@ import {
   useCreateNoteMutation,
   useNoteListQuery,
 } from "@/queries/note.queries";
-import type { NewNoteInput } from "../types";
+import type { NoteKind } from "@/api/types";
+import { uniqueDateNotePath } from "../utils/template";
 
-export interface NewNoteDialogState {
-  open: boolean;
-  dir: string;
-}
+export type CreateNote = (dir: string, kind?: NoteKind) => Promise<void>;
 
-/** 新建笔记编排：对话框状态 + Cmd/Ctrl+N + 查重 + 创建成功后打开（P0/P1） */
+/** 新建笔记编排：日期命名、重名递增、创建成功后打开（P0/P1） */
 export function useNewNote(repoPath: string | null, onOpen: (path: string) => void) {
   const create = useCreateNoteMutation();
   const { data: allNotes } = useNoteListQuery(repoPath);
-  const [dialog, setDialog] = useState<NewNoteDialogState>({ open: false, dir: "" });
   const [createdPath, setCreatedPath] = useState<string | null>(null);
 
   const existingPaths = useMemo(
@@ -22,38 +19,23 @@ export function useNewNote(repoPath: string | null, onOpen: (path: string) => vo
     [allNotes]
   );
 
-  const requestNew = useCallback((dir: string) => {
-    setDialog({ open: true, dir });
-  }, []);
-
-  const close = useCallback(() => {
-    setDialog({ open: false, dir: "" });
-  }, []);
-
-  const handleCreate = useCallback(
-    async (input: NewNoteInput) => {
-      const note = await create.mutateAsync({
-        path: input.path,
-        kind: input.kind,
-        content: input.content,
-      });
-      setCreatedPath(note.path);
-      onOpen(note.path);
-      close();
-    },
-    [create, onOpen, close]
-  );
+  const requestNew = useCallback<CreateNote>(async (dir, kind = "markdown") => {
+    const path = uniqueDateNotePath(dir, kind, existingPaths, new Date());
+    const note = await create.mutateAsync({ path, kind, content: "" });
+    setCreatedPath(note.path);
+    onOpen(note.path);
+  }, [create, existingPaths, onOpen]);
 
   useEffect(() => {
     function onKeyDown(event: KeyboardEvent) {
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === "n") {
         event.preventDefault();
-        requestNew("");
+        void requestNew("").catch(() => undefined);
       }
     }
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [requestNew]);
 
-  return { dialog, existingPaths, createdPath, requestNew, close, handleCreate };
+  return { existingPaths, createdPath, requestNew };
 }
