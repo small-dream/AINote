@@ -4,6 +4,8 @@ export type Theme = "light" | "dark";
 export type Locale = "zh-CN" | "en-US";
 export type NoteTheme = "classic" | "paper" | "midnight" | "forest";
 export type SidebarTab = "tree" | "tags" | "trash";
+/** 设置页左侧分类导航的激活项 */
+export type SettingsTab = "repositories" | "appearance" | "language" | "ai" | "updates" | "account";
 
 /** 主题偏好持久化键（localStorage，纯前端全局 UI 态） */
 export const THEME_STORAGE_KEY = "ainote.theme";
@@ -75,6 +77,7 @@ interface UiState {
   focusedTag: string | null;
   askAiOpen: boolean;
   settingsOpen: boolean;
+  settingsTab: SettingsTab;
   theme: Theme;
   noteTheme: NoteTheme;
   locale: Locale;
@@ -83,8 +86,9 @@ interface UiState {
   openTagIndex: (tag: string) => void;
   openAskAi: () => void;
   closeAskAi: () => void;
-  openSettings: () => void;
+  openSettings: (tab?: SettingsTab) => void;
   closeSettings: () => void;
+  setSettingsTab: (tab: SettingsTab) => void;
   setTheme: (theme: Theme) => void;
   setNoteTheme: (noteTheme: NoteTheme) => void;
   setLocale: (locale: Locale) => void;
@@ -96,6 +100,7 @@ export const useUiStore = create<UiState>((set) => ({
   focusedTag: null,
   askAiOpen: false,
   settingsOpen: false,
+  settingsTab: "repositories",
   theme: readStoredTheme(),
   noteTheme: readStoredNoteTheme(),
   locale: readStoredLocale(),
@@ -104,8 +109,9 @@ export const useUiStore = create<UiState>((set) => ({
   openTagIndex: (tag) => set({ sidebarTab: "tags", focusedTag: tag }),
   openAskAi: () => set({ askAiOpen: true }),
   closeAskAi: () => set({ askAiOpen: false }),
-  openSettings: () => set({ settingsOpen: true }),
+  openSettings: (tab) => set((s) => ({ settingsOpen: true, settingsTab: tab ?? s.settingsTab })),
   closeSettings: () => set({ settingsOpen: false }),
+  setSettingsTab: (settingsTab) => set({ settingsTab }),
   setTheme: (theme) => {
     writeStoredTheme(theme);
     set({ theme });

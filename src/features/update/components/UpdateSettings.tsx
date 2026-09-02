@@ -3,20 +3,20 @@ import { Button } from "@/components/atoms/Button";
 import { useUpdate } from "../hooks/useUpdate";
 import { useTranslation } from "@/i18n";
 
-/** 设置页更新区块：手动检查，发现新版本后下载并重启。 */
+/** 设置页更新内容区：手动检查，发现新版本后下载并重启（标题由设置视图统一提供）。 */
 export function UpdateSettings() {
   const { t } = useTranslation();
   const { info, busy, error, checked, checkForUpdate, install } = useUpdate();
 
   return (
-    <section>
-      <UpdateHeader t={t} info={info} busy={busy} onCheck={checkForUpdate} onInstall={install} />
+    <div className="flex flex-col items-start gap-3">
+      <UpdateAction t={t} info={info} busy={busy} onCheck={checkForUpdate} onInstall={install} />
       <UpdateMessage t={t} info={info} checked={checked} error={error} />
-    </section>
+    </div>
   );
 }
 
-interface UpdateHeaderProps {
+interface UpdateActionProps {
   t: ReturnType<typeof useTranslation>["t"];
   info: ReturnType<typeof useUpdate>["info"];
   busy: boolean;
@@ -24,16 +24,10 @@ interface UpdateHeaderProps {
   onInstall: () => Promise<void>;
 }
 
-function UpdateHeader({ t, info, busy, onCheck, onInstall }: UpdateHeaderProps) {
-  return (
-    <div className="mb-3 flex items-center justify-between gap-3">
-      <div>
-        <h3 className="text-sm font-semibold">{t("update.title")}</h3>
-        <p className="mt-1 text-xs text-text-tertiary">{t("update.description")}</p>
-      </div>
-      {info ? <InstallButton t={t} version={info.version} busy={busy} onInstall={onInstall} /> : <CheckButton t={t} busy={busy} onCheck={onCheck} />}
-    </div>
-  );
+function UpdateAction({ t, info, busy, onCheck, onInstall }: UpdateActionProps) {
+  return info
+    ? <InstallButton t={t} version={info.version} busy={busy} onInstall={onInstall} />
+    : <CheckButton t={t} busy={busy} onCheck={onCheck} />;
 }
 
 function InstallButton({ t, version, busy, onInstall }: { t: ReturnType<typeof useTranslation>["t"]; version: string; busy: boolean; onInstall: () => Promise<void> }) {

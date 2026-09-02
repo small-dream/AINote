@@ -40,7 +40,7 @@ function AiNotConfigured() {
   return (
     <div className="flex shrink-0 items-center justify-between gap-2 border-b border-border bg-warning/10 px-4 py-2">
       <span className="text-xs text-text-secondary">{t("ai.notConfigured")}</span>
-      <Button variant="ghost" className="shrink-0 text-xs" onClick={() => useUiStore.getState().openSettings()}>
+      <Button variant="ghost" className="shrink-0 text-xs" onClick={() => useUiStore.getState().openSettings("ai")}>
         {t("ai.openSettings")}
       </Button>
     </div>

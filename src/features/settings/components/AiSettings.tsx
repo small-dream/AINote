@@ -15,7 +15,7 @@ interface AiFormState {
 
 const INPUT_CLASS = "w-full rounded-md border border-border bg-bg-primary px-2 py-1.5 text-sm focus:border-accent focus:outline-none";
 
-/** 设置页 AI 区块：Provider / 模型 / API Key（加密存储，前端拿不到明文）/ 启用开关（P0-AI-1） */
+/** 设置页 AI 内容区：Provider / 模型 / API Key（标题由设置视图统一提供）。 */
 export function AiSettings() {
   const { t } = useTranslation();
   const { data, isLoading } = useAiConfig();
@@ -36,28 +36,25 @@ function AiSettingsForm({ initial }: { initial: AiConfigDto }) {
     if (apiKey) patch({ apiKey: "" });
   };
   return (
-    <section>
-      <h3 className="mb-3 text-sm font-semibold">{t("ai.settings")}</h3>
-      <form onSubmit={submit} className="flex flex-col gap-3">
-        <EnableField checked={form.enabled} onChange={(v) => patch({ enabled: v })} />
-        <Field label={t("ai.provider")}>
-          <select value={form.provider} onChange={(e) => patch({ provider: e.target.value as AiConfigDto["provider"] })} className={INPUT_CLASS}>
-            <option value="openAiCompatible">{t("ai.providerOpenAi")}</option>
-            <option value="ollama">{t("ai.providerOllama")}</option>
-          </select>
-        </Field>
-        <Field label={t("ai.baseUrl")}>
-          <input value={form.baseUrl} onChange={(e) => patch({ baseUrl: e.target.value })} className={INPUT_CLASS} />
-        </Field>
-        <Field label={t("ai.model")}>
-          <input value={form.model} onChange={(e) => patch({ model: e.target.value })} className={INPUT_CLASS} />
-        </Field>
-        <Field label={t("ai.apiKey")}>
-          <AiKeyField hasKey={initial.hasKey} value={form.apiKey} onChange={(v) => patch({ apiKey: v })} onClear={() => save.mutate({ cfg, apiKey: "" })} />
-        </Field>
-        <FormActions isPending={save.isPending} isError={save.isError} message={save.isError ? t("ai.saveFailed", { message: messageOf(save.error) }) : null} />
-      </form>
-    </section>
+    <form onSubmit={submit} className="flex flex-col gap-3">
+      <EnableField checked={form.enabled} onChange={(v) => patch({ enabled: v })} />
+      <Field label={t("ai.provider")}>
+        <select value={form.provider} onChange={(e) => patch({ provider: e.target.value as AiConfigDto["provider"] })} className={INPUT_CLASS}>
+          <option value="openAiCompatible">{t("ai.providerOpenAi")}</option>
+          <option value="ollama">{t("ai.providerOllama")}</option>
+        </select>
+      </Field>
+      <Field label={t("ai.baseUrl")}>
+        <input value={form.baseUrl} onChange={(e) => patch({ baseUrl: e.target.value })} className={INPUT_CLASS} />
+      </Field>
+      <Field label={t("ai.model")}>
+        <input value={form.model} onChange={(e) => patch({ model: e.target.value })} className={INPUT_CLASS} />
+      </Field>
+      <Field label={t("ai.apiKey")}>
+        <AiKeyField hasKey={initial.hasKey} value={form.apiKey} onChange={(v) => patch({ apiKey: v })} onClear={() => save.mutate({ cfg, apiKey: "" })} />
+      </Field>
+      <FormActions isPending={save.isPending} isError={save.isError} message={save.isError ? t("ai.saveFailed", { message: messageOf(save.error) }) : null} />
+    </form>
   );
 }
 

@@ -1,19 +1,9 @@
 import { useState } from "react";
-import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, LogOut, Search, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
-import { useNavigate } from "react-router";
-import { authApi } from "@/api";
-import { Button } from "@/components/atoms/Button";
-import { Modal } from "@/components/molecules/Modal";
+import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, Search, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
 import { ConflictMergeDialog } from "@/features/sync/components/ConflictMergeDialog";
-import { RepoManager } from "@/features/settings/components/RepoManager";
-import { ThemeSettings } from "@/features/settings/components/ThemeSettings";
-import { LanguageSettings } from "@/features/settings/components/LanguageSettings";
-import { UpdateSettings } from "@/features/update/components/UpdateSettings";
-import { AiSettings } from "@/features/settings/components/AiSettings";
 import { useSync } from "@/features/sync/hooks/useSync";
 import { deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
 import { useCommandPaletteStore } from "@/stores/command-palette.store";
-import { useSessionStore } from "@/stores/session.store";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 
@@ -83,52 +73,11 @@ function SearchNavButton() {
 
 function SettingsNavButton() {
   const { t } = useTranslation();
-  const open = useUiStore((s) => s.settingsOpen);
-  const close = useUiStore((s) => s.closeSettings);
-  return (<>
-      <button type="button" aria-label={t("settings.title")} title={t("settings.title")} onClick={() => useUiStore.getState().openSettings()} className={`${NAV_BUTTON_CLASS} mt-auto`}>
-        <Settings size={18} />
-        <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{t("settings.title")}</span>
-      </button>
-      <SettingsModal open={open} onClose={close} />
-    </>);
-}
-
-function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const { t } = useTranslation();
-  const navigate = useNavigate();
-  const reset = useSessionStore((state) => state.reset);
-  const [busy, setBusy] = useState(false);
-  async function handleLogout() {
-    setBusy(true);
-    try {
-      await authApi.logout();
-      reset();
-      navigate("/setup", { replace: true });
-    } finally {
-      setBusy(false);
-    }
-  }
   return (
-    <Modal open={open} title={t("settings.title")} onClose={onClose}>
-      <RepoManager />
-      <hr className="my-5 border-border" />
-      <ThemeSettings />
-      <hr className="my-5 border-border" />
-      <LanguageSettings />
-      <hr className="my-5 border-border" />
-      <UpdateSettings />
-      <hr className="my-5 border-border" />
-      <AiSettings />
-      <hr className="my-5 border-border" />
-      <div>
-        <h3 className="mb-3 text-sm font-semibold">{t("settings.account")}</h3>
-        <Button variant="ghost" className="inline-flex items-center gap-2 border border-border text-sm" onClick={() => void handleLogout()} disabled={busy}>
-          <LogOut size={15} />
-          {busy ? t("settings.loggingOut") : t("settings.logout")}
-        </Button>
-      </div>
-    </Modal>
+    <button type="button" aria-label={t("settings.title")} title={t("settings.title")} onClick={() => useUiStore.getState().openSettings()} className={`${NAV_BUTTON_CLASS} mt-auto`}>
+      <Settings size={18} />
+      <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{t("settings.title")}</span>
+    </button>
   );
 }
 

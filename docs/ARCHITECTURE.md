@@ -129,7 +129,8 @@ AINote/
 │   │   ├── wiki/                # 标签系统 + [[双链]]（预览跳转 / 反链面板 / 标签索引）
 │   │   ├── ai/                  # AI 写作动作 + 问答面板（P0-AI-1 ~ P0-AI-4）
 │   │   ├── auth/                 # 登录（Token 校验/保存）
-│   │   └── repo/                 # 绑定/创建仓库
+│   │   ├── repo/                 # 绑定/创建仓库
+│   │   └── settings/             # 设置页（左分类导航 + 右内容区，取代设置弹窗）
 │   ├── components/               # 业务无关组件
 │   │   ├── atoms/
 │   │   └── molecules/
@@ -165,6 +166,8 @@ AINote/
 ```
 
 ## 5. 关键运行时设计
+
+- **设置页**：`features/settings` 提供全屏设置视图（参考 Obsidian / VS Code 的设置布局）——左侧分类导航轨道（仓库 / 外观 / 语言 / AI / 更新 / 账户）+ 右侧滚动内容区，取代早期把所有设置堆在一个弹窗里的做法。分类注册表 `settingsSections.tsx` 同时驱动导航与内容渲染（策略表）；激活分类存于 `ui.store.settingsTab`，`openSettings(tab?)` 支持从 AI 面板等入口直达指定分类。设置视图以全屏覆盖层挂在工作区布局内，不破坏工作区会话（编辑器状态保留）。
 
 - **批量提交与推送**：编辑器变更 → 前端 3s 防抖落盘；`useSync` 观察到工作区有未提交变更后启动默认 15 分钟空闲计时器，到期调用 `git_commit`，把所有笔记/删除/移动汇总成单条 `note: auto commit`。一键同步仍执行“汇总提交 → Pull → Push”；手动「保存版本」调用同一提交接口生成 `note: checkpoint`，不自动 Push。新建笔记保留即时 `note: create <path>` 提交。工具栏不提供常驻保存按钮，Cmd/Ctrl+S 可立即 flush，保存失败保留 dirty 并提供重试。策略细节由 Service 层实现，Controller 不感知。
 - **离线优先**：所有读写只操作本地仓库；Push/Pull 失败进入待同步状态，网络恢复事件触发重试（前端 `online` 事件 + Query 重取）。

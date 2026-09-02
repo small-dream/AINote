@@ -8,6 +8,7 @@ import {
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
 import { WorkspaceNavRail } from "./WorkspaceNavRail";
 import { CommandPalette } from "@/features/search/components/CommandPalette";
+import { SettingsView } from "@/features/settings/components/SettingsView";
 import type { WorkspaceActions } from "./useWorkspaceActions";
 import { useTranslation } from "@/i18n";
 import { getDirectoryPath } from "@/features/file-tree/utils/path";
@@ -50,17 +51,34 @@ export function WorkspaceLayout({
         />
       </main>
       <LayoutDialogs actions={actions} onMoved={onMoved} />
+      <WorkspaceOverlays repoPath={repoPath} actions={actions} editorRef={editorRef} onOpenNote={onSelect} />
+    </div>
+  );
+}
+
+interface WorkspaceOverlaysProps {
+  repoPath: string | null;
+  actions: WorkspaceActions;
+  editorRef: RefObject<NoteEditorHandle | null>;
+  onOpenNote: (path: string) => void;
+}
+
+/** 全局覆盖层：命令面板 + 全屏设置视图。 */
+function WorkspaceOverlays({ repoPath, actions, editorRef, onOpenNote }: WorkspaceOverlaysProps) {
+  return (
+    <>
       <CommandPalette
         repoPath={repoPath}
         actions={{
-          onOpenNote: onSelect,
+          onOpenNote,
           onNewNote: () => { void actions.requestNew(""); },
           onNewFolder: () => actions.requestNewFolder(""),
           onChangeMode: (mode) => editorRef.current?.setMode(mode),
           onInsertCallout: () => editorRef.current?.insertCallout(),
         }}
       />
-    </div>
+      <SettingsView />
+    </>
   );
 }
 

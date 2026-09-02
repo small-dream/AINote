@@ -20,7 +20,7 @@ export function AiToolbarButton({ onOpen, disabled }: AiToolbarButtonProps) {
       aria-label={configured ? t("ai.title") : t("ai.notConfigured")}
       title={configured ? t("ai.title") : t("ai.notConfigured")}
       className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border"
-      onClick={configured ? onOpen : () => useUiStore.getState().openSettings()}
+      onClick={configured ? onOpen : () => useUiStore.getState().openSettings("ai")}
       disabled={disabled}
     >
       <Sparkles size={14} />

@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import type { RepoInfo } from "@/api/types";
+import { Button } from "@/components/atoms/Button";
 import { useSessionStore } from "@/stores/session.store";
 import { useRepoManager } from "../hooks/useRepoManager";
 import { AddRepoDialog } from "./AddRepoDialog";
@@ -8,17 +9,16 @@ import { RemoveRepoDialog } from "./RemoveRepoDialog";
 import { RenameRepoDialog } from "./RenameRepoDialog";
 import { useTranslation } from "@/i18n";
 
-/** 设置页仓库管理：列表 + 添加/设为当前/重命名/移除 */
+/** 设置页仓库管理内容区：列表 + 添加/设为当前/重命名/移除（标题由设置视图统一提供） */
 export function RepoManager() {
-  const { t } = useTranslation();
   const { repos, rename, remove, activate, handleAdded } = useRepoManager();
   const activePath = useSessionStore((s) => s.repoPath);
   const [addOpen, setAddOpen] = useState(false);
   const [renaming, setRenaming] = useState<RepoInfo | null>(null);
   const [removing, setRemoving] = useState<RepoInfo | null>(null);
-  return (<section className="mb-6">
-      <RepoListHeader label={t("repo.add")} title={t("repo.createTitle")} onAdd={() => setAddOpen(true)} />
-      <ul className="max-h-64 space-y-2 overflow-y-auto">
+  return (<div className="flex flex-col gap-3">
+      <RepoToolbar count={repos.length} onAdd={() => setAddOpen(true)} />
+      <ul className="space-y-2">
         {repos.length === 0 ? (
           <EmptyRepos />
         ) : (
@@ -46,7 +46,20 @@ export function RepoManager() {
         onRename={async (id, name) => { await rename.mutateAsync({ id, name }); }}
         onRemove={async (id) => { await remove.mutateAsync(id); }}
       />
-    </section>);
+    </div>);
+}
+
+function RepoToolbar({ count, onAdd }: { count: number; onAdd: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center justify-between">
+      <span className="text-xs text-text-tertiary">{t("repo.count", { count })}</span>
+      <Button type="button" variant="ghost" className="inline-flex items-center gap-1 border border-border text-xs" onClick={onAdd}>
+        <Plus size={14} />
+        {t("repo.add")}
+      </Button>
+    </div>
+  );
 }
 
 function RepoDialogs(props: RepoDialogsProps) {
@@ -69,22 +82,6 @@ interface RepoDialogsProps {
   onAdded: (path: string) => void;
   onRename: (id: string, name: string) => Promise<void>;
   onRemove: (id: string) => Promise<void>;
-}
-
-function RepoListHeader({ label, title, onAdd }: { label: string; title: string; onAdd: () => void }) {
-  return (
-    <div className="mb-3 flex items-center justify-between">
-      <h3 className="text-sm font-semibold">{title}</h3>
-      <button
-        type="button"
-        onClick={onAdd}
-        className="inline-flex items-center gap-1 text-xs text-accent transition-colors hover:underline"
-      >
-        <Plus size={14} />
-        {label}
-      </button>
-    </div>
-  );
 }
 
 interface RepoRowProps {
