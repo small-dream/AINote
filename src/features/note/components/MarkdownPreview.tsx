@@ -150,7 +150,7 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes }: Ma
     },
   }), [onOpenWiki, repoPath, wikiNotes]);
   return (
-    <article className="markdown-body max-w-3xl">
+    <article className="markdown-body max-w-3xl mx-auto">
       {document.frontmatter.length > 0 ? <MarkdownProperties fields={document.frontmatter} /> : null}
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath, [remarkFrontmatter, ["yaml", "toml"]], remarkCallouts, remarkRemoveFrontmatter]}

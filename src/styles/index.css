@@ -336,6 +336,13 @@ pre,
 }
 .markdown-outline-panel button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
 .markdown-outline-empty { padding: 0.7rem 1.5rem; border-bottom: 1px solid var(--border); color: var(--text-tertiary); font-size: 12px; }
+.note-outline-rail .markdown-outline-panel {
+  max-height: none;
+  padding: 1rem 0.75rem 1.25rem;
+  border-bottom: none;
+  background: transparent;
+}
+.note-outline-rail .markdown-outline-empty { border-bottom: none; }
 .markdown-code-toolbar button:hover { color: var(--accent); }
 .markdown-code-block .hljs-comment,
 .markdown-code-block .hljs-quote { color: var(--text-tertiary); }

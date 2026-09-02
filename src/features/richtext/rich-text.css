@@ -7,6 +7,10 @@
   line-height: 1.75;
   caret-color: var(--accent);
 }
+.rich-text-editor .rich-text-scroll .ProseMirror {
+  max-width: 68ch;
+  margin-inline: auto;
+}
 .rich-text-editor .ProseMirror > * + * {
   margin-top: 0.5em;
 }
