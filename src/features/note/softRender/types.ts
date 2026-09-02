@@ -13,6 +13,8 @@ export interface HideRange {
   to: number;
   /** true = 光标位于元素内，显示原始标记（淡显）；false = 隐藏 */
   reveal: boolean;
+  /** 用 font-size:0 的 mark 隐藏（而非 replace），避免光标进入替换区间时 CodeMirror 强制显示原文 */
+  zeroWidth?: boolean;
 }
 
 export interface WidgetRange {

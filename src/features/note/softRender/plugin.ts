@@ -4,7 +4,7 @@ import { EditorSelection, StateField, type EditorState, type Extension, type Ran
 import { Decoration, type DecorationSet, EditorView, keymap, type MouseSelectionStyle } from "@codemirror/view";
 import { assetUrl, openExternal } from "@/api";
 import { resolveLocalAssetPath } from "@/features/asset/utils/asset";
-import type { WidgetRange } from "./types";
+import type { HideRange, WidgetRange } from "./types";
 import { clickedLinePosition, debugClick, debugMouseDown, debugViewUpdate } from "./clickDebug";
 import { planSoftRender } from "./utils/plan";
 import {
@@ -58,9 +58,7 @@ function computeDecorations(state: EditorState, options: SoftRenderOptions): Dec
     ...plan.marks.map((mark) =>
       Decoration.mark({ class: mark.cls, ...(mark.attrs ? { attributes: mark.attrs } : {}) }).range(mark.from, mark.to),
     ),
-    ...plan.hides.map((hide) =>
-      (hide.reveal ? Decoration.mark({ class: "cm-sr-marker" }) : Decoration.replace({})).range(hide.from, hide.to),
-    ),
+    ...plan.hides.map((hide) => toHideDecoration(hide).range(hide.from, hide.to)),
     ...plan.blocks.map((block) => Decoration.mark({ class: block.cls, block: true }).range(block.from, block.to)),
     ...plan.widgets.map((widget) => toWidgetDecoration(widget, options)),
   ];
@@ -69,6 +67,12 @@ function computeDecorations(state: EditorState, options: SoftRenderOptions): Dec
 
 function toWidgetDecoration(widget: WidgetRange, options: SoftRenderOptions): Range<Decoration> {
   return WIDGET_BUILDERS[widget.kind](widget, options).range(widget.from, widget.to);
+}
+
+function toHideDecoration(hide: HideRange): Decoration {
+  if (hide.zeroWidth) return Decoration.mark({ class: "cm-sr-zero" });
+  if (hide.reveal) return Decoration.mark({ class: "cm-sr-marker" });
+  return Decoration.replace({});
 }
 
 const WIDGET_BUILDERS: Record<WidgetRange["kind"], (widget: WidgetRange, options: SoftRenderOptions) => Decoration> = {
@@ -127,10 +131,7 @@ function createLineSelectionStyle(view: EditorView, event: MouseEvent, options: 
   const start = clickedLinePosition(view, event);
   if (start === null) return null;
   return {
-    update: (update) => {
-      if (update.docChanged) return false;
-      return false;
-    },
+    update: () => false,
     get: (currentEvent) => {
       const pos = clickedLinePosition(view, currentEvent) ?? start;
       return EditorSelection.create([EditorSelection.cursor(pos)]);

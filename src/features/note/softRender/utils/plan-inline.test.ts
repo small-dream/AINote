@@ -37,6 +37,7 @@ describe("planSoftRender 行内强调", () => {
     const hides = planFor(text, 3).hides.filter((h) => h.from === 0 || h.from === 6);
     expect(hides).toHaveLength(2);
     expect(hides.every((h) => h.reveal === false)).toBe(true);
+    expect(hides.every((h) => h.zeroWidth === true)).toBe(true);
   });
 
   it("选区命中强调元素时标记仍隐藏，保持渲染效果", () => {
@@ -44,6 +45,7 @@ describe("planSoftRender 行内强调", () => {
     const hides = planFor(text, 0, 6).hides.filter((h) => h.from === 0 || h.from === 6);
     expect(hides).toHaveLength(2);
     expect(hides.every((h) => h.reveal === false)).toBe(true);
+    expect(hides.every((h) => h.zeroWidth === true)).toBe(true);
   });
 
   it("行内代码隐藏反引号", () => {
@@ -54,6 +56,7 @@ describe("planSoftRender 行内强调", () => {
       to: text.lastIndexOf("`"),
     });
     expect(plan.hides.find((h) => h.from === text.indexOf("`"))?.reveal).toBe(false);
+    expect(plan.hides.find((h) => h.from === text.indexOf("`"))?.zeroWidth).toBe(true);
   });
 });
 

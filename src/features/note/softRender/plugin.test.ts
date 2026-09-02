@@ -50,9 +50,10 @@ describe("softRender 渲染", () => {
     const view = await createView("a **bold** and `code` and [link](https://ex.com)");
     const text = view.contentDOM.textContent ?? "";
     expect(text).toContain("bold");
-    expect(text).not.toContain("**");
-    expect(text).not.toContain("`code`");
+    expect(text).toContain("code");
     expect(text).not.toContain("(https://ex.com)");
+    const zeroMarks = view.contentDOM.querySelectorAll(".cm-sr-zero");
+    expect(zeroMarks.length).toBeGreaterThanOrEqual(4);
     view.destroy();
   });
 

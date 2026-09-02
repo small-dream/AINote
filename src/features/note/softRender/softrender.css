@@ -55,6 +55,11 @@
   user-select: none;
 }
 
+.cm-sr-zero {
+  font-size: 0;
+  user-select: none;
+}
+
 .cm-sr-bullet,
 .cm-sr-number {
   display: inline-block;
