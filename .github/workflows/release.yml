@@ -137,6 +137,47 @@ jobs:
     needs: [create-release, publish-tauri]
     runs-on: ubuntu-22.04
     steps:
+      - name: Verify updater latest.json
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          asset_id=$(gh api "repos/${{ github.repository }}/releases/$RELEASE_ID/assets" --jq '.[] | select(.name == "latest.json") | .id')
+          if [ -z "$asset_id" ]; then
+            echo "::error::latest.json 资产缺失，发布被拦截"
+            exit 1
+          fi
+          gh api -H "Accept: application/octet-stream" "repos/${{ github.repository }}/releases/assets/$asset_id" > latest.json
+          python3 - "$TAG" <<'PY'
+          import json, sys
+
+          tag = sys.argv[1]
+          version = tag[1:] if tag.startswith("v") else tag
+          with open("latest.json", encoding="utf-8") as f:
+              data = json.load(f)
+          platforms = set(data.get("platforms", {}).keys())
+          required = {
+              "darwin-aarch64",
+              "darwin-aarch64-app",
+              "windows-x86_64",
+              "windows-x86_64-msi",
+              "windows-x86_64-nsis",
+              "linux-x86_64",
+              "linux-x86_64-appimage",
+              "linux-x86_64-deb",
+              "linux-x86_64-rpm",
+          }
+          missing = required - platforms
+          if missing:
+              print(f"::error::latest.json 缺少平台条目: {sorted(missing)}")
+              sys.exit(1)
+          if data.get("version") != version:
+              print(f"::error::latest.json version {data.get('version')!r} != 期望 {version}")
+              sys.exit(1)
+          print(f"latest.json 校验通过: version={version}，平台 {len(platforms)} 个条目齐全")
+          PY
       - name: Publish complete release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
