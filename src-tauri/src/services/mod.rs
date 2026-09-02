@@ -1,4 +1,6 @@
 pub mod asset_service;
+pub mod ai_service;
+pub mod ai_store;
 pub mod auth_service;
 pub mod auth_store;
 pub mod github_api;
@@ -8,4 +10,5 @@ pub mod repo_service;
 pub mod search_service;
 pub mod sync_service;
 pub mod wiki_service;
+pub mod secure_store;
 pub mod trash_service;

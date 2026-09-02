@@ -28,6 +28,7 @@
 | 前后端桥 | **Tauri Commands (IPC) + `serde`** | Rust 强类型入参/出参，TS 侧镜像类型，双向类型安全 |
 | GitHub 接入 | **OAuth Device Flow / PAT + GitHub REST API** | 仅用于仓库创建与授权验证；数据同步走纯 Git 协议 |
 | 软件更新 | **Tauri updater + GitHub Releases** | `latest.json` 与安装包使用签名密钥；客户端通过内置公钥校验，安装后自动重启 |
+| AI | **可插拔 Provider：OpenAI 兼容 API + Ollama（本地）** | 尊重本地优先与数据主权；统一 OpenAI 兼容 `chat/completions` 协议，HTTP 复用 `ureq`；API Key 加密存储（复用 AES-GCM 凭证模式，前端拿不到明文） |
 | 前端状态 | **Zustand（全局 UI 态）+ TanStack Query（服务端/Git 态）** | 轻量、无样板、职责边界清晰 |
 | 凭证 | **本地加密文件（AES-GCM）+ 本地状态标记** | Token 不落盘明文；登录态布尔标记可落盘到 app config |
 | 测试 | **Vitest + React Testing Library + `cargo test`** | 前后端同构的快测试 |
@@ -126,6 +127,7 @@ AINote/
 │   │   ├── search/              # 全文搜索 + Cmd+K 命令面板
 │   │   ├── asset/               # 图片/附件导入 + 光标插入引用
 │   │   ├── wiki/                # 标签系统 + [[双链]]（预览跳转 / 反链面板 / 标签索引）
+│   │   ├── ai/                  # AI 写作动作 + 问答面板（P0-AI-1 ~ P0-AI-4）
 │   │   ├── auth/                 # 登录（Token 校验/保存）
 │   │   └── repo/                 # 绑定/创建仓库
 │   ├── components/               # 业务无关组件
@@ -134,7 +136,7 @@ AINote/
 │   ├── api/                      # IPC Client, 一领域一文件
 │   │   ├── client.ts             # invoke 薄封装 + 错误统一转换
 │   │   ├── types.ts              # 与 Rust DTO 结构一致的镜像类型
-│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts / asset.api.ts / wiki.api.ts / search.api.ts / history.api.ts
+│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts / asset.api.ts / wiki.api.ts / search.api.ts / history.api.ts / ai.api.ts
 │   ├── stores/                   # Zustand, 按领域切片（session / ui / command-palette …）
 │   ├── queries/                  # TanStack Query hooks (服务端/Git 状态)
 │   ├── hooks/                    # 跨领域通用 hooks（useNetworkStatus 等）
@@ -151,10 +153,11 @@ AINote/
 │   │   │   ├── git/              # commit.rs / pull.rs / push.rs / status.rs / sync.rs / resolve.rs / history.rs / diff.rs / restore.rs
 │   │   │   ├── repo/             # bind.rs / create.rs / list.rs / rename.rs / remove.rs / switch.rs / validate.rs / path.rs
 │   │   │   ├── auth/             # save_token.rs / validate.rs / status.rs / logout.rs
+│   │   │   ├── ai/               # config.rs（get/save）/ generate.rs / chat.rs
 │   │   │   └── trash/            # list.rs / restore.rs / delete.rs / empty.rs
-│   │   ├── services/             # 一用例一模块（含 search_service / history_service / asset_service / wiki_service / trash_service）
-│   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / file_storage / note_files / file_tree / asset_files / trash_files）
-│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs / wiki.rs / trash.rs / rich_text.rs）
+│   │   ├── services/             # 一用例一模块（含 search_service / history_service / asset_service / wiki_service / trash_service / ai_service / ai_store / secure_store）
+│   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / file_storage / note_files / file_tree / asset_files / trash_files / llm）
+│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs / wiki.rs / trash.rs / rich_text.rs / ai.rs）
 │   │   └── config/            # mod.rs（持久化）+ repos.rs（仓库注册表纯逻辑）
 │   └── Cargo.toml
 ├── package.json / tsconfig.json (strict: true)
@@ -183,4 +186,5 @@ AINote/
 - **预览同步滚动**：分栏模式通过 `MutationObserver` 与 `ResizeObserver` 更新 Markdown 行号锚点，滚动事件在浏览器中用 `requestAnimationFrame` 合帧，并保留 jsdom/不支持 RAF 环境的同步回退以保证可测试性。
 - **编辑器工作区偏好**：`features/note/utils/editorPreferences.ts` 按仓库路径 + 笔记路径隔离保存视图模式、分栏比例及两侧滚动位置；`useEditorPreferences` 仅负责本地 UI 偏好，不进入 TanStack Query 或笔记正文。编辑器 / 预览的阅读主题由 `stores/ui.store.ts` 持久化，使用局部 CSS 变量映射到当前笔记工作区，不影响应用其他页面。
 - **软件更新链路**：`features/update` → `src/api/update.api.ts` → Tauri updater 插件 → GitHub Releases。更新状态为局部 UI 态，不写入 Zustand 或业务仓库；私钥只存在 GitHub Actions Secret。
+- **AI 能力链路**：`features/ai` 提供可选的写作增强与知识问答（P0-AI-1 ~ P0-AI-4 / P1-AI-1/2/3，详见 `docs/AI_PRODUCT_DESIGN.md`）。配置入口 `settings/AiSettings` → `useAiConfig`（Query）→ `ai_get_config` / `ai_save_config`（`commands/ai/config.rs`）→ `ai_service` → `ai_store`：非敏感配置存 `ai.json` 明文，API Key 经 `secure_store`（AES-256-GCM，与 `auth_store` 同模式）加密存储，前端永远拿不到明文。编辑器 AI 写作（润色/翻译/缩写/扩写/续写/摘要）由 `useAiWrite` 编排：动作菜单 → 流式请求（`ai_generate_stream`，`commands/ai/generate_stream.rs` → `ai_service::generate_stream`；摘要动作的源为整篇笔记，确认后由宿主 `upsertFrontmatterSummary` 写入 frontmatter）→ `repositories/llm.rs` 的 `LlmClient`（`OpenAiCompatClient`，ureq 调 OpenAI 兼容 `chat/completions`，Ollama 走 `/v1` 端点；非流式超时 90s，流式 180s）。前端经 `api/ai.api.ts` 的 `streamRequest` 用 Tauri `Channel` 逐块接收 SSE 增量（打字机效果），`AiPreviewDialog` 边生成边展示，确认后由 `editorAdapters`（Markdown dispatch / TipTap insertContentAt）落笔，进入现有 3s 防抖保存与 Git 提交链路。标题/大纲建议（P1-AI-3，Markdown）由 `useAiSuggest` 编排：流式生成 → `utils/titles.ts`（纯函数 `parseTitleSuggestions` 清洗候选 / `applyTitleToMarkdown` 替换首行标题）与 `AiSuggestDialog`（标题候选单选应用 / 大纲预览插入文末）；大纲源文本截断 6000 字符控 token。AI 问答（`AskAiPanel`，开关为 `ui.store` 全局态）→ `ai_chat_stream`（`commands/ai/chat_stream.rs` → `ai_service::chat_stream`）：「当前笔记」上下文由前端拼系统提示，「当前笔记 + 全库检索」由 Rust 侧 `inject_context` → `retrieve_context` 调 `search_service` 取 top-k（默认 5）命中笔记段落拼入系统消息；回答以 Markdown 渲染（react-markdown + remark-gfm，不解析原始 HTML）。错误域扩展 `AI_6xxx`（`domain/error.rs`），网络类错误标记 `retriable`。
 - **界面语言**：`stores/ui.store.ts` 持久化 `zh-CN` / `en-US` 显示偏好；`i18n/` 集中维护翻译键与插值，不让组件散落硬编码文案。`AppProviders` 同步 `<html lang>`，保证屏幕阅读器使用正确语言。

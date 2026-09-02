@@ -53,7 +53,7 @@ NoteEditor.tsx (渲染, <150行)
 
 ```text
 AppError { code: "SYNC_4013", kind: Conflict, message: "...", retriable: true }
-错误码规范: <域>_<序号>  →  NOTE_1xxx, AUTH_2xxx, REPO_3xxx, SYNC_4xxx, GIT_4xxx, IO_5xxx
+错误码规范: <域>_<序号>  →  NOTE_1xxx, AUTH_2xxx, REPO_3xxx, SYNC_4xxx, GIT_4xxx, IO_5xxx, AI_6xxx
 ```
 
 ### 边界拦截点只有两处

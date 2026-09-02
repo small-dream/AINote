@@ -3,6 +3,7 @@ import { ArrowLeftRight, FolderInput, History, Network, Split, Eye, Pencil, List
 import { useTranslation } from "@/i18n";
 import { NoteThemePicker } from "./NoteThemePicker";
 import { noteDisplayName } from "../utils/displayName";
+import { AiToolbarButton } from "@/features/ai/components/AiToolbarButton";
 
 export type ViewMode = "edit" | "split" | "preview";
 
@@ -19,6 +20,7 @@ interface EditorToolbarProps {
   onWiki: () => void;
   onOutline?: () => void;
   onConvertToRichText?: () => void;
+  onAi?: () => void;
 }
 
 const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.preview" }[] = [
@@ -28,7 +30,7 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
 ];
 
 /** 笔记操作栏：标题与保存状态、视图切换、文件操作。 */
-export function EditorToolbar({ path, mode, richText = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onOutline, onConvertToRichText }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, richText = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onOutline, onConvertToRichText, onAi }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -45,6 +47,7 @@ export function EditorToolbar({ path, mode, richText = false, saveError, onModeC
         {!richText && <NoteThemePicker />}
         <Button variant="ghost" aria-label={t("history.title")} title={t("history.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onHistory}><History size={14} /><span className="hidden xl:inline">{t("history.title")}</span></Button>
         <Button variant="ghost" aria-label={t("wiki.title")} title={t("wiki.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onWiki}><Network size={14} /><span className="hidden xl:inline">{t("wiki.title")}</span></Button>
+        {onAi ? <AiToolbarButton onOpen={onAi} /> : null}
         <OutlineButton onOutline={onOutline} />
         <ConvertButton richText={richText} onConvert={onConvertToRichText} />
         <Button variant="ghost" aria-label={t("note.moving")} title={t("note.moving")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onMove}><FolderInput size={14} /><span className="hidden xl:inline">{t("note.moving")}</span></Button>

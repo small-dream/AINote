@@ -73,12 +73,18 @@ interface UiState {
   sidebarCollapsed: boolean;
   sidebarTab: SidebarTab;
   focusedTag: string | null;
+  askAiOpen: boolean;
+  settingsOpen: boolean;
   theme: Theme;
   noteTheme: NoteTheme;
   locale: Locale;
   toggleSidebar: () => void;
   setSidebarTab: (tab: SidebarTab) => void;
   openTagIndex: (tag: string) => void;
+  openAskAi: () => void;
+  closeAskAi: () => void;
+  openSettings: () => void;
+  closeSettings: () => void;
   setTheme: (theme: Theme) => void;
   setNoteTheme: (noteTheme: NoteTheme) => void;
   setLocale: (locale: Locale) => void;
@@ -88,12 +94,18 @@ export const useUiStore = create<UiState>((set) => ({
   sidebarCollapsed: false,
   sidebarTab: "tree",
   focusedTag: null,
+  askAiOpen: false,
+  settingsOpen: false,
   theme: readStoredTheme(),
   noteTheme: readStoredNoteTheme(),
   locale: readStoredLocale(),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setSidebarTab: (sidebarTab) => set({ sidebarTab }),
   openTagIndex: (tag) => set({ sidebarTab: "tags", focusedTag: tag }),
+  openAskAi: () => set({ askAiOpen: true }),
+  closeAskAi: () => set({ askAiOpen: false }),
+  openSettings: () => set({ settingsOpen: true }),
+  closeSettings: () => set({ settingsOpen: false }),
   setTheme: (theme) => {
     writeStoredTheme(theme);
     set({ theme });

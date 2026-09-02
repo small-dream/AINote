@@ -5,5 +5,6 @@ pub mod git2_backend;
 pub mod git2_history;
 pub mod git2_remote;
 pub mod git_backend;
+pub mod llm;
 pub mod note_files;
 pub mod trash_files;

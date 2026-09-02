@@ -9,10 +9,12 @@ import { RepoManager } from "@/features/settings/components/RepoManager";
 import { ThemeSettings } from "@/features/settings/components/ThemeSettings";
 import { LanguageSettings } from "@/features/settings/components/LanguageSettings";
 import { UpdateSettings } from "@/features/update/components/UpdateSettings";
+import { AiSettings } from "@/features/settings/components/AiSettings";
 import { useSync } from "@/features/sync/hooks/useSync";
 import { deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
 import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useSessionStore } from "@/stores/session.store";
+import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 
 interface WorkspaceNavRailProps {
@@ -74,9 +76,21 @@ function SearchNavButton() {
 
 function SettingsNavButton() {
   const { t } = useTranslation();
+  const open = useUiStore((s) => s.settingsOpen);
+  const close = useUiStore((s) => s.closeSettings);
+  return (<>
+      <button type="button" aria-label={t("settings.title")} title={t("settings.title")} onClick={() => useUiStore.getState().openSettings()} className="mt-auto flex w-14 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[11px] text-text-tertiary transition-colors hover:bg-bg-primary/70 hover:text-text-secondary">
+        <Settings size={18} />
+        <span>{t("settings.title")}</span>
+      </button>
+      <SettingsModal open={open} onClose={close} />
+    </>);
+}
+
+function SettingsModal({ open, onClose }: { open: boolean; onClose: () => void }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
   const reset = useSessionStore((state) => state.reset);
-  const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   async function handleLogout() {
     setBusy(true);
@@ -88,29 +102,27 @@ function SettingsNavButton() {
       setBusy(false);
     }
   }
-  return (<>
-      <button type="button" aria-label={t("settings.title")} title={t("settings.title")} onClick={() => setOpen(true)} className="mt-auto flex w-14 flex-col items-center gap-1 rounded-lg px-2 py-2 text-[11px] text-text-tertiary transition-colors hover:bg-bg-primary/70 hover:text-text-secondary">
-        <Settings size={18} />
-        <span>{t("settings.title")}</span>
-      </button>
-      <Modal open={open} title={t("settings.title")} onClose={() => setOpen(false)}>
-        <RepoManager />
-        <hr className="my-5 border-border" />
-        <ThemeSettings />
-        <hr className="my-5 border-border" />
-        <LanguageSettings />
-        <hr className="my-5 border-border" />
-        <UpdateSettings />
-        <hr className="my-5 border-border" />
-        <div>
-          <h3 className="mb-3 text-sm font-semibold">{t("settings.account")}</h3>
-          <Button variant="ghost" className="inline-flex items-center gap-2 border border-border text-sm" onClick={() => void handleLogout()} disabled={busy}>
-            <LogOut size={15} />
-            {busy ? t("settings.loggingOut") : t("settings.logout")}
-          </Button>
-        </div>
-      </Modal>
-    </>);
+  return (
+    <Modal open={open} title={t("settings.title")} onClose={onClose}>
+      <RepoManager />
+      <hr className="my-5 border-border" />
+      <ThemeSettings />
+      <hr className="my-5 border-border" />
+      <LanguageSettings />
+      <hr className="my-5 border-border" />
+      <UpdateSettings />
+      <hr className="my-5 border-border" />
+      <AiSettings />
+      <hr className="my-5 border-border" />
+      <div>
+        <h3 className="mb-3 text-sm font-semibold">{t("settings.account")}</h3>
+        <Button variant="ghost" className="inline-flex items-center gap-2 border border-border text-sm" onClick={() => void handleLogout()} disabled={busy}>
+          <LogOut size={15} />
+          {busy ? t("settings.loggingOut") : t("settings.logout")}
+        </Button>
+      </div>
+    </Modal>
+  );
 }
 
 function SyncNavButton({ repoPath, startupSyncing }: WorkspaceNavRailProps) {

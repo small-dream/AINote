@@ -59,6 +59,34 @@ export interface AuthStatusDto {
   repoPath: string | null;
 }
 
+/** AI Provider：统一 OpenAI 兼容 chat/completions 协议（Ollama 走 /v1 兼容端点） */
+export type AiProvider = "openAiCompatible" | "ollama";
+
+/** ai_get_config 返回（不含明文 API Key） */
+export interface AiConfigDto {
+  enabled: boolean;
+  provider: AiProvider;
+  baseUrl: string;
+  model: string;
+  hasKey: boolean;
+}
+
+/** ai_chat 的对话消息（与 OpenAI messages 结构一致） */
+export interface AiChatMessage {
+  role: string;
+  content: string;
+}
+
+/** ai_generate / ai_chat 返回 */
+export interface AiReply {
+  text: string;
+}
+
+/** ai_generate_stream / ai_chat_stream 的增量块（Tauri Channel 下发） */
+export interface AiStreamChunk {
+  delta: string;
+}
+
 /** bind_repo / create_repo 返回 */
 export interface RepoPathDto {
   repoPath: string;

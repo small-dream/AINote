@@ -21,6 +21,12 @@ pub enum AppError {
     Git(String),
     #[error("io error: {0}")]
     Io(String),
+    /// AI 配置缺失 / Provider 调用失败（不可自动重试）
+    #[error("ai error: {0}")]
+    Ai(String),
+    /// AI Provider 网络错误（可重试）
+    #[error("ai network error: {0}")]
+    AiNetwork(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -54,6 +60,8 @@ impl From<AppError> for AppErrorDto {
             AppError::Conflict(_) => ("SYNC_4001", ErrorKind::Conflict, false),
             AppError::Git(_) => ("GIT_4001", ErrorKind::Unknown, true),
             AppError::Io(_) => ("IO_5001", ErrorKind::Io, true),
+            AppError::Ai(_) => ("AI_6001", ErrorKind::Unknown, false),
+            AppError::AiNetwork(_) => ("AI_6002", ErrorKind::Unknown, true),
         };
         AppErrorDto {
             code: code.to_string(),
@@ -88,6 +96,8 @@ mod tests {
         assert_eq!(dto(AppError::Conflict("c".into())).code, "SYNC_4001");
         assert_eq!(dto(AppError::Git("g".into())).code, "GIT_4001");
         assert_eq!(dto(AppError::Io("i".into())).code, "IO_5001");
+        assert_eq!(dto(AppError::Ai("no key".into())).code, "AI_6001");
+        assert_eq!(dto(AppError::AiNetwork("down".into())).code, "AI_6002");
     }
 
     #[test]
@@ -101,5 +111,10 @@ mod tests {
         let conflict = dto(AppError::Conflict("x".into()));
         assert_eq!(conflict.kind, ErrorKind::Conflict);
         assert!(!conflict.retriable);
+        let ai = dto(AppError::Ai("bad".into()));
+        assert_eq!(ai.kind, ErrorKind::Unknown);
+        assert!(!ai.retriable);
+        let net = dto(AppError::AiNetwork("down".into()));
+        assert!(net.retriable);
     }
 }

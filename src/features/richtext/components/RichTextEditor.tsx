@@ -9,6 +9,10 @@ import { useUiStore } from "@/stores/ui.store";
 import { swapNoteExtension } from "@/features/note/utils/noteKind";
 import { NoteOutline } from "@/features/note/components/NoteOutline";
 import type { OutlineItem } from "@/features/note/utils/outline";
+import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
+import { AiWriteControls } from "@/features/ai/components/AiWriteControls";
+import { AiToolbarButton } from "@/features/ai/components/AiToolbarButton";
+import { getTipTapSelection, applyToTipTapEditor } from "@/features/ai/utils/editorAdapters";
 
 interface RichTextEditorProps {
   /** TipTap JSON 字符串（.ainote 文件内容） */
@@ -34,31 +38,13 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
   const { editor, handleFiles, status, exportMarkdown, importMarkdown } = useRichTextEditor({ content, onChange, repoPath });
   const outline = useRichTextOutline(editor);
   const openTagIndex = useUiStore((s) => s.openTagIndex);
-
-  const handleConvertToMarkdown = () => {
-    if (!editor) return;
-    const storage = editor.storage as unknown as { markdown: { getMarkdown: () => string } };
-    const markdown = storage.markdown.getMarkdown();
-    onConvert?.(swapNoteExtension(notePath, "markdown"), markdown);
-  };
-
-  const handleClick = (event: MouseEvent<HTMLDivElement>) => {
-    const element = event.target as HTMLElement;
-    const wikiElement = element.closest("[data-wiki-target]");
-    const target = wikiElement?.getAttribute("data-wiki-target");
-    if (target) {
-      onOpenWiki?.(target);
-      return;
-    }
-    const tagElement = element.closest("[data-tag]");
-    const tag = tagElement?.getAttribute("data-tag");
-    if (tag) openTagIndex(tag);
-  };
+  const ai = useAiWrite({ getSelection: () => ({ ...getTipTapSelection(editor, noteTitleOf(notePath)), fullText: editor?.getText() ?? "" }), onApply: (text) => applyToTipTapEditor(editor, text) });
 
   return (
-    <div className="rich-text-editor flex h-full min-h-0 flex-col" onClick={handleClick}>
-      <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} onExportMarkdown={exportMarkdown} onImportMarkdown={importMarkdown} onConvertToMarkdown={handleConvertToMarkdown} />
+    <div className="rich-text-editor flex h-full min-h-0 flex-col" onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)}>
+      <div className="flex items-center"><RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} onExportMarkdown={exportMarkdown} onImportMarkdown={importMarkdown} onConvertToMarkdown={() => convertToMarkdown(editor, notePath, onConvert)} /><AiToolbarButton onOpen={ai.openMenu} /></div>
       <RichTextBubbleMenu editor={editor} />
+      <AiWriteControls ai={ai} />
       <div className="flex min-h-0 flex-1 overflow-hidden">
         {outlineOpen && outline.length > 0 ? (
           <aside className="note-outline-rail w-64 shrink-0 overflow-y-auto border-r border-border bg-bg-secondary">
@@ -69,6 +55,32 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
       </div>
     </div>
   );
+}
+
+/** 提取笔记标题（续写上下文）。 */
+function noteTitleOf(notePath: string): string {
+  return notePath.split("/").at(-1)?.replace(/\.(ainote|md)$/, "") ?? "";
+}
+
+/** 富文本转 Markdown：写新扩展名文件并删除旧文件由 command 层完成。 */
+function convertToMarkdown(editor: Editor | null, notePath: string, onConvert?: (to: string, content: string) => void): void {
+  if (!editor) return;
+  const storage = editor.storage as unknown as { markdown: { getMarkdown: () => string } };
+  onConvert?.(swapNoteExtension(notePath, "markdown"), storage.markdown.getMarkdown());
+}
+
+/** 点击委托：双链跳转 + 标签索引。 */
+function handleEditorClick(event: MouseEvent<HTMLDivElement>, onOpenWiki?: (name: string) => void, openTagIndex?: (tag: string) => void): void {
+  const element = event.target as HTMLElement;
+  const wikiElement = element.closest("[data-wiki-target]");
+  const target = wikiElement?.getAttribute("data-wiki-target");
+  if (target) {
+    onOpenWiki?.(target);
+    return;
+  }
+  const tagElement = element.closest("[data-tag]");
+  const tag = tagElement?.getAttribute("data-tag");
+  if (tag) openTagIndex?.(tag);
 }
 
 /** 大纲点击：定位到对应标题并聚焦编辑器。 */

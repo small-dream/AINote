@@ -21,6 +21,14 @@ import { insertCallout } from "../utils/insert";
 import { useUiStore } from "@/stores/ui.store";
 import { RichTextEditor } from "@/features/richtext/components/RichTextEditor";
 import { useNoteConversion } from "../hooks/useNoteConversion";
+import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
+import { useAiSuggest } from "@/features/ai/hooks/useAiSuggest";
+import { AiWriteControls } from "@/features/ai/components/AiWriteControls";
+import { AskAiPanel } from "@/features/ai/components/AskAiPanel";
+import { getMarkdownSelection, applyToMarkdownEditor } from "@/features/ai/utils/editorAdapters";
+import { upsertFrontmatterSummary } from "@/features/ai/utils/frontmatter";
+import { applyTitleToMarkdown } from "@/features/ai/utils/titles";
+import { noteDisplayName } from "../utils/displayName";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -59,27 +67,45 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const asset = useAssetImport(readyView);
     const previewRef = useRef<HTMLDivElement | null>(null);
     const { handleConvertNote, handleConvertToRichText } = useNoteConversion({ notePath, draft, flush, onOpenNote });
+    const { ai, suggest, askAiOpen, closeAskAi, insertAnswer } = useEditorAi(viewRef, notePath, draft, onChange);
     useEditorScrollPersistence(readyView, previewRef, mode, { editorScrollTop, previewScrollTop, setEditorScrollTop, setPreviewScrollTop });
     useSyncScroll(readyView, previewRef, mode);
     useImperativeHandle(ref, () => ({ flush, setMode, insertCallout: () => { if (viewRef.current) dispatchFormat(viewRef.current, insertCallout); viewRef.current?.focus(); } }), [flush, setMode, viewRef]);
-    const handleSave = () => { void flush().catch(() => undefined); };
     const handleOutlineSelect = (item: OutlineItem) => { if (mode !== "preview" && readyView) { const line = readyView.state.doc.line(Math.min(item.line, readyView.state.doc.lines)); readyView.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: "center" }) }); readyView.focus(); } if (mode !== "edit") scrollPreviewToHeading(previewRef.current, item.id); setOutlineOpen(false); };
 
     if (!notePath) return <EmptyState />;
     if (loadError) return <ErrorState message={loadError.message} />;
-    const isRichText = kind === "richText";
     const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineSelect: handleOutlineSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar path={notePath} mode={mode} richText={isRichText} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={handleSave} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} onConvertToRichText={handleConvertToRichText} />
-        {isRichText ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} outlineOpen={outlineOpen} /> : <MarkdownEditorSurface {...surfaceProps} />}
+        <EditorToolbar path={notePath} mode={mode} richText={kind === "richText"} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} onConvertToRichText={handleConvertToRichText} {...(kind === "richText" ? {} : { onAi: ai.openMenu })} />
+        {kind === "richText" ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} outlineOpen={outlineOpen} /> : <MarkdownEditorSurface {...surfaceProps} />}
+        <AiWriteControls ai={ai} canSummarize={kind !== "richText"} canSuggest={kind !== "richText"} suggest={suggest} /><AskAiPanel open={askAiOpen} noteContent={draft} canInsert={kind !== "richText"} onInsert={insertAnswer} onClose={closeAskAi} />
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
         <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
       </div>
     );
   }
 );
+
+/** Markdown 编辑器的 AI 写作 + 问答面板编排（收敛接线，避免组件超长） */
+function useEditorAi(viewRef: React.RefObject<EditorView | null>, notePath: string | null, draft: string, onChange: (value: string) => void) {
+  const askAiOpen = useUiStore((s) => s.askAiOpen);
+  const closeAskAi = useUiStore((s) => s.closeAskAi);
+  const ai = useAiWrite({
+    getSelection: () => ({ ...getMarkdownSelection(viewRef.current, notePath ? noteDisplayName(notePath.split("/").at(-1) ?? notePath) : undefined), fullText: draft }),
+    onApply: (text) => applyToMarkdownEditor(viewRef.current, text),
+    onApplySummary: (summary) => onChange(upsertFrontmatterSummary(draft, summary)),
+  });
+  const suggest = useAiSuggest({
+    noteText: draft,
+    onApplyTitle: (title) => onChange(applyTitleToMarkdown(draft, title)),
+    onInsertOutline: (outline) => onChange(draft ? `${draft}\n\n${outline}` : outline),
+  });
+  const insertAnswer = (text: string) => onChange(draft ? `${draft}\n\n${text}` : text);
+  return { ai, suggest, askAiOpen, closeAskAi, insertAnswer };
+}
 
 function scrollPreviewToHeading(preview: HTMLDivElement | null, id: string): void {
   const heading = preview ? Array.from(preview.querySelectorAll<HTMLElement>("[id]")).find((element) => element.id === id) : null;
