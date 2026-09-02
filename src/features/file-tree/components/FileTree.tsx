@@ -22,12 +22,13 @@ interface FileTreeProps {
   onRequestNew: (dir: string, kind?: NoteKind) => void;
   onRequestFolder: (dir: string) => void;
   onRequestImport: (files: File[]) => Promise<void>;
+  onRequestImportNotes: (dir: string, files: File[]) => Promise<void>;
   createDir?: string;
   onRequestMove: (path: string) => void;
 }
 
 /** 目录树（P0-3）：目录可折叠、可在目录内新建笔记/文件夹；文件点击打开 */
-export function FileTree({ repoPath, onSelect, onRequestNew, onRequestFolder, onRequestImport, createDir = "", onRequestMove }: FileTreeProps) {
+export function FileTree({ repoPath, onSelect, onRequestNew, onRequestFolder, onRequestImport, onRequestImportNotes, createDir = "", onRequestMove }: FileTreeProps) {
   const { t } = useTranslation();
   const { tree, isLoading, expanded, toggle } = useFileTree(repoPath);
   const [query, setQuery] = useState("");
@@ -51,6 +52,7 @@ export function FileTree({ repoPath, onSelect, onRequestNew, onRequestFolder, on
       onRequestNew={onRequestNew}
       onRequestFolder={onRequestFolder}
       onRequestImport={onRequestImport}
+      onRequestImportNotes={onRequestImportNotes}
       createDir={createDir}
       onRequestMove={onRequestMove}
     />
@@ -70,11 +72,12 @@ interface TreeContentProps {
   onRequestNew: (dir: string, kind?: NoteKind) => void;
   onRequestFolder: (dir: string) => void;
   onRequestImport: (files: File[]) => Promise<void>;
+  onRequestImportNotes: (dir: string, files: File[]) => Promise<void>;
   createDir: string;
   onRequestMove: (path: string) => void;
 }
 
-function TreeContent({ tree, expanded, toggle, query, onQueryChange, results, isSearching, error, onSelect, onRequestNew, onRequestFolder, onRequestImport, createDir, onRequestMove }: TreeContentProps) {
+function TreeContent({ tree, expanded, toggle, query, onQueryChange, results, isSearching, error, onSelect, onRequestNew, onRequestFolder, onRequestImport, onRequestImportNotes, createDir, onRequestMove }: TreeContentProps) {
   const { t } = useTranslation();
   const currentNotePath = useSessionStore((s) => s.currentNotePath);
   const openNote = useSessionStore((s) => s.openNote);
@@ -87,11 +90,11 @@ function TreeContent({ tree, expanded, toggle, query, onQueryChange, results, is
   const confirmDelete = async () => { if (!pendingDelete) return; try { if (pendingDelete.isFolder) await removeFolder.mutateAsync(pendingDelete.path); else await remove.mutateAsync(pendingDelete.path); setPendingDelete(null); } catch (error) { setDeleteError(messageOf(error)); } };
   const searching = query.trim().length > 0;
   return <div className="flex h-full min-h-0 flex-col">
-    <TreeToolbar createDir={createDir} query={query} onQueryChange={onQueryChange} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} />
+    <TreeToolbar createDir={createDir} query={query} onQueryChange={onQueryChange} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} />
     {searching ? (
       <TreeSearchResults query={query} results={results} isSearching={isSearching} error={error} onSelect={onSelect} />
     ) : (
-      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2" aria-label={t("tree.navigation")}><TreeNodes node={tree} depth={0} expanded={expanded} currentNotePath={currentNotePath} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onContextMenu={contextMenu.open} /></nav>
+      <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2" aria-label={t("tree.navigation")}><TreeNodes node={tree} depth={0} expanded={expanded} currentNotePath={currentNotePath} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} onContextMenu={contextMenu.open} /></nav>
     )}
     {deleteError && <div className="tree-error" role="alert">{t("tree.deleteFailed", { message: deleteError })}</div>}
     <ContextMenuSlot menu={contextMenu.menu} copied={contextMenu.copied} onClose={contextMenu.close} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} onDelete={(path) => requestDelete(path, false)} onDeleteFolder={(path) => requestDelete(path, true)} onCopy={contextMenu.copy} />
@@ -99,10 +102,10 @@ function TreeContent({ tree, expanded, toggle, query, onQueryChange, results, is
   </div>;
 }
 
-function TreeToolbar({ createDir, query, onQueryChange, onRequestNew, onRequestFolder, onRequestImport }: Pick<FileTreeProps, "onRequestNew" | "onRequestFolder" | "onRequestImport"> & { createDir: string; query: string; onQueryChange: (query: string) => void }) {
+function TreeToolbar({ createDir, query, onQueryChange, onRequestNew, onRequestFolder, onRequestImport, onRequestImportNotes }: Pick<FileTreeProps, "onRequestNew" | "onRequestFolder" | "onRequestImport" | "onRequestImportNotes"> & { createDir: string; query: string; onQueryChange: (query: string) => void }) {
   return <div className="flex shrink-0 items-center gap-1.5 border-b border-border px-3 py-2">
     <TreeSearchInput value={query} onChange={onQueryChange} />
-    <CreateMenu onCreateNote={async (kind: NoteKind) => { await onRequestNew(createDir, kind); }} onCreateFolder={() => onRequestFolder(createDir)} onImportFiles={onRequestImport} />
+    <CreateMenu onCreateNote={async (kind: NoteKind) => { await onRequestNew(createDir, kind); }} onCreateFolder={() => onRequestFolder(createDir)} onImportFiles={onRequestImport} onImportNotes={(files) => onRequestImportNotes(createDir, files)} />
   </div>;
 }
 

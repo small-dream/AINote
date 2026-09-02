@@ -10,6 +10,7 @@ interface WorkspaceSidebarProps {
   onRequestNew: (dir: string, kind?: NoteKind) => void;
   onRequestFolder: (dir: string) => void;
   onRequestImport: (files: File[]) => Promise<void>;
+  onRequestImportNotes: (dir: string, files: File[]) => Promise<void>;
   createDir?: string;
   onRequestMove: (path: string) => void;
 }
@@ -21,6 +22,7 @@ export function WorkspaceSidebar({
   onRequestNew,
   onRequestFolder,
   onRequestImport,
+  onRequestImportNotes,
   createDir = "",
   onRequestMove,
 }: WorkspaceSidebarProps) {
@@ -28,7 +30,7 @@ export function WorkspaceSidebar({
   return (
     <div className="flex min-h-0 w-[248px] shrink-0 flex-col border-r border-border bg-bg-secondary/80">
       {tab === "tree" ? (
-        <FileTree repoPath={repoPath} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} createDir={createDir} onRequestMove={onRequestMove} />
+        <FileTree repoPath={repoPath} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} createDir={createDir} onRequestMove={onRequestMove} />
       ) : tab === "tags" ? (
         <TagIndex repoPath={repoPath} onSelect={onSelect} />
       ) : (

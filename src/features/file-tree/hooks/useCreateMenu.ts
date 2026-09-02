@@ -4,6 +4,7 @@ import type { NoteKind } from "@/api/types";
 export function useCreateMenu(
   onCreateNote: (kind: NoteKind) => Promise<void>,
   onImportFiles: (files: File[]) => Promise<void>,
+  onImportNotes: (files: File[]) => Promise<void>,
 ) {
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -30,6 +31,6 @@ export function useCreateMenu(
     close: () => setOpen(false),
     createNote: (kind: NoteKind) => run(() => onCreateNote(kind)),
     importFiles: (files: File[]) => files.length ? run(() => onImportFiles(files)) : Promise.resolve(),
+    importNotes: (files: File[]) => files.length ? run(() => onImportNotes(files)) : Promise.resolve(),
   };
 }
-

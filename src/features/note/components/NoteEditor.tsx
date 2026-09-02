@@ -29,6 +29,8 @@ import { getMarkdownSelection, applyToMarkdownEditor } from "@/features/ai/utils
 import { upsertFrontmatterSummary } from "@/features/ai/utils/frontmatter";
 import { applyTitleToMarkdown } from "@/features/ai/utils/titles";
 import { noteDisplayName } from "../utils/displayName";
+import { PdfExportOverlay } from "@/features/export/components/PdfExportOverlay";
+import { usePdfExport } from "@/features/export/hooks/usePdfExport";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -52,8 +54,8 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const wiki = useEditorWiki(repoPath, onOpenNote);
     const noteTheme = useUiStore((state) => state.noteTheme);
-    const { mode, editorScrollTop, previewScrollTop, ratio } = editorPreferences.preferences;
-    const { setMode, setRatio, setEditorScrollTop, setPreviewScrollTop } = editorPreferences;
+    const { preferences: { mode, editorScrollTop, previewScrollTop, ratio }, setMode, setRatio, setEditorScrollTop, setPreviewScrollTop } = editorPreferences;
+    const pdf = usePdfExport({ notePath, kind, repoPath, flush });
     // Markdown 编辑视图固定软渲染（WYSIWYG）；分栏视图编辑侧固定源码 + 右侧实时预览
     const softRenderEnabled = mode !== "split";
     const { extensions, activeFormats } = useEditorExtensions({
@@ -63,8 +65,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
       softRenderEnabled,
     });
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
-    const outline = useMemo(() => extractOutline(draft), [draft]);
-    const asset = useAssetImport(readyView);
+    const outline = useMemo(() => extractOutline(draft), [draft]); const asset = useAssetImport(readyView);
     const previewRef = useRef<HTMLDivElement | null>(null);
     const { handleConvertNote, handleConvertToRichText } = useNoteConversion({ notePath, draft, flush, onOpenNote });
     const { ai, suggest, askAiOpen, closeAskAi, insertAnswer } = useEditorAi(viewRef, notePath, draft, onChange);
@@ -79,11 +80,12 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar path={notePath} mode={mode} richText={kind === "richText"} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={handleConvertToRichText} {...(kind === "richText" ? {} : { onAi: ai.openMenu })} />
+        <EditorToolbar path={notePath} mode={mode} richText={kind === "richText"} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={handleConvertToRichText} onExportPdf={() => void pdf.request()} {...(kind === "richText" ? {} : { onAi: ai.openMenu })} />
         {kind === "richText" ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}
         <AiWriteControls ai={ai} canSummarize={kind !== "richText"} canSuggest={kind !== "richText"} suggest={suggest} /><AskAiPanel open={askAiOpen} noteContent={draft} canInsert={kind !== "richText"} onInsert={insertAnswer} onClose={closeAskAi} />
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
         <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
+        <PdfExportOverlay open={pdf.open} title={pdf.title} kind={kind} content={draft} repoPath={repoPath} onClose={pdf.close} />
       </div>
     );
   }

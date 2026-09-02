@@ -16,6 +16,7 @@ export interface TreeNodesProps {
   onRequestNew: (dir: string, kind?: NoteKind) => void;
   onRequestFolder: (dir: string) => void;
   onRequestImport: (files: File[]) => Promise<void>;
+  onRequestImportNotes: (dir: string, files: File[]) => Promise<void>;
   onContextMenu: (event: MouseEvent, node: TreeNode) => void;
 }
 
@@ -44,7 +45,7 @@ function FileNode({ node, depth, currentNotePath, onSelect, onContextMenu }: Tre
   );
 }
 
-function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, onRequestNew, onRequestFolder, onRequestImport, onContextMenu }: TreeNodesProps) {
+function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, onRequestNew, onRequestFolder, onRequestImport, onRequestImportNotes, onContextMenu }: TreeNodesProps) {
   const isOpen = expanded.has(node.path);
   return (
     <div>
@@ -56,6 +57,7 @@ function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, o
         onRequestNew={onRequestNew}
         onRequestFolder={onRequestFolder}
         onRequestImport={onRequestImport}
+        onRequestImportNotes={onRequestImportNotes}
         onContextMenu={onContextMenu}
       />
       {isOpen &&
@@ -71,6 +73,7 @@ function DirNode({ node, depth, expanded, currentNotePath, onToggle, onSelect, o
             onRequestNew={onRequestNew}
             onRequestFolder={onRequestFolder}
             onRequestImport={onRequestImport}
+            onRequestImportNotes={onRequestImportNotes}
             onContextMenu={onContextMenu}
           />
         ))}
@@ -86,10 +89,11 @@ interface DirRowProps {
   onRequestNew: (dir: string, kind?: NoteKind) => void;
   onRequestFolder: (dir: string) => void;
   onRequestImport: (files: File[]) => Promise<void>;
+  onRequestImportNotes: (dir: string, files: File[]) => Promise<void>;
   onContextMenu: (event: MouseEvent, node: TreeNode) => void;
 }
 
-function DirRow({ node, depth, isOpen, onToggle, onRequestNew, onRequestFolder, onRequestImport, onContextMenu }: DirRowProps) {
+function DirRow({ node, depth, isOpen, onToggle, onRequestNew, onRequestFolder, onRequestImport, onRequestImportNotes, onContextMenu }: DirRowProps) {
   const { t } = useTranslation();
   const label = node.path === "" ? t("tree.allNotes") : node.name;
   return (
@@ -110,6 +114,7 @@ function DirRow({ node, depth, isOpen, onToggle, onRequestNew, onRequestFolder, 
         onCreateNote={(kind) => Promise.resolve(onRequestNew(node.path, kind))}
         onCreateFolder={() => onRequestFolder(node.path)}
         onImportFiles={onRequestImport}
+        onImportNotes={(files) => onRequestImportNotes(node.path, files)}
       />
     </div>
   );

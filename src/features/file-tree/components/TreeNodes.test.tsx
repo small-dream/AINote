@@ -23,6 +23,7 @@ function renderTree(node: TreeNode, expanded: Set<string>) {
       onRequestNew={vi.fn()}
       onRequestFolder={vi.fn()}
       onRequestImport={vi.fn()}
+      onRequestImportNotes={vi.fn()}
       onContextMenu={vi.fn()}
     />,
   );

@@ -1,0 +1,150 @@
+/* PDF 导出（打印为 PDF）：固定浅色纸面预览，系统打印对话框可另存为 PDF。 */
+.pdf-export-root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #f5f7fa;
+  --bg-tertiary: #eef1f5;
+  --accent: #3f6fe5;
+  --accent-soft: #e9efff;
+  --text-primary: #1f2937;
+  --text-secondary: #4b5563;
+  --text-tertiary: #6b7280;
+  --border: #d9dee7;
+  --success: #1a7f37;
+  --warning: #9a6700;
+  --danger: #cf222e;
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: flex;
+  flex-direction: column;
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+  color-scheme: light;
+}
+
+.pdf-export-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.25rem;
+  border-bottom: 1px solid var(--border);
+  background: var(--bg-primary);
+}
+
+.pdf-export-drag-space {
+  flex: none;
+}
+
+.pdf-export-title {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.pdf-export-actions {
+  display: flex;
+  flex: none;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pdf-export-hint {
+  color: var(--text-tertiary);
+  font-size: 12px;
+}
+
+.pdf-export-scroll {
+  min-height: 0;
+  flex: 1;
+  overflow-y: auto;
+}
+
+.pdf-export-page {
+  width: min(820px, calc(100% - 48px));
+  margin: 24px auto;
+  padding: 48px 56px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: #fff;
+  box-shadow: 0 8px 30px rgb(0 0 0 / 0.08);
+}
+
+.pdf-export-page.markdown-body,
+.pdf-export-page .ProseMirror {
+  color: var(--text-primary);
+}
+
+.pdf-export-page table {
+  min-width: 0;
+}
+
+.pdf-export-page img {
+  max-width: 100%;
+}
+
+/* 打印时：隐藏应用与工具栏，让内容回到正常文档流以支持多页分页 */
+@media print {
+  @page {
+    size: A4;
+    margin: 16mm 14mm;
+  }
+
+  html,
+  body {
+    background: #fff !important;
+  }
+
+  body > #root {
+    display: none !important;
+  }
+
+  .pdf-export-root {
+    position: static !important;
+    display: block !important;
+    background: #fff !important;
+  }
+
+  .pdf-export-toolbar,
+  .pdf-export-hint,
+  .pdf-export-drag-space {
+    display: none !important;
+  }
+
+  .pdf-export-scroll {
+    height: auto !important;
+    overflow: visible !important;
+  }
+
+  .pdf-export-page {
+    width: auto;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    box-shadow: none;
+  }
+
+  .markdown-code-toolbar,
+  .code-block-toolbar {
+    display: none !important;
+  }
+
+  .markdown-code-block,
+  .pdf-export-page pre,
+  .pdf-export-page .code-block-shell {
+    break-inside: avoid;
+  }
+
+  .pdf-export-page h1,
+  .pdf-export-page h2,
+  .pdf-export-page h3,
+  .pdf-export-page blockquote,
+  .pdf-export-page table,
+  .pdf-export-page .markdown-image {
+    break-inside: avoid;
+  }
+}

@@ -4,3 +4,8 @@ import { call } from "./client";
 export async function openExternal(url: string): Promise<void> {
   await call("open_external", { url });
 }
+
+/** 打开系统打印对话框打印当前页面（导出 PDF 时选择“存储为 PDF”）。 */
+export async function printPage(): Promise<void> {
+  await call("print_current_page");
+}

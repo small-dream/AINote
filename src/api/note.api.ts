@@ -8,6 +8,9 @@ export const noteApi = {
   /** content 为 null 时由后端按 kind 写入默认模板 */
   create: (path: string, kind: NoteKind, content: string | null) =>
     call<NoteMeta>("create_note", { path, kind, content }),
+  /** 导入外部 Markdown 内容为笔记（写入当前目录，重名自动加序号） */
+  importFromMarkdown: (dir: string, fileName: string, content: string) =>
+    call<NoteMeta>("import_note", { dir, fileName, content }),
   /** 新建文件夹（目录），已存在时幂等 */
   createFolder: (path: string) => call<null>("create_folder", { path }),
   update: (path: string, content: string) => call<null>("update_note", { path, content }),

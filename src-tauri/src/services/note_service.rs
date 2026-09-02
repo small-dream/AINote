@@ -46,6 +46,18 @@ pub fn create_folder(repo_path: &Path, rel: &str) -> Result<(), AppError> {
     Ok(())
 }
 
+/// 用例：导入外部 Markdown 内容为笔记（写入当前目录，重名自动加序号）。
+pub fn import_note(
+    repo_path: &Path,
+    dir: &str,
+    file_name: &str,
+    content: &str,
+) -> Result<NoteMeta, AppError> {
+    let rel = note_files::unique_note_path(repo_path, dir, file_name)?;
+    note_files::write_note(repo_path, &rel, content)?;
+    to_meta(repo_path, &repo_path.join(&rel))
+}
+
 /// 用例：读取笔记完整内容
 pub fn read_note(repo_path: &Path, rel: &str) -> Result<NoteContent, AppError> {
     let path = note_files::validate_rel_path(rel)?;
@@ -230,5 +242,25 @@ mod tests {
             .collect();
         assert_eq!(by_path["sub/x.md"], "标题X");
         assert_eq!(by_path["y.md"], "y");
+    }
+
+    #[test]
+    fn import_note_writes_to_current_dir_with_unique_name() {
+        let tmp = setup();
+        let root = tmp.path();
+        let meta = import_note(root, "", "README.md", "# 导入\n正文").unwrap();
+        assert_eq!(meta.path, "README.md");
+        assert_eq!(meta.kind, NoteKind::Markdown);
+        assert_eq!(meta.title, "导入");
+        assert_eq!(read_note(root, "README.md").unwrap().content, "# 导入\n正文");
+        // 重名自动加序号
+        let second = import_note(root, "", "README.md", "other").unwrap();
+        assert_eq!(second.path, "README-1.md");
+        // 子目录 + `.markdown` 归一化为 `.md`
+        let sub = import_note(root, "sub", "docs.markdown", "x").unwrap();
+        assert_eq!(sub.path, "sub/docs.md");
+        // 非法目录拒绝（路径穿越 / 隐藏段）
+        assert!(import_note(root, "../evil", "x.md", "y").is_err());
+        assert!(import_note(root, ".hidden", "x.md", "y").is_err());
     }
 }

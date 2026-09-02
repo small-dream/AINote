@@ -2,6 +2,7 @@ use std::fs;
 use std::path::{Component, Path, PathBuf};
 
 use crate::domain::error::AppError;
+use crate::repositories::asset_files;
 
 /// 仓库相对路径校验：拒绝空、绝对路径、`..`、以 `.` 开头的路径段（路径穿越防御）。
 pub fn validate_rel_path(rel: &str) -> Result<PathBuf, AppError> {
@@ -33,6 +34,29 @@ pub fn write_note(root: &Path, rel: &str, content: &str) -> Result<(), AppError>
         fs::create_dir_all(parent)?;
     }
     Ok(fs::write(path, content)?)
+}
+
+/// 导入外部 Markdown 笔记：在当前目录生成不冲突的 `<stem>.md` 目标路径（只计算不写入）。
+/// 文件名经规范化（复用资产文件名清理规则，兼容 CJK），扩展名统一归一化为 `.md`。
+pub fn unique_note_path(root: &Path, dir: &str, file_name: &str) -> Result<String, AppError> {
+    let dir = if dir.trim().is_empty() {
+        PathBuf::new()
+    } else {
+        validate_rel_path(dir)?
+    };
+    let sanitized = asset_files::sanitize_file_name(file_name);
+    let stem = Path::new(&sanitized)
+        .file_stem()
+        .map(|s| s.to_string_lossy().into_owned())
+        .filter(|s| !s.is_empty())
+        .unwrap_or_else(|| "imported".to_string());
+    let mut candidate = dir.join(format!("{stem}.md"));
+    let mut i = 1;
+    while root.join(&candidate).exists() {
+        candidate = dir.join(format!("{stem}-{i}.md"));
+        i += 1;
+    }
+    Ok(candidate.to_string_lossy().into_owned())
 }
 
 pub fn move_note(root: &Path, from: &str, to: &str) -> Result<(), AppError> {
@@ -128,5 +152,21 @@ mod tests {
             convert_note(&root, "nope.md", "nope.ainote", "{}"),
             Err(AppError::NoteNotFound(_))
         ));
+    }
+
+    #[test]
+    fn unique_note_path_normalizes_and_avoids_collisions() {
+        let (_t, root) = setup();
+        write_note(&root, "a.md", "# a").unwrap();
+        write_note(&root, "a-1.md", "# a1").unwrap();
+        assert_eq!(unique_note_path(&root, "", "a.md").unwrap(), "a-2.md");
+        // `.markdown` 统一归一化为 `.md`，并写入子目录
+        assert_eq!(
+            unique_note_path(&root, "sub", "notes.markdown").unwrap(),
+            "sub/notes.md"
+        );
+        // 非法文件名 / 目录拒绝
+        assert!(unique_note_path(&root, "../evil", "x.md").is_err());
+        assert!(unique_note_path(&root, ".hidden", "x.md").is_err());
     }
 }

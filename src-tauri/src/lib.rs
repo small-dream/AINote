@@ -29,6 +29,7 @@ pub fn run() {
             commands::ai::chat::ai_chat,
             commands::ai::chat_stream::ai_chat_stream,
             commands::note::create::create_note,
+            commands::note::import::import_note,
             commands::note::convert::convert_note,
             commands::note::create_folder::create_folder,
             commands::note::read::read_note,
@@ -70,6 +71,7 @@ pub fn run() {
             commands::asset::import::import_asset,
             commands::asset::import_bytes::import_asset_bytes,
             commands::app::open_external,
+            commands::print::print_current_page,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AINote");

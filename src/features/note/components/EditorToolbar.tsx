@@ -1,5 +1,5 @@
 import { Button } from "@/components/atoms/Button";
-import { ArrowLeftRight, FolderInput, History, Network, Split, Eye, Pencil } from "lucide-react";
+import { ArrowLeftRight, FolderInput, History, Network, Printer, Split, Eye, Pencil } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { NoteThemePicker } from "./NoteThemePicker";
 import { noteDisplayName } from "../utils/displayName";
@@ -19,6 +19,7 @@ interface EditorToolbarProps {
   onHistory: () => void;
   onWiki: () => void;
   onConvertToRichText?: () => void;
+  onExportPdf?: () => void;
   onAi?: () => void;
 }
 
@@ -29,7 +30,7 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
 ];
 
 /** 笔记操作栏：标题与保存状态、视图切换、文件操作。 */
-export function EditorToolbar({ path, mode, richText = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onAi }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, richText = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onAi }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -46,12 +47,24 @@ export function EditorToolbar({ path, mode, richText = false, saveError, onModeC
         {!richText && <NoteThemePicker />}
         <Button variant="ghost" aria-label={t("history.title")} title={t("history.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onHistory}><History size={14} /><span className="hidden xl:inline">{t("history.title")}</span></Button>
         <Button variant="ghost" aria-label={t("wiki.title")} title={t("wiki.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onWiki}><Network size={14} /><span className="hidden xl:inline">{t("wiki.title")}</span></Button>
+        {onExportPdf ? <ExportPdfButton onClick={onExportPdf} /> : null}
         {onAi ? <AiToolbarButton onOpen={onAi} /> : null}
         <ConvertButton richText={richText} onConvert={onConvertToRichText} />
         <Button variant="ghost" aria-label={t("note.moving")} title={t("note.moving")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onMove}><FolderInput size={14} /><span className="hidden xl:inline">{t("note.moving")}</span></Button>
       </div>
       <SaveErrorMessage message={saveError} onRetry={onSave} />
     </div>
+  );
+}
+
+function ExportPdfButton({ onClick }: { onClick: () => void }) {
+  const { t } = useTranslation();
+  const label = t("note.exportPdf");
+  return (
+    <Button variant="ghost" aria-label={label} title={label} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onClick}>
+      <Printer size={14} />
+      <span className="hidden xl:inline">{label}</span>
+    </Button>
   );
 }
 

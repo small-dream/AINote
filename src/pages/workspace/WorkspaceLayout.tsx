@@ -46,6 +46,7 @@ export function WorkspaceLayout({
           onRequestNew={actions.requestNew}
           onRequestFolder={actions.requestNewFolder}
           onRequestImport={actions.importFiles}
+          onRequestImportNotes={actions.importNotes}
           createDir={currentNotePath ? getDirectoryPath(currentNotePath) : ""}
           onSetMove={actions.setMoveTarget}
         />
@@ -91,6 +92,7 @@ interface WorkspaceColumnsProps {
   onRequestNew: (dir: string, kind?: import("@/api/types").NoteKind) => void;
   onRequestFolder: (dir: string) => void;
   onRequestImport: (files: File[]) => Promise<void>;
+  onRequestImportNotes: (dir: string, files: File[]) => Promise<void>;
   createDir: string;
   onSetMove: (path: string | null) => void;
 }
@@ -104,6 +106,7 @@ function WorkspaceColumns({
   onRequestNew,
   onRequestFolder,
   onRequestImport,
+  onRequestImportNotes,
   createDir,
   onSetMove,
 }: WorkspaceColumnsProps) {
@@ -116,6 +119,7 @@ function WorkspaceColumns({
         onRequestNew={onRequestNew}
         onRequestFolder={onRequestFolder}
         onRequestImport={onRequestImport}
+        onRequestImportNotes={onRequestImportNotes}
         createDir={createDir}
         onRequestMove={onSetMove}
       />

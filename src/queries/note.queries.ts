@@ -33,6 +33,13 @@ interface CreateNoteInput {
   content: string | null;
 }
 
+interface ImportNoteInput {
+  /** 目标目录（仓库相对路径，空串表示仓库根） */
+  dir: string;
+  fileName: string;
+  content: string;
+}
+
 /** 新建笔记：成功即本地 commit 版本化，并刷新列表/树/同步状态（P0-2） */
 export function useCreateNoteMutation() {
   const queryClient = useQueryClient();
@@ -43,6 +50,24 @@ export function useCreateNoteMutation() {
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
       void queryClient.removeQueries({ queryKey: ["note-content"] });
       void syncApi.commit(`note: create ${path}`).finally(() => {
+        void queryClient.invalidateQueries({ queryKey: ["sync"] });
+      });
+    },
+  });
+}
+
+/** 导入 Markdown 文件为笔记（写入当前目录，重名自动加序号）：成功即 commit 并刷新（P0-2） */
+export function useImportNoteMutation() {
+  const queryClient = useQueryClient();
+  const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
+  return useMutation({
+    mutationFn: ({ dir, fileName, content }: ImportNoteInput) =>
+      noteApi.importFromMarkdown(dir, fileName, content),
+    onSuccess: (note) => {
+      void queryClient.invalidateQueries({ queryKey: ["notes"] });
+      void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      markActivity();
+      void syncApi.commit(`note: import ${note.path}`).finally(() => {
         void queryClient.invalidateQueries({ queryKey: ["sync"] });
       });
     },
