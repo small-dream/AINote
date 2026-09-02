@@ -31,6 +31,8 @@ body {
 
 button, input, textarea { font: inherit; }
 button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+/* 侧边栏目录搜索框：聚焦态由外层容器高亮，输入框本身不再叠加浏览器/全局蓝色外框 */
+.tree-search-input:focus-visible { outline: none; box-shadow: none; }
 ::selection { background: color-mix(in srgb, var(--accent) 20%, transparent); }
 
 /* 全局细滚动条：统一桌面端 WebKit/WebView 与 Firefox 样式 */

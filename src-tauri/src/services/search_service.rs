@@ -52,16 +52,24 @@ pub fn search_notes(repo_path: &Path, query: &str) -> Result<Vec<SearchResult>, 
     Ok(results)
 }
 
-/// 纯函数：在标题与正文中查找首个命中（忽略大小写），返回片段与行号。
+/// 纯函数：在标题、路径与正文中查找首个命中（忽略大小写）。
+/// 正文命中优先返回片段与行号；文件名/路径/标题命中时以标题作为片段。
 pub fn match_note(path: &str, title: &str, content: &str, query: &str) -> Option<SearchResult> {
     let needle = query.trim().to_lowercase();
     if needle.is_empty() {
         return None;
     }
     let hay = content.to_lowercase();
-    let pos = hay.find(&needle)?;
-    let line = 1 + hay[..pos].bytes().filter(|&b| b == b'\n').count() as u32;
-    let snippet = line_snippet(content, line)?;
+    let (line, snippet) = match hay.find(&needle) {
+        Some(pos) => {
+            let line = 1 + hay[..pos].bytes().filter(|&b| b == b'\n').count() as u32;
+            (line, line_snippet(content, line)?)
+        }
+        None if path.to_lowercase().contains(&needle) || title.to_lowercase().contains(&needle) => {
+            (1, title.to_string())
+        }
+        None => return None,
+    };
     Some(SearchResult {
         path: path.to_string(),
         title: title.to_string(),
@@ -122,6 +130,18 @@ mod tests {
     }
 
     #[test]
+    fn match_matches_filename_and_path() {
+        let by_name = match_note("daily/新项目初次开发模板.md", "角色设定", "body", "新项目").unwrap();
+        assert_eq!(by_name.path, "daily/新项目初次开发模板.md");
+        assert_eq!(by_name.line, 1);
+        assert_eq!(by_name.snippet, "角色设定");
+
+        let by_dir = match_note("AI/notes.md", "标题", "body", "ai").unwrap();
+        assert_eq!(by_dir.path, "AI/notes.md");
+    }
+
+
+    #[test]
     fn snippet_truncates_long_lines() {
         let long = format!("prefix {}", "x".repeat(200));
         let r = match_note("a.md", "t", &long, "prefix").unwrap();
@@ -177,4 +197,5 @@ mod tests {
         assert_eq!(results[0].path, "r.ainote");
         assert!(results[0].snippet.contains("RustLang"));
     }
+
 }
