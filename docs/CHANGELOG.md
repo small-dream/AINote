@@ -1,5 +1,17 @@
 # 更新日志
 
+## v0.12.0 — 2026-09-02
+
+### AI 能力（新增）
+
+- 设置 → AI：支持 OpenAI 兼容 API 与 Ollama 本地端点，可配置 Base URL / 模型 / API Key / 启用开关；API Key 以 AES-256-GCM 加密存储，前端拿不到明文；未配置时编辑器与问答入口显示引导直达设置。
+- 编辑器 AI 写作：选中文本支持润色 / 翻译 / 缩写 / 扩写，光标处支持续写；结果先预览确认再落笔，Markdown（CodeMirror）与富文本（TipTap）编辑器均可用。
+- AI 问答面板：可基于「仅当前笔记」或「当前笔记 + 全库关键词检索」提问，回答以 Markdown 渲染并可一键插入笔记。
+- 流式输出（打字机效果）：写作与问答均按 SSE 增量实时展示，降低等待感知。
+- 一键生成笔记摘要：写入 frontmatter `summary`（可再次覆盖），正文保持不变。
+- 标题 / 大纲建议：标题建议产出候选列表、单选即替换首行标题；大纲建议产出层级大纲、可一键插入文末。
+- 架构：新增 `commands/ai`、`services/{ai_service,ai_store,secure_store}`、`repositories/llm.rs`、`domain/ai.rs` 与 `AI_6xxx` 错误域；前端新增 `features/ai`（写作 / 问答 / 建议）与 `settings/AiSettings`，错误与隐私边界沿用既有防腐化规范。
+
 ## v0.11.1 — 2026-09-02
 
 ### 缺陷修复
