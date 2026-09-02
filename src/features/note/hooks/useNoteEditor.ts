@@ -13,6 +13,7 @@ export interface NoteEditorHandle {
   flush: () => Promise<void>;
   setMode: (mode: "edit" | "split" | "preview") => void;
   insertCallout: () => void;
+  openHistory: () => void;
 }
 
 /** 编辑器状态编排：读取笔记 → 草稿 → 3s 防抖自动保存（P0-2）

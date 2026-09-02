@@ -184,24 +184,43 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
 .tree-context-menu {
   position: fixed;
   z-index: 50;
-  min-width: 188px;
-  padding: 5px;
+  min-width: 216px;
+  max-height: min(430px, calc(100dvh - 16px));
+  overflow-y: auto;
+  padding: 6px;
   border: 1px solid var(--border);
   border-radius: 8px;
   background: var(--bg-primary);
-  box-shadow: 0 8px 24px rgb(15 23 42 / 14%);
+  box-shadow: 0 5px 8px rgb(15 23 42 / 16%);
 }
 .tree-menu-heading {
-  max-width: 230px;
-  padding: 6px 9px 7px;
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+  padding: 5px 9px 8px;
   overflow: hidden;
+}
+.tree-menu-heading-type {
   color: var(--text-tertiary);
-  font-size: 11px;
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+.tree-menu-heading-name {
+  overflow: hidden;
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 .tree-menu-item {
-  display: block;
+  display: flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 9px;
   width: 100%;
   padding: 7px 9px;
   border-radius: 5px;
@@ -210,6 +229,7 @@ button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px
   text-align: left;
   transition: background-color 120ms ease-out, color 120ms ease-out;
 }
+.tree-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
 .tree-menu-item:hover { background: var(--bg-tertiary); }
 .tree-menu-danger { color: var(--danger); }
 .tree-menu-danger:hover { background: color-mix(in srgb, var(--danger) 9%, transparent); }

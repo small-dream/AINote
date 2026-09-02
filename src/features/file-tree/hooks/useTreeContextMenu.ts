@@ -15,7 +15,10 @@ export function useTreeContextMenu() {
   }, []);
   const open = (event: MouseEvent, node: TreeNode) => {
     event.preventDefault(); event.stopPropagation();
-    setMenu({ node, x: event.clientX, y: event.clientY });
+    const estimatedHeight = node.nodeType === "dir" ? 250 : 220;
+    const x = Math.min(event.clientX, Math.max(8, window.innerWidth - 232));
+    const y = Math.min(event.clientY, Math.max(8, window.innerHeight - estimatedHeight));
+    setMenu({ node, x, y });
   };
   const copy = async (path: string) => {
     if (navigator.clipboard) await navigator.clipboard.writeText(path);

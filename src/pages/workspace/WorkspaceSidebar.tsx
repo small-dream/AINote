@@ -13,6 +13,7 @@ interface WorkspaceSidebarProps {
   onRequestImportNotes: (dir: string, files: File[]) => Promise<void>;
   createDir?: string;
   onRequestMove: (path: string) => void;
+  onRequestHistory: (path: string) => void;
 }
 
 /** 侧边栏内容区；内容切换入口统一位于工作区导航轨道（P0-3 / P1-5 / P2-1）。 */
@@ -25,12 +26,13 @@ export function WorkspaceSidebar({
   onRequestImportNotes,
   createDir = "",
   onRequestMove,
+  onRequestHistory,
 }: WorkspaceSidebarProps) {
   const tab = useUiStore((s) => s.sidebarTab);
   return (
     <div className="flex min-h-0 w-[248px] shrink-0 flex-col border-r border-border bg-bg-secondary/80">
       {tab === "tree" ? (
-        <FileTree repoPath={repoPath} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} createDir={createDir} onRequestMove={onRequestMove} />
+        <FileTree repoPath={repoPath} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} createDir={createDir} onRequestMove={onRequestMove} onRequestHistory={onRequestHistory} />
       ) : tab === "tags" ? (
         <TagIndex repoPath={repoPath} onSelect={onSelect} />
       ) : (

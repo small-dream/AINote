@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { EditorView } from "@codemirror/view";
 import { useNoteEditor, type NoteEditorHandle } from "../hooks/useNoteEditor";
 import { useNoteHistory } from "@/features/history/hooks/useNoteHistory";
@@ -42,11 +42,13 @@ interface NoteEditorProps {
   onOpenNote: (path: string) => void;
   /** 新建打开时自动聚焦首行标题（P2） */
   focusTitleOnLoad?: boolean;
+  historyRequestPath?: string | null;
+  onHistoryRequestHandled?: () => void;
 }
 
 /** 笔记编辑器：按类型路由 Markdown（CodeMirror）或真富文本（TipTap）+ 防抖自动保存（P0-2） */
 export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
-  function NoteEditor({ repoPath, notePath, onMove, onOpenNote, focusTitleOnLoad = false }, ref) {
+  function NoteEditor({ repoPath, notePath, onMove, onOpenNote, focusTitleOnLoad = false, historyRequestPath = null, onHistoryRequestHandled }, ref) {
     const history = useNoteHistory();
     const [outlineOpen, setOutlineOpen] = useState(false);
     const { draft, kind, onChange, flush, loadError, saveError } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
@@ -71,25 +73,64 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const { ai, suggest, askAiOpen, closeAskAi, insertAnswer } = useEditorAi(viewRef, notePath, draft, onChange);
     useEditorScrollPersistence(readyView, previewRef, mode, { editorScrollTop, previewScrollTop, setEditorScrollTop, setPreviewScrollTop });
     useSyncScroll(readyView, previewRef, mode);
-    useImperativeHandle(ref, () => ({ flush, setMode, insertCallout: () => { if (viewRef.current) dispatchFormat(viewRef.current, insertCallout); viewRef.current?.focus(); } }), [flush, setMode, viewRef]);
+    useHistoryRequest(historyRequestPath, notePath, onHistoryRequestHandled, history.openHistory);
+    useImperativeHandle(ref, () => ({ flush, setMode, openHistory: history.openHistory, insertCallout: () => { if (viewRef.current) dispatchFormat(viewRef.current, insertCallout); viewRef.current?.focus(); } }), [flush, setMode, history.openHistory, viewRef]);
     const handleOutlineSelect = (item: OutlineItem) => selectOutline(item, mode, viewRef.current ?? readyView, previewRef.current);
 
-    if (!notePath) return <EmptyState />;
-    if (loadError) return <ErrorState message={loadError.message} />;
+    if (isEditorUnavailable(notePath, loadError)) return <EditorState notePath={notePath} error={loadError?.message ?? null} />;
+    const activePath = notePath as string;
     const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((o) => !o), onOutlineSelect: handleOutlineSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
 
-    return (
-      <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar path={notePath} mode={mode} richText={kind === "richText"} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={handleConvertToRichText} onExportPdf={() => void pdf.request()} {...(kind === "richText" ? {} : { onAi: ai.openMenu })} />
-        {kind === "richText" ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}
-        <AiWriteControls ai={ai} canSummarize={kind !== "richText"} canSuggest={kind !== "richText"} suggest={suggest} /><AskAiPanel open={askAiOpen} noteContent={draft} canInsert={kind !== "richText"} onInsert={insertAnswer} onClose={closeAskAi} />
-        <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
-        <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
-        <PdfExportOverlay open={pdf.open} title={pdf.title} kind={kind} content={draft} repoPath={repoPath} onClose={pdf.close} />
-      </div>
-    );
+    return <NoteEditorContent notePath={activePath} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} mode={mode} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} handleConvertNote={handleConvertNote} handleConvertToRichText={handleConvertToRichText} flush={flush} saveError={saveError?.message ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
   }
 );
+
+interface NoteEditorContentProps {
+  notePath: string;
+  repoPath: string | null;
+  kind: "markdown" | "richText";
+  draft: string;
+  onChange: (value: string) => void;
+  onMove: (path: string) => void;
+  onOpenNote: (path: string) => void;
+  mode: ViewMode;
+  setMode: (mode: ViewMode) => void;
+  setOutlineOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  outlineOpen: boolean;
+  surfaceProps: MarkdownEditorSurfaceProps;
+  handleConvertNote: (to: string, content: string) => void;
+  handleConvertToRichText: () => void;
+  flush: () => Promise<void>;
+  saveError: string | null;
+  history: ReturnType<typeof useNoteHistory>;
+  wiki: ReturnType<typeof useEditorWiki>;
+  ai: ReturnType<typeof useEditorAi>["ai"];
+  suggest: ReturnType<typeof useEditorAi>["suggest"];
+  askAiOpen: boolean;
+  closeAskAi: () => void;
+  insertAnswer: (text: string) => void;
+  pdf: ReturnType<typeof usePdfExport>;
+}
+
+function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, mode, setMode, setOutlineOpen, outlineOpen, surfaceProps, handleConvertNote, handleConvertToRichText, flush, saveError, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf }: NoteEditorContentProps) {
+  const richText = kind === "richText";
+  return <div className="flex h-full min-h-0 flex-col bg-bg-primary">
+    <EditorToolbar path={notePath} mode={mode} richText={richText} saveError={saveError} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={handleConvertToRichText} onExportPdf={() => void pdf.request()} {...(richText ? {} : { onAi: ai.openMenu })} />
+    {richText ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}
+    <AiWriteControls ai={ai} canSummarize={!richText} canSuggest={!richText} suggest={suggest} /><AskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} />
+    <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
+    <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
+    <PdfExportOverlay open={pdf.open} title={pdf.title} kind={kind} content={draft} repoPath={repoPath} onClose={pdf.close} />
+  </div>;
+}
+
+function useHistoryRequest(requestPath: string | null, notePath: string | null, onHandled: (() => void) | undefined, openHistory: () => void) {
+  useEffect(() => {
+    if (requestPath !== notePath || !notePath) return;
+    openHistory();
+    onHandled?.();
+  }, [requestPath, notePath, onHandled, openHistory]);
+}
 
 /** Markdown 编辑器的 AI 写作 + 问答面板编排（收敛接线，避免组件超长） */
 function useEditorAi(viewRef: React.RefObject<EditorView | null>, notePath: string | null, draft: string, onChange: (value: string) => void) {
@@ -153,4 +194,12 @@ function ErrorState({ message }: { message: string }) {
       {t("note.loadFailed", { message })}
     </div>
   );
+}
+
+function EditorState({ notePath, error }: { notePath: string | null; error: string | null }) {
+  return notePath ? <ErrorState message={error ?? ""} /> : <EmptyState />;
+}
+
+function isEditorUnavailable(notePath: string | null, error: unknown): boolean {
+  return notePath === null || error !== null;
 }

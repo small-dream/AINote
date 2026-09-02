@@ -1,4 +1,4 @@
-import type { RefObject } from "react";
+import { useState, type RefObject } from "react";
 import { NewFolderDialog } from "@/features/file-tree/components/NewFolderDialog";
 import { MoveNoteDialog } from "@/features/note/components/MoveNoteDialog";
 import {
@@ -33,6 +33,11 @@ export function WorkspaceLayout({
   onSelect,
   onMoved,
 }: WorkspaceLayoutProps) {
+  const [historyRequestPath, setHistoryRequestPath] = useState<string | null>(null);
+  const requestHistory = (path: string) => {
+    setHistoryRequestPath(path);
+    onSelect(path);
+  };
   return (
     <div className="flex h-dvh min-h-0 overflow-hidden bg-bg-tertiary/55">
       <WorkspaceNavRail repoPath={repoPath} startupSyncing={startupSyncing} />
@@ -43,6 +48,9 @@ export function WorkspaceLayout({
           createdPath={actions.createdPath}
           editorRef={editorRef}
           onSelect={onSelect}
+          onRequestHistory={requestHistory}
+          historyRequestPath={historyRequestPath}
+          onHistoryRequestHandled={() => setHistoryRequestPath(null)}
           onRequestNew={actions.requestNew}
           onRequestFolder={actions.requestNewFolder}
           onRequestImport={actions.importFiles}
@@ -89,6 +97,9 @@ interface WorkspaceColumnsProps {
   createdPath: string | null;
   editorRef: RefObject<NoteEditorHandle | null>;
   onSelect: (path: string) => void;
+  onRequestHistory: (path: string) => void;
+  historyRequestPath: string | null;
+  onHistoryRequestHandled: () => void;
   onRequestNew: (dir: string, kind?: import("@/api/types").NoteKind) => void;
   onRequestFolder: (dir: string) => void;
   onRequestImport: (files: File[]) => Promise<void>;
@@ -103,6 +114,9 @@ function WorkspaceColumns({
   createdPath,
   editorRef,
   onSelect,
+  onRequestHistory,
+  historyRequestPath,
+  onHistoryRequestHandled,
   onRequestNew,
   onRequestFolder,
   onRequestImport,
@@ -110,7 +124,6 @@ function WorkspaceColumns({
   createDir,
   onSetMove,
 }: WorkspaceColumnsProps) {
-  const { t } = useTranslation();
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <WorkspaceSidebar
@@ -122,19 +135,29 @@ function WorkspaceColumns({
         onRequestImportNotes={onRequestImportNotes}
         createDir={createDir}
         onRequestMove={onSetMove}
+        onRequestHistory={onRequestHistory}
       />
-      <section className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary" aria-label={t("app.noteContent")}>
-        <NoteEditor
-          ref={editorRef}
-          repoPath={repoPath}
-          notePath={currentNotePath}
-          onMove={onSetMove}
-          onOpenNote={onSelect}
-          focusTitleOnLoad={currentNotePath === createdPath}
-        />
-      </section>
+      <EditorPane repoPath={repoPath} currentNotePath={currentNotePath} createdPath={createdPath} editorRef={editorRef} onSelect={onSelect} onSetMove={onSetMove} historyRequestPath={historyRequestPath} onHistoryRequestHandled={onHistoryRequestHandled} />
     </div>
   );
+}
+
+interface EditorPaneProps {
+  repoPath: string | null;
+  currentNotePath: string | null;
+  createdPath: string | null;
+  editorRef: RefObject<NoteEditorHandle | null>;
+  onSelect: (path: string) => void;
+  onSetMove: (path: string | null) => void;
+  historyRequestPath: string | null;
+  onHistoryRequestHandled: () => void;
+}
+
+function EditorPane({ repoPath, currentNotePath, createdPath, editorRef, onSelect, onSetMove, historyRequestPath, onHistoryRequestHandled }: EditorPaneProps) {
+  const { t } = useTranslation();
+  return <section className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary" aria-label={t("app.noteContent")}>
+    <NoteEditor ref={editorRef} repoPath={repoPath} notePath={currentNotePath} onMove={onSetMove} onOpenNote={onSelect} historyRequestPath={historyRequestPath} onHistoryRequestHandled={onHistoryRequestHandled} focusTitleOnLoad={currentNotePath === createdPath} />
+  </section>;
 }
 
 interface LayoutDialogsProps {
