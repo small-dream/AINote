@@ -61,12 +61,12 @@ describe("planSoftRender 行内强调", () => {
 });
 
 describe("planSoftRender 列表", () => {
-  it("无序列表渲染圆点，光标所在项淡显 marker", () => {
+  it("无序列表始终渲染圆点，光标所在项也隐藏标记", () => {
     const text = "- a\n- b";
     const plan = planFor(text, text.length - 1);
-    expect(plan.widgets.filter((w) => w.kind === "bullet")).toHaveLength(1);
-    const active = planFor(text, 5);
-    expect(active.hides.some((h) => h.reveal && h.from === 4)).toBe(true);
+    expect(plan.widgets.filter((w) => w.kind === "bullet")).toHaveLength(2);
+    expect(plan.widgets.some((w) => w.from === 4)).toBe(true);
+    expect(plan.hides.some((h) => h.reveal && h.from === 4)).toBe(false);
   });
 
   it("有序列表按序号渲染", () => {

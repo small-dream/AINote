@@ -110,16 +110,14 @@ export function planBlockquote(
 export function planList(
   node: SyntaxNode,
   doc: string,
-  cursor: number,
   plan: SoftRenderPlan,
   kind: "bullet" | "ordered",
-  selectionTo?: number,
 ): void {
   const items = collectListItems(node);
   if (items.length === 0) return;
   const firstMark = items[0]?.mark;
   const base = kind === "ordered" && firstMark ? parseOrderedMarker(doc.slice(firstMark.from, firstMark.to)) : null;
-  items.forEach((item, index) => emitListItem(item, doc, kind, cursor, plan, selectionTo, base, index));
+  items.forEach((item, index) => emitListItem(item, doc, kind, plan, base, index));
 }
 
 interface ListItemInfo {
@@ -142,20 +140,15 @@ function emitListItem(
   item: ListItemInfo,
   doc: string,
   kind: "bullet" | "ordered",
-  cursor: number,
   plan: SoftRenderPlan,
-  selectionTo: number | undefined,
   base: number | null,
   index: number,
 ): void {
   const { child, mark } = item;
   const ordinal = index + 1;
   const number = base !== null ? base + ordinal - 1 : ordinal;
-  const inItem = isActiveRange(child.from, child.to, cursor, selectionTo);
   if (child.getChild("Task")) {
     plan.hides.push({ from: mark.from, to: listMarkEnd(mark, doc), reveal: false });
-  } else if (inItem) {
-    plan.hides.push({ from: mark.from, to: listMarkEnd(mark, doc), reveal: true });
   } else {
     plan.widgets.push(toListWidget(kind, mark, listMarkEnd(mark, doc), number));
   }
