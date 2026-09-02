@@ -7,7 +7,7 @@ import { useRichTextEditor } from "../hooks/useRichTextEditor";
 import { useRichTextOutline } from "../hooks/useRichTextOutline";
 import { useUiStore } from "@/stores/ui.store";
 import { swapNoteExtension } from "@/features/note/utils/noteKind";
-import { NoteOutline } from "@/features/note/components/NoteOutline";
+import { NoteOutlineFloating } from "@/features/note/components/NoteOutlineFloating";
 import type { OutlineItem } from "@/features/note/utils/outline";
 import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
 import { AiWriteControls } from "@/features/ai/components/AiWriteControls";
@@ -27,14 +27,15 @@ interface RichTextEditorProps {
   notePath: string;
   /** 请求把当前富文本转换为 Markdown；to 为目标路径，content 为已转换的 Markdown */
   onConvert?: (to: string, content: string) => void;
-  /** 是否显示左侧大纲（工具栏大纲开关） */
+  /** 是否保持大纲浮层展开 */
   outlineOpen?: boolean;
+  onOutlineToggle?: () => void;
 }
 
 /** 真富文本所见即所得编辑器：TipTap 读写 TipTap JSON。
  * 支持图片/表格/任务列表、斜杠命令、双链与标签 mark、Markdown 互转导出。
  * 通过父组件 key 重挂载以切换笔记；异步加载的 content 会由 hook 同步到编辑器。 */
-export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, onConvert, outlineOpen = false }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, onConvert, outlineOpen = false, onOutlineToggle = () => undefined }: RichTextEditorProps) {
   const { editor, handleFiles, status, exportMarkdown, importMarkdown } = useRichTextEditor({ content, onChange, repoPath });
   const outline = useRichTextOutline(editor);
   const openTagIndex = useUiStore((s) => s.openTagIndex);
@@ -45,12 +46,8 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
       <div className="flex items-center"><RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} onExportMarkdown={exportMarkdown} onImportMarkdown={importMarkdown} onConvertToMarkdown={() => convertToMarkdown(editor, notePath, onConvert)} /><AiToolbarButton onOpen={ai.openMenu} /></div>
       <RichTextBubbleMenu editor={editor} />
       <AiWriteControls ai={ai} />
-      <div className="flex min-h-0 flex-1 overflow-hidden">
-        {outlineOpen && outline.length > 0 ? (
-          <aside className="note-outline-rail w-64 shrink-0 overflow-y-auto border-r border-border bg-bg-secondary">
-            <NoteOutline items={outline} onSelect={(item) => scrollToOutline(editor, item)} />
-          </aside>
-        ) : null}
+      <div className="relative flex min-h-0 flex-1 overflow-hidden">
+        <NoteOutlineFloating items={outline} open={outlineOpen} onToggle={onOutlineToggle} onSelect={(item) => scrollToOutline(editor, item)} />
         <EditorContent editor={editor} className="rich-text-scroll min-h-0 flex-1 overflow-y-auto px-8 py-4" />
       </div>
     </div>
@@ -86,6 +83,12 @@ function handleEditorClick(event: MouseEvent<HTMLDivElement>, onOpenWiki?: (name
 /** 大纲点击：定位到对应标题并聚焦编辑器。 */
 function scrollToOutline(editor: Editor | null, item: OutlineItem): void {
   if (!editor) return;
-  editor.view.dom.querySelectorAll("h1, h2, h3, h4, h5, h6")[item.line]?.scrollIntoView({ block: "start" });
-  editor.commands.focus();
+  const headings = editor.view.dom.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6");
+  const heading = headings[item.line];
+  const scrollContainer = editor.view.dom.closest<HTMLElement>(".rich-text-scroll");
+  if (heading && scrollContainer) {
+    const offset = heading.getBoundingClientRect().top - scrollContainer.getBoundingClientRect().top;
+    scrollContainer.scrollTop += offset - 16;
+  }
+  editor.commands.focus(null, { scrollIntoView: false });
 }

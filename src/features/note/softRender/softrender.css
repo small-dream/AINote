@@ -4,6 +4,18 @@
   line-height: 1.65;
 }
 
+/* 软渲染正文与预览保持一致的阅读留白；滚动条仍贴合编辑区右侧。 */
+.note-theme-surface .cm-soft-render-shell {
+  height: 100%;
+}
+.note-theme-surface .cm-soft-render-shell .cm-editor,
+.note-theme-surface .cm-soft-render-shell .cm-scroller {
+  height: 100%;
+}
+.note-theme-surface .cm-soft-render-shell .cm-editor .cm-content {
+  padding: 1.25rem 3rem 1.5rem;
+}
+
 .cm-sr-h1,
 .cm-sr-h2,
 .cm-sr-h3,
@@ -245,4 +257,10 @@
 .cm-sr-mermaid svg {
   max-width: 100%;
   height: auto;
+}
+
+@media (max-width: 640px) {
+  .note-theme-surface .cm-soft-render-shell .cm-editor .cm-content {
+    padding: 1rem;
+  }
 }

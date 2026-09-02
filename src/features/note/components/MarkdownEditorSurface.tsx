@@ -5,7 +5,7 @@ import type { NoteWikiDto } from "@/api/types";
 import CodeMirror from "@uiw/react-codemirror";
 import { MarkdownPreview } from "./MarkdownPreview";
 import { SplitPane } from "./SplitPane";
-import { NoteOutline } from "./NoteOutline";
+import { NoteOutlineFloating } from "./NoteOutlineFloating";
 import { FormatToolbar } from "./FormatToolbar";
 import type { ViewMode } from "./EditorToolbar";
 import type { OutlineItem } from "../utils/outline";
@@ -26,6 +26,7 @@ export interface MarkdownEditorSurfaceProps {
   onRatioChange: (ratio: number) => void;
   outline: OutlineItem[];
   outlineOpen: boolean;
+  onOutlineToggle: () => void;
   onOutlineSelect: (item: OutlineItem) => void;
   viewRef: RefObject<EditorView | null>;
   activeFormats: Set<string>;
@@ -36,11 +37,11 @@ export interface MarkdownEditorSurfaceProps {
 }
 
 /** Markdown 编辑器主体：大纲 + 格式工具栏 + 编辑/分栏/预览三模式（P0-2） */
-export function MarkdownEditorSurface({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineSelect, viewRef, activeFormats, onImagePicked, assetStatus, softRender = true }: MarkdownEditorSurfaceProps) {
+export function MarkdownEditorSurface({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, viewRef, activeFormats, onImagePicked, assetStatus, softRender = true }: MarkdownEditorSurfaceProps) {
   return (
     <>
       {mode !== "preview" ? <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={onImagePicked} status={assetStatus} /> : null}
-      <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} previewRef={previewRef} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} ratio={ratio} onRatioChange={onRatioChange} outline={outline} outlineOpen={outlineOpen} onOutlineSelect={onOutlineSelect} softRender={softRender} />
+      <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} previewRef={previewRef} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} ratio={ratio} onRatioChange={onRatioChange} outline={outline} outlineOpen={outlineOpen} onOutlineToggle={onOutlineToggle} onOutlineSelect={onOutlineSelect} softRender={softRender} />
     </>
   );
 }
@@ -60,37 +61,38 @@ interface EditorBodyProps {
   onRatioChange: (ratio: number) => void;
   outline: OutlineItem[];
   outlineOpen: boolean;
+  onOutlineToggle: () => void;
   onOutlineSelect: (item: OutlineItem) => void;
   softRender: boolean;
 }
 
-function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineSelect, softRender }: EditorBodyProps) {
-  const editor = <CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" basicSetup={{ syntaxHighlighting: !softRender, lineNumbers: !softRender, highlightActiveLineGutter: !softRender }} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} />;
-  const outlineRail = outlineOpen ? (
-    <aside className="note-outline-rail w-64 shrink-0 overflow-y-auto border-r border-border bg-bg-secondary">
-      <NoteOutline items={outline} onSelect={onOutlineSelect} />
-    </aside>
-  ) : null;
+function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, softRender }: EditorBodyProps) {
+  const editor = <EditorShell softRender={softRender}><CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" basicSetup={{ syntaxHighlighting: !softRender, lineNumbers: !softRender, highlightActiveLineGutter: !softRender, foldGutter: false }} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} /></EditorShell>;
+  const outlineFloat = <NoteOutlineFloating items={outline} open={outlineOpen} onToggle={onOutlineToggle} onSelect={onOutlineSelect} />;
   if (mode === "split") {
     return (
-      <div data-note-theme={noteTheme} className="note-theme-surface flex min-h-0 flex-1 overflow-hidden">
-        {outlineRail}
+      <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
+        {outlineFloat}
         <SplitPane ratio={ratio} onRatioChange={onRatioChange} left={editor} right={<div ref={previewRef} className="note-preview-pane h-full overflow-y-auto p-6"><MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} /></div>} />
       </div>
     );
   }
   if (mode === "preview") {
     return (
-      <div data-note-theme={noteTheme} className="note-theme-surface flex min-h-0 flex-1 overflow-hidden">
-        {outlineRail}
+      <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
+        {outlineFloat}
         <div ref={previewRef} className="note-preview-pane min-h-0 flex-1 overflow-y-auto p-6"><MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} /></div>
       </div>
     );
   }
   return (
-    <div data-note-theme={noteTheme} className="note-theme-surface flex min-h-0 flex-1 overflow-hidden">
-      {outlineRail}
+    <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
+      {outlineFloat}
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{editor}</div>
     </div>
   );
+}
+
+function EditorShell({ softRender, children }: { softRender: boolean; children: React.ReactNode }) {
+  return <div className={softRender ? "cm-soft-render-shell h-full" : "h-full"}>{children}</div>;
 }

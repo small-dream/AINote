@@ -336,13 +336,74 @@ pre,
 }
 .markdown-outline-panel button:hover { background: var(--bg-tertiary); color: var(--text-primary); }
 .markdown-outline-empty { padding: 0.7rem 1.5rem; border-bottom: 1px solid var(--border); color: var(--text-tertiary); font-size: 12px; }
-.note-outline-rail .markdown-outline-panel {
+.note-outline-floating {
+  position: absolute;
+  z-index: 20;
+  top: 1rem;
+  left: 1rem;
+}
+.note-outline-floating-trigger {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid var(--border);
+  background: color-mix(in srgb, var(--bg-primary) 94%, transparent);
+  box-shadow: 0 4px 8px rgb(15 23 42 / 12%);
+  color: var(--text-secondary);
+}
+.note-outline-floating-trigger:hover,
+.note-outline-floating-trigger.is-open {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+.note-outline-floating-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  width: 240px;
+  max-width: min(240px, calc(100vw - 2rem));
+  max-height: min(420px, calc(100dvh - 8rem));
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--bg-primary);
+  box-shadow: 0 6px 8px rgb(15 23 42 / 14%);
+  visibility: hidden;
+  opacity: 0;
+  transform: translateY(-4px) scale(0.98);
+  pointer-events: none;
+  transition: opacity 160ms ease-out, transform 160ms ease-out, visibility 0s linear 160ms;
+}
+.note-outline-floating-panel.is-visible {
+  visibility: visible;
+  opacity: 1;
+  transform: translateY(0) scale(1);
+  pointer-events: auto;
+  transition-delay: 0s;
+}
+.note-outline-floating-panel .markdown-outline-panel {
   max-height: none;
-  padding: 1rem 0.75rem 1.25rem;
+  padding: 0.7rem;
   border-bottom: none;
   background: transparent;
 }
-.note-outline-rail .markdown-outline-empty { border-bottom: none; }
+.note-outline-floating-panel .markdown-outline-title {
+  padding: 0 0.35rem 0.35rem;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.note-outline-floating-panel .markdown-outline-empty { padding: 0.45rem 0.35rem 0.25rem; }
+.note-outline-floating-panel .markdown-outline-panel button { padding: 5px 6px; }
+@media (max-width: 640px) {
+  .note-outline-floating { top: 0.5rem; left: 0.5rem; }
+  .note-outline-floating-panel { max-width: calc(100vw - 1rem); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .note-outline-floating-panel { transition: none; }
+}
 .markdown-code-toolbar button:hover { color: var(--accent); }
 .markdown-code-block .hljs-comment,
 .markdown-code-block .hljs-quote { color: var(--text-tertiary); }

@@ -11,7 +11,7 @@ import { useAssetImport } from "@/features/asset/hooks/useAssetImport";
 import { useEditorWiki } from "@/features/wiki/hooks/useEditorWiki";
 import { HistoryPanel } from "@/features/history/components/HistoryPanel";
 import { WikiPanel } from "@/features/wiki/components/WikiPanel";
-import { EditorToolbar } from "./EditorToolbar";
+import { EditorToolbar, type ViewMode } from "./EditorToolbar";
 import { MarkdownEditorSurface, type MarkdownEditorSurfaceProps } from "./MarkdownEditorSurface";
 import { extractOutline, type OutlineItem } from "../utils/outline";
 import { useTranslation } from "@/i18n";
@@ -71,16 +71,16 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     useEditorScrollPersistence(readyView, previewRef, mode, { editorScrollTop, previewScrollTop, setEditorScrollTop, setPreviewScrollTop });
     useSyncScroll(readyView, previewRef, mode);
     useImperativeHandle(ref, () => ({ flush, setMode, insertCallout: () => { if (viewRef.current) dispatchFormat(viewRef.current, insertCallout); viewRef.current?.focus(); } }), [flush, setMode, viewRef]);
-    const handleOutlineSelect = (item: OutlineItem) => { if (mode !== "preview" && readyView) { const line = readyView.state.doc.line(Math.min(item.line, readyView.state.doc.lines)); readyView.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: "center" }) }); readyView.focus(); } if (mode !== "edit") scrollPreviewToHeading(previewRef.current, item.id); };
+    const handleOutlineSelect = (item: OutlineItem) => selectOutline(item, mode, viewRef.current ?? readyView, previewRef.current);
 
     if (!notePath) return <EmptyState />;
     if (loadError) return <ErrorState message={loadError.message} />;
-    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineSelect: handleOutlineSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
+    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((o) => !o), onOutlineSelect: handleOutlineSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
 
     return (
       <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-        <EditorToolbar path={notePath} mode={mode} richText={kind === "richText"} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onOutline={() => setOutlineOpen((o) => !o)} onConvertToRichText={handleConvertToRichText} {...(kind === "richText" ? {} : { onAi: ai.openMenu })} />
-        {kind === "richText" ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} outlineOpen={outlineOpen} /> : <MarkdownEditorSurface {...surfaceProps} />}
+        <EditorToolbar path={notePath} mode={mode} richText={kind === "richText"} saveError={saveError?.message ?? null} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={handleConvertToRichText} {...(kind === "richText" ? {} : { onAi: ai.openMenu })} />
+        {kind === "richText" ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}
         <AiWriteControls ai={ai} canSummarize={kind !== "richText"} canSuggest={kind !== "richText"} suggest={suggest} /><AskAiPanel open={askAiOpen} noteContent={draft} canInsert={kind !== "richText"} onInsert={insertAnswer} onClose={closeAskAi} />
         <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
         <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
@@ -107,9 +107,32 @@ function useEditorAi(viewRef: React.RefObject<EditorView | null>, notePath: stri
   return { ai, suggest, askAiOpen, closeAskAi, insertAnswer };
 }
 
-function scrollPreviewToHeading(preview: HTMLDivElement | null, id: string): void {
-  const heading = preview ? Array.from(preview.querySelectorAll<HTMLElement>("[id]")).find((element) => element.id === id) : null;
-  heading?.scrollIntoView?.({ block: "center" });
+function scrollPreviewToHeading(preview: HTMLDivElement | null, item: OutlineItem): void {
+  if (!preview) return;
+  const headings = preview.querySelectorAll<HTMLElement>("h1, h2, h3, h4, h5, h6");
+  const line = String(item.line);
+  const heading = Array.from(headings).find((element) => element.dataset.line === line)
+    ?? Array.from(headings).find((element) => element.id === item.id);
+  if (!heading) return;
+  heading.scrollIntoView({ block: "center", inline: "nearest", behavior: "auto" });
+  alignPreviewHeading(preview, heading);
+  globalThis.requestAnimationFrame?.(() => alignPreviewHeading(preview, heading));
+}
+
+function alignPreviewHeading(preview: HTMLDivElement, heading: HTMLElement): void {
+  const previewRect = preview.getBoundingClientRect();
+  const headingRect = heading.getBoundingClientRect();
+  const target = preview.scrollTop + headingRect.top - previewRect.top - (preview.clientHeight - headingRect.height) / 2;
+  preview.scrollTop = Math.max(0, target);
+}
+
+function selectOutline(item: OutlineItem, mode: ViewMode, editorView: EditorView | null, preview: HTMLDivElement | null): void {
+  if (mode !== "preview" && editorView?.dom.isConnected) {
+    const line = editorView.state.doc.line(Math.min(item.line, editorView.state.doc.lines));
+    editorView.dispatch({ selection: { anchor: line.from }, effects: EditorView.scrollIntoView(line.from, { y: "center" }) });
+    editorView.focus();
+  }
+  if (mode !== "edit") scrollPreviewToHeading(preview, item);
 }
 
 function EmptyState() {

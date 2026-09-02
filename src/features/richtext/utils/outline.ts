@@ -15,8 +15,8 @@ export function extractRichTextOutline(doc: JSONContent): OutlineItem[] {
         const count = ids.get(base) ?? 0;
         ids.set(base, count + 1);
         items.push({ id: count === 0 ? base : `${base}-${count + 1}`, text, level: headingLevel(node), line: index });
+        index += 1;
       }
-      index += 1;
     }
     for (const child of node.content ?? []) visit(child);
   };

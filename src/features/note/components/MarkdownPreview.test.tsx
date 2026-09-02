@@ -96,6 +96,13 @@ describe("MarkdownPreview P1 预览增强", () => {
     expect(container.querySelector("h1")?.id).toBe("hello-世界");
   });
 
+  it("内容更新后重新生成标题锚点", () => {
+    const { container, rerender } = render(<MarkdownPreview content={"# 旧标题"} />);
+    rerender(<MarkdownPreview content={"# 新标题"} />);
+
+    expect(container.querySelector("h1")?.id).toBe("新标题");
+  });
+
   it("代码块显示语言和复制操作", () => {
     const { container } = render(<MarkdownPreview content={"```ts\nconst answer = 42;\n```"} />);
     expect(container.querySelector(".markdown-code-toolbar")?.textContent).toContain("ts");

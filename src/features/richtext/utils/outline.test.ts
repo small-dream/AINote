@@ -57,6 +57,17 @@ describe("extractRichTextOutline 过滤", () => {
 });
 
 describe("extractRichTextOutline 边界", () => {
+  it("空标题不占用后续标题的定位序号", () => {
+    const doc: JSONContent = {
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 1 } },
+        { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "有效标题" }] },
+      ],
+    };
+    expect(extractRichTextOutline(doc)).toMatchObject([{ text: "有效标题", line: 0 }]);
+  });
+
   it("重复标题生成唯一 id", () => {
     const doc: JSONContent = {
       type: "doc",
