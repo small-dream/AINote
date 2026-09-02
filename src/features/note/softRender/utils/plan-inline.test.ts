@@ -32,18 +32,18 @@ describe("planSoftRender 行内强调", () => {
     expect(findMark(plan, "cm-sr-strike")).toMatchObject({ from: s + 2, to: s + 8 });
   });
 
-  it("光标进入强调元素时淡显标记", () => {
+  it("光标进入强调元素时标记仍隐藏，保持渲染效果", () => {
     const text = "**bold**";
-    const revealed = planFor(text, 3).hides.filter((h) => h.reveal);
-    expect(revealed).toHaveLength(2);
-    expect(revealed[0]?.from).toBe(0);
-    expect(revealed[1]?.from).toBe(6);
+    const hides = planFor(text, 3).hides.filter((h) => h.from === 0 || h.from === 6);
+    expect(hides).toHaveLength(2);
+    expect(hides.every((h) => h.reveal === false)).toBe(true);
   });
 
-  it("选区命中强调元素时淡显标记", () => {
+  it("选区命中强调元素时标记仍隐藏，保持渲染效果", () => {
     const text = "**bold**";
-    const revealed = planFor(text, 0, 6).hides.filter((h) => h.reveal);
-    expect(revealed).toHaveLength(2);
+    const hides = planFor(text, 0, 6).hides.filter((h) => h.from === 0 || h.from === 6);
+    expect(hides).toHaveLength(2);
+    expect(hides.every((h) => h.reveal === false)).toBe(true);
   });
 
   it("行内代码隐藏反引号", () => {

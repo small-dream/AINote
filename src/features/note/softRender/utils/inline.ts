@@ -9,40 +9,25 @@ export type InlineHandler = (
   plan: SoftRenderPlan,
 ) => void;
 
-/** 成对标记的行内元素（加粗/斜体/删除线）：隐藏标记，正文套样式；光标进入时淡显标记。 */
-export function planMarkedPair(
-  node: SyntaxNode,
-  markName: string,
-  cls: string,
-  cursor: number,
-  plan: SoftRenderPlan,
-  selectionTo?: number,
-): void {
+/** 成对标记的行内元素（加粗/斜体/删除线）：始终隐藏标记，正文套样式，编辑时保持渲染效果。 */
+export function planMarkedPair(node: SyntaxNode, markName: string, cls: string, plan: SoftRenderPlan): void {
   const marks = node.getChildren(markName);
   if (marks.length < 2) return;
   const first = marks[0];
   const last = marks[marks.length - 1];
   if (!first || !last) return;
-  const active = isActiveRange(node.from, node.to, cursor, selectionTo);
-  for (const mark of marks) plan.hides.push({ from: mark.from, to: mark.to, reveal: active });
+  for (const mark of marks) plan.hides.push({ from: mark.from, to: mark.to, reveal: false });
   if (first.to < last.from) plan.marks.push({ from: first.to, to: last.from, cls });
 }
 
-/** 行内代码：隐藏反引号，内容按代码片渲染；光标进入时淡显反引号。 */
-export function planInlineCode(
-  node: SyntaxNode,
-  _doc: string,
-  cursor: number,
-  plan: SoftRenderPlan,
-  selectionTo?: number,
-): void {
+/** 行内代码：始终隐藏反引号，内容按代码片渲染，编辑时保持渲染效果。 */
+export function planInlineCode(node: SyntaxNode, _doc: string, _cursor: number, plan: SoftRenderPlan): void {
   const marks = node.getChildren("CodeMark");
   if (marks.length < 2) return;
   const first = marks[0];
   const last = marks[marks.length - 1];
   if (!first || !last) return;
-  const active = isActiveRange(node.from, node.to, cursor, selectionTo);
-  for (const mark of marks) plan.hides.push({ from: mark.from, to: mark.to, reveal: active });
+  for (const mark of marks) plan.hides.push({ from: mark.from, to: mark.to, reveal: false });
   plan.marks.push({ from: first.to, to: last.from, cls: "cm-sr-inline-code" });
 }
 
