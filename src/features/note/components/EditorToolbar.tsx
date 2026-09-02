@@ -1,9 +1,10 @@
-import { Button } from "@/components/atoms/Button";
-import { ArrowLeftRight, FolderInput, History, Network, Printer, Split, Eye, Pencil } from "lucide-react";
+import { Eye, History, Link2, Pencil, Split, type LucideIcon } from "lucide-react";
+import { IconButton } from "@/components/atoms/IconButton";
 import { useTranslation } from "@/i18n";
 import { NoteThemePicker } from "./NoteThemePicker";
 import { noteDisplayName } from "../utils/displayName";
 import { AiToolbarButton } from "@/features/ai/components/AiToolbarButton";
+import { ToolbarOverflowMenu } from "./ToolbarOverflowMenu";
 
 export type ViewMode = "edit" | "split" | "preview";
 
@@ -29,86 +30,101 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
   { key: "preview", labelKey: "note.preview" },
 ];
 
-/** 笔记操作栏：标题与保存状态、视图切换、文件操作。 */
+/** 笔记操作栏：左侧标题锚点，右侧按「高频视图 → 中频工具 → 低频文件操作」分层分组。 */
 export function EditorToolbar({ path, mode, richText = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onAi }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
       data-tauri-drag-region="deep"
-      className="flex min-h-14 items-center justify-between gap-4 border-b border-border bg-bg-primary px-6 py-2.5"
+      className="flex min-h-16 items-center justify-between gap-4 border-b border-border bg-bg-primary px-6 py-2.5"
     >
       <div className="flex min-w-0 items-center gap-3">
-        <div className="min-w-0">
-          <span className="truncate text-[15px] font-semibold tracking-[-0.01em]">{noteDisplayName(path.split("/").at(-1) ?? path)}</span>
+        <span className="truncate text-[15px] font-semibold tracking-[-0.01em]">
+          {noteDisplayName(path.split("/").at(-1) ?? path)}
+        </span>
+      </div>
+
+      <div className="flex shrink-0 items-center gap-4">
+        <div className="flex items-center gap-1">
+          {!richText ? (
+            <>
+              <ModeTabs mode={mode} onChange={onModeChange} />
+              <ToolbarDivider />
+              <NoteThemePicker />
+            </>
+          ) : null}
+          <ToolbarIconButton icon={History} label={t("history.title")} onClick={onHistory} />
+          {!richText ? <ToolbarIconButton icon={Link2} label={t("wiki.title")} onClick={onWiki} /> : null}
+          {onAi ? <AiToolbarButton onOpen={onAi} /> : null}
+          <ToolbarDivider />
+          <ToolbarOverflowMenu
+            richText={richText}
+            hasConvert={Boolean(onConvertToRichText)}
+            isPdfAvailable={Boolean(onExportPdf)}
+            onExportPdf={onExportPdf}
+            onConvert={onConvertToRichText}
+            onMove={onMove}
+          />
         </div>
+        <SaveErrorMessage message={saveError} onRetry={onSave} />
       </div>
-      <div className="flex shrink-0 items-center gap-2">
-        {!richText && <ModeTabs mode={mode} onChange={onModeChange} />}
-        {!richText && <NoteThemePicker />}
-        <Button variant="ghost" aria-label={t("history.title")} title={t("history.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onHistory}><History size={14} /><span className="hidden xl:inline">{t("history.title")}</span></Button>
-        <Button variant="ghost" aria-label={t("wiki.title")} title={t("wiki.title")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onWiki}><Network size={14} /><span className="hidden xl:inline">{t("wiki.title")}</span></Button>
-        {onExportPdf ? <ExportPdfButton onClick={onExportPdf} /> : null}
-        {onAi ? <AiToolbarButton onOpen={onAi} /> : null}
-        <ConvertButton richText={richText} onConvert={onConvertToRichText} />
-        <Button variant="ghost" aria-label={t("note.moving")} title={t("note.moving")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onMove}><FolderInput size={14} /><span className="hidden xl:inline">{t("note.moving")}</span></Button>
-      </div>
-      <SaveErrorMessage message={saveError} onRetry={onSave} />
     </div>
   );
 }
 
-function ExportPdfButton({ onClick }: { onClick: () => void }) {
-  const { t } = useTranslation();
-  const label = t("note.exportPdf");
-  return (
-    <Button variant="ghost" aria-label={label} title={label} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onClick}>
-      <Printer size={14} />
-      <span className="hidden xl:inline">{label}</span>
-    </Button>
-  );
+/**
+ * 工具条图标按钮：统一直观尺寸，整套图标选用近似笔画/占位深度的字形，观感一致。
+ */
+function ToolbarIconButton({ icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
+  return <IconButton icon={icon} label={label} onClick={onClick} />;
 }
 
-function ConvertButton({ richText, onConvert }: { richText: boolean; onConvert: (() => void) | undefined }) {
-  const { t } = useTranslation();
-  if (richText || !onConvert) return null;
-  return <Button variant="ghost" aria-label={t("note.convertToRichText")} title={t("note.convertToRichText")} className="inline-flex items-center gap-1.5 border border-transparent px-2.5 text-xs hover:border-border" onClick={onConvert}><ArrowLeftRight size={14} /><span className="hidden xl:inline">{t("note.convertToRichText")}</span></Button>;
+function ToolbarDivider() {
+  return <span aria-hidden="true" className="mx-1 h-5 w-px bg-border" />;
 }
 
 function SaveErrorMessage({ message, onRetry }: { message: string | null | undefined; onRetry: () => void }) {
   const { t } = useTranslation();
   if (!message) return null;
-  return <span role="status" className="flex max-w-72 items-center gap-2 text-xs text-danger"><span className="truncate" title={message}>{message}</span><button type="button" className="shrink-0 underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={onRetry}>{t("note.retrySave")}</button></span>;
+  return (
+    <span role="status" className="flex max-w-72 items-center gap-2 text-xs text-danger">
+      <span className="truncate" title={message}>{message}</span>
+      <button type="button" className="shrink-0 underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={onRetry}>
+        {t("note.retrySave")}
+      </button>
+    </span>
+  );
 }
 
 function ModeTabs({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) => void }) {
   const { t } = useTranslation();
   const tabClass = (active: boolean) =>
-    `inline-flex items-center gap-1.5 px-2.5 py-1.5 text-xs font-medium transition-colors ${active ? "bg-accent/10 text-accent shadow-sm" : "text-text-secondary hover:text-text-primary"}`;
+    `inline-flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium transition-colors ${active ? "bg-accent/10 text-accent shadow-sm" : "text-text-secondary hover:text-text-primary"}`;
   return (
-    <div role="tablist" aria-label={t("note.viewMode")} className="flex overflow-hidden rounded-lg border border-border bg-bg-secondary p-0.5">
+    <div role="tablist" aria-label={t("note.viewMode")} className="flex h-9 items-center overflow-hidden rounded-lg border border-border bg-bg-secondary p-0.5">
       {MODE_TABS.map(({ key, labelKey }) => {
         const Icon = key === "edit" ? Pencil : key === "split" ? Split : Eye;
         return (
-        <button
-          key={key}
-          type="button"
-          role="tab"
-          aria-selected={mode === key}
-          tabIndex={mode === key ? 0 : -1}
-          className={tabClass(mode === key)}
-          onClick={() => onChange(key)}
-          onKeyDown={(event) => {
-            if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
-            event.preventDefault();
-            const current = MODE_TABS.findIndex((item) => item.key === mode);
-            const delta = event.key === "ArrowRight" ? 1 : -1;
-            const next = MODE_TABS[(current + delta + MODE_TABS.length) % MODE_TABS.length];
-            if (next) onChange(next.key);
-          }}
-        >
-          <Icon size={14} />
-          {t(labelKey)}
-        </button>
+          <button
+            key={key}
+            type="button"
+            role="tab"
+            aria-selected={mode === key}
+            tabIndex={mode === key ? 0 : -1}
+            className={tabClass(mode === key)}
+            onClick={() => onChange(key)}
+            onKeyDown={(event) => {
+              if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+              event.preventDefault();
+              const current = MODE_TABS.findIndex((item) => item.key === mode);
+              const delta = event.key === "ArrowRight" ? 1 : -1;
+              const next = MODE_TABS[(current + delta + MODE_TABS.length) % MODE_TABS.length];
+              if (next) onChange(next.key);
+            }}
+          >
+            <Icon size={16} />
+            {t(labelKey)}
+          </button>
         );
       })}
     </div>

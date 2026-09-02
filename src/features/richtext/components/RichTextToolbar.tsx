@@ -25,6 +25,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { IconButton } from "@/components/atoms/IconButton";
 
 interface RichTextToolbarProps {
   editor: Editor | null;
@@ -63,20 +64,15 @@ const BUTTONS: ToolButton[] = [
 
 function ToolbarButton({ icon: Icon, label, active, disabled, onClick }: { icon: LucideIcon; label: string; active?: boolean; disabled?: boolean; onClick: () => void }) {
   return (
-    <button
-      type="button"
-      title={label}
-      aria-label={label}
-      aria-pressed={active}
-      disabled={disabled}
-      className={`grid h-7 w-7 place-items-center rounded-md transition-colors disabled:opacity-40 ${
-        active ? "bg-accent/15 text-accent" : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
-      }`}
-      onMouseDown={(e) => e.preventDefault()}
+    <IconButton
+      icon={Icon}
+      label={label}
+      size="sm"
+      {...(active === undefined ? {} : { active })}
+      {...(disabled === undefined ? {} : { disabled })}
+      onMouseDown={(event) => event.preventDefault()}
       onClick={onClick}
-    >
-      <Icon size={15} />
-    </button>
+    />
   );
 }
 
@@ -87,8 +83,8 @@ function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (file
     if (files.length > 0) onPicked(files);
   };
   return (
-    <label title={label} aria-label={label} className="grid h-7 w-7 cursor-pointer place-items-center rounded-md text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary">
-      <ImageIcon size={15} />
+    <label title={label} aria-label={label} className="group inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-transparent p-0 text-text-secondary transition-[background-color,border-color,color,transform] duration-150 ease-out hover:border-border hover:bg-bg-secondary hover:text-text-primary active:scale-[0.96]">
+      <ImageIcon size={16} strokeWidth={1.9} aria-hidden="true" />
       <input type="file" accept="image/*" multiple className="hidden" onChange={handleChange} />
     </label>
   );

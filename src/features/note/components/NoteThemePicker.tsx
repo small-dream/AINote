@@ -1,7 +1,8 @@
-import { Check, ChevronDown, Palette } from "lucide-react";
+import { Check, Palette } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "@/i18n";
 import { useUiStore, type NoteTheme } from "@/stores/ui.store";
+import { IconButton } from "@/components/atoms/IconButton";
 
 const NOTE_THEME_OPTIONS: ReadonlyArray<{ value: NoteTheme; labelKey: "note.themeClassic" | "note.themePaper" | "note.themeMidnight" | "note.themeForest"; swatches: string[] }> = [
   { value: "classic", labelKey: "note.themeClassic", swatches: ["#f8fafc", "#2563eb", "#334155"] },
@@ -9,7 +10,6 @@ const NOTE_THEME_OPTIONS: ReadonlyArray<{ value: NoteTheme; labelKey: "note.them
   { value: "midnight", labelKey: "note.themeMidnight", swatches: ["#111827", "#7dd3fc", "#dbeafe"] },
   { value: "forest", labelKey: "note.themeForest", swatches: ["#f1f7f2", "#2f855a", "#244239"] },
 ];
-const DEFAULT_NOTE_THEME = NOTE_THEME_OPTIONS[0] ?? { value: "classic" as NoteTheme, labelKey: "note.themeClassic" as const, swatches: [] };
 
 /** 编辑器与预览共用的主题选择器，偏好存储在 UI store。 */
 export function NoteThemePicker() {
@@ -18,24 +18,18 @@ export function NoteThemePicker() {
   const setNoteTheme = useUiStore((state) => state.setNoteTheme);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  const active = NOTE_THEME_OPTIONS.find((option) => option.value === noteTheme) ?? DEFAULT_NOTE_THEME;
   useCloseOnOutside(rootRef, open, () => setOpen(false));
 
   return (
     <div ref={rootRef} className="relative">
-      <button
-        type="button"
-        aria-label={t("note.theme")}
+      <IconButton
+        icon={Palette}
+        label={t("note.theme")}
+        active={open}
         aria-haspopup="menu"
         aria-expanded={open}
-        title={t("note.theme")}
         onClick={() => setOpen((value) => !value)}
-        className="inline-flex items-center gap-1.5 rounded-md border border-transparent px-2.5 py-1.5 text-xs font-medium text-text-secondary transition-colors hover:border-border hover:bg-bg-secondary hover:text-text-primary"
-      >
-        <Palette size={14} />
-        <span className="hidden 2xl:inline">{t(active.labelKey)}</span>
-        <ChevronDown size={13} className={`transition-transform ${open ? "rotate-180" : ""}`} />
-      </button>
+      />
       {open ? <ThemeMenu noteTheme={noteTheme} onSelect={(value) => { setNoteTheme(value); setOpen(false); }} /> : null}
     </div>
   );

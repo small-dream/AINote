@@ -43,7 +43,7 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
 
   return (
     <div className="rich-text-editor flex h-full min-h-0 flex-col" onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)}>
-      <div className="flex items-center"><RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} onExportMarkdown={exportMarkdown} onImportMarkdown={importMarkdown} onConvertToMarkdown={() => convertToMarkdown(editor, notePath, onConvert)} /><AiToolbarButton onOpen={ai.openMenu} /></div>
+      <div className="flex items-center"><RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} onExportMarkdown={exportMarkdown} onImportMarkdown={importMarkdown} onConvertToMarkdown={() => convertToMarkdown(editor, notePath, onConvert)} /><AiToolbarButton onOpen={ai.openMenu} compact /></div>
       <RichTextBubbleMenu editor={editor} />
       <AiWriteControls ai={ai} />
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
