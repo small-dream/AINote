@@ -56,7 +56,11 @@
 }
 
 .cm-sr-zero {
-  font-size: 0;
+  /* WebKit（macOS Tauri webview）无法为 font-size:0 的文本定位光标：
+     coordsAtPos 返回 null，导致光标停靠时消失/错位、输入异常。
+     1px + 透明色在所有内核下都可正确定位光标，视觉上仍不可见。 */
+  font-size: 1px;
+  color: transparent;
   user-select: none;
 }
 
