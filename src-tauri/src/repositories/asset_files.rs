@@ -27,14 +27,6 @@ pub fn sanitize_file_name(name: &str) -> String {
     }
 }
 
-/// 纯函数：小写扩展名（不含点）；无扩展返回空串。
-pub fn file_extension(name: &str) -> String {
-    Path::new(name)
-        .extension()
-        .map(|e| e.to_string_lossy().to_lowercase())
-        .unwrap_or_default()
-}
-
 /// 把源文件复制到仓库 `assets/` 下（重名自动加序号），返回仓库相对路径。
 pub fn import_from_path(root: &Path, source: &Path) -> Result<AssetInfo, AppError> {
     let bytes = fs::read(source)?;
@@ -97,13 +89,6 @@ mod tests {
         assert_eq!(sanitize_file_name("..hidden.."), "hidden");
         assert_eq!(sanitize_file_name("   "), "file");
         assert_eq!(sanitize_file_name("a-b_c.d"), "a-b_c.d");
-    }
-
-    #[test]
-    fn extension_is_lowercased_without_dot() {
-        assert_eq!(file_extension("X.PNG"), "png");
-        assert_eq!(file_extension("archive.tar.gz"), "gz");
-        assert_eq!(file_extension("noext"), "");
     }
 
     #[test]

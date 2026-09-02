@@ -19,27 +19,6 @@ pub fn default_template() -> String {
     .to_string()
 }
 
-/// 按日期生成富文本每日模板（一级标题为日期）。
-pub fn daily_template(date: &str) -> String {
-    serde_json::json!({
-        "type": "doc",
-        "content": [
-            {
-                "type": "heading",
-                "attrs": { "level": 1 },
-                "content": [{ "type": "text", "text": date }],
-            },
-            { "type": "paragraph" },
-        ],
-    })
-    .to_string()
-}
-
-/// 空白富文本模板：仅一个空段落。
-pub fn blank_template() -> String {
-    serde_json::json!({ "type": "doc", "content": [{ "type": "paragraph" }] }).to_string()
-}
-
 /// 递归收集全部 text 节点文本（每个文本节点后换行），供全文搜索与标签/双链提取。
 pub fn plain_text(json: &str) -> String {
     let Ok(value) = serde_json::from_str::<Value>(json) else {
@@ -174,9 +153,7 @@ mod tests {
 
     #[test]
     fn templates_are_valid_doc_json() {
-        for template in [default_template(), daily_template("2026-09-01"), blank_template()] {
-            let value: Value = serde_json::from_str(&template).unwrap();
-            assert_eq!(value["type"], "doc");
-        }
+        let value: Value = serde_json::from_str(&default_template()).unwrap();
+        assert_eq!(value["type"], "doc");
     }
 }
