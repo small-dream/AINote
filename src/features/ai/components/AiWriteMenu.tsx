@@ -73,7 +73,7 @@ function ActionButton({ labelKey, icon, onClick }: { labelKey: ActionLabelKey; i
   const { t } = useTranslation();
   const Icon = ICONS[icon];
   return (
-    <Button variant="ghost" className="justify-start gap-2" onClick={onClick}>
+    <Button variant="ghost" className="flex w-full items-center justify-start gap-2 px-3 py-2 text-left" onClick={onClick}>
       <Icon size={15} />
       {t(labelKey)}
     </Button>

@@ -1,4 +1,5 @@
 import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from "react";
+import { ChevronDown } from "lucide-react";
 
 export const AI_INPUT_CLASS =
   "ai-input h-9 w-full rounded-md border border-border bg-bg-primary px-3 text-sm text-text-primary transition-colors placeholder:text-text-secondary hover:border-text-tertiary focus:border-accent focus:outline-none";
@@ -21,8 +22,15 @@ export function AiInput(props: InputHTMLAttributes<HTMLInputElement>) {
   return <input {...props} className={`${AI_INPUT_CLASS} ${props.className ?? ""}`} />;
 }
 
-export function AiSelect(props: SelectHTMLAttributes<HTMLSelectElement>) {
-  return <select {...props} className={`${AI_INPUT_CLASS} appearance-none ${props.className ?? ""}`} />;
+export function AiSelect({ className = "", children, ...props }: SelectHTMLAttributes<HTMLSelectElement>) {
+  return (
+    <span className="relative block w-full">
+      <select {...props} className={`${AI_INPUT_CLASS} appearance-none pr-8 ${className}`}>
+        {children}
+      </select>
+      <ChevronDown size={14} strokeWidth={2} aria-hidden="true" className="pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2 text-text-tertiary" />
+    </span>
+  );
 }
 
 interface AiToggleProps {

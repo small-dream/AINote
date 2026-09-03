@@ -15,21 +15,22 @@ export function AiModelSelect({ className = "" }: AiModelSelectProps) {
   const options = usableAiModels(data);
   const selectedId = useAiModelStore((state) => state.selectedModelId);
   const setSelectedId = useAiModelStore((state) => state.setSelectedModelId);
+  const resolvedId = resolveModelSelection(data, selectedId);
 
   useEffect(() => {
-    const resolved = resolveModelSelection(data, selectedId);
-    if (resolved !== selectedId) setSelectedId(resolved);
-  }, [data, selectedId, setSelectedId]);
+    if (resolvedId !== selectedId) setSelectedId(resolvedId);
+  }, [resolvedId, selectedId, setSelectedId]);
 
   if (options.length === 0) {
     return <span className={`text-xs text-text-secondary ${className}`}>{t("ai.noModels")}</span>;
   }
   return (
     <select
-      value={selectedId ?? ""}
+      value={resolvedId ?? ""}
       onChange={(event) => setSelectedId(event.target.value)}
       aria-label={t("ai.modelSelector")}
-      className={`max-w-48 rounded-md border border-border bg-bg-primary px-1.5 py-1 text-xs focus:border-accent focus:outline-none ${className}`}
+      title={options.find((model) => model.id === resolvedId)?.label ?? t("ai.modelSelector")}
+      className={`h-9 w-full min-w-0 rounded-md border border-border bg-bg-primary px-3 pr-8 text-sm text-text-primary transition-colors hover:border-text-tertiary focus:border-accent focus:outline-none ${className}`}
     >
       {options.map((model) => (
         <option key={model.id} value={model.id}>
