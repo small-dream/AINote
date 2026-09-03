@@ -52,18 +52,18 @@ describe("EditorToolbar / 更多菜单", () => {
     renderToolbar();
     expect(screen.queryByText("导出 PDF")).toBeNull();
     expect(screen.queryByText("转换为富文本")).toBeNull();
-    expect(screen.queryByText("移动 / 重命名")).toBeNull();
+    expect(screen.queryByText("移动笔记")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "更多" }));
     expect(screen.getByRole("menuitem", { name: "导出 PDF" })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: "转换为富文本" })).toBeTruthy();
-    expect(screen.getByRole("menuitem", { name: "移动 / 重命名" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "移动笔记" })).toBeTruthy();
   });
 
   it("「更多」菜单项触发动作并关闭菜单", () => {
     const onMove = vi.fn();
     renderToolbar({ onMove });
     fireEvent.click(screen.getByRole("button", { name: "更多" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "移动 / 重命名" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "移动笔记" }));
     expect(onMove).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("menuitem")).toBeNull();
   });
@@ -81,6 +81,6 @@ describe("EditorToolbar / 更多菜单", () => {
     expect(screen.queryByRole("button", { name: "双链与标签" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "更多" }));
     expect(screen.queryByRole("menuitem", { name: "转换为富文本" })).toBeNull();
-    expect(screen.getByRole("menuitem", { name: "移动 / 重命名" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "移动笔记" })).toBeTruthy();
   });
 });

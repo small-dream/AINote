@@ -13,7 +13,7 @@ interface MoveNoteDialogProps {
   onMoved: (to: string) => void;
 }
 
-/** 重命名 / 移动笔记：输入目标路径。父组件以 key={path} 重建以重置草稿。 */
+/** 移动笔记：输入目标路径。父组件以 key={path} 重建以重置草稿。 */
 export function MoveNoteDialog({ path, onClose, onMoved }: MoveNoteDialogProps) {
   const { t } = useTranslation();
   const move = useMoveNoteMutation();

@@ -13,6 +13,7 @@ interface WorkspaceSidebarProps {
   onRequestImportNotes: (dir: string, files: File[]) => Promise<void>;
   createDir?: string;
   onRequestMove: (path: string) => void;
+  onRequestRename: (path: string) => void;
   onRequestHistory: (path: string) => void;
 }
 
@@ -26,13 +27,14 @@ export function WorkspaceSidebar({
   onRequestImportNotes,
   createDir = "",
   onRequestMove,
+  onRequestRename,
   onRequestHistory,
 }: WorkspaceSidebarProps) {
   const tab = useUiStore((s) => s.sidebarTab);
   return (
     <div className="flex min-h-0 w-[248px] shrink-0 flex-col border-r border-border bg-bg-secondary/80">
       {tab === "tree" ? (
-        <FileTree repoPath={repoPath} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} createDir={createDir} onRequestMove={onRequestMove} onRequestHistory={onRequestHistory} />
+        <FileTree repoPath={repoPath} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} createDir={createDir} onRequestMove={onRequestMove} onRequestRename={onRequestRename} onRequestHistory={onRequestHistory} />
       ) : tab === "tags" ? (
         <TagIndex repoPath={repoPath} onSelect={onSelect} />
       ) : (

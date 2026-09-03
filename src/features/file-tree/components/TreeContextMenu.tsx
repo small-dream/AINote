@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactElement } from "react";
-import { ChevronDown, ChevronRight, Copy, FilePlus2, FileText, FolderPlus, History, Pencil, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, FilePlus2, FileText, FolderPlus, History, Move, Pencil, Trash2 } from "lucide-react";
 import type { TreeNode } from "@/api/types";
 import type { TreeContextMenuState } from "../hooks/useTreeContextMenu";
 import { useTranslation } from "@/i18n";
@@ -14,6 +14,7 @@ interface Props {
   onRequestNew: (dir: string) => void;
   onRequestFolder: (dir: string) => void;
   onRequestMove: (path: string) => void;
+  onRequestRename: (path: string) => void;
   onRequestHistory: (path: string) => void;
   onDelete: (path: string) => void;
   onDeleteFolder: (path: string) => void;
@@ -27,7 +28,7 @@ interface MenuActionProps {
   danger?: boolean;
 }
 
-export function TreeContextMenu({ menu, copied, onClose, onToggle, onSelect, onRequestNew, onRequestFolder, onRequestMove, onRequestHistory, onDelete, onDeleteFolder, onCopy }: Props) {
+export function TreeContextMenu({ menu, copied, onClose, onToggle, onSelect, onRequestNew, onRequestFolder, onRequestMove, onRequestRename, onRequestHistory, onDelete, onDeleteFolder, onCopy }: Props) {
   const { t } = useTranslation();
   const { node } = menu;
   const displayName = contextMenuDisplayName(node, t);
@@ -44,7 +45,7 @@ export function TreeContextMenu({ menu, copied, onClose, onToggle, onSelect, onR
         <span className="tree-menu-heading-type">{node.nodeType === "dir" ? t("tree.folderType") : t("tree.noteType")}</span>
         <span className="tree-menu-heading-name">{displayName}</span>
       </div>
-      {node.nodeType === "dir" ? <FolderActions node={node} copied={copied} command={command} onToggle={onToggle} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onDeleteFolder={onDeleteFolder} onCopy={onCopy} /> : <NoteActions node={node} copied={copied} command={command} onSelect={onSelect} onRequestMove={onRequestMove} onRequestHistory={onRequestHistory} onDelete={onDelete} onCopy={onCopy} />}
+      {node.nodeType === "dir" ? <FolderActions node={node} copied={copied} command={command} onToggle={onToggle} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onDeleteFolder={onDeleteFolder} onCopy={onCopy} /> : <NoteActions node={node} copied={copied} command={command} onSelect={onSelect} onRequestMove={onRequestMove} onRequestRename={onRequestRename} onRequestHistory={onRequestHistory} onDelete={onDelete} onCopy={onCopy} />}
     </div>
   );
 }
@@ -69,11 +70,12 @@ function FolderActions({ node, copied, command, onToggle, onRequestNew, onReques
   </>;
 }
 
-function NoteActions({ node, copied, command, onSelect, onRequestMove, onRequestHistory, onDelete, onCopy }: ActionGroupProps & { onSelect: (path: string) => void; onRequestMove: (path: string) => void; onRequestHistory: (path: string) => void; onDelete: (path: string) => void }) {
+function NoteActions({ node, copied, command, onSelect, onRequestMove, onRequestRename, onRequestHistory, onDelete, onCopy }: ActionGroupProps & { onSelect: (path: string) => void; onRequestMove: (path: string) => void; onRequestRename: (path: string) => void; onRequestHistory: (path: string) => void; onDelete: (path: string) => void }) {
   const { t } = useTranslation();
   return <>
     {command({ icon: FileText, label: t("tree.openNote"), onClick: () => onSelect(node.path) })}
-    {command({ icon: Pencil, label: t("tree.renameMove"), onClick: () => onRequestMove(node.path) })}
+    {command({ icon: Pencil, label: t("tree.renameNote"), onClick: () => onRequestRename(node.path) })}
+    {command({ icon: Move, label: t("tree.moveNote"), onClick: () => onRequestMove(node.path) })}
     {command({ icon: History, label: t("tree.viewHistory"), onClick: () => onRequestHistory(node.path) })}
     {command({ icon: Copy, label: copied ? t("tree.pathCopied") : t("tree.copyPath"), onClick: () => onCopy(node.path) })}
     <div className="tree-menu-divider" />

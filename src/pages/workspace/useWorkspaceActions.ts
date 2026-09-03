@@ -20,6 +20,8 @@ export interface WorkspaceActions {
   handleCreateFolder: (path: string) => Promise<void>;
   moveTarget: string | null;
   setMoveTarget: (path: string | null) => void;
+  renameTarget: string | null;
+  setRenameTarget: (path: string | null) => void;
 }
 
 /** 工作区「新建笔记 / 新建文件夹 / 移动」三组编排的聚合 */
@@ -29,6 +31,7 @@ export function useWorkspaceActions(repoPath: string | null, onOpen: (path: stri
   const importAsset = useImportAssetBytesMutation();
   const importNote = useImportNoteMutation();
   const [moveTarget, setMoveTarget] = useState<string | null>(null);
+  const [renameTarget, setRenameTarget] = useState<string | null>(null);
 
   return {
     existingPaths: newNote.existingPaths,
@@ -57,5 +60,7 @@ export function useWorkspaceActions(repoPath: string | null, onOpen: (path: stri
     handleCreateFolder: newFolder.handleCreate,
     moveTarget,
     setMoveTarget,
+    renameTarget,
+    setRenameTarget,
   };
 }

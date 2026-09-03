@@ -1,6 +1,7 @@
 import { useState, type RefObject } from "react";
 import { NewFolderDialog } from "@/features/file-tree/components/NewFolderDialog";
 import { MoveNoteDialog } from "@/features/note/components/MoveNoteDialog";
+import { RenameNoteDialog } from "@/features/note/components/RenameNoteDialog";
 import {
   NoteEditor,
   type NoteEditorHandle,
@@ -34,10 +35,6 @@ export function WorkspaceLayout({
   onMoved,
 }: WorkspaceLayoutProps) {
   const [historyRequestPath, setHistoryRequestPath] = useState<string | null>(null);
-  const requestHistory = (path: string) => {
-    setHistoryRequestPath(path);
-    onSelect(path);
-  };
   return (
     <div className="flex h-dvh min-h-0 overflow-hidden bg-bg-tertiary/55">
       <WorkspaceNavRail repoPath={repoPath} startupSyncing={startupSyncing} />
@@ -48,7 +45,7 @@ export function WorkspaceLayout({
           createdPath={actions.createdPath}
           editorRef={editorRef}
           onSelect={onSelect}
-          onRequestHistory={requestHistory}
+          onRequestHistory={(path) => { setHistoryRequestPath(path); onSelect(path); }}
           historyRequestPath={historyRequestPath}
           onHistoryRequestHandled={() => setHistoryRequestPath(null)}
           onRequestNew={actions.requestNew}
@@ -57,6 +54,7 @@ export function WorkspaceLayout({
           onRequestImportNotes={actions.importNotes}
           createDir={currentNotePath ? getDirectoryPath(currentNotePath) : ""}
           onSetMove={actions.setMoveTarget}
+          onSetRename={actions.setRenameTarget}
         />
       </main>
       <LayoutDialogs actions={actions} onMoved={onMoved} />
@@ -106,6 +104,7 @@ interface WorkspaceColumnsProps {
   onRequestImportNotes: (dir: string, files: File[]) => Promise<void>;
   createDir: string;
   onSetMove: (path: string | null) => void;
+  onSetRename: (path: string | null) => void;
 }
 
 function WorkspaceColumns({
@@ -123,6 +122,7 @@ function WorkspaceColumns({
   onRequestImportNotes,
   createDir,
   onSetMove,
+  onSetRename,
 }: WorkspaceColumnsProps) {
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
@@ -135,6 +135,7 @@ function WorkspaceColumns({
         onRequestImportNotes={onRequestImportNotes}
         createDir={createDir}
         onRequestMove={onSetMove}
+        onRequestRename={onSetRename}
         onRequestHistory={onRequestHistory}
       />
       <EditorPane repoPath={repoPath} currentNotePath={currentNotePath} createdPath={createdPath} editorRef={editorRef} onSelect={onSelect} onSetMove={onSetMove} historyRequestPath={historyRequestPath} onHistoryRequestHandled={onHistoryRequestHandled} />
@@ -181,6 +182,12 @@ function LayoutDialogs({ actions, onMoved }: LayoutDialogsProps) {
         path={actions.moveTarget}
         onClose={() => actions.setMoveTarget(null)}
         onMoved={onMoved}
+      />
+      <RenameNoteDialog
+        key={actions.renameTarget ?? "none"}
+        path={actions.renameTarget}
+        onClose={() => actions.setRenameTarget(null)}
+        onRenamed={onMoved}
       />
     </>
   );
