@@ -57,7 +57,7 @@ export function WorkspaceLayout({
           onSetRename={actions.setRenameTarget}
         />
       </main>
-      <LayoutDialogs actions={actions} onMoved={onMoved} />
+      <LayoutDialogs repoPath={repoPath} actions={actions} onMoved={onMoved} />
       <WorkspaceOverlays repoPath={repoPath} actions={actions} editorRef={editorRef} onOpenNote={onSelect} />
     </div>
   );
@@ -162,11 +162,12 @@ function EditorPane({ repoPath, currentNotePath, createdPath, editorRef, onSelec
 }
 
 interface LayoutDialogsProps {
+  repoPath: string | null;
   actions: WorkspaceActions;
   onMoved: (to: string) => void;
 }
 
-function LayoutDialogs({ actions, onMoved }: LayoutDialogsProps) {
+function LayoutDialogs({ repoPath, actions, onMoved }: LayoutDialogsProps) {
   return (
     <>
       <NewFolderDialog
@@ -179,6 +180,7 @@ function LayoutDialogs({ actions, onMoved }: LayoutDialogsProps) {
       />
       <MoveNoteDialog
         key={actions.moveTarget ?? "none"}
+        repoPath={repoPath}
         path={actions.moveTarget}
         onClose={() => actions.setMoveTarget(null)}
         onMoved={onMoved}

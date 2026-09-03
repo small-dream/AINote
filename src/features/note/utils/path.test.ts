@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { joinNotePath, normalizeNotePath } from "./path";
+import { getNoteFileName, joinNotePath, normalizeNotePath } from "./path";
 
 describe("normalizeNotePath", () => {
   it("补全 .md 后缀", () => {
@@ -38,5 +38,18 @@ describe("joinNotePath", () => {
 
   it("去目录首尾斜杠", () => {
     expect(joinNotePath("/daily/", "a.md")).toBe("daily/a.md");
+  });
+});
+
+describe("getNoteFileName", () => {
+  it("保留移动后的文件名和扩展名", () => {
+    expect(joinNotePath("daily/archive", getNoteFileName("projects/roadmap.ainote"))).toBe(
+      "daily/archive/roadmap.ainote",
+    );
+  });
+
+  it("处理根目录笔记", () => {
+    expect(getNoteFileName("roadmap.md")).toBe("roadmap.md");
+    expect(joinNotePath("", getNoteFileName("roadmap.md"))).toBe("roadmap.md");
   });
 });

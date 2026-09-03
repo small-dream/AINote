@@ -36,6 +36,7 @@ export function NoteList({ repoPath, onSelect, onRequestNew }: NoteListProps) {
       />
       <MoveNoteDialog
         key={moveTarget ?? "none"}
+        repoPath={repoPath}
         path={moveTarget}
         onClose={() => setMoveTarget(null)}
         onMoved={(to) => onSelect(to)}
