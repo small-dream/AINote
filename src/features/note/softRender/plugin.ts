@@ -55,9 +55,8 @@ function computeDecorations(state: EditorState, options: SoftRenderOptions): Dec
   const tree = ensureSyntaxTree(state, doc.length, 100) ?? syntaxTree(state);
   const plan = planSoftRender(tree, doc, cursor, selectionTo);
   const ranges: Range<Decoration>[] = [
-    ...plan.marks.map((mark) =>
-      Decoration.mark({ class: mark.cls, ...(mark.attrs ? { attributes: mark.attrs } : {}) }).range(mark.from, mark.to),
-    ),
+    ...plan.marks.map((mark) => Decoration.mark({ class: mark.cls, ...(mark.attrs ? { attributes: mark.attrs } : {}) }).range(mark.from, mark.to)),
+    ...plan.gaps.map((gap) => Decoration.line({ class: gap.cls }).range(gap.pos, gap.pos)),
     ...plan.hides.map((hide) => toHideDecoration(hide).range(hide.from, hide.to)),
     ...plan.blocks.map((block) => Decoration.mark({ class: block.cls, block: true }).range(block.from, block.to)),
     ...plan.widgets.map((widget) => toWidgetDecoration(widget, options)),

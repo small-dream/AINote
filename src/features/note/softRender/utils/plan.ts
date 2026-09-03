@@ -10,7 +10,7 @@ import {
   planSetextHeading,
   planTable,
 } from "./blocks";
-import { planImage, planInlineCode, planLink, planMarkedPair, planTaskMarker } from "./inline";
+import { planEscape, planImage, planInlineCode, planLink, planMarkedPair, planTaskMarker } from "./inline";
 import { findAutolinks } from "./autolink";
 import { findMathRanges } from "./math";
 
@@ -35,6 +35,7 @@ const NODE_HANDLERS: Record<string, NodeHandler> = {
   Emphasis: (n, _d, _c, p) => planMarkedPair(n, "EmphasisMark", "cm-sr-em", p),
   Strikethrough: (n, _d, _c, p) => planMarkedPair(n, "StrikethroughMark", "cm-sr-strike", p),
   InlineCode: planInlineCode,
+  Escape: planEscape,
   FencedCode: planFencedCode,
   Blockquote: planBlockquote,
   BulletList: (n, d, _c, p) => planList(n, d, p, "bullet"),
@@ -55,11 +56,52 @@ export function planSoftRender(tree: Tree, doc: string, cursor: number, selectio
   planMathAndAutolink(doc, cursor, plan, codeRanges, linkRanges, selectionTo);
   const protectedIndex = createRangeIndex([...plan.wikiRanges, ...plan.mathRanges]);
   walk(tree.topNode, doc, cursor, plan, selectionTo, protectedIndex);
+  planBlankLines(doc, plan, codeRanges);
   return plan;
 }
 
 function createEmptyPlan(): SoftRenderPlan {
-  return { marks: [], hides: [], widgets: [], blocks: [], wikiRanges: [], mathRanges: [] };
+  return { marks: [], hides: [], widgets: [], blocks: [], gaps: [], wikiRanges: [], mathRanges: [] };
+}
+
+/**
+ * 折叠源码中的空行：Markdown 用空行分隔块，softRender 保留源码原样，
+ * 若让空行以完整行高渲染，会与预览（折叠空行 + 块 margin）不一致，显得间距过大。
+ * 这里把非代码块内的空行收窄到预览的块边距高度，避免间距被放大。
+ */
+function planBlankLines(doc: string, plan: SoftRenderPlan, codeRanges: TextRange[]): void {
+  const codeIndex = createRangeIndex(codeRanges);
+  let lineStart = 0;
+  while (lineStart <= doc.length) {
+    const newline = doc.indexOf("\n", lineStart);
+    const lineEnd = newline === -1 ? doc.length : newline;
+    if (doc.slice(lineStart, lineEnd).trim() === "" && !codeIndex.contains(lineStart, lineEnd)) {
+      plan.gaps.push({ pos: lineStart, cls: blankLineClass(doc, lineStart) });
+    }
+    if (newline === -1) break;
+    lineStart = newline + 1;
+  }
+}
+
+/** 空行后面紧跟 ATX 标题时用标题间距（1.2em），否则用正文块间距（0.6em），与预览一致。 */
+function blankLineClass(doc: string, from: number): string {
+  const contentStart = nextNonBlankLineStart(doc, from);
+  if (contentStart < 0) return "cm-sr-blank";
+  const newline = doc.indexOf("\n", contentStart);
+  const content = doc.slice(contentStart, newline === -1 ? doc.length : newline);
+  return /^#{1,6}\s/.test(content) ? "cm-sr-blank-heading" : "cm-sr-blank";
+}
+
+function nextNonBlankLineStart(doc: string, from: number): number {
+  let start = from;
+  while (start <= doc.length) {
+    const newline = doc.indexOf("\n", start);
+    const end = newline === -1 ? doc.length : newline;
+    if (doc.slice(start, end).trim() !== "") return start;
+    if (newline === -1) return -1;
+    start = newline + 1;
+  }
+  return -1;
 }
 
 const WIKI_LINK_RE = /\[\[([^\]\n|]+)(?:\|([^\]\n]+?))?\]\]/g;

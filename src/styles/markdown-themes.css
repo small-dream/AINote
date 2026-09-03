@@ -12,6 +12,16 @@
   --note-success: var(--success);
   --note-warning: var(--warning);
   --note-danger: var(--danger);
+  /* 内容排版 Token：所见即所得编辑（softRender）与 react-markdown 预览共用，
+     使「所见」与「所得」在字体、行高、阅读列宽、内联代码样式上保持一致。 */
+  --note-body-font: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  --note-code-font: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  --note-code-bg: var(--bg-secondary);
+  --note-font-size: 15px;
+  --note-line-height: 1.7;
+  --note-reading-width: 72ch;
+  --note-block-margin: 0.6em;
+  --note-heading-margin: 1.2em;
 }
 
 [data-note-theme="paper"] {
@@ -88,7 +98,7 @@
 }
 
 .note-theme-surface .markdown-body {
-  max-width: 72ch;
+  max-width: var(--note-reading-width);
 }
 
 .note-theme-surface .markdown-body h1 {

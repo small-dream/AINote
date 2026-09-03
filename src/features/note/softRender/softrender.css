@@ -1,10 +1,15 @@
 /* Markdown 软渲染（WYSIWYG）样式：全部使用笔记主题变量，观感与预览一致 */
 
 .cm-soft-render .cm-content {
-  line-height: 1.65;
+  /* 软渲染正文沿用预览的 UI 无衬线字体，而不是 CodeMirror 源码等宽（index.css 的
+     code/pre/.cm-editor 会覆盖到整个编辑器），否则"所见即所得"正文会变成等宽字。 */
+  font-family: var(--note-body-font);
+  font-size: var(--note-font-size);
+  line-height: var(--note-line-height);
 }
 
-/* 软渲染正文与预览保持一致的阅读留白；滚动条仍贴合编辑区右侧。 */
+/* 与预览一致的阅读列宽并居中：避免编辑区通栏而预览呈窄列居中。
+   max-width 计入左右内边距（2rem×2），使正文可读宽度恰为 --note-reading-width。 */
 .note-theme-surface .cm-soft-render-shell {
   height: 100%;
 }
@@ -13,7 +18,9 @@
   height: 100%;
 }
 .note-theme-surface .cm-soft-render-shell .cm-editor .cm-content {
-  padding: 1.25rem 3rem 1.5rem;
+  max-width: calc(var(--note-reading-width) + 4rem);
+  margin-inline: auto;
+  padding: 1.25rem 2rem 1.5rem;
 }
 
 .cm-sr-h1,
@@ -22,7 +29,7 @@
 .cm-sr-h4,
 .cm-sr-h5,
 .cm-sr-h6 {
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: -0.02em;
   color: var(--note-ink);
   line-height: 1.3;
@@ -39,12 +46,11 @@
 .cm-sr-strike { text-decoration: line-through; }
 
 .cm-sr-inline-code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  font-family: var(--note-code-font);
   font-size: 0.9em;
-  background: var(--note-muted);
-  border: 1px solid var(--note-border);
+  background: var(--note-code-bg);
   border-radius: 4px;
-  padding: 0 0.25em;
+  padding: 0.15em 0.35em;
 }
 
 .cm-sr-link {
@@ -124,6 +130,16 @@
 .cm-sr-code-text {
   font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
   font-size: 0.92em;
+}
+
+/* 块级间距：softRender 保留源码空行，若以完整行高渲染会与预览（折叠空行 + 块 margin）
+   不一致而显得间距过大；这里把空行收窄到预览的块边距高度，标题前用更大间距，
+   与预览标题上边距（1.2em）一致，并随 CM 行高测量正确滚动。 */
+.cm-sr-blank {
+  line-height: var(--note-block-margin);
+}
+.cm-sr-blank-heading {
+  line-height: var(--note-heading-margin);
 }
 
 .cm-sr-blockquote {

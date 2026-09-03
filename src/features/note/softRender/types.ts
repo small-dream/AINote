@@ -38,6 +38,14 @@ export interface BlockRange {
   cls: string;
 }
 
+/** 块级间距：把源码空行收窄到预览的块边距高度，避免 softRender 间距被放大。 */
+export interface GapRange {
+  /** 空行起始偏移（源码坐标） */
+  pos: number;
+  /** 应用到所在 .cm-line 的类名 */
+  cls: string;
+}
+
 export interface TextRange {
   from: number;
   to: number;
@@ -48,6 +56,7 @@ export interface SoftRenderPlan {
   hides: HideRange[];
   widgets: WidgetRange[];
   blocks: BlockRange[];
+  gaps: GapRange[];
   wikiRanges: TextRange[];
   mathRanges: TextRange[];
 }

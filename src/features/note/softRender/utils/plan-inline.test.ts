@@ -84,6 +84,49 @@ describe("planSoftRender 列表", () => {
   });
 });
 
+describe("planSoftRender 块级间距（空行折叠）", () => {
+  it("把源码中分隔块的每个空行登记为空白间距", () => {
+    const text = "# 标题\n\n第一段\n\n第二段";
+    const plan = planFor(text, 0);
+    expect(plan.gaps.map((g) => ({ pos: g.pos, cls: g.cls }))).toEqual(
+      blankLinePositions(text).map((pos) => ({ pos, cls: "cm-sr-blank" })),
+    );
+  });
+
+  it("跳过围栏代码块内部的空行", () => {
+    const text = "前\n\n```\n\n  \n```\n\n后";
+    const plan = planFor(text, 0);
+    const positions = plan.gaps.map((g) => g.pos);
+    expect(positions).toEqual(blankLinePositions(text).filter((pos) => !insideFence(text, pos)));
+    expect(positions).toContain(text.indexOf("\n\n后") + 1);
+  });
+
+  it("标题前的空行使用标题间距类，其余用正文间距类", () => {
+    const text = "第一段\n\n## 标题\n\n第二段";
+    const plan = planFor(text, 0);
+    expect(plan.gaps.find((g) => g.pos === text.indexOf("\n\n## 标题") + 1)?.cls).toBe("cm-sr-blank-heading");
+    expect(plan.gaps.find((g) => g.pos === text.indexOf("\n\n第二段") + 1)?.cls).toBe("cm-sr-blank");
+  });
+});
+
+/** 收集文本中每个空白行（trim 后为空）的起始偏移。 */
+function blankLinePositions(text: string): number[] {
+  const out: number[] = [];
+  let start = 0;
+  for (const line of text.split("\n")) {
+    if (line.trim() === "") out.push(start);
+    start += line.length + 1;
+  }
+  return out;
+}
+
+/** 粗略判断一个偏移是否落在 ``` 围栏代码块内部（仅供空行折叠测试用）。 */
+function insideFence(text: string, pos: number): boolean {
+  const before = text.slice(0, pos);
+  const fences = before.match(/```/g)?.length ?? 0;
+  return fences % 2 === 1;
+}
+
 describe("planSoftRender 链接与图片", () => {
   it("普通链接隐藏语法并登记可点击", () => {
     const text = "before [text](https://ex.com)";

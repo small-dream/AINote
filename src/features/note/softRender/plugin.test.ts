@@ -66,6 +66,31 @@ describe("softRender 渲染", () => {
     view.destroy();
   });
 
+  it("转义符隐藏反斜杠（只显示字面字符）", async () => {
+    const view = await createView("\\[设计师 负责]", 0);
+    const zero = view.contentDOM.querySelector(".cm-sr-zero");
+    expect(zero).toBeDefined();
+    expect(zero?.textContent).toBe("\\");
+    view.destroy();
+  });
+
+});
+
+describe("softRender 块级间距（空行折叠）", () => {
+  it("块间空行收窄为空白间距类", async () => {
+    const view = await createView("# Title\n\nPara one\n\nPara two", 0);
+    const blankLine = view.contentDOM.querySelector<HTMLElement>(".cm-line.cm-sr-blank");
+    expect(blankLine).toBeDefined();
+    view.destroy();
+  });
+
+  it("代码块（replace widget）与间距装饰共存", async () => {
+    const view = await createView("para\n\n```js\nconst a = 1;\n```\n\nafter", 0);
+    expect(view.contentDOM.querySelector(".cm-sr-codeblock-widget")).toBeDefined();
+    const blankLines = view.contentDOM.querySelectorAll<HTMLElement>(".cm-line.cm-sr-blank");
+    expect(blankLines.length).toBeGreaterThanOrEqual(1);
+    view.destroy();
+  });
 });
 
 describe("softRender 点击定位", () => {
