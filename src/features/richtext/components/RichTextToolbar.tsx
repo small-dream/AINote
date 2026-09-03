@@ -1,79 +1,58 @@
-import type { ChangeEvent } from "react";
-import type { Editor } from "@tiptap/react";
-import {
-  Bold,
-  ClipboardPaste,
-  Code,
-  Download,
-  ArrowLeftRight,
-  Heading1,
-  Heading2,
-  Heading3,
-  Image as ImageIcon,
-  Italic,
-  List,
-  ListChecks,
-  ListOrdered,
-  Minus,
-  Redo,
-  SquareCode,
-  Strikethrough,
-  Table as TableIcon,
-  TextQuote,
-  Trash2,
-  Undo,
-  type LucideIcon,
-} from "lucide-react";
 import { useTranslation } from "@/i18n";
-import { IconButton } from "@/components/atoms/IconButton";
+import type { ChangeEvent, ReactNode } from "react";
+import type { Editor } from "@tiptap/core";
+import { ArrowLeftRight, ClipboardPaste, Download, Image as ImageIcon, MoreHorizontal, Plus, Redo, Trash2, Undo } from "lucide-react";
+import { ToolbarPopover, type ToolbarMenuItem } from "./ToolbarPopover";
+import { BLOCK_COMMANDS, getActiveHeadingCommand, HEADING_COMMANDS, INLINE_COMMANDS, INSERT_COMMANDS, type EditorToolbarCommand } from "../utils/toolbarCommands";
 
 interface RichTextToolbarProps {
   editor: Editor | null;
-  onImagePicked?: (files: File[]) => void;
-  status?: string | null;
-  onExportMarkdown?: () => void;
-  onImportMarkdown?: () => void;
-  onConvertToMarkdown?: () => void;
+  onImagePicked?: ((files: File[]) => void) | undefined;
+  status?: string | null | undefined;
+  onExportMarkdown?: (() => void) | undefined;
+  onImportMarkdown?: (() => void) | undefined;
+  onConvertToMarkdown?: (() => void) | undefined;
+  trailing?: ReactNode | undefined;
 }
 
-interface ToolButton {
-  key: string;
-  icon: LucideIcon;
-  labelKey: "richtext.h1" | "richtext.h2" | "richtext.h3" | "richtext.bold" | "richtext.italic" | "richtext.strike" | "richtext.inlineCode" | "richtext.quote" | "richtext.bulletList" | "richtext.orderedList" | "richtext.taskList" | "richtext.codeBlock" | "richtext.divider" | "richtext.table" | "richtext.deleteTable";
-  active: (editor: Editor) => boolean;
-  run: (editor: Editor) => void;
-}
-
-/** 行内格式命令表：全部基于 TipTap 命令，无 IPC */
-const BUTTONS: ToolButton[] = [
-  { key: "h1", icon: Heading1, labelKey: "richtext.h1", active: (e) => e.isActive("heading", { level: 1 }), run: (e) => void e.chain().focus().toggleHeading({ level: 1 }).run() },
-  { key: "h2", icon: Heading2, labelKey: "richtext.h2", active: (e) => e.isActive("heading", { level: 2 }), run: (e) => void e.chain().focus().toggleHeading({ level: 2 }).run() },
-  { key: "h3", icon: Heading3, labelKey: "richtext.h3", active: (e) => e.isActive("heading", { level: 3 }), run: (e) => void e.chain().focus().toggleHeading({ level: 3 }).run() },
-  { key: "bold", icon: Bold, labelKey: "richtext.bold", active: (e) => e.isActive("bold"), run: (e) => void e.chain().focus().toggleBold().run() },
-  { key: "italic", icon: Italic, labelKey: "richtext.italic", active: (e) => e.isActive("italic"), run: (e) => void e.chain().focus().toggleItalic().run() },
-  { key: "strike", icon: Strikethrough, labelKey: "richtext.strike", active: (e) => e.isActive("strike"), run: (e) => void e.chain().focus().toggleStrike().run() },
-  { key: "inlineCode", icon: Code, labelKey: "richtext.inlineCode", active: (e) => e.isActive("code"), run: (e) => void e.chain().focus().toggleCode().run() },
-  { key: "quote", icon: TextQuote, labelKey: "richtext.quote", active: (e) => e.isActive("blockquote"), run: (e) => void e.chain().focus().toggleBlockquote().run() },
-  { key: "bulletList", icon: List, labelKey: "richtext.bulletList", active: (e) => e.isActive("bulletList"), run: (e) => void e.chain().focus().toggleBulletList().run() },
-  { key: "orderedList", icon: ListOrdered, labelKey: "richtext.orderedList", active: (e) => e.isActive("orderedList"), run: (e) => void e.chain().focus().toggleOrderedList().run() },
-  { key: "taskList", icon: ListChecks, labelKey: "richtext.taskList", active: (e) => e.isActive("taskList"), run: (e) => void e.chain().focus().toggleTaskList().run() },
-  { key: "codeBlock", icon: SquareCode, labelKey: "richtext.codeBlock", active: (e) => e.isActive("codeBlock"), run: (e) => void e.chain().focus().toggleCodeBlock().run() },
-  { key: "divider", icon: Minus, labelKey: "richtext.divider", active: () => false, run: (e) => void e.chain().focus().setHorizontalRule().run() },
-  { key: "table", icon: TableIcon, labelKey: "richtext.table", active: (e) => e.isActive("table"), run: (e) => void e.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
-];
-
-function ToolbarButton({ icon: Icon, label, active, disabled, onClick }: { icon: LucideIcon; label: string; active?: boolean; disabled?: boolean; onClick: () => void }) {
+export function RichTextToolbar({ editor, onImagePicked, status, onExportMarkdown, onImportMarkdown, onConvertToMarkdown, trailing }: RichTextToolbarProps) {
+  const { t } = useTranslation();
   return (
-    <IconButton
-      icon={Icon}
-      label={label}
-      size="sm"
-      {...(active === undefined ? {} : { active })}
-      {...(disabled === undefined ? {} : { disabled })}
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={onClick}
-    />
+    <div className="flex w-full min-h-10 items-center gap-1 border-b border-border bg-bg-secondary px-2 py-1.5">
+      {editor ? (
+        <div className="flex min-w-0 flex-1 items-center gap-0.5">
+          <HeadingSelector editor={editor} />
+          <ToolbarDivider />
+          <ToolbarCommandGroup editor={editor} commands={INLINE_COMMANDS} />
+          <ToolbarDivider />
+          <ToolbarCommandGroup editor={editor} commands={BLOCK_COMMANDS} />
+          <ToolbarDivider />
+          <InsertPopover editor={editor} />
+          {onImagePicked ? <ImagePickerButton label={t("richtext.image")} onPicked={onImagePicked} /> : null}
+        </div>
+      ) : null}
+      <ToolbarHistoryGroup editor={editor} status={status} onExportMarkdown={onExportMarkdown} onImportMarkdown={onImportMarkdown} onConvertToMarkdown={onConvertToMarkdown} trailing={trailing} />
+    </div>
   );
+}
+
+function HeadingSelector({ editor }: { editor: Editor }) {
+  const { t } = useTranslation();
+  const activeCommand = getActiveHeadingCommand(editor);
+  const items = HEADING_ITEMS(editor, t);
+  return <ToolbarPopover label={t("note.headingLevel")} text={activeCommand.key === "paragraph" ? t(activeCommand.labelKey) : activeCommand.key.toUpperCase()} active={activeCommand.key !== "paragraph"} items={items} />;
+}
+
+function InsertPopover({ editor }: { editor: Editor }) {
+  const { t } = useTranslation();
+  const items: ToolbarMenuItem[] = INSERT_COMMANDS.map(({ key, icon, labelKey, isActive, run }) => ({
+    key,
+    label: t(labelKey),
+    icon,
+    active: Boolean(isActive?.(editor)),
+    onSelect: () => run(editor),
+  }));
+  return <ToolbarPopover label={t("richtext.insert")} icon={Plus} items={items} />;
 }
 
 function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (files: File[]) => void }) {
@@ -83,31 +62,72 @@ function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (file
     if (files.length > 0) onPicked(files);
   };
   return (
-    <label title={label} aria-label={label} className="group inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-transparent p-0 text-text-secondary transition-[background-color,border-color,color,transform] duration-150 ease-out hover:border-border hover:bg-bg-secondary hover:text-text-primary active:scale-[0.96]">
+    <label title={label} aria-label={label} className="group inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-transparent text-text-secondary transition-[background-color,border-color,color,transform] duration-150 hover:border-border hover:bg-bg-tertiary hover:text-text-primary active:scale-[0.96]">
       <ImageIcon size={16} strokeWidth={1.9} aria-hidden="true" />
       <input type="file" accept="image/*" multiple className="hidden" onChange={handleChange} />
     </label>
   );
 }
 
-/** 真富文本编辑器的行内格式工具栏 */
-export function RichTextToolbar({ editor, onImagePicked, status, onExportMarkdown, onImportMarkdown, onConvertToMarkdown }: RichTextToolbarProps) {
+type ToolbarHistoryGroupProps = Pick<RichTextToolbarProps, "editor" | "status" | "onExportMarkdown" | "onImportMarkdown" | "onConvertToMarkdown" | "trailing">;
+
+function ToolbarHistoryGroup({ editor, status, onExportMarkdown, onImportMarkdown, onConvertToMarkdown, trailing }: ToolbarHistoryGroupProps) {
   const { t } = useTranslation();
-  if (!editor) return <div className="flex items-center gap-0.5 border-b border-border bg-bg-secondary px-3 py-1.5" />;
+  const moreItems = getMoreItems({ editor, onExportMarkdown, onImportMarkdown, onConvertToMarkdown }, t);
+
   return (
-    <div className="flex flex-wrap items-center gap-0.5 border-b border-border bg-bg-secondary px-3 py-1.5">
-      {BUTTONS.map(({ key, icon, labelKey, active, run }) => (
-        <ToolbarButton key={key} icon={icon} label={t(labelKey)} active={active(editor)} onClick={() => run(editor)} />
+    <div className="ml-auto flex shrink-0 items-center gap-0.5">
+      {status ? <span role="status" className="mr-1 hidden truncate text-xs text-text-secondary lg:block">{status}</span> : null}
+      {moreItems.length > 0 ? (
+        <ToolbarPopover label={t("note.more")} icon={MoreHorizontal} align="right" items={moreItems} />
+      ) : null}
+      <ToolbarButton icon={Undo} label={t("richtext.undo")} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} />
+      <ToolbarButton icon={Redo} label={t("richtext.redo")} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} />
+      {trailing}
+    </div>
+  );
+}
+
+function getMoreItems({ editor, onExportMarkdown, onImportMarkdown, onConvertToMarkdown }: Pick<ToolbarHistoryGroupProps, "editor" | "onExportMarkdown" | "onImportMarkdown" | "onConvertToMarkdown">, t: ReturnType<typeof useTranslation>["t"]): ToolbarMenuItem[] {
+  const items: ToolbarMenuItem[] = [];
+  if (onConvertToMarkdown) items.push({ key: "convert", label: t("richtext.convertToMarkdown"), icon: ArrowLeftRight, onSelect: onConvertToMarkdown });
+  if (onExportMarkdown) items.push({ key: "export", label: t("richtext.exportMarkdown"), icon: Download, onSelect: onExportMarkdown });
+  if (onImportMarkdown) items.push({ key: "import", label: t("richtext.importMarkdown"), icon: ClipboardPaste, onSelect: () => void onImportMarkdown() });
+  if (editor?.isActive("table")) items.push({ key: "deleteTable", label: t("richtext.deleteTable"), icon: Trash2, onSelect: () => editor.chain().focus().deleteTable().run() });
+  return items;
+}
+
+function HEADING_ITEMS(editor: Editor, t: ReturnType<typeof useTranslation>["t"]): ToolbarMenuItem[] {
+  return HEADING_COMMANDS.map(({ key, icon, labelKey, isActive, run }) => ({
+    key,
+    label: t(labelKey),
+    icon,
+    active: Boolean(isActive?.(editor)),
+    onSelect: () => run(editor),
+  }));
+}
+
+function ToolbarDivider() {
+  return <span aria-hidden="true" className="mx-0.5 h-4 w-px shrink-0 bg-border" />;
+}
+
+function ToolbarButton({ icon, label, active, disabled, onClick }: { icon: EditorToolbarCommand["icon"]; label: string; active?: boolean | undefined; disabled?: boolean | undefined; onClick: () => void }) {
+  const state = active ? "border-accent/30 bg-accent-soft text-accent" : "border-transparent text-text-secondary hover:border-border hover:bg-bg-tertiary hover:text-text-primary";
+  const Icon = icon;
+  return (
+    <button type="button" aria-label={label} title={label} aria-pressed={active} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={onClick} className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 ${state}`}>
+      <Icon size={16} strokeWidth={1.9} aria-hidden="true" />
+    </button>
+  );
+}
+
+function ToolbarCommandGroup({ editor, commands }: { editor: Editor; commands: EditorToolbarCommand[] }) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-0.5">
+      {commands.map(({ key, icon, labelKey, isActive, run }) => (
+        <ToolbarButton key={key} icon={icon} label={t(labelKey)} active={Boolean(isActive?.(editor))} onClick={() => run(editor)} />
       ))}
-      {onImagePicked ? <ImagePickerButton label={t("richtext.image")} onPicked={onImagePicked} /> : null}
-      {editor.isActive("table") ? <ToolbarButton icon={Trash2} label={t("richtext.deleteTable")} onClick={() => editor.chain().focus().deleteTable().run()} /> : null}
-      <span className="mx-1 h-4 w-px bg-border" />
-      {onConvertToMarkdown ? <ToolbarButton icon={ArrowLeftRight} label={t("richtext.convertToMarkdown")} onClick={onConvertToMarkdown} /> : null}
-      {onExportMarkdown ? <ToolbarButton icon={Download} label={t("richtext.exportMarkdown")} onClick={onExportMarkdown} /> : null}
-      {onImportMarkdown ? <ToolbarButton icon={ClipboardPaste} label={t("richtext.importMarkdown")} onClick={() => void onImportMarkdown()} /> : null}
-      <ToolbarButton icon={Undo} label={t("richtext.undo")} disabled={!editor.can().undo()} onClick={() => editor.chain().focus().undo().run()} />
-      <ToolbarButton icon={Redo} label={t("richtext.redo")} disabled={!editor.can().redo()} onClick={() => editor.chain().focus().redo().run()} />
-      {status ? <span role="status" className="ml-2 truncate text-xs text-text-secondary">{status}</span> : null}
     </div>
   );
 }
