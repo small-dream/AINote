@@ -124,6 +124,14 @@ describe("MarkdownPreview P1 预览增强", () => {
 });
 
 describe("MarkdownPreview properties and callouts", () => {
+  it("单换行渲染为 <br>（remark-breaks 保换行）", () => {
+    const { container } = render(<MarkdownPreview content={"第一行\n第二行"} />);
+    const p = container.querySelector("p");
+    expect(p?.querySelector("br")).toBeTruthy();
+    expect(p?.textContent).toContain("第一行");
+    expect(p?.textContent).toContain("第二行");
+  });
+
   it("展示 frontmatter 属性且不把分隔线渲染到正文", () => {
     const { container } = render(<MarkdownPreview content={"---\ntitle: Demo\ntags: [one, two]\n---\n正文"} />);
     expect(container.querySelector(".markdown-properties")?.textContent).toContain("title");
