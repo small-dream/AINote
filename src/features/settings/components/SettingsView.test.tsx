@@ -7,7 +7,7 @@ import { SettingsView } from "./SettingsView";
 const repoApiMock = vi.hoisted(() => ({ list: vi.fn(), rename: vi.fn(), remove: vi.fn(), switchRepo: vi.fn() }));
 const aiApiMock = vi.hoisted(() => ({ getConfig: vi.fn(), saveConfig: vi.fn() }));
 const authApiMock = vi.hoisted(() => ({ logout: vi.fn() }));
-const updateApiMock = vi.hoisted(() => ({ checkForUpdate: vi.fn(), installUpdate: vi.fn() }));
+const updateApiMock = vi.hoisted(() => ({ getCurrentVersion: vi.fn(), checkForUpdate: vi.fn(), installUpdate: vi.fn() }));
 
 vi.mock("@/api", () => ({
   repoApi: repoApiMock,
@@ -31,6 +31,7 @@ describe("SettingsView 全屏设置视图", () => {
     vi.resetAllMocks();
     useUiStore.setState({ settingsOpen: true, settingsTab: "appearance", theme: "light", locale: "zh-CN" });
     aiApiMock.getConfig.mockResolvedValue({ enabled: false, provider: "openAiCompatible", baseUrl: "", model: "", hasKey: false });
+    updateApiMock.getCurrentVersion.mockResolvedValue("0.14.2");
   });
 
   it("渲染全部分类导航与当前分类内容", () => {
