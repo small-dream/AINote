@@ -14,8 +14,22 @@
   --note-danger: var(--danger);
   /* 内容排版 Token：所见即所得编辑（softRender）与 react-markdown 预览共用，
      使「所见」与「所得」在字体、行高、阅读列宽、内联代码样式上保持一致。 */
-  --note-body-font: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
-  --note-code-font: ui-monospace, "JetBrains Mono", "SF Mono", Menlo, Consolas, monospace;
+  /* 西文优先 + 显式 CJK fallback + emoji：中英混排时字形统一，跨平台观感可控。
+     顺序参考 GitHub / Apple 系统字体栈；中文按 macOS → Linux → Windows 兜底。 */
+  --note-body-font:
+    -apple-system, BlinkMacSystemFont,
+    "Segoe UI", Roboto, "Helvetica Neue", Arial,
+    "PingFang SC", "Hiragino Sans GB",
+    "Source Han Sans SC", "Noto Sans CJK SC", "Noto Sans SC",
+    "Microsoft YaHei", "Microsoft YaHei UI",
+    sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --note-code-font:
+    ui-monospace, "JetBrains Mono", "SF Mono", "SFMono-Regular", Menlo, Consolas,
+    "Liberation Mono", "Courier New",
+    "PingFang SC", "Hiragino Sans GB",
+    "Source Han Sans SC", "Noto Sans CJK SC", "Noto Sans Mono CJK SC",
+    "Microsoft YaHei",
+    monospace;
   --note-code-bg: var(--bg-secondary);
   --note-font-size: 15px;
   --note-line-height: 1.7;

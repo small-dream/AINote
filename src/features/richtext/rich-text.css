@@ -3,6 +3,7 @@
   outline: none;
   min-height: 100%;
   color: var(--text-primary);
+  font-family: var(--note-body-font);
   font-size: 15px;
   line-height: 1.75;
   caret-color: var(--accent);
@@ -75,7 +76,7 @@
   color: var(--text-primary);
 }
 .rich-text-editor .ProseMirror code {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-family: var(--note-code-font);
   background: var(--bg-tertiary);
   padding: 0.1em 0.35em;
   border-radius: 4px;
