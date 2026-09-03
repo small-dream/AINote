@@ -1,5 +1,7 @@
 import type { Extension } from "@codemirror/state";
 import { EditorView } from "@codemirror/view";
+import { HighlightStyle } from "@codemirror/language";
+import { tags as t } from "@lezer/highlight";
 
 /**
  * 适配 AINote 设计 Token 的 CodeMirror 样式表。
@@ -104,4 +106,34 @@ const EDITOR_THEME_STYLES = {
  */
 export function getAinoteEditorTheme(dark: boolean): Extension {
   return EditorView.theme(EDITOR_THEME_STYLES, { dark });
+}
+
+/**
+ * Markdown 语法高亮：映射到 note 代码层 token，随阅读主题切换。
+ *
+ * 与 hljs（预览 / 软渲染 / 富文本代码块）消费同一套 `--note-code-*`，
+ * 保证源码模式（分栏）下编辑器配色与预览、代码块一致。
+ */
+export function getAinoteHighlightStyle(): HighlightStyle {
+  return HighlightStyle.define([
+    { tag: t.comment, color: "var(--note-code-comment)", fontStyle: "italic" },
+    { tag: [t.keyword, t.operatorKeyword, t.bool, t.null], color: "var(--note-code-keyword)" },
+    { tag: [t.string, t.special(t.string)], color: "var(--note-code-string)" },
+    { tag: [t.number, t.atom], color: "var(--note-code-number)" },
+    { tag: [t.typeName, t.className, t.namespace], color: "var(--note-code-type)" },
+    { tag: [t.function(t.variableName), t.propertyName], color: "var(--note-code-function)" },
+    { tag: [t.variableName, t.definition(t.variableName)], color: "var(--note-code-var)" },
+    { tag: t.heading, color: "var(--note-ink)", fontWeight: "700" },
+    { tag: t.strong, color: "var(--note-ink)", fontWeight: "700" },
+    { tag: t.emphasis, color: "var(--note-secondary)", fontStyle: "italic" },
+    { tag: t.link, color: "var(--note-accent)", textDecoration: "underline" },
+    { tag: t.url, color: "var(--note-tertiary)", textDecoration: "underline" },
+    { tag: t.monospace, color: "var(--note-code-string)", fontFamily: "var(--note-code-font)" },
+    { tag: t.quote, color: "var(--note-secondary)", fontStyle: "italic" },
+    { tag: t.contentSeparator, color: "var(--note-tertiary)" },
+    { tag: t.labelName, color: "var(--note-accent)" },
+    { tag: t.strikethrough, color: "var(--note-tertiary)", textDecoration: "line-through" },
+    { tag: t.meta, color: "var(--note-tertiary)" },
+    { tag: t.list, color: "var(--note-accent)" },
+  ]);
 }

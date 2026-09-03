@@ -6,14 +6,15 @@ import { EditorView, keymap } from "@codemirror/view";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
 import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
-import { bracketMatching, indentOnInput } from "@codemirror/language";
+import { bracketMatching, indentOnInput, syntaxHighlighting } from "@codemirror/language";
 import { useUiStore } from "@/stores/ui.store";
 import type { NoteWikiDto } from "@/api/types";
 import { autocompletion, type CompletionContext } from "@codemirror/autocomplete";
 import { dispatchFormat, dispatchLink } from "./useFormatCommands";
 import { getActiveFormats, toggleInline } from "../utils/format";
 import { getListContinuation } from "../utils/markdownInput";
-import { getAinoteEditorTheme } from "./editorTheme";
+import { getNoteThemeMode } from "../utils/noteThemes";
+import { getAinoteEditorTheme, getAinoteHighlightStyle } from "./editorTheme";
 import { buildCompletions, getCompletionContext } from "../utils/completion";
 import { softRender } from "../softRender/plugin";
 
@@ -65,9 +66,9 @@ const markdownInputKeymap = Prec.high(
 export function useEditorExtensions(input: EditorExtensionsInput = {}): { extensions: Extension[]; activeFormats: Set<string> } {
   const { notes = [], repoPath = null, onOpenWiki, softRenderEnabled = true } = input;
   const [activeFormats, setActiveFormats] = useState<Set<string>>(() => new Set());
-  const theme = useUiStore((s) => s.theme);
+  const noteTheme = useUiStore((s) => s.noteTheme);
   const extensions = useMemo(() => [
-    getAinoteEditorTheme(theme === "dark"),
+    getAinoteEditorTheme(getNoteThemeMode(noteTheme) === "dark"),
     markdown({ extensions: [GFM] }),
     history(),
     search({ top: true }),
@@ -80,11 +81,11 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
     markdownInputKeymap,
     formatKeymap,
-    ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki) : []),
+    ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki) : [syntaxHighlighting(getAinoteHighlightStyle())]),
     EditorView.updateListener.of((update) => {
       if (update.selectionSet || update.docChanged) setActiveFormats(getActiveFormats(update.state));
     }),
-  ], [theme, notes, repoPath, onOpenWiki, softRenderEnabled]);
+  ], [noteTheme, notes, repoPath, onOpenWiki, softRenderEnabled]);
   return { extensions, activeFormats };
 }
 

@@ -4,6 +4,7 @@ import type { Editor } from "@tiptap/core";
 import { ArrowLeftRight, ClipboardPaste, Download, Image as ImageIcon, MoreHorizontal, Plus, Redo, Trash2, Undo } from "lucide-react";
 import { ToolbarPopover, type ToolbarMenuItem } from "./ToolbarPopover";
 import { BLOCK_COMMANDS, getActiveHeadingCommand, HEADING_COMMANDS, INLINE_COMMANDS, INSERT_COMMANDS, type EditorToolbarCommand } from "../utils/toolbarCommands";
+import { NoteThemePicker } from "@/features/note/components/NoteThemePicker";
 
 interface RichTextToolbarProps {
   editor: Editor | null;
@@ -83,6 +84,7 @@ function ToolbarHistoryGroup({ editor, status, onExportMarkdown, onImportMarkdow
       ) : null}
       <ToolbarButton icon={Undo} label={t("richtext.undo")} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} />
       <ToolbarButton icon={Redo} label={t("richtext.redo")} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} />
+      <NoteThemePicker />
       {trailing}
     </div>
   );

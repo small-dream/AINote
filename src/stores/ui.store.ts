@@ -1,8 +1,8 @@
 import { create } from "zustand";
 
-export type Theme = "light" | "dark";
+export type Theme = "light" | "dark" | "system";
 export type Locale = "zh-CN" | "en-US";
-export type NoteTheme = "classic" | "paper" | "midnight" | "forest";
+export type NoteTheme = "classic" | "paper" | "midnight" | "forest" | "solar" | "graphite" | "inkblue" | "warmdark";
 export type SidebarTab = "tree" | "tags" | "trash";
 /** 设置页左侧分类导航的激活项 */
 export type SettingsTab = "repositories" | "appearance" | "language" | "ai" | "updates" | "account";
@@ -18,7 +18,12 @@ export const SIDEBAR_DEFAULT_WIDTH = 248;
 
 /** 解析 localStorage 值；非法值一律回退亮色 */
 export function parseTheme(value: string | null): Theme {
-  return value === "dark" ? "dark" : "light";
+  return value === "dark" ? "dark" : value === "system" ? "system" : "light";
+}
+
+/** 解析「跟随系统」后的实际明暗值；无 matchMedia 环境一律回退亮色。 */
+export function resolveTheme(theme: Theme, systemPrefersDark: boolean): "light" | "dark" {
+  return theme === "dark" || (theme === "system" && systemPrefersDark) ? "dark" : "light";
 }
 
 /** 解析显示语言；非法值一律回退简体中文。 */
@@ -27,7 +32,7 @@ export function parseLocale(value: string | null): Locale {
 }
 
 export function parseNoteTheme(value: string | null): NoteTheme {
-  return value === "paper" || value === "midnight" || value === "forest" ? value : "classic";
+  return value === "paper" || value === "midnight" || value === "forest" || value === "solar" || value === "graphite" || value === "inkblue" || value === "warmdark" ? value : "classic";
 }
 
 export function clampSidebarWidth(width: number): number {

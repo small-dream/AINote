@@ -39,10 +39,11 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
   const { editor, handleFiles, status, exportMarkdown, importMarkdown } = useRichTextEditor({ content, onChange, repoPath });
   const outline = useRichTextOutline(editor);
   const openTagIndex = useUiStore((s) => s.openTagIndex);
+  const noteTheme = useUiStore((s) => s.noteTheme);
   const ai = useAiWrite({ getSelection: () => ({ ...getTipTapSelection(editor, noteTitleOf(notePath)), fullText: editor?.getText() ?? "" }), onApply: (text) => applyToTipTapEditor(editor, text) });
 
   return (
-    <div className="rich-text-editor flex h-full min-h-0 flex-col" onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)}>
+    <div data-note-theme={noteTheme} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)}>
       <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} onExportMarkdown={exportMarkdown} onImportMarkdown={importMarkdown} onConvertToMarkdown={() => convertToMarkdown(editor, notePath, onConvert)} trailing={<AiToolbarButton onOpen={ai.openMenu} compact />} />
       <RichTextBubbleMenu editor={editor} />
       <AiWriteControls ai={ai} />

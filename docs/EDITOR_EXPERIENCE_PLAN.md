@@ -1,6 +1,6 @@
 # AINote Markdown 编辑与预览体验优化计划
 
-> 版本：v0.1 · 状态：P1 实现中 · 维护：产品与前端协作
+> 版本：v0.2（新增 §5 主题体系方案）· 状态：P1 实现中 · 维护：产品与前端协作
 >
 > 本文档是编辑器与 Markdown 预览的专项路线图。它补充 `docs/PRD.md` 的产品目标，实施时仍须遵守 `docs/ARCHITECTURE.md` 与 `docs/CODING_STANDARDS.md` 的分层、文件规模、错误处理和测试约束。
 
@@ -60,6 +60,9 @@ AINote 的核心体验目标是：用户打开一篇笔记后，可以立即、�
 8. **同步滚动稳定性**：只观察 DOM mutation，图片、字体和代码高亮完成后的尺寸变化可能导致锚点偏移。
 9. **导航不足**：没有当前笔记大纲、标题跳转、`[[`/`#` 补全和带上下文的反向链接。
 10. **小窗口体验**：固定侧栏和三栏布局在窄窗口、触控设备上会压缩编辑区域；分割线也缺少键盘调节语义。
+11. **主题体系不完整**：阅读主题仅作用于 Markdown 编辑与预览，富文本（TipTap）仍只跟随全局明暗；主题仅 4 套且 token 维度少，代码高亮只有 5 个语义色映射。
+12. **暗色阅读主题渲染错误**：CodeMirror 的 `dark` 标志跟随全局 theme，全局亮色 + 暗色阅读主题（如夜航）时光标、选区与默认高亮使用亮色样式。
+13. **无「跟随系统」与排版偏好**：全局主题仅亮/暗二选一；字号、行高、阅读宽度等排版 token 与配色耦合，用户无法单独调整。
 
 ## 3. 优先级与里程碑
 
@@ -139,6 +142,22 @@ Markdown 源文
 - 解析、语法高亮和大文档预览迁移到 Worker 或可取消任务；编辑输入与预览渲染解耦。
 - 以 1,000 篇笔记目录和 5,000 行单篇文档建立性能基准。
 
+### P1：主题体系（阅读主题升级，1–2 周）✅ 已完成（v0.21）
+
+目标：富文本与 Markdown 共用同一套阅读主题；主题数量与 token 维度达到行业主流水平；全局主题支持「跟随系统」。对应 PRD P1-8 的范围扩展，详细方案见 §5。
+
+- [x] 富文本接入阅读主题：`RichTextEditor` 包 `data-note-theme` + `.note-theme-surface`，`rich-text.css` 改用 note token，富文本工具栏提供与 Markdown 共用的主题选择器。
+- [x] 修复 `dark` 标志联动：CodeMirror 的 `dark` 依据阅读主题 `mode` 而非全局明暗。
+- [x] 语法高亮 token 化：每个主题补齐 `--note-code-*`，`hljs` 映射与 CodeMirror `HighlightStyle` 统一消费同一 token。
+- [x] 主题扩容至 8 套并按亮/暗系分组，注册表驱动选择器、持久化与测试。
+- [x] 全局主题支持「跟随系统」（`prefers-color-scheme` + `matchMedia` 监听）。
+- [x] 主题选择器升级为卡片式实时预览（标题/正文/代码/引用示例）。
+- [x] 排版偏好与配色分离：字号、行高、阅读宽度、字体族独立设置。
+
+验收：任意主题下 Markdown 编辑/预览/富文本/代码块配色一致；全局亮色 + 暗色阅读主题时 CodeMirror 光标、选区、默认高亮正确；各主题正文、代码、链接对比度满足 WCAG AA；切换即时生效并持久化。
+
+后续（P2）：PDF 导出可选「使用当前主题」，保留 A4 浅色打印模式；自定义主题（JSON token / CSS）并入插件系统（PRD P2-3）。
+
 ## 4. 推荐的前端拆分
 
 遵循“View → Hooks/Queries → api/”方向，最终让 `NoteEditor.tsx` 只负责组装：
@@ -167,7 +186,67 @@ src/features/note/
 
 每个新增纯函数必须同时提供单元测试；Hook 使用 `vi.mock('@/api')` 隔离 IPC；涉及 Rust 的 AST/文件能力则在 Service 层注入 Mock Repository。
 
-## 5. 视觉与交互规范
+## 5. 主题体系方案（阅读主题 · 语法高亮 · 富文本联动）
+
+> 承接 §3 里程碑，对齐 PRD P1-8。目标：三层主题统一（全局明暗 / 阅读主题 / 语法高亮），富文本与 Markdown 共用同一套语义 token，主题数量与质感达到 Obsidian / Typora / VS Code 的主流水平。
+
+### 5.1 产品取舍与行业参考
+
+阅读主题是「编辑器皮肤」而非「文档属性」：切换即时生效、偏好持久化，但**不写入笔记文件**（frontmatter 不携带主题信息），保持 `.md` / `.ainote` 数据纯净、可被 Git 审计与迁移——延续「不照搬 Obsidian 私有数据模型」的产品取向。
+
+| 竞品 | 借鉴 | 不照搬 |
+|---|---|---|
+| Obsidian | CSS 变量主题体系 + 社区主题商店；编辑/阅读/代码共用同一套变量 | 笔记级 frontmatter 主题、插件私有数据模型 |
+| Typora | 内置 GitHub/Newsprint/Night 等风格主题，读写一体排版 | 主题数量不求多、当前不做主题商店 |
+| Bear | 少而精的内置主题，弱化选择、强调开箱即用的精致感 | — |
+| iA Writer / Ulysses | 排版（字号/行高/行宽/字体）与配色分离 | 编辑器即产品本身，不提供换肤 |
+| GitHub / VS Code | 语法高亮 token 化，随明暗主题整体切换 | TextMate grammar 的复杂度 |
+| Logseq / Notion | 明暗两态 + 排版细节 | 不追求插件式主题生态 |
+
+### 5.2 三层主题模型
+
+| 层 | 作用域 | 现有机制 | 缺口 |
+|---|---|---|---|
+| 全局明暗 | 应用外壳 | `src/styles/tokens.css` 的 `[data-theme="dark"]` | 无「跟随系统」 |
+| 阅读主题 | Markdown 编辑 + 预览 + 富文本 | `src/styles/markdown-themes.css` 的 `[data-note-theme]` | 富文本未接入；仅 4 套；token 维度少 |
+| 语法高亮 | 代码块（编辑/预览/富文本） | `hljs` 映射 5 个语义色；CodeMirror 默认高亮 | 无独立高亮 token；未自定义 `HighlightStyle` |
+
+每个阅读主题定义一组语义 token（配色），排版 token（`--note-body-font`、字号、行高、阅读宽度）保持全局共享：
+
+```text
+背景层：--note-bg / --note-surface / --note-muted
+文字层：--note-ink / --note-secondary / --note-tertiary
+交互层：--note-accent / --note-accent-soft / --note-border
+        --note-success / --note-warning / --note-danger
+代码层：--note-code-bg / --note-code-keyword / --note-code-string / --note-code-number
+        --note-code-comment / --note-code-type / --note-code-function / --note-code-var
+```
+
+`hljs`（预览 / 软渲染 / 富文本代码块）与 CodeMirror `HighlightStyle` 只映射到代码层 token，代码高亮因此自动跟随阅读主题。
+
+### 5.3 实施动作
+
+1. **富文本接入阅读主题（M1）**：`RichTextEditor` 外层包 `data-note-theme` + `.note-theme-surface`；`rich-text.css` 从全局 var 改为 note token；从 `NoteThemePicker` 抽取共享组件供 `RichTextToolbar` 与 Markdown 工具栏复用。
+2. **修复 `dark` 标志联动（M1）**：主题注册表为每个主题标注 `mode: "light" | "dark"`，`getAinoteEditorTheme` 依据阅读主题 `mode` 而非全局明暗，修复「全局亮色 + 夜航」时光标/选区错误。
+3. **语法高亮 token 化（M2）**：每个主题补齐 `--note-code-*`；`src/styles/index.css` 与 `rich-text.css` 的 `hljs` 映射统一改为 note token；CodeMirror 用 `HighlightStyle` 映射同一 token。
+4. **主题扩容至 6–8 套（M2）**：亮色系（经典 / 纸张 / 森林 / 海盐）+ 暗色系（夜航 / 石墨 / 墨蓝 / 暖暗），注册表驱动选择器、持久化与测试。
+5. **跟随系统（M3）**：`Theme` 增加 `"system"`，`matchMedia("(prefers-color-scheme: dark)")` 监听，沿用 `src/main.tsx` 首屏防闪烁逻辑。
+6. **选择器升级（M3）**：卡片式实时预览（标题/正文/代码/引用示例），按亮/暗系分组；设置页「外观」区同步提供阅读主题管理。
+7. **排版偏好分离（M4）**：字号、行高、阅读宽度、字体族（衬线/无衬线）独立设置，与配色解耦。
+8. **P2 扩展**：PDF 导出可选「使用当前主题」（保留 A4 浅色打印模式）；自定义主题（JSON token 导入 / CSS 覆盖）并入插件系统。
+
+### 5.4 涉及文件
+
+| 动作 | 主要文件 |
+|---|---|
+| 富文本接入 | `src/features/richtext/components/RichTextEditor.tsx`、`src/features/richtext/rich-text.css`、`src/features/richtext/components/RichTextToolbar.tsx` |
+| 主题注册表与类型 | `src/stores/ui.store.ts`、`src/features/note/components/NoteThemePicker.tsx` |
+| 阅读主题与高亮 token | `src/styles/markdown-themes.css`、`src/styles/index.css` |
+| CodeMirror 联动 | `src/features/note/hooks/editorTheme.ts`、`src/features/note/hooks/useEditorExtensions.ts` |
+| 跟随系统与选择器 | `src/features/settings/components/ThemeSettings.tsx`、`src/app/providers.tsx`、`src/main.tsx` |
+| 导出联动（P2） | `src/features/export/components/PdfExportOverlay.tsx`、`src/features/export/utils/richTextHtml.ts` |
+
+## 6. 视觉与交互规范
 
 ### 编辑区
 
@@ -191,7 +270,14 @@ src/features/note/
 - 自动保存、保存失败、离线和同步状态使用 `role="status"` 或 `aria-live`，不依赖颜色单独表达。
 - 遵守 `prefers-reduced-motion`，动画只表达状态变化，时长控制在 150–250ms。
 
-## 6. 验收指标
+### 主题
+
+- 主题选择器使用大色卡 + 示例内容（标题/正文/代码/引用）实时预览，按亮/暗系分组，当前项有选中态。
+- 阅读主题是应用级偏好，切换即时生效并持久化；主题信息不写入笔记文件。
+- 暗色系主题下正文、代码、链接对比度满足 WCAG AA；语法高亮至少 6 个语义类可区分，且不依赖颜色单独表达语义（配合 `role`/`aria` 或文本标记）。
+- 跟随系统开启时，系统明暗切换应用自动跟随，且沿用首屏防闪烁逻辑。
+
+## 7. 验收指标
 
 ### 体验指标
 
@@ -202,6 +288,9 @@ src/features/note/
 - 图片、字体、代码高亮完成后，同步滚动偏差不超过一个可视块。
 - 1,000 篇笔记下目录树与搜索交互 < 100ms。
 - ≥900px 窗口下编辑区不出现横向溢出；移动端主要操作命中区 ≥44px。
+- 全部内置主题下 Markdown 编辑/预览/富文本/代码块配色一致，切换即时生效并持久化。
+- 全局亮色 + 暗色阅读主题时，CodeMirror 光标、选区、默认高亮渲染正确。
+- 各主题正文、代码、链接对比度满足 WCAG AA；主题选择器窄工具栏不溢出、键盘可操作。
 
 ### 工程门禁
 
@@ -210,8 +299,9 @@ src/features/note/
 - `lib/`、`utils/`、AST/滚动/格式化等纯函数覆盖率 ≥ 90%。
 - 新增 Markdown 扩展必须有正常、边界、恶意输入和暗色主题测试。
 - 不得在组件中直接调用 `invoke()`；不得将 Git 或文件 IO 放入前端。
+- 新增主题必须同时覆盖正常、边界（长文 / 深色）与对比度测试；主题注册表变更同步更新测试数据。
 
-## 7. 交付顺序与依赖
+## 8. 交付顺序与依赖
 
 ```text
 P0 保存可靠性
@@ -221,6 +311,8 @@ P0 编辑器基础能力
 P1 Markdown 预览平台 ──┐
   ↓                    ├→ P1 性能与同步滚动
 P1 导航与知识流 ────────┘
+  ↓
+P1 主题体系（阅读主题升级）
 ```
 
 建议每个里程碑拆成可独立回滚的小 PR：
@@ -230,10 +322,14 @@ P1 导航与知识流 ────────┘
 3. `feat(note): build markdown preview pipeline`
 4. `feat(note): add outline and link completion`
 5. `perf(note): stabilize preview anchors and responsive split`
+6. `feat(note): apply reading theme to rich text editor`
+7. `feat(note): add syntax highlight tokens and extend themes`
+8. `feat(note): upgrade theme picker with system mode`
+9. `feat(note): split typography preferences from palettes`
 
 每个 PR 合并前同步更新本文件的完成状态，并在 PRD/架构发生业务规则或分层变化时同步更新对应活文档。
 
-## 8. 设计决策记录
+## 9. 设计决策记录
 
 - **继续使用 CodeMirror 6**：已满足模块化、Markdown 解析和 Tauri WebView 体积要求；当前缺口主要是扩展配置，而非编辑器内核替换。
 - **富文本为可选类型而非默认**：真富文本（TipTap JSON，`.ainote`）与 Markdown 并存，新建时选择；Markdown 仍是默认且对 Git 工作流最友好的格式。
@@ -241,3 +337,8 @@ P1 导航与知识流 ────────┘
 - **本地保存优先于 Git 提交**：编辑器的“已保存”表示内容已写入本地文件；Git commit/push 是独立的版本化与同步反馈。
 - **预览默认安全**：不解析原始 HTML；所有未来扩展先定义安全边界，再实现视觉能力。
 - **性能以可感知延迟为准**：优先保证输入线程和滚动线程流畅，再考虑更复杂的渲染效果。
+- **主题 = 语义 token + CSS 变量**：单一机制同时驱动 CodeMirror、TipTap、react-markdown 预览与 `hljs`，避免各编辑器各自维护一套样式；配色走 CSS 变量热切换，`dark` 标志类配置经扩展重建，切换无内容闪烁。
+- **主题是应用级偏好，不写入笔记文件**：frontmatter 不携带主题信息，保持 Markdown/Git 数据纯净；仓库级覆盖作为后续可选项，不引入笔记级主题。
+- **语法高亮继续走 token 映射，不引入 Shiki**：与现有 lowlight/`hljs` 管线一致，体积可控；CodeMirror 用 `HighlightStyle` 消费同一 token。
+- **暗色阅读主题独立于全局明暗**：CodeMirror `dark` 标志跟随阅读主题 `mode`，允许「全局亮色 + 暗色阅读主题」组合。
+- **PDF「A4 浅色」为固定打印模式**：主题化导出是可选叠加，默认保持打印输出稳定。

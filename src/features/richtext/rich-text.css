@@ -1,15 +1,15 @@
-/* 真富文本编辑器（TipTap）排版：引用设计 Token，随全局主题切换 */
+/* 真富文本编辑器（TipTap）排版：引用 note token，随阅读主题切换 */
 .rich-text-editor .ProseMirror {
   outline: none;
   min-height: 100%;
-  color: var(--text-primary);
+  color: var(--note-ink);
   font-family: var(--note-body-font);
-  font-size: 15px;
-  line-height: 1.75;
-  caret-color: var(--accent);
+  font-size: var(--note-font-size);
+  line-height: var(--note-line-height);
+  caret-color: var(--note-accent);
 }
 .rich-text-editor .rich-text-scroll .ProseMirror {
-  max-width: 68ch;
+  max-width: var(--note-reading-width);
   margin-inline: auto;
 }
 .rich-text-editor .ProseMirror > * + * {
@@ -19,7 +19,7 @@
 .rich-text-editor .ProseMirror h2,
 .rich-text-editor .ProseMirror h3 {
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--note-ink);
   line-height: 1.3;
 }
 .rich-text-editor .ProseMirror h1 { font-size: 1.7rem; margin: 0.6em 0 0.3em; }
@@ -30,22 +30,22 @@
 .rich-text-editor .ProseMirror ol { list-style: decimal; padding-left: 1.4rem; }
 .rich-text-editor .ProseMirror li { margin: 0.15em 0; }
 .rich-text-editor .ProseMirror blockquote {
-  border-left: 3px solid var(--accent);
+  border-left: 3px solid var(--note-accent);
   padding-left: 1rem;
-  color: var(--text-secondary);
+  color: var(--note-secondary);
   margin: 0.5em 0;
 }
 .rich-text-editor .ProseMirror pre {
-  background: var(--bg-secondary);
+  background: var(--note-code-bg);
   padding: 0.75rem 1rem;
   font-size: 13px;
   overflow-x: auto;
 }
 .rich-text-editor .ProseMirror .code-block-shell {
-  border: 1px solid var(--border);
+  border: 1px solid var(--note-border);
   border-radius: 8px;
   overflow: hidden;
-  background: var(--bg-secondary);
+  background: var(--note-code-bg);
 }
 .rich-text-editor .ProseMirror .code-block-shell pre {
   margin: 0;
@@ -57,27 +57,27 @@
   align-items: center;
   min-height: 30px;
   padding: 0 0.5rem;
-  border-bottom: 1px solid var(--border);
-  background: var(--bg-tertiary);
+  border-bottom: 1px solid var(--note-border);
+  background: var(--note-muted);
 }
 .rich-text-editor .ProseMirror .code-block-language {
   padding: 2px 4px;
   border: none;
   border-radius: 4px;
   background: transparent;
-  color: var(--text-secondary);
+  color: var(--note-secondary);
   font-family: inherit;
   font-size: 11px;
   cursor: pointer;
   outline: none;
 }
 .rich-text-editor .ProseMirror .code-block-language:hover {
-  background: var(--bg-secondary);
-  color: var(--text-primary);
+  background: var(--note-surface);
+  color: var(--note-ink);
 }
 .rich-text-editor .ProseMirror code {
   font-family: var(--note-code-font);
-  background: var(--bg-tertiary);
+  background: var(--note-code-bg);
   padding: 0.1em 0.35em;
   border-radius: 4px;
   font-size: 0.9em;
@@ -85,28 +85,30 @@
 .rich-text-editor .ProseMirror pre code { background: none; padding: 0; }
 /* 代码块语法高亮：与 Markdown 预览（.markdown-code-block）同一套 hljs 语义配色 */
 .rich-text-editor .ProseMirror pre code .hljs-comment,
-.rich-text-editor .ProseMirror pre code .hljs-quote { color: var(--text-tertiary); }
+.rich-text-editor .ProseMirror pre code .hljs-quote { color: var(--note-code-comment); font-style: italic; }
 .rich-text-editor .ProseMirror pre code .hljs-keyword,
 .rich-text-editor .ProseMirror pre code .hljs-selector-tag,
 .rich-text-editor .ProseMirror pre code .hljs-literal,
-.rich-text-editor .ProseMirror pre code .hljs-type { color: var(--accent); }
-.rich-text-editor .ProseMirror pre code .hljs-string,
+.rich-text-editor .ProseMirror pre code .hljs-type { color: var(--note-code-keyword); }
 .rich-text-editor .ProseMirror pre code .hljs-title,
+.rich-text-editor .ProseMirror pre code .hljs-function,
+.rich-text-editor .ProseMirror pre code .hljs-title.function_ { color: var(--note-code-function); }
+.rich-text-editor .ProseMirror pre code .hljs-string,
 .rich-text-editor .ProseMirror pre code .hljs-name,
-.rich-text-editor .ProseMirror pre code .hljs-attribute { color: var(--success); }
+.rich-text-editor .ProseMirror pre code .hljs-attribute { color: var(--note-code-string); }
 .rich-text-editor .ProseMirror pre code .hljs-number,
 .rich-text-editor .ProseMirror pre code .hljs-symbol,
-.rich-text-editor .ProseMirror pre code .hljs-bullet { color: var(--warning); }
+.rich-text-editor .ProseMirror pre code .hljs-bullet { color: var(--note-code-number); }
 .rich-text-editor .ProseMirror pre code .hljs-built_in,
 .rich-text-editor .ProseMirror pre code .hljs-variable,
-.rich-text-editor .ProseMirror pre code .hljs-template-variable { color: var(--danger); }
+.rich-text-editor .ProseMirror pre code .hljs-template-variable { color: var(--note-code-var); }
 .rich-text-editor .ProseMirror hr {
   border: none;
-  border-top: 1px solid var(--border);
+  border-top: 1px solid var(--note-border);
   margin: 1em 0;
 }
 .rich-text-editor .ProseMirror .ProseMirror-selectednode {
-  outline: 2px solid var(--accent);
+  outline: 2px solid var(--note-accent);
   border-radius: 4px;
 }
 .rich-text-editor .ProseMirror img {
@@ -122,20 +124,20 @@
 }
 .rich-text-editor .ProseMirror th,
 .rich-text-editor .ProseMirror td {
-  border: 1px solid var(--border);
+  border: 1px solid var(--note-border);
   padding: 0.4rem 0.6rem;
   text-align: left;
   vertical-align: top;
 }
 .rich-text-editor .ProseMirror th {
-  background: var(--bg-secondary);
+  background: var(--note-surface);
   font-weight: 600;
 }
 .rich-text-editor .ProseMirror .selectedCell:after {
   content: "";
   position: absolute;
   inset: 0;
-  background: color-mix(in srgb, var(--accent) 18%, transparent);
+  background: color-mix(in srgb, var(--note-accent) 18%, transparent);
   pointer-events: none;
 }
 .rich-text-editor .ProseMirror .column-resize-handle {
@@ -144,11 +146,11 @@
   top: 0;
   bottom: -2px;
   width: 4px;
-  background: var(--accent);
+  background: var(--note-accent);
   pointer-events: none;
 }
 .rich-text-editor .ProseMirror .wiki-link {
-  color: var(--accent);
+  color: var(--note-accent);
   text-decoration: underline;
   text-decoration-style: dotted;
   text-underline-offset: 3px;
@@ -156,7 +158,7 @@
   border-radius: 4px;
 }
 .rich-text-editor .ProseMirror .wiki-link:hover {
-  background: var(--accent-soft);
+  background: var(--note-accent-soft);
 }
 .rich-text-editor .ProseMirror ul[data-type="taskList"] {
   list-style: none;
@@ -172,15 +174,15 @@
   margin-top: 0.35em;
 }
 .rich-text-editor .ProseMirror li[data-type="taskItem"] input[type="checkbox"] {
-  accent-color: var(--accent);
+  accent-color: var(--note-accent);
 }
 .rich-text-editor .ProseMirror li[data-type="taskItem"].is-checked > div {
   text-decoration: line-through;
-  color: var(--text-tertiary);
+  color: var(--note-tertiary);
 }
 .rich-text-editor .ProseMirror .tag-mark {
-  color: var(--accent);
-  background: var(--accent-soft);
+  color: var(--note-accent);
+  background: var(--note-accent-soft);
   border-radius: 4px;
   padding: 0 0.25em;
 }

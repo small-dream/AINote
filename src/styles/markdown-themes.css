@@ -16,13 +16,18 @@
      使「所见」与「所得」在字体、行高、阅读列宽、内联代码样式上保持一致。 */
   /* 西文优先 + 显式 CJK fallback + emoji：中英混排时字形统一，跨平台观感可控。
      顺序参考 GitHub / Apple 系统字体栈；中文按 macOS → Linux → Windows 兜底。 */
-  --note-body-font:
+  --note-body-font-sans:
     -apple-system, BlinkMacSystemFont,
     "Segoe UI", Roboto, "Helvetica Neue", Arial,
     "PingFang SC", "Hiragino Sans GB",
     "Source Han Sans SC", "Noto Sans CJK SC", "Noto Sans SC",
     "Microsoft YaHei", "Microsoft YaHei UI",
     sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --note-body-font-serif:
+    Georgia, "Times New Roman",
+    "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun",
+    serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+  --note-body-font: var(--note-body-font-sans);
   --note-code-font:
     ui-monospace, "JetBrains Mono", "SF Mono", "SFMono-Regular", Menlo, Consolas,
     "Liberation Mono", "Courier New",
@@ -30,7 +35,16 @@
     "Source Han Sans SC", "Noto Sans CJK SC", "Noto Sans Mono CJK SC",
     "Microsoft YaHei",
     monospace;
-  --note-code-bg: var(--bg-secondary);
+  /* 代码层 token：预览 / 软渲染 / 富文本 / CodeMirror 共用，随阅读主题切换。
+     默认即 classic（经典亮色，GitHub Light 系配色）。 */
+  --note-code-bg: #f6f8fa;
+  --note-code-keyword: #cf222e;
+  --note-code-string: #0a3069;
+  --note-code-number: #0550ae;
+  --note-code-comment: #6e7781;
+  --note-code-type: #953800;
+  --note-code-function: #8250df;
+  --note-code-var: #953800;
   --note-font-size: 15px;
   --note-line-height: 1.7;
   --note-reading-width: 72ch;
@@ -51,6 +65,14 @@
   --note-success: #3f7d58;
   --note-warning: #a16207;
   --note-danger: #b94a48;
+  --note-code-bg: #f3ecdf;
+  --note-code-keyword: #a94442;
+  --note-code-string: #586e9a;
+  --note-code-number: #8a5a19;
+  --note-code-comment: #8a7a63;
+  --note-code-type: #9a6b1f;
+  --note-code-function: #7d5ba6;
+  --note-code-var: #9a6b1f;
 }
 
 [data-note-theme="midnight"] {
@@ -66,6 +88,14 @@
   --note-success: #8bd5a6;
   --note-warning: #f4c56a;
   --note-danger: #ff9b9b;
+  --note-code-bg: #0d1526;
+  --note-code-keyword: #ff7b72;
+  --note-code-string: #a5d6ff;
+  --note-code-number: #79c0ff;
+  --note-code-comment: #8b949e;
+  --note-code-type: #ffa657;
+  --note-code-function: #d2a8ff;
+  --note-code-var: #ffa657;
 }
 
 [data-note-theme="forest"] {
@@ -81,6 +111,106 @@
   --note-success: #2f855a;
   --note-warning: #a66a1f;
   --note-danger: #b94a48;
+  --note-code-bg: #e3efe5;
+  --note-code-keyword: #9c2f2f;
+  --note-code-string: #2f5f8f;
+  --note-code-number: #7a5a12;
+  --note-code-comment: #6c8779;
+  --note-code-type: #8a5a10;
+  --note-code-function: #6b5ba0;
+  --note-code-var: #8a5a10;
+}
+
+[data-note-theme="solar"] {
+  --note-bg: #f5f8fc;
+  --note-surface: #e9eff7;
+  --note-muted: #dbe4f0;
+  --note-ink: #26344c;
+  --note-secondary: #5b6c85;
+  --note-tertiary: #8494ab;
+  --note-border: #cdd8e8;
+  --note-accent: #2f6fed;
+  --note-accent-soft: #dbe7ff;
+  --note-success: #2f8f5b;
+  --note-warning: #a06a12;
+  --note-danger: #c33b4f;
+  --note-code-bg: #eef3fa;
+  --note-code-keyword: #c33b4f;
+  --note-code-string: #1f5f8f;
+  --note-code-number: #2f6fed;
+  --note-code-comment: #7b8aa3;
+  --note-code-type: #8a5a10;
+  --note-code-function: #7d4fc0;
+  --note-code-var: #8a5a10;
+}
+
+[data-note-theme="graphite"] {
+  --note-bg: #14161b;
+  --note-surface: #1c1f25;
+  --note-muted: #272b33;
+  --note-ink: #e9ebec;
+  --note-secondary: #a4a9b0;
+  --note-tertiary: #70777f;
+  --note-border: #34383f;
+  --note-accent: #8fa6ff;
+  --note-accent-soft: #262d47;
+  --note-success: #7fd1a0;
+  --note-warning: #e0b060;
+  --note-danger: #f08a8a;
+  --note-code-bg: #101216;
+  --note-code-keyword: #ff9a9a;
+  --note-code-string: #a5d6ff;
+  --note-code-number: #82aaff;
+  --note-code-comment: #808891;
+  --note-code-type: #ffc48a;
+  --note-code-function: #c3a6ff;
+  --note-code-var: #ffc48a;
+}
+
+[data-note-theme="inkblue"] {
+  --note-bg: #0c1424;
+  --note-surface: #131e31;
+  --note-muted: #1c2a42;
+  --note-ink: #dbe6f5;
+  --note-secondary: #93a5c2;
+  --note-tertiary: #617395;
+  --note-border: #25344f;
+  --note-accent: #5aa2ff;
+  --note-accent-soft: #16314f;
+  --note-success: #67d3a0;
+  --note-warning: #e3b45c;
+  --note-danger: #f18484;
+  --note-code-bg: #0a1120;
+  --note-code-keyword: #ff8f8f;
+  --note-code-string: #9fdcff;
+  --note-code-number: #6fb6ff;
+  --note-code-comment: #6d7f9e;
+  --note-code-type: #ffc08a;
+  --note-code-function: #c3a6ff;
+  --note-code-var: #ffc08a;
+}
+
+[data-note-theme="warmdark"] {
+  --note-bg: #1b1712;
+  --note-surface: #231e18;
+  --note-muted: #2f2922;
+  --note-ink: #ece4d7;
+  --note-secondary: #b3a793;
+  --note-tertiary: #807564;
+  --note-border: #3b342c;
+  --note-accent: #e8a34d;
+  --note-accent-soft: #3a2e1c;
+  --note-success: #9ccb7d;
+  --note-warning: #d9a24f;
+  --note-danger: #e08181;
+  --note-code-bg: #15110c;
+  --note-code-keyword: #f08a8a;
+  --note-code-string: #e2c08c;
+  --note-code-number: #d9a24f;
+  --note-code-comment: #8b806f;
+  --note-code-type: #e3a857;
+  --note-code-function: #c9a6e8;
+  --note-code-var: #e3a857;
 }
 
 .note-theme-surface {

@@ -12,6 +12,7 @@ import {
   readStoredLocale,
   readStoredSidebarWidth,
   readStoredTheme,
+  resolveTheme,
   useUiStore,
 } from "./ui.store";
 
@@ -22,6 +23,7 @@ describe("ui.store 主题解析与持久化", () => {
 
   it("parseTheme 非法值回退亮色", () => {
     expect(parseTheme("dark")).toBe("dark");
+    expect(parseTheme("system")).toBe("system");
     expect(parseTheme(null)).toBe("light");
     expect(parseTheme("unknown")).toBe("light");
   });
@@ -51,6 +53,10 @@ describe("ui.store 主题解析与持久化", () => {
 
   it("解析并持久化笔记主题", () => {
     expect(parseNoteTheme("forest")).toBe("forest");
+    expect(parseNoteTheme("solar")).toBe("solar");
+    expect(parseNoteTheme("graphite")).toBe("graphite");
+    expect(parseNoteTheme("inkblue")).toBe("inkblue");
+    expect(parseNoteTheme("warmdark")).toBe("warmdark");
     expect(parseNoteTheme("unknown")).toBe("classic");
     useUiStore.getState().setNoteTheme("midnight");
     expect(localStorage.getItem(NOTE_THEME_STORAGE_KEY)).toBe("midnight");
@@ -89,5 +95,14 @@ describe("ui.store 目录栏宽度", () => {
 
     useUiStore.getState().persistSidebarWidth();
     expect(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY)).toBe("480");
+  });
+});
+
+describe("ui.store 跟随系统解析", () => {
+  it("resolveTheme 按主题与系统明暗解析实际值", () => {
+    expect(resolveTheme("light", true)).toBe("light");
+    expect(resolveTheme("dark", false)).toBe("dark");
+    expect(resolveTheme("system", true)).toBe("dark");
+    expect(resolveTheme("system", false)).toBe("light");
   });
 });
