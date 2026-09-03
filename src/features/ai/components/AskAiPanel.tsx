@@ -6,6 +6,8 @@ import remarkGfm from "remark-gfm";
 import { useTranslation } from "@/i18n";
 import { useAskAi } from "../hooks/useAskAi";
 import { useAiConfig } from "../hooks/useAiConfig";
+import { usableAiModels } from "../utils/models";
+import { AiModelSelect } from "./AiModelSelect";
 import { useUiStore } from "@/stores/ui.store";
 import type { AskScope } from "../utils/prompts";
 
@@ -22,11 +24,14 @@ interface AskAiPanelProps {
 export function AskAiPanel({ open, noteContent, canInsert = true, onClose, onInsert }: AskAiPanelProps) {
   const ai = useAskAi({ noteContent });
   const { data } = useAiConfig();
-  const configured = Boolean(data?.enabled && (data.provider === "ollama" || data.hasKey));
+  const configured = usableAiModels(data).length > 0;
   if (!open) return null;
   return (
     <aside className="flex h-full w-96 shrink-0 flex-col border-l border-border bg-bg-secondary/70">
       <AskAiHeader onClose={onClose} onReset={ai.reset} />
+      <div className="border-b border-border px-3 py-2">
+        <AiModelSelect className="w-full" />
+      </div>
       <ScopeTabs scope={ai.scope} onChange={ai.setScope} />
       {configured ? null : <AiNotConfigured />}
       <AskAiMessages history={ai.history} streaming={ai.streaming} loading={ai.loading} error={ai.error} canInsert={canInsert} onInsert={onInsert} />

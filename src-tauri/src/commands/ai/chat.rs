@@ -11,8 +11,11 @@ pub async fn ai_chat(
     app: AppHandle,
     messages: Vec<AiChatMessage>,
     repo_query: Option<String>,
+    model_id: Option<String>,
 ) -> Result<AiReplyDto, AppErrorDto> {
-    blocking::run(move || ai_service::chat(&app, messages, repo_query).map(|text| AiReplyDto { text }))
-        .await
-        .map_err(AppErrorDto::from)
+    blocking::run(move || {
+        ai_service::chat(&app, messages, repo_query, model_id).map(|text| AiReplyDto { text })
+    })
+    .await
+    .map_err(AppErrorDto::from)
 }

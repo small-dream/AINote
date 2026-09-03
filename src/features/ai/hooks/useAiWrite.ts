@@ -1,5 +1,6 @@
 import { useCallback, useRef, useState } from "react";
 import { aiApi, messageOf } from "@/api";
+import { useAiModelStore } from "@/stores/aiModel.store";
 import { actionSystem, buildWritePrompt, AI_SUMMARIZE, type AiWriteAction } from "../utils/prompts";
 
 export interface AiSelection {
@@ -33,7 +34,12 @@ export function useAiWrite({ getSelection, onApply, onApplySummary }: UseAiWrite
     setMenuOpen(false); setLoading(true); setError(null); setPreview("");
     try {
       const source = action === AI_SUMMARIZE ? (sel.fullText ?? sel.text) : sel.text;
-      const full = await aiApi.generateStream(actionSystem(action), buildWritePrompt(action, source, sel.contextTitle), (delta) => setPreview((prev) => (prev ?? "") + delta));
+      const full = await aiApi.generateStream(
+        actionSystem(action),
+        buildWritePrompt(action, source, sel.contextTitle),
+        (delta) => setPreview((prev) => (prev ?? "") + delta),
+        useAiModelStore.getState().selectedModelId,
+      );
       setPreview(full);
     } catch (err) {
       setError(messageOf(err));

@@ -26,6 +26,7 @@ pub fn run() {
             commands::ai::config::ai_save_config,
             commands::ai::generate::ai_generate,
             commands::ai::generate_stream::ai_generate_stream,
+            commands::ai::models::ai_fetch_models,
             commands::ai::chat::ai_chat,
             commands::ai::chat_stream::ai_chat_stream,
             commands::note::create::create_note,

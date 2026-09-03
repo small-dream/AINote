@@ -1,4 +1,5 @@
 pub mod ai;
+pub mod ai_settings;
 pub mod asset;
 pub mod dto;
 pub mod error;
@@ -7,5 +8,5 @@ pub mod note;
 pub mod rich_text;
 pub mod search;
 pub mod sync;
-pub mod wiki;
 pub mod trash;
+pub mod wiki;

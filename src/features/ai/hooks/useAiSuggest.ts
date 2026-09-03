@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { aiApi, messageOf } from "@/api";
+import { useAiModelStore } from "@/stores/aiModel.store";
 import { buildSuggestPrompt, suggestSystem, type AiSuggestKind } from "../utils/prompts";
 import { parseTitleSuggestions } from "../utils/titles";
 
@@ -25,7 +26,12 @@ export function useAiSuggest({ noteText, onApplyTitle, onInsertOutline }: UseAiS
       setLoading(true);
       setText("");
       setError(null);
-      aiApi.generateStream(suggestSystem(next), buildSuggestPrompt(next, noteText), (delta) => setText((prev) => prev + delta))
+      aiApi.generateStream(
+        suggestSystem(next),
+        buildSuggestPrompt(next, noteText),
+        (delta) => setText((prev) => prev + delta),
+        useAiModelStore.getState().selectedModelId,
+      )
         .then((full) => setText(full))
         .catch((err: unknown) => setError(messageOf(err)))
         .finally(() => setLoading(false));

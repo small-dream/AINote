@@ -67,7 +67,7 @@
 
 | ID | User Story |
 |---|---|
-| P0-AI-1 | 在「设置 → AI」配置 Provider（OpenAI 兼容 API / Ollama）、API Key、模型与开关；Key 加密存储，前端拿不到明文 |
+| P0-AI-1 | 在「设置 → AI」管理多个 Provider（OpenAI 兼容 API / Ollama），每个 Provider 下维护多个模型并独立启用；设置全局默认模型；AI 菜单与问答面板可选择本次模型；Key 加密存储，前端拿不到明文 |
 | P0-AI-2 | 编辑器（Markdown + 富文本）选中文本一键「润色 / 翻译 / 缩写 / 扩写」，结果预览后替换选区 |
 | P0-AI-3 | 光标处 AI 续写当前笔记，结果插入光标处 |
 | P0-AI-4 | 「AI 问答」面板基于当前笔记（可选全库关键词检索上下文）提问，回答渲染 Markdown 并可插入笔记 |

@@ -15,7 +15,10 @@ export { isAppError, messageOf } from "./error";
 export type { AppError, ErrorKind } from "./error";
 export type {
   AiChatMessage,
-  AiConfigDto,
+  AiSettingsDto,
+  AiSettings,
+  AiProviderDto,
+  AiModelDto,
   AiProvider,
   AiReply,
   AiStreamChunk,

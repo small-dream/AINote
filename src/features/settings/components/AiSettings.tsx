@@ -1,101 +1,77 @@
-import { useState, type FormEvent, type ReactNode } from "react";
 import { Button } from "@/components/atoms/Button";
-import { messageOf } from "@/api";
-import { useAiConfig, useSaveAiConfig } from "@/features/ai/hooks/useAiConfig";
-import type { AiConfigDto } from "@/api";
+import { useAiConfig } from "@/features/ai/hooks/useAiConfig";
 import { useTranslation } from "@/i18n";
+import { AiToggle } from "./AiField";
+import { AiProviderManager } from "./AiProviderManager";
+import { useAiSettingsDraft } from "../hooks/useAiSettingsDraft";
 
-interface AiFormState {
-  enabled: boolean;
-  provider: AiConfigDto["provider"];
-  baseUrl: string;
-  model: string;
-  apiKey: string;
-}
-
-const INPUT_CLASS = "w-full rounded-md border border-border bg-bg-primary px-2 py-1.5 text-sm focus:border-accent focus:outline-none";
-
-/** 设置页 AI 内容区：Provider / 模型 / API Key（标题由设置视图统一提供）。 */
+/** 设置页 AI 内容区：全局能力状态 + Provider 连接 + 模型目录。 */
 export function AiSettings() {
   const { t } = useTranslation();
   const { data, isLoading } = useAiConfig();
+
   if (isLoading || !data) return <p className="text-sm text-text-secondary">{t("common.loading")}</p>;
-  return <AiSettingsForm initial={data} />;
+  return <AiSettingsEditor config={data} />;
 }
 
-function AiSettingsForm({ initial }: { initial: AiConfigDto }) {
-  const { t } = useTranslation();
-  const save = useSaveAiConfig();
-  const [form, setForm] = useState<AiFormState>({ enabled: initial.enabled, provider: initial.provider, baseUrl: initial.baseUrl, model: initial.model, apiKey: "" });
-  const cfg = { enabled: form.enabled, provider: form.provider, baseUrl: form.baseUrl, model: form.model };
-  const patch = (part: Partial<AiFormState>) => setForm((f) => ({ ...f, ...part }));
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    const apiKey = form.apiKey.trim() ? form.apiKey.trim() : null;
-    save.mutate({ cfg, apiKey });
-    if (apiKey) patch({ apiKey: "" });
-  };
+function AiSettingsEditor({ config }: { config: NonNullable<ReturnType<typeof useAiConfig>["data"]> }) {
+  const draft = useAiSettingsDraft(config);
   return (
-    <form onSubmit={submit} className="flex flex-col gap-3">
-      <EnableField checked={form.enabled} onChange={(v) => patch({ enabled: v })} />
-      <Field label={t("ai.provider")}>
-        <select value={form.provider} onChange={(e) => patch({ provider: e.target.value as AiConfigDto["provider"] })} className={INPUT_CLASS}>
-          <option value="openAiCompatible">{t("ai.providerOpenAi")}</option>
-          <option value="ollama">{t("ai.providerOllama")}</option>
-        </select>
-      </Field>
-      <Field label={t("ai.baseUrl")}>
-        <input value={form.baseUrl} onChange={(e) => patch({ baseUrl: e.target.value })} className={INPUT_CLASS} />
-      </Field>
-      <Field label={t("ai.model")}>
-        <input value={form.model} onChange={(e) => patch({ model: e.target.value })} className={INPUT_CLASS} />
-      </Field>
-      <Field label={t("ai.apiKey")}>
-        <AiKeyField hasKey={initial.hasKey} value={form.apiKey} onChange={(v) => patch({ apiKey: v })} onClear={() => save.mutate({ cfg, apiKey: "" })} />
-      </Field>
-      <FormActions isPending={save.isPending} isError={save.isError} message={save.isError ? t("ai.saveFailed", { message: messageOf(save.error) }) : null} />
+    <form onSubmit={draft.submit} className="flex flex-col gap-3">
+      <AiSummaryCard settings={draft.settings} onToggle={(enabled) => draft.update((current) => ({ ...current, enabled }))} />
+      <AiProviderManager
+        settings={draft.settings}
+        providerKeys={config.providers}
+        keyDrafts={draft.keyDrafts}
+        onSetKey={draft.setKeyDraft}
+        onUpdate={draft.update}
+        onAddProvider={draft.addProvider}
+        onAddModel={draft.addModel}
+        onRemoveProvider={draft.removeProvider}
+        onRemoveModel={draft.removeModel}
+      />
+      <FormFooter saving={draft.saving} error={draft.error} />
     </form>
   );
 }
 
-function EnableField({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) {
-  const { t } = useTranslation();
-  return (
-    <label className="flex items-center gap-2 text-sm">
-      <input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />
-      {t("ai.enable")}
-    </label>
-  );
+interface AiSummarySettings {
+  enabled: boolean;
+  providers: { id: string }[];
+  models: { id: string; displayName: string }[];
+  defaultModelId: string | null;
 }
 
-function AiKeyField({ hasKey, value, onChange, onClear }: { hasKey: boolean; value: string; onChange: (v: string) => void; onClear: () => void }) {
+function AiSummaryCard({ settings, onToggle }: { settings: AiSummarySettings; onToggle: (enabled: boolean) => void }) {
   const { t } = useTranslation();
+  const defaultModel = settings.models.find((model) => model.id === settings.defaultModelId);
+  const summary = t("ai.summary", {
+    providers: settings.providers.length,
+    models: settings.models.length,
+    model: defaultModel?.displayName || t("ai.defaultModelEmpty"),
+  });
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex gap-2">
-        <input type="password" value={value} placeholder={hasKey ? t("ai.apiKeyPlaceholder") : ""} onChange={(e) => onChange(e.target.value)} className={INPUT_CLASS} />
-        {hasKey ? <Button type="button" variant="ghost" className="shrink-0" onClick={onClear}>{t("ai.clearKey")}</Button> : null}
+    <section className="flex items-start justify-between gap-3 rounded-xl border border-border bg-bg-secondary/60 p-3">
+      <div className="min-w-0">
+        <h3 className="text-sm font-semibold text-text-primary">{t("ai.capability")}</h3>
+        <p className="mt-0.5 truncate text-xs text-text-secondary">{summary}</p>
       </div>
-      {hasKey ? <p className="text-xs text-text-tertiary">{t("ai.hasKey")}</p> : null}
-    </div>
+      <div className="flex shrink-0 items-center gap-2">
+        <span className={`rounded-full px-2 py-0.5 text-xs ${settings.enabled ? "bg-accent-soft text-accent" : "bg-bg-tertiary text-text-secondary"}`}>
+          {settings.enabled ? t("ai.enabled") : t("ai.disabled")}
+        </span>
+        <AiToggle checked={settings.enabled} label={t("ai.enable")} onChange={onToggle} />
+      </div>
+    </section>
   );
 }
 
-function FormActions({ isPending, isError, message }: { isPending: boolean; isError: boolean; message: string | null }) {
+function FormFooter({ saving, error }: { saving: boolean; error: string | null }) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center justify-between gap-2">
-      {isError ? <p className="text-xs text-danger">{message}</p> : <span />}
-      <Button type="submit" disabled={isPending}>{isPending ? t("common.saving") : t("ai.save")}</Button>
+    <div className="sticky bottom-0 -mx-1 flex items-center justify-between gap-3 bg-bg-primary/92 px-1 py-2 backdrop-blur">
+      {error ? <p className="min-w-0 truncate text-xs text-danger">{error}</p> : <span />}
+      <Button type="submit" className="shrink-0 px-4" disabled={saving}>{saving ? t("common.saving") : t("ai.save")}</Button>
     </div>
-  );
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <label className="flex flex-col gap-1 text-xs text-text-secondary">
-      <span>{label}</span>
-      {children}
-    </label>
   );
 }

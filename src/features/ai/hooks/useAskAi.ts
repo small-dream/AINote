@@ -1,5 +1,6 @@
 import { useCallback, useState } from "react";
 import { aiApi, messageOf, type AiChatMessage } from "@/api";
+import { useAiModelStore } from "@/stores/aiModel.store";
 import { buildChatSystem, type AskScope } from "../utils/prompts";
 
 interface UseAskAiOptions {
@@ -31,6 +32,7 @@ export function useAskAi({ noteContent }: UseAskAiOptions) {
         [{ role: "system", content: system }, ...nextHistory],
         scope === "repo" ? question : null,
         (delta) => setStreaming((prev) => prev + delta),
+        useAiModelStore.getState().selectedModelId,
       );
       setStreaming("");
       setHistory((h) => [...h, { role: "assistant", content: full }]);

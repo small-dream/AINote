@@ -22,40 +22,14 @@ impl AiProvider {
     }
 }
 
-/// AI 非敏感配置（存 ai.json 明文；API Key 单独加密存储）。
+/// 单次 AI 请求的运行时配置（由 Provider + 模型解析得到）。
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AiConfig {
     #[serde(default)]
-    pub enabled: bool,
-    #[serde(default)]
-    pub provider: AiProvider,
-    #[serde(default = "default_base_url")]
-    pub base_url: String,
-    #[serde(default = "default_model")]
-    pub model: String,
-}
-
-impl Default for AiConfig {
-    fn default() -> Self {
-        Self {
-            enabled: false,
-            provider: AiProvider::OpenAiCompatible,
-            base_url: default_base_url(),
-            model: default_model(),
-        }
-    }
-}
-
-/// 传输给前端的配置（含 has_key，Key 明文不返回前端）。
-#[derive(Debug, Clone, Serialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AiConfigDto {
-    pub enabled: bool,
     pub provider: AiProvider,
     pub base_url: String,
     pub model: String,
-    pub has_key: bool,
 }
 
 /// 对话消息（与 OpenAI chat/completions 的 messages 结构一致）。
@@ -80,37 +54,9 @@ pub struct AiStreamChunk {
     pub delta: String,
 }
 
-fn default_base_url() -> String {
-    "https://api.openai.com/v1".to_string()
-}
-
-fn default_model() -> String {
-    "gpt-4o-mini".to_string()
-}
-
-impl From<&AiConfig> for AiConfigDto {
-    fn from(cfg: &AiConfig) -> Self {
-        Self {
-            enabled: cfg.enabled,
-            provider: cfg.provider,
-            base_url: cfg.base_url.clone(),
-            model: cfg.model.clone(),
-            has_key: false,
-        }
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn default_config_is_safe() {
-        let cfg = AiConfig::default();
-        assert!(!cfg.enabled);
-        assert_eq!(cfg.provider, AiProvider::OpenAiCompatible);
-        assert!(cfg.base_url.contains("api.openai.com"));
-    }
 
     #[test]
     fn provider_requires_key() {

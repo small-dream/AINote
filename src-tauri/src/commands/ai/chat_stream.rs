@@ -12,11 +12,14 @@ pub async fn ai_chat_stream(
     app: AppHandle,
     messages: Vec<AiChatMessage>,
     repo_query: Option<String>,
+    model_id: Option<String>,
     on_event: Channel<AiStreamChunk>,
 ) -> Result<(), AppErrorDto> {
     blocking::run(move || {
-        ai_service::chat_stream(&app, messages, repo_query, |delta| {
-            let _ = on_event.send(AiStreamChunk { delta: delta.to_string() });
+        ai_service::chat_stream(&app, messages, repo_query, model_id, |delta| {
+            let _ = on_event.send(AiStreamChunk {
+                delta: delta.to_string(),
+            });
         })
     })
     .await

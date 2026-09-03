@@ -2,6 +2,7 @@ import { IconButton } from "@/components/atoms/IconButton";
 import { Wand2 } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { useAiConfig } from "../hooks/useAiConfig";
+import { usableAiModels } from "../utils/models";
 import { useUiStore } from "@/stores/ui.store";
 
 interface AiToolbarButtonProps {
@@ -15,7 +16,7 @@ interface AiToolbarButtonProps {
 export function AiToolbarButton({ onOpen, disabled, compact = false }: AiToolbarButtonProps) {
   const { t } = useTranslation();
   const { data } = useAiConfig();
-  const configured = Boolean(data?.enabled && (data.provider === "ollama" || data.hasKey));
+  const configured = usableAiModels(data).length > 0;
   const { label, action } = resolveAiToolbar(configured, t, onOpen);
   return (
     <IconButton

@@ -62,13 +62,40 @@ export interface AuthStatusDto {
 /** AI Provider：统一 OpenAI 兼容 chat/completions 协议（Ollama 走 /v1 兼容端点） */
 export type AiProvider = "openAiCompatible" | "ollama";
 
-/** ai_get_config 返回（不含明文 API Key） */
-export interface AiConfigDto {
-  enabled: boolean;
+/** AI Provider 连接（不含明文 API Key） */
+export interface AiProviderDto {
+  id: string;
   provider: AiProvider;
+  displayName: string;
   baseUrl: string;
-  model: string;
+  enabled: boolean;
   hasKey: boolean;
+}
+
+/** AI 模型：属于 Provider，可独立启停 */
+export interface AiModelDto {
+  id: string;
+  providerId: string;
+  modelId: string;
+  displayName: string;
+  enabled: boolean;
+}
+
+/** ai_get_config 返回（不含明文 API Key） */
+export interface AiSettingsDto {
+  enabled: boolean;
+  providers: AiProviderDto[];
+  models: AiModelDto[];
+  defaultModelId: string | null;
+}
+
+/** ai_save_config 入参；Provider 不回传 hasKey */
+export interface AiSettings {
+  schemaVersion: 2;
+  enabled: boolean;
+  providers: Omit<AiProviderDto, "hasKey">[];
+  models: AiModelDto[];
+  defaultModelId: string | null;
 }
 
 /** ai_chat 的对话消息（与 OpenAI messages 结构一致） */

@@ -1,4 +1,5 @@
 import { useEffect, type ReactNode } from "react";
+import { createPortal } from "react-dom";
 
 interface ModalProps {
   open: boolean;
@@ -20,9 +21,9 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
 
   if (!open) return null;
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40"
+      className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40"
       role="presentation"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) onClose();
@@ -37,8 +38,9 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
         <h2 id="ainote-modal-title" className="mb-4 text-lg font-semibold">
           {title}
         </h2>
-        {children}
+      {children}
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

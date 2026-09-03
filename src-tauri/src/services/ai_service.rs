@@ -5,7 +5,8 @@ use std::path::Path;
 
 use tauri::AppHandle;
 
-use crate::domain::ai::{AiChatMessage, AiConfig, AiConfigDto};
+use crate::domain::ai::{AiChatMessage, AiConfig, AiProvider};
+use crate::domain::ai_settings::{AiApiKeyInput, AiSettings, AiSettingsDto};
 use crate::domain::error::AppError;
 use crate::repositories::llm::{LlmClient, OpenAiCompatClient};
 
@@ -15,31 +16,65 @@ use super::search_service;
 const MAX_CONTEXT_RESULTS: usize = 5;
 const MAX_PARAGRAPH_CHARS: usize = 1200;
 
-pub fn config(app: &AppHandle) -> Result<AiConfigDto, AppError> {
+pub fn config(app: &AppHandle) -> Result<AiSettingsDto, AppError> {
     AiStore::from_app(app)?.dto()
 }
 
-/// 保存配置；api_key 为 Some 时同时更新加密 Key，为 None 时保留已有 Key。
-pub fn save_config(app: &AppHandle, cfg: AiConfig, api_key: Option<String>) -> Result<(), AppError> {
+/// 保存设置；api_key 指定时必须同时指定目标 Provider，None 表示保留已有 Key。
+pub fn save_config(
+    app: &AppHandle,
+    settings: AiSettings,
+    api_keys: Option<Vec<AiApiKeyInput>>,
+) -> Result<(), AppError> {
     let store = AiStore::from_app(app)?;
-    if let Some(key) = api_key {
-        if !key.trim().is_empty() {
-            store.save_key(key.trim())?;
-        } else {
-            store.delete_key()?;
+    if let Some(keys) = api_keys {
+        for input in keys {
+            if input.key.trim().is_empty() {
+                store.delete_provider_key(&input.provider_id)?;
+            } else {
+                store.save_provider_key(&input.provider_id, input.key.trim())?;
+            }
         }
     }
-    store.save_config(&cfg)
+    store.save_settings(&settings)
+}
+
+/// 拉取 OpenAI 兼容 /models 列表，供设置页自动补全模型目录。
+pub fn fetch_models(
+    app: &AppHandle,
+    provider_id: &str,
+    base_url: &str,
+    kind: AiProvider,
+) -> Result<Vec<String>, AppError> {
+    let store = AiStore::from_app(app)?;
+    let key = store.provider_key(provider_id)?;
+    let runtime = AiConfig {
+        provider: kind,
+        base_url: base_url.to_owned(),
+        model: String::new(),
+    };
+    OpenAiCompatClient.list_models(&runtime, key.as_deref())
 }
 
 /// 编辑器写作动作：system + prompt 单轮生成。
-pub fn generate(app: &AppHandle, system: String, prompt: String) -> Result<String, AppError> {
+pub fn generate(
+    app: &AppHandle,
+    system: String,
+    prompt: String,
+    model_id: Option<String>,
+) -> Result<String, AppError> {
     let client = OpenAiCompatClient;
     let messages = vec![
-        AiChatMessage { role: "system".into(), content: system },
-        AiChatMessage { role: "user".into(), content: prompt },
+        AiChatMessage {
+            role: "system".into(),
+            content: system,
+        },
+        AiChatMessage {
+            role: "user".into(),
+            content: prompt,
+        },
     ];
-    complete(&client, app, &messages)
+    complete(&client, app, &messages, model_id.as_deref())
 }
 
 /// 编辑器写作动作（流式）：增量回调给前端渲染，返回完整文本。
@@ -47,21 +82,33 @@ pub fn generate_stream(
     app: &AppHandle,
     system: String,
     prompt: String,
+    model_id: Option<String>,
     on_delta: impl FnMut(&str) + Send,
 ) -> Result<String, AppError> {
     let client = OpenAiCompatClient;
     let messages = vec![
-        AiChatMessage { role: "system".into(), content: system },
-        AiChatMessage { role: "user".into(), content: prompt },
+        AiChatMessage {
+            role: "system".into(),
+            content: system,
+        },
+        AiChatMessage {
+            role: "user".into(),
+            content: prompt,
+        },
     ];
-    complete_stream(&client, app, &messages, on_delta)
+    complete_stream(&client, app, &messages, on_delta, model_id.as_deref())
 }
 
 /// 问答：messages 为完整对话；repo_query 非空时检索全库段落并入上下文。
-pub fn chat(app: &AppHandle, mut messages: Vec<AiChatMessage>, repo_query: Option<String>) -> Result<String, AppError> {
+pub fn chat(
+    app: &AppHandle,
+    mut messages: Vec<AiChatMessage>,
+    repo_query: Option<String>,
+    model_id: Option<String>,
+) -> Result<String, AppError> {
     let client = OpenAiCompatClient;
     inject_context(app, &mut messages, repo_query)?;
-    complete(&client, app, &messages)
+    complete(&client, app, &messages, model_id.as_deref())
 }
 
 /// 问答（流式）：同上，增量回调给前端渲染。
@@ -69,15 +116,22 @@ pub fn chat_stream(
     app: &AppHandle,
     mut messages: Vec<AiChatMessage>,
     repo_query: Option<String>,
+    model_id: Option<String>,
     on_delta: impl FnMut(&str) + Send,
 ) -> Result<String, AppError> {
     let client = OpenAiCompatClient;
     inject_context(app, &mut messages, repo_query)?;
-    complete_stream(&client, app, &messages, on_delta)
+    complete_stream(&client, app, &messages, on_delta, model_id.as_deref())
 }
 
-fn inject_context(app: &AppHandle, messages: &mut Vec<AiChatMessage>, repo_query: Option<String>) -> Result<(), AppError> {
-    let Some(query) = repo_query else { return Ok(()) };
+fn inject_context(
+    app: &AppHandle,
+    messages: &mut Vec<AiChatMessage>,
+    repo_query: Option<String>,
+) -> Result<(), AppError> {
+    let Some(query) = repo_query else {
+        return Ok(());
+    };
     let query = query.trim();
     if query.is_empty() || messages.len() > 24 {
         return Ok(());
@@ -86,22 +140,26 @@ fn inject_context(app: &AppHandle, messages: &mut Vec<AiChatMessage>, repo_query
     let context = retrieve_context(&root, query, MAX_CONTEXT_RESULTS)?;
     if !context.is_empty() {
         let sys = format!("以下是笔记库中与“{query}”相关的段落，优先依据它们回答，注意区分事实与推测：\n\n{context}");
-        messages.insert(0, AiChatMessage { role: "system".into(), content: sys });
+        messages.insert(
+            0,
+            AiChatMessage {
+                role: "system".into(),
+                content: sys,
+            },
+        );
     }
     Ok(())
 }
 
-fn complete(client: &impl LlmClient, app: &AppHandle, messages: &[AiChatMessage]) -> Result<String, AppError> {
+fn complete(
+    client: &impl LlmClient,
+    app: &AppHandle,
+    messages: &[AiChatMessage],
+    model_id: Option<&str>,
+) -> Result<String, AppError> {
     let store = AiStore::from_app(app)?;
-    let cfg = store.config()?;
-    if !cfg.enabled {
-        return Err(AppError::Ai("AI 功能未启用，请先在设置中配置".into()));
-    }
-    let key = store.key()?;
-    if cfg.provider.requires_key() && key.is_none() {
-        return Err(AppError::Ai("未配置 API Key，请先在设置中填写".into()));
-    }
-    client.complete(&cfg, key.as_deref(), messages)
+    let (runtime, key) = resolve_request(&store, model_id)?;
+    client.complete(&runtime, key.as_deref(), messages)
 }
 
 fn complete_stream(
@@ -109,18 +167,25 @@ fn complete_stream(
     app: &AppHandle,
     messages: &[AiChatMessage],
     on_delta: impl FnMut(&str) + Send,
+    model_id: Option<&str>,
 ) -> Result<String, AppError> {
     let store = AiStore::from_app(app)?;
-    let cfg = store.config()?;
-    if !cfg.enabled {
-        return Err(AppError::Ai("AI 功能未启用，请先在设置中配置".into()));
-    }
-    let key = store.key()?;
-    if cfg.provider.requires_key() && key.is_none() {
-        return Err(AppError::Ai("未配置 API Key，请先在设置中填写".into()));
-    }
+    let (runtime, key) = resolve_request(&store, model_id)?;
     let mut on_delta = on_delta;
-    client.complete_stream(&cfg, key.as_deref(), messages, &mut on_delta)
+    client.complete_stream(&runtime, key.as_deref(), messages, &mut on_delta)
+}
+
+fn resolve_request(
+    store: &AiStore,
+    model_id: Option<&str>,
+) -> Result<(AiConfig, Option<String>), AppError> {
+    let settings = store.settings()?;
+    let (provider, model) = settings.resolve_model(model_id)?;
+    let key = store.provider_key(&provider.id)?;
+    if provider.provider.requires_key() && key.is_none() {
+        return Err(AppError::Ai("所选 Provider 未配置 API Key".into()));
+    }
+    Ok((AiSettings::runtime_config(&provider, &model), key))
 }
 
 /// 全库关键词检索：取 top_k 命中笔记，提取命中行段落拼成上下文块（纯逻辑，可单测）。

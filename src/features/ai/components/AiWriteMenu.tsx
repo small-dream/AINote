@@ -2,6 +2,7 @@ import { Button } from "@/components/atoms/Button";
 import { Modal } from "@/components/molecules/Modal";
 import { Sparkles, MessagesSquare, FileText, Heading1, FolderTree, type LucideIcon } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { AiModelSelect } from "./AiModelSelect";
 import { AI_WRITE_ACTIONS, AI_SUMMARIZE, type AiWriteAction } from "../utils/prompts";
 
 const ACTION_LABELS: Record<AiWriteAction, "ai.polish" | "ai.translate" | "ai.shorten" | "ai.expand" | "ai.continue" | "ai.summarize"> = {
@@ -45,6 +46,7 @@ export function AiWriteMenu({ open, hasSelection, canSummarize = false, canSugge
   return (
     <Modal open={open} title={t("ai.actionTitle")} onClose={onClose}>
       <div className="flex flex-col gap-2">
+        <AiModelSelect className="w-full" />
         {actions.map((action) => (
           <ActionButton key={action} labelKey={ACTION_LABELS[action]} icon="write" onClick={() => onPick(action)} />
         ))}

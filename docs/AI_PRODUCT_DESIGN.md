@@ -25,7 +25,7 @@
 
 | ID | User Story | 验收要点 |
 |---|---|---|
-| P0-AI-1 | 作为用户，我可以在「设置 → AI」配置 AI 能力 | 选择 Provider（OpenAI 兼容 API / Ollama）、填写 Base URL、API Key、模型名；支持启用/停用开关；Key 加密存储（复用 AES-GCM 凭证模式），前端拿不到明文；未配置时编辑器/问答入口显示禁用态并引导去设置 |
+| P0-AI-1 | 作为用户，我可以在「设置 → AI」管理 AI Provider 与模型 | 支持多个 Provider 连接（OpenAI 兼容 API / Ollama）；每个 Provider 下添加多个模型并独立启用；Provider 与模型支持启停；设置全局默认模型；可拉取 OpenAI 兼容 `/models`；API Key 按 Provider 加密存储，前端拿不到明文；无可用模型时入口引导去设置 |
 | P0-AI-2 | 作为用户，我可以在编辑器中选中文本，一键完成「润色 / 翻译 / 缩写 / 扩写」 | Markdown（CodeMirror）与富文本（TipTap）编辑器均有选中态气泡入口；结果以「替换选中」方式落笔；请求中有加载态，可取消；失败可重试 |
 | P0-AI-3 | 作为用户，我可以在光标处让 AI 续写当前笔记 | 未选中文本时入口为「续写」；结果插入光标处并保持编辑器焦点 |
 | P0-AI-4 | 作为用户，我可以打开「AI 问答」面板，基于笔记提问 | 上下文范围可在「当前笔记」与「当前笔记 + 全库关键词检索」间切换；回答以 Markdown 渲染（走既有 sanitize 管线）；可一键把回答插入当前笔记末尾 |
@@ -53,12 +53,13 @@
 
 ```mermaid
 flowchart TD
-    A[打开编辑器 / 问答面板] --> B{已配置 AI?}
+    A[打开编辑器 / 问答面板] --> B{有可用模型?}
     B -- 否 --> C[显示禁用态 → 跳转设置]
     B -- 是 --> D[用户触发 AI 动作]
     D --> E[前端组装上下文<br/>当前选区/光标 + 上下文范围]
     E --> F[IPC → Rust AI Service]
-    F --> G[读取加密 Key + Provider 配置]
+    F --> G[解析临时/默认模型<br/>校验 Provider 与模型启停]
+    G --> G2[读取该 Provider 加密 Key]
     G --> H[按 Provider 协议请求 LLM]
     H --> I{成功?}
     I -- 否 --> J[结构化错误提示 + 可重试]
@@ -77,6 +78,11 @@ flowchart TD
 - **Provider 兼容**
   - 统一使用 OpenAI 兼容 `chat/completions` 协议；Ollama 通过其 `/v1` OpenAI 兼容端点接入。
   - 请求体与响应结构收敛在 Rust Repository 层，Service 不感知厂商差异。
+- **Provider 与模型路由**
+  - 设置数据使用 `schemaVersion: 2`；v1 单配置首次读取时迁移为一个 Provider 和一个默认模型。
+  - 模型可选择的前提是：全局 AI 启用、Provider 启用、模型启用；云端 Provider 还必须有 Key。
+  - 全局默认模型只允许指向存在的模型。默认不可用时，前端自动选中第一个可用模型并在选择器中明示；Rust 端不会静默替换失效请求。
+  - AI 菜单与问答面板的选择是本次请求的临时选择；「设为默认」仍需在设置页显式保存。
 - **超时与重试**
   - 单次请求超时 90s（长于 GitHub API 的 15s，适配长文本生成）。
   - 网络类错误标记 `retriable: true`，前端可重试；计费请求不自动重试。

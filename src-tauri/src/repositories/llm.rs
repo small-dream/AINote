@@ -32,6 +32,27 @@ pub trait LlmClient {
 /// OpenAI 兼容 Provider（ureq 实现；Ollama 走其 /v1 端点，无需 Key）。
 pub struct OpenAiCompatClient;
 
+impl OpenAiCompatClient {
+    /// 拉取 OpenAI 兼容模型列表；该请求只读模型目录，不产生补全费用。
+    pub fn list_models(&self, cfg: &AiConfig, key: Option<&str>) -> Result<Vec<String>, AppError> {
+        let url = models_url(&cfg.base_url, cfg.provider);
+        let config = ureq::Agent::config_builder()
+            .timeout_global(Some(std::time::Duration::from_secs(DEFAULT_TIMEOUT_SECS)))
+            .build();
+        let agent = ureq::Agent::new_with_config(config);
+        let mut req = agent.get(&url).header("User-Agent", UA);
+        if let Some(k) = key {
+            req = req.header("Authorization", &format!("Bearer {k}"));
+        }
+        let mut resp = req.call().map_err(map_llm_http)?;
+        let body: serde_json::Value = resp
+            .body_mut()
+            .read_json()
+            .map_err(|e| AppError::AiNetwork(e.to_string()))?;
+        parse_models(body)
+    }
+}
+
 impl LlmClient for OpenAiCompatClient {
     fn complete(
         &self,
@@ -57,7 +78,10 @@ impl LlmClient for OpenAiCompatClient {
             "temperature": 0.7,
         });
         let mut resp = req.send_json(payload).map_err(map_llm_http)?;
-        let body: serde_json::Value = resp.body_mut().read_json().map_err(|e| AppError::AiNetwork(e.to_string()))?;
+        let body: serde_json::Value = resp
+            .body_mut()
+            .read_json()
+            .map_err(|e| AppError::AiNetwork(e.to_string()))?;
         parse_completions(body)
     }
 
@@ -126,6 +150,21 @@ pub fn chat_url(base_url: &str, provider: AiProvider) -> String {
     }
 }
 
+/// 纯函数：按 Provider 组装 /models 端点 URL。
+pub fn models_url(base_url: &str, provider: AiProvider) -> String {
+    let base = base_url.trim_end_matches('/').to_string();
+    match provider {
+        AiProvider::OpenAiCompatible => format!("{base}/models"),
+        AiProvider::Ollama => {
+            if base.ends_with("/v1") {
+                format!("{base}/models")
+            } else {
+                format!("{base}/v1/models")
+            }
+        }
+    }
+}
+
 /// 纯函数：从 OpenAI 兼容响应中提取首个 choices[].message.content。
 pub fn parse_completions(body: serde_json::Value) -> Result<String, AppError> {
     body.get("choices")
@@ -154,6 +193,22 @@ pub fn parse_sse_line(line: &str) -> Option<String> {
         .get("content")?
         .as_str()
         .map(str::to_owned)
+}
+
+/// 纯函数：解析 OpenAI 兼容 /models 响应（Ollama /v1 同结构）。
+pub fn parse_models(body: serde_json::Value) -> Result<Vec<String>, AppError> {
+    let models = body
+        .get("data")
+        .and_then(serde_json::Value::as_array)
+        .ok_or_else(|| AppError::Ai("AI Provider 模型列表格式无效".into()))?
+        .iter()
+        .filter_map(|item| item.get("id").and_then(serde_json::Value::as_str))
+        .map(str::to_owned)
+        .collect::<Vec<_>>();
+    if models.is_empty() {
+        return Err(AppError::Ai("AI Provider 未返回可用模型".into()));
+    }
+    Ok(models)
 }
 
 fn map_llm_http(err: ureq::Error) -> AppError {
@@ -185,6 +240,29 @@ mod tests {
             chat_url("http://localhost:11434/v1", AiProvider::Ollama),
             "http://localhost:11434/v1/chat/completions"
         );
+    }
+
+    #[test]
+    fn models_url_builds_per_provider() {
+        assert_eq!(
+            models_url("https://api.openai.com/v1/", AiProvider::OpenAiCompatible),
+            "https://api.openai.com/v1/models"
+        );
+        assert_eq!(
+            models_url("http://localhost:11434", AiProvider::Ollama),
+            "http://localhost:11434/v1/models"
+        );
+    }
+
+    #[test]
+    fn parses_model_ids() {
+        let body = serde_json::json!({ "data": [{ "id": "model-a" }, { "id": "model-b" }] });
+        assert_eq!(parse_models(body).unwrap(), vec!["model-a", "model-b"]);
+    }
+
+    #[test]
+    fn rejects_empty_model_list() {
+        assert!(parse_models(serde_json::json!({ "data": [] })).is_err());
     }
 
     #[test]

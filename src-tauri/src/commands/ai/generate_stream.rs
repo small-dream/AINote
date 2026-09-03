@@ -12,11 +12,14 @@ pub async fn ai_generate_stream(
     app: AppHandle,
     system: String,
     prompt: String,
+    model_id: Option<String>,
     on_event: Channel<AiStreamChunk>,
 ) -> Result<(), AppErrorDto> {
     blocking::run(move || {
-        ai_service::generate_stream(&app, system, prompt, |delta| {
-            let _ = on_event.send(AiStreamChunk { delta: delta.to_string() });
+        ai_service::generate_stream(&app, system, prompt, model_id, |delta| {
+            let _ = on_event.send(AiStreamChunk {
+                delta: delta.to_string(),
+            });
         })
     })
     .await
