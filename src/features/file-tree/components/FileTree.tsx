@@ -95,7 +95,7 @@ function TreeContent({ tree, expanded, toggle, query, onQueryChange, results, is
   const requestDelete = (path: string, isFolder: boolean) => { setDeleteError(null); setPendingDelete({ path, isFolder, name: contextMenu.menu?.node.name ?? path }); };
   const confirmDelete = async () => { if (!pendingDelete) return; try { if (pendingDelete.isFolder) await removeFolder.mutateAsync(pendingDelete.path); else await remove.mutateAsync(pendingDelete.path); setPendingDelete(null); } catch (error) { setDeleteError(messageOf(error)); } };
   const searching = query.trim().length > 0;
-  return <div className="flex h-full min-h-0 flex-col">
+  return <div className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden">
     <TreeToolbar createDir={createDir} query={query} onQueryChange={onQueryChange} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} />
     {searching ? (
       <TreeSearchResults query={query} results={results} isSearching={isSearching} error={error} onSelect={onSelect} />
@@ -109,9 +109,9 @@ function TreeContent({ tree, expanded, toggle, query, onQueryChange, results, is
 }
 
 function TreeToolbar({ createDir, query, onQueryChange, onRequestNew, onRequestFolder, onRequestImport, onRequestImportNotes }: Pick<FileTreeProps, "onRequestNew" | "onRequestFolder" | "onRequestImport" | "onRequestImportNotes"> & { createDir: string; query: string; onQueryChange: (query: string) => void }) {
-  return <div className="flex shrink-0 items-center gap-1.5 border-b border-border px-3 py-2">
+  return <div className="flex min-w-0 shrink-0 items-center gap-1.5 border-b border-border px-3 py-2">
     <TreeSearchInput value={query} onChange={onQueryChange} />
-    <CreateMenu onCreateNote={async (kind: NoteKind) => { await onRequestNew(createDir, kind); }} onCreateFolder={() => onRequestFolder(createDir)} onImportFiles={onRequestImport} onImportNotes={(files) => onRequestImportNotes(createDir, files)} />
+    <CreateMenu className="shrink-0" onCreateNote={async (kind: NoteKind) => { await onRequestNew(createDir, kind); }} onCreateFolder={() => onRequestFolder(createDir)} onImportFiles={onRequestImport} onImportNotes={(files) => onRequestImportNotes(createDir, files)} />
   </div>;
 }
 

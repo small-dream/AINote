@@ -182,6 +182,39 @@ input.ai-input:focus-visible { outline: none; }
 }
 .tree-file { line-height: 1; border-width: 1px; }
 
+.sidebar-resizer {
+  position: relative;
+  z-index: 10;
+  width: 8px;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+
+.sidebar-resizer::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: calc(50% - 0.5px);
+  width: 1px;
+  background: var(--border);
+  transition: background-color 150ms ease;
+}
+
+.sidebar-resizer:hover::after,
+.sidebar-resizer:focus-visible::after,
+.sidebar-resizer.is-resizing::after {
+  left: calc(50% - 1px);
+  width: 2px;
+  background: var(--accent);
+}
+
+body.sidebar-resizing {
+  cursor: col-resize;
+  user-select: none;
+}
+
 .tree-context-menu {
   position: fixed;
   z-index: 50;

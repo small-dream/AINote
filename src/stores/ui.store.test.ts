@@ -1,7 +1,21 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { LOCALE_STORAGE_KEY, NOTE_THEME_STORAGE_KEY, parseLocale, parseNoteTheme, parseTheme, readStoredLocale, readStoredTheme, THEME_STORAGE_KEY, useUiStore } from "./ui.store";
+import {
+  LOCALE_STORAGE_KEY,
+  NOTE_THEME_STORAGE_KEY,
+  SIDEBAR_DEFAULT_WIDTH,
+  SIDEBAR_WIDTH_STORAGE_KEY,
+  THEME_STORAGE_KEY,
+  parseLocale,
+  parseNoteTheme,
+  parseSidebarWidth,
+  parseTheme,
+  readStoredLocale,
+  readStoredSidebarWidth,
+  readStoredTheme,
+  useUiStore,
+} from "./ui.store";
 
-afterEach(() => useUiStore.setState({ theme: "light", noteTheme: "classic", locale: "zh-CN", sidebarTab: "tree", focusedTag: null }));
+afterEach(() => useUiStore.setState({ theme: "light", noteTheme: "classic", locale: "zh-CN", sidebarWidth: SIDEBAR_DEFAULT_WIDTH, sidebarTab: "tree", focusedTag: null }));
 
 describe("ui.store 主题解析与持久化", () => {
   beforeEach(() => localStorage.clear());
@@ -53,5 +67,27 @@ describe("ui.store 侧边栏 Tab 与标签聚焦", () => {
     useUiStore.getState().openTagIndex("project");
     expect(useUiStore.getState().sidebarTab).toBe("tags");
     expect(useUiStore.getState().focusedTag).toBe("project");
+  });
+});
+
+describe("ui.store 目录栏宽度", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("解析非法或超界宽度并回退到默认/边界值", () => {
+    expect(parseSidebarWidth(null)).toBe(SIDEBAR_DEFAULT_WIDTH);
+    expect(parseSidebarWidth("invalid")).toBe(SIDEBAR_DEFAULT_WIDTH);
+    expect(parseSidebarWidth("160")).toBe(200);
+    expect(parseSidebarWidth("640")).toBe(480);
+  });
+
+  it("读取并更新可持久化的目录栏宽度", () => {
+    localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, "360");
+    expect(readStoredSidebarWidth()).toBe(360);
+
+    useUiStore.getState().setSidebarWidth(1600);
+    expect(useUiStore.getState().sidebarWidth).toBe(480);
+
+    useUiStore.getState().persistSidebarWidth();
+    expect(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY)).toBe("480");
   });
 });

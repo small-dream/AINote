@@ -11,6 +11,10 @@ export type SettingsTab = "repositories" | "appearance" | "language" | "ai" | "u
 export const THEME_STORAGE_KEY = "ainote.theme";
 export const LOCALE_STORAGE_KEY = "ainote.locale";
 export const NOTE_THEME_STORAGE_KEY = "ainote.note-theme";
+export const SIDEBAR_WIDTH_STORAGE_KEY = "ainote.sidebar-width";
+export const SIDEBAR_MIN_WIDTH = 200;
+export const SIDEBAR_MAX_WIDTH = 480;
+export const SIDEBAR_DEFAULT_WIDTH = 248;
 
 /** 解析 localStorage 值；非法值一律回退亮色 */
 export function parseTheme(value: string | null): Theme {
@@ -24,6 +28,15 @@ export function parseLocale(value: string | null): Locale {
 
 export function parseNoteTheme(value: string | null): NoteTheme {
   return value === "paper" || value === "midnight" || value === "forest" ? value : "classic";
+}
+
+export function clampSidebarWidth(width: number): number {
+  return Math.min(SIDEBAR_MAX_WIDTH, Math.max(SIDEBAR_MIN_WIDTH, Math.round(width)));
+}
+
+export function parseSidebarWidth(value: string | null): number {
+  const width = Number.parseInt(value ?? "", 10);
+  return Number.isFinite(width) ? clampSidebarWidth(width) : SIDEBAR_DEFAULT_WIDTH;
 }
 
 /** 探测 localStorage 是否真正可用（Node 26+ 实验性 localStorage 会定义但无法使用） */
@@ -71,8 +84,19 @@ export function writeStoredNoteTheme(noteTheme: NoteTheme): void {
   localStorage.setItem(NOTE_THEME_STORAGE_KEY, noteTheme);
 }
 
+export function readStoredSidebarWidth(): number {
+  if (!localStorageAvailable) return SIDEBAR_DEFAULT_WIDTH;
+  return parseSidebarWidth(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
+}
+
+export function writeStoredSidebarWidth(sidebarWidth: number): void {
+  if (!localStorageAvailable) return;
+  localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(clampSidebarWidth(sidebarWidth)));
+}
+
 interface UiState {
   sidebarCollapsed: boolean;
+  sidebarWidth: number;
   sidebarTab: SidebarTab;
   focusedTag: string | null;
   askAiOpen: boolean;
@@ -82,6 +106,8 @@ interface UiState {
   noteTheme: NoteTheme;
   locale: Locale;
   toggleSidebar: () => void;
+  setSidebarWidth: (sidebarWidth: number) => void;
+  persistSidebarWidth: () => void;
   setSidebarTab: (tab: SidebarTab) => void;
   openTagIndex: (tag: string) => void;
   openAskAi: () => void;
@@ -96,6 +122,7 @@ interface UiState {
 
 export const useUiStore = create<UiState>((set) => ({
   sidebarCollapsed: false,
+  sidebarWidth: readStoredSidebarWidth(),
   sidebarTab: "tree",
   focusedTag: null,
   askAiOpen: false,
@@ -105,6 +132,11 @@ export const useUiStore = create<UiState>((set) => ({
   noteTheme: readStoredNoteTheme(),
   locale: readStoredLocale(),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
+  setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: clampSidebarWidth(sidebarWidth) }),
+  persistSidebarWidth: () => set((state) => {
+    writeStoredSidebarWidth(state.sidebarWidth);
+    return {};
+  }),
   setSidebarTab: (sidebarTab) => set({ sidebarTab }),
   openTagIndex: (tag) => set({ sidebarTab: "tags", focusedTag: tag }),
   openAskAi: () => set({ askAiOpen: true }),

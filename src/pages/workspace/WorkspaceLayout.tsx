@@ -7,6 +7,7 @@ import {
   type NoteEditorHandle,
 } from "@/features/note/components/NoteEditor";
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
+import { useSidebarResizer, type SidebarResizeHandleProps } from "./useSidebarResizer";
 import { WorkspaceNavRail } from "./WorkspaceNavRail";
 import { CommandPalette } from "@/features/search/components/CommandPalette";
 import { SettingsView } from "@/features/settings/components/SettingsView";
@@ -107,6 +108,16 @@ interface WorkspaceColumnsProps {
   onSetRename: (path: string | null) => void;
 }
 
+function SidebarDivider({ label, isResizing, resizeHandleProps }: { label: string; isResizing: boolean; resizeHandleProps: SidebarResizeHandleProps }) {
+  return (
+    <div
+      {...resizeHandleProps}
+      aria-label={label}
+      className={`sidebar-resizer -ml-1 -mr-1 shrink-0 ${isResizing ? "is-resizing" : ""}`}
+    />
+  );
+}
+
 function WorkspaceColumns({
   repoPath,
   currentNotePath,
@@ -124,6 +135,9 @@ function WorkspaceColumns({
   onSetMove,
   onSetRename,
 }: WorkspaceColumnsProps) {
+  const { t } = useTranslation();
+  const { sidebarWidth, isResizing, resizeHandleProps } = useSidebarResizer();
+
   return (
     <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <WorkspaceSidebar
@@ -137,7 +151,9 @@ function WorkspaceColumns({
         onRequestMove={onSetMove}
         onRequestRename={onSetRename}
         onRequestHistory={onRequestHistory}
+        sidebarWidth={sidebarWidth}
       />
+      <SidebarDivider label={t("sidebar.resize")} isResizing={isResizing} resizeHandleProps={resizeHandleProps} />
       <EditorPane repoPath={repoPath} currentNotePath={currentNotePath} createdPath={createdPath} editorRef={editorRef} onSelect={onSelect} onSetMove={onSetMove} historyRequestPath={historyRequestPath} onHistoryRequestHandled={onHistoryRequestHandled} />
     </div>
   );
