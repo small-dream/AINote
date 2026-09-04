@@ -1,7 +1,7 @@
 import { useTranslation } from "@/i18n";
 import type { ChangeEvent, ReactNode } from "react";
 import type { Editor } from "@tiptap/core";
-import { ArrowLeftRight, ClipboardPaste, Download, Image as ImageIcon, MoreHorizontal, Plus, Redo, Trash2, Undo } from "lucide-react";
+import { ArrowLeftRight, ClipboardPaste, Download, Image as ImageIcon, MoreHorizontal, Redo, Trash2, Undo } from "lucide-react";
 import { ToolbarPopover, type ToolbarMenuItem } from "./ToolbarPopover";
 import { BLOCK_COMMANDS, getActiveHeadingCommand, HEADING_COMMANDS, INLINE_COMMANDS, INSERT_COMMANDS, type EditorToolbarCommand } from "../utils/toolbarCommands";
 import { NoteThemePicker } from "@/features/note/components/NoteThemePicker";
@@ -28,7 +28,7 @@ export function RichTextToolbar({ editor, onImagePicked, status, onExportMarkdow
           <ToolbarDivider />
           <ToolbarCommandGroup editor={editor} commands={BLOCK_COMMANDS} />
           <ToolbarDivider />
-          <InsertPopover editor={editor} />
+          <ToolbarCommandGroup editor={editor} commands={INSERT_COMMANDS} />
           {onImagePicked ? <ImagePickerButton label={t("richtext.image")} onPicked={onImagePicked} /> : null}
         </div>
       ) : null}
@@ -42,18 +42,6 @@ function HeadingSelector({ editor }: { editor: Editor }) {
   const activeCommand = getActiveHeadingCommand(editor);
   const items = HEADING_ITEMS(editor, t);
   return <ToolbarPopover label={t("note.headingLevel")} text={activeCommand.key === "paragraph" ? t(activeCommand.labelKey) : activeCommand.key.toUpperCase()} active={activeCommand.key !== "paragraph"} items={items} />;
-}
-
-function InsertPopover({ editor }: { editor: Editor }) {
-  const { t } = useTranslation();
-  const items: ToolbarMenuItem[] = INSERT_COMMANDS.map(({ key, icon, labelKey, isActive, run }) => ({
-    key,
-    label: t(labelKey),
-    icon,
-    active: Boolean(isActive?.(editor)),
-    onSelect: () => run(editor),
-  }));
-  return <ToolbarPopover label={t("richtext.insert")} icon={Plus} items={items} />;
 }
 
 function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (files: File[]) => void }) {

@@ -35,12 +35,11 @@ describe("RichTextToolbar", () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
-  it("把低频插入命令折叠进插入菜单", () => {
+  it("将块级插入命令直接呈现在工具栏", () => {
     const { chainMethods, editor, run } = createEditor();
     render(<RichTextToolbar editor={editor} />);
 
-    fireEvent.click(screen.getByTitle("插入"));
-    fireEvent.click(screen.getByRole("menuitem", { name: "插入表格" }));
+    fireEvent.click(screen.getByRole("button", { name: "插入表格" }));
 
     expect(chainMethods.insertTable).toHaveBeenCalledWith({ rows: 3, cols: 3, withHeaderRow: true });
     expect(run).toHaveBeenCalledTimes(1);

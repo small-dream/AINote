@@ -54,7 +54,7 @@ export const BLOCK_COMMANDS: EditorToolbarCommand[] = [
   { key: "taskList", icon: ListChecks, labelKey: "richtext.taskList", isActive: (editor) => editor.isActive("taskList"), run: (editor) => void editor.chain().focus().toggleTaskList().run() },
 ];
 
-/** 插入类低频命令收敛到同一个菜单，保持一级行聚焦 */
+/** 插入类块级命令直接呈现在工具栏，减少常用结构的操作层级 */
 export const INSERT_COMMANDS: EditorToolbarCommand[] = [
   { key: "codeBlock", icon: SquareCode, labelKey: "richtext.codeBlock", isActive: (editor) => editor.isActive("codeBlock"), run: (editor) => void editor.chain().focus().toggleCodeBlock().run() },
   { key: "table", icon: TableIcon, labelKey: "richtext.table", isActive: (editor) => editor.isActive("table"), run: (editor) => void editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },
