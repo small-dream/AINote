@@ -73,7 +73,7 @@ interface EditorBodyProps {
 }
 
 function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, softRender }: EditorBodyProps) {
-  const editor = <EditorShell softRender={softRender}><CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" basicSetup={{ syntaxHighlighting: !softRender, lineNumbers: !softRender, highlightActiveLineGutter: !softRender, foldGutter: false }} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} /></EditorShell>;
+  const editor = <EditorShell softRender={softRender}><CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" basicSetup={{ syntaxHighlighting: !softRender, lineNumbers: !softRender, highlightActiveLine: !softRender, highlightActiveLineGutter: !softRender, foldGutter: false }} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} /></EditorShell>;
   const outlineFloat = <NoteOutlineFloating items={outline} open={outlineOpen} onToggle={onOutlineToggle} onSelect={onOutlineSelect} />;
   if (mode === "split") {
     return (

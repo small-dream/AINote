@@ -133,11 +133,16 @@ function createLineSelectionStyle(view: EditorView, event: MouseEvent, options: 
   if (!isPlainSingleClick(event)) return null;
   const start = clickedLinePosition(view, event);
   if (start === null) return null;
+  const startSelection = view.state.selection;
   return {
     update: () => false,
-    get: (currentEvent) => {
+    get: (currentEvent, extend, multiple) => {
       const pos = clickedLinePosition(view, currentEvent) ?? start;
-      return EditorSelection.create([EditorSelection.cursor(pos)]);
+      if (currentEvent === event) return EditorSelection.create([EditorSelection.cursor(pos)]);
+      const range = EditorSelection.range(start, pos);
+      if (extend) return startSelection.replaceRange(startSelection.main.extend(range.from, range.to, range.assoc));
+      if (multiple) return startSelection.addRange(range);
+      return EditorSelection.create([range]);
     },
   };
 }

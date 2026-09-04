@@ -115,6 +115,21 @@ describe("softRender 点击定位", () => {
     expect(view.state.selection.main.head).toBe(7);
     view.destroy();
   });
+
+  it("拖拽软渲染文本时保留范围选区", async () => {
+    const view = await createView("first\nsecond", 0);
+    const lines = view.contentDOM.querySelectorAll<HTMLElement>(".cm-line");
+    const firstLine = lines[0];
+    const secondLine = lines[1];
+    if (!firstLine || !secondLine) throw new Error("editor lines not rendered");
+    vi.spyOn(view, "posAtCoords").mockImplementation(({ y }) => y > 20 ? 7 : 0);
+    firstLine.firstChild?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0, detail: 1, clientX: 20, clientY: 10 }));
+    secondLine.firstChild?.dispatchEvent(new MouseEvent("mousemove", { bubbles: true, buttons: 1, clientX: 20, clientY: 30 }));
+    secondLine.firstChild?.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, button: 0, clientX: 20, clientY: 30 }));
+    expect(view.state.selection.main.from).toBe(0);
+    expect(view.state.selection.main.to).toBe(7);
+    view.destroy();
+  });
 });
 
 describe("softRender 交互与块级", () => {
