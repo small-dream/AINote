@@ -24,8 +24,10 @@ interface WorkspaceLayoutProps {
 /** 工作区三栏布局与全局对话框/覆盖层的装配入口。 */
 export function WorkspaceLayout({ repoPath, startupSyncing, currentNotePath, editorRef, actions, onSelect, onMoved }: WorkspaceLayoutProps) {
   const [historyRequestPath, setHistoryRequestPath] = useState<string | null>(null);
+  const noteTheme = useUiStore((state) => state.noteTheme);
+  const noteThemeScope = useUiStore((state) => state.noteThemeScope);
   return (
-    <div className="flex h-dvh min-h-0 overflow-hidden bg-bg-tertiary/55">
+    <div className={`workspace-shell flex h-dvh min-h-0 overflow-hidden bg-bg-tertiary ${noteThemeScope === "workspace" ? "workspace-theme-linked" : ""}`} data-note-theme={noteThemeScope === "workspace" ? noteTheme : undefined}>
       <WorkspaceNavRail repoPath={repoPath} startupSyncing={startupSyncing} />
       <main className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary">
         <WorkspaceColumns

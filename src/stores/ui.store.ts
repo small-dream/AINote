@@ -3,6 +3,7 @@ import { create } from "zustand";
 export type Theme = "light" | "dark" | "system";
 export type Locale = "zh-CN" | "en-US";
 export type NoteTheme = "classic" | "paper" | "midnight" | "forest" | "solar" | "graphite" | "inkblue" | "warmdark";
+export type NoteThemeScope = "content" | "workspace";
 export type SidebarTab = "tree" | "tags" | "trash";
 /** 设置页左侧分类导航的激活项 */
 export type SettingsTab = "repositories" | "appearance" | "language" | "ai" | "updates" | "account";
@@ -11,6 +12,7 @@ export type SettingsTab = "repositories" | "appearance" | "language" | "ai" | "u
 export const THEME_STORAGE_KEY = "ainote.theme";
 export const LOCALE_STORAGE_KEY = "ainote.locale";
 export const NOTE_THEME_STORAGE_KEY = "ainote.note-theme";
+export const NOTE_THEME_SCOPE_STORAGE_KEY = "ainote.note-theme-scope";
 export const SIDEBAR_WIDTH_STORAGE_KEY = "ainote.sidebar-width";
 export const SIDEBAR_MIN_WIDTH = 200;
 export const SIDEBAR_MAX_WIDTH = 480;
@@ -33,6 +35,10 @@ export function parseLocale(value: string | null): Locale {
 
 export function parseNoteTheme(value: string | null): NoteTheme {
   return value === "paper" || value === "midnight" || value === "forest" || value === "solar" || value === "graphite" || value === "inkblue" || value === "warmdark" ? value : "classic";
+}
+
+export function parseNoteThemeScope(value: string | null): NoteThemeScope {
+  return value === "content" ? "content" : "workspace";
 }
 
 export function clampSidebarWidth(width: number): number {
@@ -89,6 +95,16 @@ export function writeStoredNoteTheme(noteTheme: NoteTheme): void {
   localStorage.setItem(NOTE_THEME_STORAGE_KEY, noteTheme);
 }
 
+export function readStoredNoteThemeScope(): NoteThemeScope {
+  if (!localStorageAvailable) return "workspace";
+  return parseNoteThemeScope(localStorage.getItem(NOTE_THEME_SCOPE_STORAGE_KEY));
+}
+
+export function writeStoredNoteThemeScope(scope: NoteThemeScope): void {
+  if (!localStorageAvailable) return;
+  localStorage.setItem(NOTE_THEME_SCOPE_STORAGE_KEY, scope);
+}
+
 export function readStoredSidebarWidth(): number {
   if (!localStorageAvailable) return SIDEBAR_DEFAULT_WIDTH;
   return parseSidebarWidth(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY));
@@ -109,6 +125,7 @@ interface UiState {
   settingsTab: SettingsTab;
   theme: Theme;
   noteTheme: NoteTheme;
+  noteThemeScope: NoteThemeScope;
   locale: Locale;
   toggleSidebar: () => void;
   setSidebarWidth: (sidebarWidth: number) => void;
@@ -122,6 +139,7 @@ interface UiState {
   setSettingsTab: (tab: SettingsTab) => void;
   setTheme: (theme: Theme) => void;
   setNoteTheme: (noteTheme: NoteTheme) => void;
+  setNoteThemeScope: (scope: NoteThemeScope) => void;
   setLocale: (locale: Locale) => void;
 }
 
@@ -135,6 +153,7 @@ export const useUiStore = create<UiState>((set) => ({
   settingsTab: "repositories",
   theme: readStoredTheme(),
   noteTheme: readStoredNoteTheme(),
+  noteThemeScope: readStoredNoteThemeScope(),
   locale: readStoredLocale(),
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: clampSidebarWidth(sidebarWidth) }),
@@ -156,6 +175,10 @@ export const useUiStore = create<UiState>((set) => ({
   setNoteTheme: (noteTheme) => {
     writeStoredNoteTheme(noteTheme);
     set({ noteTheme });
+  },
+  setNoteThemeScope: (noteThemeScope) => {
+    writeStoredNoteThemeScope(noteThemeScope);
+    set({ noteThemeScope });
   },
   setLocale: (locale) => {
     writeStoredLocale(locale);

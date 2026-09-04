@@ -47,7 +47,15 @@ NoteEditor.tsx (渲染, <220行)
 数据流单向：`IPC → Query 缓存 → Hook → View`。
 写操作走 `mutation → invalidate → 自动重取`；禁止手写「更新后手动同步多份状态」。
 
-## 3. 异常处理与边界防御
+## 3. 主题适配（强制）
+
+- 所有新增或修改的工作区页面、侧栏、工具栏、面板、菜单与弹窗必须适配应用主题和阅读主题；不得只验证编辑内容区。
+- 工作区导航壳（导航轨、目录、分隔线、编辑器工具栏）必须使用工作区派生 Token；阅读内容及其直属面板使用 `note-theme-surface` 与当前 `data-note-theme`。禁止硬编码颜色，禁止以半透明背景混合不确定的底层主题色。
+- 使用 `createPortal` 挂到 `document.body` 的表面不会继承编辑器主题，必须显式传入当前 `noteTheme` 并挂载 `data-note-theme` / `note-theme-surface`；AI 预览、建议等弹窗适用此规则。
+- 任何包含 Markdown/富文本渲染的新增面板，必须把其排版库默认色映射到主题 Token，覆盖正文、标题、链接、代码、引用、列表与边框。
+- 提交前至少验证：应用亮色 + 暗色阅读主题、应用暗色 + 亮色阅读主题，以及“仅内容”/“内容与工作区”两种阅读主题范围。暗色下正文和辅助文字的对比度均不得低于 4.5:1；图标、边框及选中态必须可辨识。
+
+## 4. 异常处理与边界防御
 
 ### 统一错误结构（`src-tauri/src/domain/error.rs`）
 
@@ -67,20 +75,20 @@ AppError { code: "SYNC_4013", kind: Conflict, message: "...", retriable: true }
 - 前端用户输入在 Hook 层校验。
 - Markdown 渲染强制 sanitize（防 XSS），不信任编辑器产出的任何内容。
 
-## 4. 测试友好性
+## 5. 测试友好性
 
 - **依赖注入**：Rust Service 依赖 `trait GitBackend`，测试注入 Mock；前端 Hook 依赖 `api/` 接口，测试用 `vi.mock('@/api')` 替换。
 - **纯函数优先**：`lib/`、`utils/`、`domain/` 下的函数必须无副作用、无 IO，单测覆盖率 ≥ 90%。
 - **AI 强制测试义务**：实现核心业务逻辑（Service 用例、纯函数 utils、数据转换）时必须同时交付对应单元测试；UI 组件只要求关键交互集成测试，不追求快照覆盖。
 - **测试金字塔**：纯函数单测（多）→ Hook/Service 逻辑测试（中）→ 页面级冒烟（少）。
 
-## 5. Git 提交规范
+## 6. Git 提交规范
 
 - Commit message：`type(scope): summary`，type ∈ `feat | fix | refactor | test | docs | chore`。
 - 应用内自动生成的笔记提交：`note: <action> <path>`。
 - 禁止提交：密钥/Token、构建产物、`node_modules/`、本地仓库数据目录。
 
-## 6. 文档同步义务
+## 7. 文档同步义务
 
 修改了以下任一内容，必须同 PR 更新对应文档：
 

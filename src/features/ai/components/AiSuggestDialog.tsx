@@ -2,6 +2,7 @@ import { Button } from "@/components/atoms/Button";
 import { Modal } from "@/components/molecules/Modal";
 import { Heading1, FolderTree, Loader2, CornerDownLeft } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { useUiStore } from "@/stores/ui.store";
 import type { UseAiSuggestReturn } from "../hooks/useAiSuggestTypes";
 
 interface AiSuggestDialogProps {
@@ -13,10 +14,11 @@ interface AiSuggestDialogProps {
 /** 文档级 AI 建议结果（P1-AI-3）：标题候选单选应用 / 大纲预览插入 */
 export function AiSuggestDialog({ suggest, onRetry }: AiSuggestDialogProps) {
   const { t } = useTranslation();
+  const noteTheme = useUiStore((state) => state.noteTheme);
   const { kind } = suggest;
   if (!kind) return null;
   return (
-    <Modal open title={kind === "title" ? t("ai.suggestTitle") : t("ai.suggestOutline")} onClose={suggest.close}>
+    <Modal open title={kind === "title" ? t("ai.suggestTitle") : t("ai.suggestOutline")} onClose={suggest.close} className="note-theme-surface ai-theme-modal" noteTheme={noteTheme}>
       {kind === "title" ? <TitleSuggestBody suggest={suggest} onRetry={onRetry} /> : <OutlineSuggestBody suggest={suggest} onRetry={onRetry} />}
     </Modal>
   );

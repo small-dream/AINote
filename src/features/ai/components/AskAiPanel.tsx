@@ -24,10 +24,11 @@ interface AskAiPanelProps {
 export function AskAiPanel({ open, noteContent, canInsert = true, onClose, onInsert }: AskAiPanelProps) {
   const ai = useAskAi({ noteContent });
   const { data } = useAiConfig();
+  const noteTheme = useUiStore((state) => state.noteTheme);
   const configured = usableAiModels(data).length > 0;
   if (!open) return null;
   return (
-    <aside className="flex h-full w-96 shrink-0 flex-col border-l border-border bg-bg-secondary/70">
+    <aside data-note-theme={noteTheme} className="note-theme-surface ai-ask-panel flex h-full w-96 shrink-0 flex-col border-l border-border bg-bg-secondary">
       <AskAiHeader onClose={onClose} onReset={ai.reset} />
       <div className="border-b border-border px-3 py-2">
         <AiModelSelect className="w-full" />

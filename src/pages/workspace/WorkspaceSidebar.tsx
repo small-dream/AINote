@@ -35,7 +35,7 @@ export function WorkspaceSidebar({
   const tab = useUiStore((s) => s.sidebarTab);
 
   return (
-    <div className="flex h-full min-h-0 shrink-0 overflow-hidden bg-bg-secondary/80" style={{ width: sidebarWidth }}>
+    <div className="workspace-sidebar flex h-full min-h-0 shrink-0 overflow-hidden bg-bg-secondary" style={{ width: sidebarWidth }}>
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         {tab === "tree" ? (
           <FileTree repoPath={repoPath} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} createDir={createDir} onRequestMove={onRequestMove} onRequestRename={onRequestRename} onRequestHistory={onRequestHistory} />

@@ -30,7 +30,7 @@ const NAV_TOOLTIP_CLASS = "pointer-events-none absolute left-full top-1/2 z-50 m
 export function WorkspaceNavRail({ repoPath, startupSyncing }: WorkspaceNavRailProps) {
   const { t } = useTranslation();
   return (
-    <nav className="flex w-[72px] shrink-0 flex-col items-center border-r border-border bg-bg-tertiary/55 px-2 pb-3" aria-label={t("app.workspaceNavigation")}>
+    <nav className="workspace-nav-rail flex w-[72px] shrink-0 flex-col items-center border-r border-border bg-bg-tertiary px-2 pb-3" aria-label={t("app.workspaceNavigation")}>
       <div data-tauri-drag-region className="h-11 w-full shrink-0" aria-hidden="true" />
       <SyncNavButton repoPath={repoPath} startupSyncing={startupSyncing} />
       <SearchNavButton />

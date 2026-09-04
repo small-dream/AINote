@@ -27,7 +27,7 @@ export function WorkspaceColumns({ repoPath, currentNotePath, createdPath, edito
   const { t } = useTranslation();
   const { sidebarWidth, isResizing, resizeHandleProps } = useSidebarResizer();
   return (
-    <div className="flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
+    <div className="workspace-columns flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <WorkspaceSidebar
         repoPath={repoPath}
         onSelect={onSelect}

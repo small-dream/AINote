@@ -6,10 +6,12 @@ interface ModalProps {
   title: string;
   onClose: () => void;
   children: ReactNode;
+  className?: string;
+  noteTheme?: string;
 }
 
 /** 通用模态框：ESC / 遮罩点击关闭 + dialog 语义（P2 可访问性） */
-export function Modal({ open, title, onClose, children }: ModalProps) {
+export function Modal({ open, title, onClose, children, className = "", noteTheme }: ModalProps) {
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
@@ -33,7 +35,8 @@ export function Modal({ open, title, onClose, children }: ModalProps) {
         role="dialog"
         aria-modal="true"
         aria-labelledby="ainote-modal-title"
-        className="w-full max-w-md rounded-lg bg-bg-primary p-6 shadow-lg"
+        data-note-theme={noteTheme}
+        className={`w-full max-w-md rounded-lg bg-bg-primary p-6 shadow-lg ${className}`}
       >
         <h2 id="ainote-modal-title" className="mb-4 text-lg font-semibold">
           {title}

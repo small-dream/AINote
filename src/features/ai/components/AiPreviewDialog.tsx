@@ -2,6 +2,7 @@ import { Button } from "@/components/atoms/Button";
 import { Modal } from "@/components/molecules/Modal";
 import { Loader2 } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { useUiStore } from "@/stores/ui.store";
 
 interface AiPreviewDialogProps {
   open: boolean;
@@ -17,9 +18,10 @@ interface AiPreviewDialogProps {
 /** AI 结果预览确认：流式边生成边展示；确认后由宿主写入编辑器（P1-AI-1） */
 export function AiPreviewDialog({ open, text, error, loading, hasSelection, onConfirm, onRetry, onCancel }: AiPreviewDialogProps) {
   const { t } = useTranslation();
+  const noteTheme = useUiStore((state) => state.noteTheme);
   if (!open) return null;
   return (
-    <Modal open={open} title={t("ai.preview")} onClose={onCancel}>
+    <Modal open={open} title={t("ai.preview")} onClose={onCancel} className="note-theme-surface ai-theme-modal" noteTheme={noteTheme}>
       <div className="flex max-h-80 min-h-40 flex-col gap-3">
         <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-border bg-bg-secondary p-3">
           {loading ? <StreamingPreview text={text} /> : error ? <p className="text-sm text-danger">{error}</p> : <PreviewText text={text} />}

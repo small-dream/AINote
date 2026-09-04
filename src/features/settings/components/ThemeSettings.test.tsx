@@ -6,7 +6,7 @@ import { ThemeSettings } from "./ThemeSettings";
 describe("ThemeSettings 主题切换", () => {
   beforeEach(() => {
     localStorage.clear();
-    useUiStore.setState({ theme: "light" });
+    useUiStore.setState({ theme: "light", noteTheme: "classic", noteThemeScope: "workspace" });
   });
 
   it("渲染亮色 / 暗色 / 跟随系统三个选项", () => {
@@ -43,5 +43,11 @@ describe("ThemeSettings 主题切换", () => {
     expect(cards.length).toBeGreaterThanOrEqual(7);
     fireEvent.click(screen.getByText("石墨"));
     expect(useUiStore.getState().noteTheme).toBe("graphite");
+  });
+
+  it("可切换阅读主题作用范围并持久化", () => {
+    render(<ThemeSettings />);
+    fireEvent.click(screen.getByRole("radio", { name: /仅内容/ }));
+    expect(useUiStore.getState().noteThemeScope).toBe("content");
   });
 });

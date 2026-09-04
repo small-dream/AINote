@@ -38,7 +38,7 @@ export function EditorToolbar({ path, mode, richText = false, saving = false, di
   return (
     <div
       data-tauri-drag-region="deep"
-      className="flex min-h-16 items-center justify-between gap-4 border-b border-border bg-bg-primary px-6 py-2.5"
+      className="workspace-toolbar flex min-h-16 items-center justify-between gap-4 border-b border-border bg-bg-primary px-6 py-2.5"
     >
       <div className="flex min-w-0 items-center gap-3">
         <span className="truncate text-[15px] font-semibold tracking-[-0.01em]">

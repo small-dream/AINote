@@ -2,11 +2,13 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   LOCALE_STORAGE_KEY,
   NOTE_THEME_STORAGE_KEY,
+  NOTE_THEME_SCOPE_STORAGE_KEY,
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_WIDTH_STORAGE_KEY,
   THEME_STORAGE_KEY,
   parseLocale,
   parseNoteTheme,
+  parseNoteThemeScope,
   parseSidebarWidth,
   parseTheme,
   readStoredLocale,
@@ -16,7 +18,7 @@ import {
   useUiStore,
 } from "./ui.store";
 
-afterEach(() => useUiStore.setState({ theme: "light", noteTheme: "classic", locale: "zh-CN", sidebarWidth: SIDEBAR_DEFAULT_WIDTH, sidebarTab: "tree", focusedTag: null }));
+afterEach(() => useUiStore.setState({ theme: "light", noteTheme: "classic", noteThemeScope: "workspace", locale: "zh-CN", sidebarWidth: SIDEBAR_DEFAULT_WIDTH, sidebarTab: "tree", focusedTag: null }));
 
 describe("ui.store 主题解析与持久化", () => {
   beforeEach(() => localStorage.clear());
@@ -60,6 +62,14 @@ describe("ui.store 主题解析与持久化", () => {
     expect(parseNoteTheme("unknown")).toBe("classic");
     useUiStore.getState().setNoteTheme("midnight");
     expect(localStorage.getItem(NOTE_THEME_STORAGE_KEY)).toBe("midnight");
+  });
+
+  it("解析并持久化阅读主题作用范围", () => {
+    expect(parseNoteThemeScope("content")).toBe("content");
+    expect(parseNoteThemeScope("unknown")).toBe("workspace");
+    useUiStore.getState().setNoteThemeScope("content");
+    expect(useUiStore.getState().noteThemeScope).toBe("content");
+    expect(localStorage.getItem(NOTE_THEME_SCOPE_STORAGE_KEY)).toBe("content");
   });
 });
 

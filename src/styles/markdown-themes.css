@@ -81,8 +81,8 @@
   --note-muted: #22324a;
   --note-ink: #e5edf8;
   --note-secondary: #a8b8cf;
-  --note-tertiary: #7185a1;
-  --note-border: #30425e;
+  --note-tertiary: #8fa4c0;
+  --note-border: #40587c;
   --note-accent: #7dd3fc;
   --note-accent-soft: #183d58;
   --note-success: #8bd5a6;
@@ -150,8 +150,8 @@
   --note-muted: #272b33;
   --note-ink: #e9ebec;
   --note-secondary: #a4a9b0;
-  --note-tertiary: #70777f;
-  --note-border: #34383f;
+  --note-tertiary: #8b929b;
+  --note-border: #4b515b;
   --note-accent: #8fa6ff;
   --note-accent-soft: #262d47;
   --note-success: #7fd1a0;
@@ -173,8 +173,8 @@
   --note-muted: #1c2a42;
   --note-ink: #dbe6f5;
   --note-secondary: #93a5c2;
-  --note-tertiary: #617395;
-  --note-border: #25344f;
+  --note-tertiary: #89a0c5;
+  --note-border: #3b4d70;
   --note-accent: #5aa2ff;
   --note-accent-soft: #16314f;
   --note-success: #67d3a0;
@@ -196,8 +196,8 @@
   --note-muted: #2f2922;
   --note-ink: #ece4d7;
   --note-secondary: #b3a793;
-  --note-tertiary: #807564;
-  --note-border: #3b342c;
+  --note-tertiary: #ad9f89;
+  --note-border: #574c3e;
   --note-accent: #e8a34d;
   --note-accent-soft: #3a2e1c;
   --note-success: #9ccb7d;
@@ -258,4 +258,60 @@
 
 .note-theme-surface .markdown-body hr {
   border-top-color: var(--note-border);
+}
+
+/* 阅读主题的工作区联动层：只染色导航壳，内容区仍使用完整阅读主题。 */
+.workspace-shell[data-note-theme] {
+  /* 阅读主题主导色相，应用主题只校准少量明度，避免暗色主题被混成灰色。 */
+  --workspace-nav-bg: color-mix(in srgb, var(--note-surface) 96%, var(--app-bg-secondary));
+  --workspace-sidebar-bg: color-mix(in srgb, var(--note-bg) 94%, var(--app-bg-secondary));
+  --workspace-toolbar-bg: color-mix(in srgb, var(--note-bg) 96%, var(--app-bg-primary));
+  --workspace-tertiary-bg: color-mix(in srgb, var(--note-muted) 92%, var(--app-bg-tertiary));
+  --workspace-text-primary: color-mix(in srgb, var(--note-ink) 90%, var(--app-text-primary));
+  --workspace-text-secondary: color-mix(in srgb, var(--note-secondary) 90%, var(--app-text-secondary));
+  --workspace-text-tertiary: color-mix(in srgb, var(--note-secondary) 86%, var(--app-text-secondary));
+  --workspace-border: color-mix(in srgb, var(--note-border) 90%, var(--app-border));
+  --workspace-accent: color-mix(in srgb, var(--note-accent) 94%, var(--app-accent));
+  --workspace-accent-soft: color-mix(in srgb, var(--note-accent-soft) 92%, var(--app-accent-soft));
+}
+
+.workspace-shell.workspace-theme-linked .workspace-nav-rail,
+.workspace-shell.workspace-theme-linked .workspace-sidebar,
+.workspace-shell.workspace-theme-linked .workspace-columns,
+.workspace-shell.workspace-theme-linked .workspace-toolbar {
+  --bg-primary: var(--workspace-toolbar-bg);
+  --bg-secondary: var(--workspace-nav-bg);
+  --bg-tertiary: var(--workspace-tertiary-bg);
+  --text-primary: var(--workspace-text-primary);
+  --text-secondary: var(--workspace-text-secondary);
+  --text-tertiary: var(--workspace-text-tertiary);
+  --border: var(--workspace-border);
+  --accent: var(--workspace-accent);
+  --accent-soft: var(--workspace-accent-soft);
+}
+
+.workspace-shell.workspace-theme-linked .workspace-nav-rail {
+  --bg-primary: var(--workspace-toolbar-bg);
+}
+
+.workspace-shell.workspace-theme-linked .workspace-sidebar {
+  --bg-primary: var(--workspace-sidebar-bg);
+  --bg-secondary: var(--workspace-sidebar-bg);
+}
+
+/* AI 回答使用 Tailwind Typography 的独立灰阶，需显式映射回阅读主题。 */
+.ai-ask-panel .prose {
+  --tw-prose-body: var(--note-ink);
+  --tw-prose-headings: var(--note-ink);
+  --tw-prose-links: var(--note-accent);
+  --tw-prose-bold: var(--note-ink);
+  --tw-prose-counters: var(--note-secondary);
+  --tw-prose-bullets: var(--note-secondary);
+  --tw-prose-hr: var(--note-border);
+  --tw-prose-quotes: var(--note-secondary);
+  --tw-prose-quote-borders: var(--note-border);
+  --tw-prose-captions: var(--note-tertiary);
+  --tw-prose-code: var(--note-code-string);
+  --tw-prose-pre-code: var(--note-ink);
+  --tw-prose-pre-bg: var(--note-code-bg);
 }

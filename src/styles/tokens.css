@@ -12,6 +12,16 @@
   --success: #1a7f37;
   --warning: #9a6700;
   --danger: #cf222e;
+  /* 应用层基准：工作区联动时用来保留导航和状态控件的可读对比度。 */
+  --app-bg-primary: var(--bg-primary);
+  --app-bg-secondary: var(--bg-secondary);
+  --app-bg-tertiary: var(--bg-tertiary);
+  --app-text-primary: var(--text-primary);
+  --app-text-secondary: var(--text-secondary);
+  --app-text-tertiary: var(--text-tertiary);
+  --app-border: var(--border);
+  --app-accent: var(--accent);
+  --app-accent-soft: var(--accent-soft);
 }
 
 [data-theme="dark"] {

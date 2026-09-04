@@ -4,6 +4,7 @@ import { Sparkles, MessagesSquare, FileText, Heading1, FolderTree, type LucideIc
 import { useTranslation } from "@/i18n";
 import { AiModelSelect } from "./AiModelSelect";
 import { AI_WRITE_ACTIONS, AI_SUMMARIZE, type AiWriteAction } from "../utils/prompts";
+import { useUiStore } from "@/stores/ui.store";
 
 const ACTION_LABELS: Record<AiWriteAction, "ai.polish" | "ai.translate" | "ai.shorten" | "ai.expand" | "ai.continue" | "ai.summarize"> = {
   polish: "ai.polish",
@@ -42,9 +43,10 @@ interface AiWriteMenuProps {
 /** AI 写作动作选择：改写/续写 + 文档级建议（摘要/标题/大纲）+ 问答跳转 */
 export function AiWriteMenu({ open, hasSelection, canSummarize = false, canSuggest = false, onPick, onTitleSuggest, onOutlineSuggest, onAsk, onClose }: AiWriteMenuProps) {
   const { t } = useTranslation();
+  const noteTheme = useUiStore((state) => state.noteTheme);
   const actions = hasSelection ? AI_WRITE_ACTIONS : (["continue"] as const);
   return (
-    <Modal open={open} title={t("ai.actionTitle")} onClose={onClose}>
+    <Modal open={open} title={t("ai.actionTitle")} onClose={onClose} className="note-theme-surface ai-theme-modal" noteTheme={noteTheme}>
       <div className="flex flex-col gap-2">
         <AiModelSelect className="w-full" />
         {actions.map((action) => (
