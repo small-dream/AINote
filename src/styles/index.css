@@ -513,10 +513,52 @@ pre,
 .markdown-code-block .hljs-template-variable { color: var(--note-code-var); }
 .markdown-table-wrap { width: 100%; overflow-x: auto; }
 .markdown-body table { min-width: 32rem; }
-.markdown-image { margin: 0.8em 0; }
-.markdown-image img { max-width: 100%; border-radius: 6px; }
+.markdown-image { display: block; margin: 0.8em 0; }
+.markdown-image-trigger {
+  display: block;
+  max-width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: zoom-in;
+  text-align: left;
+}
+.markdown-image-trigger:disabled { cursor: default; }
+.markdown-image img { display: block; max-width: 100%; border-radius: 6px; }
 .markdown-image-loading { min-height: 3rem; background: var(--bg-secondary); }
-.markdown-image-error { color: var(--danger); font-size: 12px; }
+.markdown-image-error { display: block; color: var(--danger); font-size: 12px; }
+.markdown-image-lightbox {
+  position: fixed;
+  z-index: 80;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  background: rgb(0 0 0 / 78%);
+}
+.markdown-image-lightbox-content {
+  position: relative;
+  max-width: min(96vw, 1200px);
+  max-height: 92vh;
+}
+.markdown-image-lightbox-content img {
+  display: block;
+  max-width: 96vw;
+  max-height: 92vh;
+  object-fit: contain;
+}
+.markdown-image-lightbox-close {
+  position: absolute;
+  top: -2.25rem;
+  right: 0;
+  width: 2rem;
+  height: 2rem;
+  color: white;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+.markdown-image-lightbox-close:hover { color: var(--accent); }
 .markdown-body blockquote {
   padding-left: 0.9em;
   border-left: 3px solid var(--text-secondary);

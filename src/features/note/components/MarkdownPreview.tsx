@@ -23,6 +23,7 @@ import { useTranslation } from "@/i18n";
 import { MarkdownProperties } from "./MarkdownProperties";
 import { MermaidBlock } from "./MermaidBlock";
 import { toggleTaskAtLine } from "../utils/task";
+import { PreviewImage } from "./PreviewImage";
 
 interface MarkdownPreviewProps {
   content: string;
@@ -183,15 +184,4 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onCh
 function createHeadingComponents(): Pick<Components, "h1" | "h2" | "h3" | "h4" | "h5" | "h6"> {
   const ids = new Map<string, number>();
   return { h1: Heading("h1", ids), h2: Heading("h2", ids), h3: Heading("h3", ids), h4: Heading("h4", ids), h5: Heading("h5", ids), h6: Heading("h6", ids) };
-}
-
-function PreviewImage({ src, alt, line, ...props }: { src: string | undefined; alt: string; line?: number | undefined } & Record<string, unknown>) {
-  const { t } = useTranslation();
-  const [state, setState] = useState<"loading" | "loaded" | "error">("loading");
-  return (
-    <figure className={`markdown-image markdown-image-${state}`} data-line={line}>
-      <img {...props} src={src} alt={alt} loading="lazy" onLoad={() => setState("loaded")} onError={() => setState("error")} />
-      {state === "error" ? <figcaption>{t("note.imageLoadFailed")}</figcaption> : null}
-    </figure>
-  );
 }
