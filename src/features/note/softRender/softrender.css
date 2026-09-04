@@ -86,11 +86,20 @@
 .cm-sr-number {
   display: inline-block;
   min-width: 1.4em;
-  color: var(--note-secondary);
+  /* 预览的 list marker 继承正文色，软渲染保持相同的视觉权重。 */
+  color: var(--note-ink);
   user-select: none;
+}
+.cm-sr-bullet {
+  /* 圆点视觉上放大，但收窄占位，避免标记与正文之间留下过宽空隙。 */
+  min-width: 1em;
+  margin-right: -0.15em;
+  transform: scale(1.7);
+  transform-origin: center;
 }
 .cm-sr-number {
   text-align: right;
+  margin-right: 0.4em;
 }
 
 .cm-sr-checkbox {
