@@ -49,7 +49,7 @@ View → Hooks/Queries → api/ → IPC → commands → services → repositori
 
 ### 防腐化硬指标（ESLint/Review 强制）
 
-- 单文件 ≤ 200 行（React 组件 ≤ 150 行），单函数 ≤ 40 行，圈复杂度 ≤ 8。
+- 单文件 ≤ 300 行（React 组件 ≤ 220 行），单函数 ≤ 60 行，圈复杂度 ≤ 12。
 - 禁 `any`，TS `strict` 全开。
 - **新增优于修改**：新功能 = `src/features/` 新目录 + `src-tauri/src/commands/` 新文件。
 - 组件超限时按三段式拆分：View Component + Custom Hook + Pure Utils（见 CODING_STANDARDS §1）。

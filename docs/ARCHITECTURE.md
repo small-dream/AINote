@@ -76,7 +76,7 @@ flowchart TB
 
 - `commands/`（Controller）：一命令一文件。只做参数反序列化、调用 Service、把 `Result<T, AppError>` 返回给前端。**禁止出现业务逻辑**。
 - `services/`（Service）：一个业务用例一个文件/模块。编排 Repository，实现 PRD 中的业务规则（如防抖提交策略）。
-- `repositories/`：trait 与实现分离。`git_backend.rs` 定义 `GitBackend` trait，`git2_backend.rs`（本地操作）+ `git2_remote.rs`（网络操作）是 libgit2 实现；`file_storage.rs` / `note_files.rs` / `file_tree.rs` / `trash_files.rs` 为文件系统访问（受 200 行上限拆分）。未来可换实现，Service 零感知。
+- `repositories/`：trait 与实现分离。`git_backend.rs` 定义 `GitBackend` trait，`git2_backend.rs`（本地操作）+ `git2_remote.rs`（网络操作）是 libgit2 实现；`file_storage.rs` / `note_files.rs` / `file_tree.rs` / `trash_files.rs` 为文件系统访问（受 300 行上限拆分）。未来可换实现，Service 零感知。
 - `domain/`：实体（`Note`）、值对象、统一错误 `AppError`。**零外部依赖**，不 import git2 / tauri。
 
 ### 前端
@@ -117,7 +117,7 @@ AINote/
 │   ├── features/                 # 按领域垂直切分 (核心防腐化手段)
 │   │   ├── note/
 │   │   ├── richtext/            # 真富文本编辑器（TipTap），读写 `.ainote` JSON
-│   │   │   ├── components/       # 每个组件 < 150 行
+│   │   │   ├── components/       # 每个组件 < 220 行
 │   │   │   ├── hooks/            # 状态/副作用/IPC 编排全部在此
 │   │   │   ├── utils/            # 纯函数
 │   │   │   └── types.ts

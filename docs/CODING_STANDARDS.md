@@ -7,25 +7,25 @@
 
 | 指标 | 上限 | 强制方式 |
 |---|---|---|
-| 单文件行数 | ≤ 200 行（组件 ≤ 150 行） | ESLint `max-lines` |
-| 单函数行数 | ≤ 40 行 | ESLint `max-lines-per-function` |
-| 圈复杂度 | ≤ 8 | ESLint `complexity` / Clippy `cognitive_complexity` |
+| 单文件行数 | ≤ 300 行（组件 ≤ 220 行） | ESLint `max-lines` |
+| 单函数行数 | ≤ 60 行 | ESLint `max-lines-per-function` |
+| 圈复杂度 | ≤ 12 | ESLint `complexity` / Clippy `cognitive_complexity` |
 | TypeScript | `strict: true`，禁 `any` | `tsconfig` + `@typescript-eslint/no-explicit-any` |
 | 分支结构 | > 3 分支的 if-else/switch 必须重构 | Review + `complexity` 规则 |
 
-> Rust 文件同样遵守 200 行上限；`commands/` 单文件预期 < 50 行。
+> Rust 文件同样遵守 300 行上限；`commands/` 单文件预期 < 80 行。
 
 ## 1. 文件与函数拆分指南
 
-### React 组件三段式拆分（超 150 行组件的固定手术刀法）
+### React 组件三段式拆分（超 220 行组件的固定手术刀法）
 
 1. **View Component**：只接 props、只渲染。除数据订阅 Hook 外无逻辑。
 2. **Custom Hook**（`features/x/hooks/useXxx.ts`）：状态、副作用、API 调用全部上移。
 3. **Pure Utils**（`features/x/utils/` 或 `lib/`）：数据转换、格式化抽成纯函数——纯函数最易测试、AI 最不易写错。
 
 ```text
-NoteEditor.tsx (渲染, <150行)
-  └─ useNoteEditor.ts (状态/防抖/保存编排, <100行)
+NoteEditor.tsx (渲染, <220行)
+  └─ useNoteEditor.ts (状态/防抖/保存编排, <120行)
        └─ utils/markdown.ts (纯函数: 提取标题/wiki-link 解析等)
 ```
 

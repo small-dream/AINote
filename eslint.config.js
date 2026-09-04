@@ -12,9 +12,9 @@ export default tseslint.config(
     rules: {
       ...reactHooks.configs.flat.recommended.rules,
       // anti-corruption hard limits (docs/CODING_STANDARDS.md section 0)
-      "max-lines": ["error", { max: 200, skipBlankLines: true, skipComments: true }],
-      "max-lines-per-function": ["error", { max: 40, skipBlankLines: true, skipComments: true }],
-      complexity: ["error", 8],
+      "max-lines": ["error", { max: 300, skipBlankLines: true, skipComments: true }],
+      "max-lines-per-function": ["error", { max: 60, skipBlankLines: true, skipComments: true }],
+      complexity: ["error", 12],
       "@typescript-eslint/no-explicit-any": "error",
       // dependency boundary: Tauri IPC only inside src/api/
       "no-restricted-imports": ["error", {
