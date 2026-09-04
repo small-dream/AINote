@@ -13,6 +13,8 @@ interface EditorToolbarProps {
   mode: ViewMode;
   /** 富文本笔记：隐藏视图切换、主题与大纲（所见即所得无需分栏） */
   richText?: boolean;
+  saving?: boolean;
+  dirty?: boolean;
   saveError?: string | null;
   onModeChange: (mode: ViewMode) => void;
   onSave: () => void;
@@ -31,7 +33,7 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
 ];
 
 /** 笔记操作栏：左侧标题锚点，右侧按「高频视图 → 中频工具 → 低频文件操作」分层分组。 */
-export function EditorToolbar({ path, mode, richText = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onAi }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, richText = false, saving = false, dirty = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onAi }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -42,6 +44,7 @@ export function EditorToolbar({ path, mode, richText = false, saveError, onModeC
         <span className="truncate text-[15px] font-semibold tracking-[-0.01em]">
           {noteDisplayName(path.split("/").at(-1) ?? path)}
         </span>
+        <SaveStatus saving={saving} dirty={dirty} />
       </div>
 
       <div className="flex shrink-0 items-center gap-4">
@@ -69,6 +72,18 @@ export function EditorToolbar({ path, mode, richText = false, saveError, onModeC
         <SaveErrorMessage message={saveError} onRetry={onSave} />
       </div>
     </div>
+  );
+}
+
+function SaveStatus({ saving, dirty }: { saving: boolean; dirty: boolean }) {
+  const { t } = useTranslation();
+  const label = saving ? t("common.saving") : dirty ? t("note.unsaved") : t("note.saved");
+  const tone = saving ? "text-text-secondary" : dirty ? "text-warning" : "text-success";
+  return (
+    <span role="status" aria-live="polite" className={`inline-flex shrink-0 items-center gap-1 text-xs ${tone}`}>
+      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
+      {label}
+    </span>
   );
 }
 

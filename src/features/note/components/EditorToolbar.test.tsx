@@ -40,6 +40,16 @@ describe("EditorToolbar", () => {
     expect(onModeChange).toHaveBeenCalledWith("preview");
   });
 
+  it("展示自动保存状态", () => {
+    renderToolbar({ dirty: true });
+    expect(screen.getByRole("status").textContent).toContain("有未保存修改");
+  });
+
+  it("保存进行中优先显示保存中", () => {
+    renderToolbar({ saving: true, dirty: true });
+    expect(screen.getByRole("status").textContent).toContain("保存中…");
+  });
+
   it("分栏模式下高亮对应标签", () => {
     renderToolbar({ mode: "split" });
     const tab = screen.getByText("分栏");

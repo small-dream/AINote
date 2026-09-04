@@ -35,7 +35,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
   function NoteEditor({ repoPath, notePath, onMove, onOpenNote, focusTitleOnLoad = false, historyRequestPath = null, onHistoryRequestHandled }, ref) {
     const history = useNoteHistory();
     const [outlineOpen, setOutlineOpen] = useState(false);
-    const { draft, kind, onChange, flush, loadError, saveError } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
+    const { draft, kind, onChange, flush, saving, dirty, loadError, saveError } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
     const preferences = useEditorPreferences(repoPath, notePath);
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const wiki = useEditorWiki(repoPath, onOpenNote);
@@ -58,6 +58,6 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
     if (isEditorUnavailable(notePath, loadError)) return <EditorState notePath={notePath} error={loadError?.message ?? null} />;
     const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
-    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} mode={mode} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} handleConvertNote={handleConvertNote} handleConvertToRichText={handleConvertToRichText} flush={flush} saveError={saveError?.message ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
+    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} mode={mode} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} handleConvertNote={handleConvertNote} handleConvertToRichText={handleConvertToRichText} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
   },
 );
