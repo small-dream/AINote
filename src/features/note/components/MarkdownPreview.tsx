@@ -134,10 +134,9 @@ function WikiLink({ href, children, onOpenWiki, resolved }: { href: string; chil
 /** Markdown 渲染预览。react-markdown 默认不渲染原始 HTML（当作文本），天然防 XSS（安全红线）。 */
 export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes }: MarkdownPreviewProps) {
   const document = useMemo(() => parseMarkdownDocument(content), [content]);
-  const headingComponents = createHeadingComponents();
   const components = useMemo<Components>(() => ({
     ...blockComponents,
-    ...headingComponents,
+    ...createHeadingComponents(),
     img: ({ node, src, alt, ...props }) => {
       const local = resolveLocalAssetPath(repoPath ?? "", src ?? "");
       return <PreviewImage src={local ? assetUrl(local) : src} alt={alt ?? ""} line={node?.position?.start.line} {...props} />;
@@ -150,7 +149,7 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes }: Ma
       }
       return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>;
     },
-  }), [headingComponents, onOpenWiki, repoPath, wikiNotes]);
+  }), [onOpenWiki, repoPath, wikiNotes]);
   return (
     <article className="markdown-body max-w-3xl mx-auto">
       {document.frontmatter.length > 0 ? <MarkdownProperties fields={document.frontmatter} /> : null}

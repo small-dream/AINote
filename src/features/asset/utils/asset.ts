@@ -35,5 +35,21 @@ export function resolveLocalAssetPath(repoPath: string, src: string): string | n
   if (!s || isExternalUrl(s)) return null;
   if (s.startsWith("/") || isDrivePath(s)) return s;
   const root = repoPath.replace(/[\\/]+$/, "");
-  return `${root}/${s}`.replace(/\\/g, "/");
+  if (!root) return null;
+  const relative = normalizeRelativePath(s);
+  return relative ? `${root}/${relative}` : null;
+}
+
+function normalizeRelativePath(source: string): string | null {
+  const parts: string[] = [];
+  for (const part of source.replace(/\\/g, "/").split("/")) {
+    if (part === "" || part === ".") continue;
+    if (part === "..") {
+      if (parts.length === 0) return null;
+      parts.pop();
+    } else {
+      parts.push(part);
+    }
+  }
+  return parts.length > 0 ? parts.join("/") : null;
 }

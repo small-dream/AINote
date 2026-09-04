@@ -49,6 +49,15 @@ describe("resolveLocalAssetPath", () => {
     expect(resolveLocalAssetPath(repo, "  ")).toBeNull();
   });
 
+  it("没有仓库上下文时不把相对路径解析到根目录", () => {
+    expect(resolveLocalAssetPath("", "assets/photo.png")).toBeNull();
+  });
+
+  it("规范化仓库内相对路径并拒绝越过仓库根目录", () => {
+    expect(resolveLocalAssetPath(repo, "notes/../assets/photo.png")).toBe("/Users/jake/notes/assets/photo.png");
+    expect(resolveLocalAssetPath(repo, "../../outside.png")).toBeNull();
+  });
+
   it("绝对路径与 Windows 盘符原样返回", () => {
     expect(resolveLocalAssetPath(repo, "/tmp/x.png")).toBe("/tmp/x.png");
     expect(resolveLocalAssetPath(repo, "C:\\notes\\assets\\a.png")).toBe("C:\\notes\\assets\\a.png");

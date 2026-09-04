@@ -69,7 +69,7 @@ function getMarker(paragraph: Paragraph): { kind: CalloutKind } | null {
 function removeMarker(children: Paragraph["children"]): Paragraph["children"] {
   const first = children[0];
   if (!first || first.type !== "text") return children;
-  const value = first.value.replace(/^\[!(NOTE|TIP|WARNING|DANGER)\]\s*/i, "");
+  const value = first.value.replace(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|DANGER)\]\s*/i, "");
   if (!value) return children.slice(1);
   return [{ ...(first as Text), value }, ...children.slice(1)];
 }

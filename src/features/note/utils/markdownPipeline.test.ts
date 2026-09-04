@@ -22,6 +22,16 @@ describe("markdown pipeline", () => {
     expect(blockquote.children[0]?.children?.[0]?.value).toBe("小心\n内容");
   });
 
+  it("移除 IMPORTANT 和 CAUTION callout 前缀", () => {
+    for (const kind of ["IMPORTANT", "CAUTION"]) {
+      const tree = unified().use(remarkParse).parse(`> [!${kind}] 标题\n> 内容`);
+      unified().use(remarkCallouts).runSync(tree);
+      const paragraph = (tree.children[0] as { children: Array<{ children?: Array<{ value?: string }> }> }).children[0];
+      if (!paragraph) throw new Error("callout paragraph missing");
+      expect(paragraph.children?.[0]?.value).toBe("标题\n内容");
+    }
+  });
+
   it("移除 frontmatter AST 节点", () => {
     const tree = unified().use(remarkParse).use(remarkFrontmatter, ["yaml"]).parse("---\ntitle: Demo\n---\n正文");
     unified().use(remarkRemoveFrontmatter).runSync(tree);

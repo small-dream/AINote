@@ -159,3 +159,17 @@ describe("MarkdownPreview properties and callouts", () => {
     expect(container.querySelector(".markdown-mermaid")).toBeTruthy();
   });
 });
+
+describe("MarkdownPreview edge cases", () => {
+  it("渲染 important/caution callout 时不保留语法前缀", () => {
+    const { container } = render(<MarkdownPreview content={"> [!IMPORTANT] 重要\n\n> [!CAUTION] 注意"} />);
+    expect(container.textContent).not.toContain("[!IMPORTANT]");
+    expect(container.textContent).not.toContain("[!CAUTION]");
+  });
+
+  it("没有仓库路径时保留相对图片 URL", () => {
+    const { container } = render(<MarkdownPreview content={"![图](assets/photo.png)"} />);
+    expect(container.querySelector("img")?.getAttribute("src")).toBe("assets/photo.png");
+    expect(assetUrlMock).not.toHaveBeenCalled();
+  });
+});
