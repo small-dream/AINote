@@ -89,7 +89,7 @@ function buildRow(
 
 /** 代码块：光标离开时渲染为高亮 DOM。 */
 export class CodeBlockWidget extends WidgetType {
-  constructor(readonly source: string, readonly language: string, readonly from: number, readonly to: number) {
+  constructor(readonly source: string, readonly language: string, readonly from: number, readonly to: number, readonly copyCodeLabel = "Copy code", readonly copiedLabel = "Copied") {
     super();
   }
 
@@ -99,7 +99,9 @@ export class CodeBlockWidget extends WidgetType {
       other.source === this.source &&
       other.language === this.language &&
       other.from === this.from &&
-      other.to === this.to
+      other.to === this.to &&
+      other.copyCodeLabel === this.copyCodeLabel &&
+      other.copiedLabel === this.copiedLabel
     );
   }
 
@@ -112,11 +114,37 @@ export class CodeBlockWidget extends WidgetType {
     wrapper.className = "cm-sr-codeblock cm-sr-codeblock-widget";
     const header = document.createElement("div");
     header.className = "cm-sr-codeblock-header";
-    header.textContent = this.language || "code";
+    const language = document.createElement("span");
+    language.textContent = this.language || "code";
+    header.appendChild(language);
+    const copy = document.createElement("button");
+    copy.type = "button";
+    copy.className = "cm-sr-code-copy";
+    copy.textContent = this.copyCodeLabel;
+    copy.dataset.label = this.copyCodeLabel;
+    copy.setAttribute("aria-label", this.copyCodeLabel);
+    copy.addEventListener("click", () => {
+      void copyCode(this.source, copy, this.copiedLabel);
+    });
+    header.appendChild(copy);
     wrapper.appendChild(header);
     wrapper.appendChild(highlightCode(this.source, this.language || null));
     markRange(wrapper, this.from, this.to);
     return wrapper;
+  }
+}
+
+async function copyCode(source: string, button: HTMLButtonElement, copiedLabel: string): Promise<void> {
+  try {
+    await navigator.clipboard.writeText(source);
+    button.textContent = copiedLabel;
+    button.setAttribute("aria-label", copiedLabel);
+    window.setTimeout(() => {
+      button.textContent = button.dataset.label ?? "Copy code";
+      button.setAttribute("aria-label", button.textContent);
+    }, 1400);
+  } catch {
+    return;
   }
 }
 

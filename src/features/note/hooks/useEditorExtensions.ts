@@ -17,6 +17,7 @@ import { getNoteThemeMode } from "../utils/noteThemes";
 import { getAinoteEditorTheme, getAinoteHighlightStyle } from "./editorTheme";
 import { buildCompletions, getCompletionContext } from "../utils/completion";
 import { softRender } from "../softRender/plugin";
+import { useTranslation } from "@/i18n";
 
 export interface EditorExtensionsInput {
   notes?: NoteWikiDto[];
@@ -67,6 +68,7 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
   const { notes = [], repoPath = null, onOpenWiki, softRenderEnabled = true } = input;
   const [activeFormats, setActiveFormats] = useState<Set<string>>(() => new Set());
   const noteTheme = useUiStore((s) => s.noteTheme);
+  const { t } = useTranslation();
   const extensions = useMemo(() => [
     getAinoteEditorTheme(getNoteThemeMode(noteTheme) === "dark"),
     markdown({ extensions: [GFM] }),
@@ -81,16 +83,16 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
     markdownInputKeymap,
     formatKeymap,
-    ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki) : [syntaxHighlighting(getAinoteHighlightStyle())]),
+    ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki, t("note.copyCode"), t("note.copied")) : [syntaxHighlighting(getAinoteHighlightStyle())]),
     EditorView.updateListener.of((update) => {
       if (update.selectionSet || update.docChanged) setActiveFormats(getActiveFormats(update.state));
     }),
-  ], [noteTheme, notes, repoPath, onOpenWiki, softRenderEnabled]);
+  ], [noteTheme, notes, repoPath, onOpenWiki, softRenderEnabled, t]);
   return { extensions, activeFormats };
 }
 
-function softRenderExtension(repoPath: string | null, onOpenWiki: ((name: string) => void) | undefined): Extension[] {
-  return onOpenWiki ? [softRender({ repoPath, onOpenWiki })] : [softRender({ repoPath })];
+function softRenderExtension(repoPath: string | null, onOpenWiki: ((name: string) => void) | undefined, copyCodeLabel: string, copiedLabel: string): Extension[] {
+  return onOpenWiki ? [softRender({ repoPath, onOpenWiki, copyCodeLabel, copiedLabel })] : [softRender({ repoPath, copyCodeLabel, copiedLabel })];
 }
 
 function completionSource(context: CompletionContext, notes: Parameters<typeof buildCompletions>[0]) {

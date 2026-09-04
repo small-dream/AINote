@@ -234,6 +234,13 @@
   font-family: inherit;
 }
 
+.cm-sr-code-copy {
+  padding: 0.15rem 0.35rem;
+  color: var(--note-secondary);
+  font-size: 11px;
+}
+.cm-sr-code-copy:hover { color: var(--note-accent); }
+
 .cm-sr-codeblock-pre {
   margin: 0;
   padding: 0.75rem 1rem;

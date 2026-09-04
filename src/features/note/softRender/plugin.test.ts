@@ -159,13 +159,28 @@ describe("softRender 交互与块级", () => {
   });
 });
 
+describe("softRender 代码块复制", () => {
+  it("代码块复制按钮复制源码且不进入源码编辑", async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+    const view = await createView("```js\nconst a = 1;\n```", 0);
+    const button = view.contentDOM.querySelector<HTMLButtonElement>(".cm-sr-code-copy");
+    expect(button).toBeDefined();
+    button?.click();
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(writeText).toHaveBeenCalledWith("const a = 1;");
+    expect(view.contentDOM.querySelector(".cm-sr-codeblock-widget")).toBeDefined();
+    view.destroy();
+  });
+});
+
 
 describe("softRender 代码块与数学", () => {
   it("围栏代码块光标离开时渲染高亮 widget", async () => {
     const view = await createView("```js\nconst a = 1;\n```", 0);
     const widget = view.contentDOM.querySelector(".cm-sr-codeblock-widget");
     expect(widget).toBeDefined();
-    expect(widget?.querySelector(".cm-sr-codeblock-header")?.textContent).toBe("js");
+    expect(widget?.querySelector(".cm-sr-codeblock-header span")?.textContent).toBe("js");
     expect(widget?.querySelector(".cm-sr-codeblock-code")?.textContent).toContain("const");
     view.destroy();
   });

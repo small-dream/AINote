@@ -2,8 +2,7 @@ import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
 import type { SyntaxNode } from "@lezer/common";
 import { EditorSelection, StateField, type EditorState, type Extension, type Range } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, keymap, type MouseSelectionStyle } from "@codemirror/view";
-import { assetUrl, openExternal } from "@/api";
-import { resolveLocalAssetPath } from "@/features/asset/utils/asset";
+import { openExternal } from "@/api";
 import type { HideRange, WidgetRange } from "./types";
 import { clickedLinePosition, debugClick, debugMouseDown, debugViewUpdate } from "./clickDebug";
 import { planSoftRender } from "./utils/plan";
@@ -18,12 +17,16 @@ import {
   NumberWidget,
   TableWidget,
 } from "./widgets";
+import { resolveImageSrc } from "./utils/image";
 
 export interface SoftRenderOptions {
   /** 活动仓库绝对路径，用于解析图片等仓库相对路径 */
   repoPath: string | null;
   /** 点击 [[双链]] 时回调目标名 */
   onOpenWiki?: (name: string) => void;
+  /** 代码块复制按钮文案 */
+  copyCodeLabel?: string;
+  copiedLabel?: string;
   /** 开发诊断：输出点击坐标与 selection 映射日志。 */
   debugClick?: boolean;
 }
@@ -84,9 +87,9 @@ const WIDGET_BUILDERS: Record<WidgetRange["kind"], (widget: WidgetRange, options
   table: (widget) => Decoration.replace({ widget: new TableWidget(widget.value ?? "", widget.from, widget.to), block: true }),
   bullet: (widget) => Decoration.replace({ widget: new BulletWidget(widget.from, widget.to) }),
   number: (widget) => Decoration.replace({ widget: new NumberWidget(widget.from, widget.to, widget.index ?? 1) }),
-  codeblock: (widget) =>
+  codeblock: (widget, options) =>
     Decoration.replace({
-      widget: new CodeBlockWidget(widget.value ?? "", widget.alt ?? "", widget.from, widget.to),
+      widget: new CodeBlockWidget(widget.value ?? "", widget.alt ?? "", widget.from, widget.to, options.copyCodeLabel, options.copiedLabel),
       block: true,
     }),
   math: (widget) =>
@@ -107,6 +110,7 @@ function handleClick(event: MouseEvent, view: EditorView, options: SoftRenderOpt
     toggleTask(view, checkbox);
     return true;
   }
+  if (closestElement(target, ".cm-sr-code-copy")) return true;
   if (enterWidgetAt(event, view)) return true;
   correctSelectionToClickedLine(event, view);
   debugClick("click:after", event, view, options);
@@ -213,14 +217,4 @@ function openFromLink(link: HTMLElement, options: SoftRenderOptions): boolean {
     return true;
   }
   return false;
-}
-
-function resolveImageSrc(repoPath: string | null, src: string): string {
-  const local = resolveLocalAssetPath(repoPath ?? "", src);
-  if (!local) return src;
-  try {
-    return assetUrl(local);
-  } catch {
-    return src;
-  }
 }
