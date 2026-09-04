@@ -155,7 +155,8 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onCh
     input: ({ checked, ...props }) => <TaskCheckbox {...props} checked={checked} content={content} onContentChange={onChange} />,
     img: ({ node, src, alt, ...props }) => {
       const local = resolveLocalAssetPath(repoPath ?? "", src ?? "");
-      return <PreviewImage src={local ? assetUrl(local) : src} alt={alt ?? ""} line={node?.position?.start.line} {...props} />;
+      const imageSrc = local ? assetUrl(local) : src;
+      return <PreviewImage key={imageSrc} src={imageSrc} alt={alt ?? ""} line={node?.position?.start.line} {...props} />;
     },
     table: ({ node, children, ...props }) => <div className="markdown-table-wrap"><table data-line={node?.position?.start.line} {...props}>{children}</table></div>,
       a: ({ href, children, ...props }) => {

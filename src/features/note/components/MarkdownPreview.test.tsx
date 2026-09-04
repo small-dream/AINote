@@ -47,7 +47,9 @@ describe("MarkdownPreview 本地资产图片渲染（P1-4）", () => {
     expect(img?.getAttribute("src")).toBe("https://example.com/a.png");
     expect(assetUrlMock).not.toHaveBeenCalled();
   });
+});
 
+describe("MarkdownPreview 图片 Lightbox", () => {
   it("点击已加载图片打开大图并支持 Escape 关闭", () => {
     const { container } = render(<MarkdownPreview content={"![logo](https://example.com/a.png)"} />);
     const image = container.querySelector(".markdown-image img") as HTMLImageElement;
@@ -65,6 +67,13 @@ describe("MarkdownPreview 本地资产图片渲染（P1-4）", () => {
     fireEvent.error(image);
     expect(container.querySelector<HTMLButtonElement>(".markdown-image-trigger")?.disabled).toBe(true);
     expect(container.querySelector(".markdown-image-error")).toBeTruthy();
+  });
+
+  it("图片地址变化时重置加载状态", () => {
+    const { container, rerender } = render(<MarkdownPreview content={"![logo](https://example.com/old.png)"} />);
+    fireEvent.load(container.querySelector(".markdown-image img") as HTMLImageElement);
+    rerender(<MarkdownPreview content={"![logo](https://example.com/new.png)"} />);
+    expect(container.querySelector(".markdown-image")?.className).toContain("markdown-image-loading");
   });
 });
 
