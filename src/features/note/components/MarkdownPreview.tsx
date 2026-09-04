@@ -22,6 +22,7 @@ import { slugifyHeading, textContent } from "../utils/preview";
 import { useTranslation } from "@/i18n";
 import { MarkdownProperties } from "./MarkdownProperties";
 import { MermaidBlock } from "./MermaidBlock";
+import { toggleTaskAtLine } from "../utils/task";
 
 interface MarkdownPreviewProps {
   content: string;
@@ -31,6 +32,8 @@ interface MarkdownPreviewProps {
   onOpenWiki?: (name: string) => void;
   /** 当前仓库索引，用于区分已解析与未解析双链。 */
   wikiNotes?: NoteWikiDto[];
+  /** Preview 任务勾选后的源码更新回调；未提供时保持只读。 */
+  onChange?: (content: string) => void;
 }
 
 /** 为块级元素注入 data-line（Markdown 起始行号），供分栏同步滚动收集锚点 */
@@ -44,6 +47,7 @@ const blockComponents: Components = {
 
 type HeadingProps = ComponentProps<"h1"> & ExtraProps;
 type PreProps = ComponentProps<"pre"> & ExtraProps;
+type TaskInputProps = ComponentProps<"input"> & ExtraProps & { content: string; onContentChange?: ((content: string) => void) | undefined };
 
 function Heading(tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6", ids: Map<string, number>): ComponentType<HeadingProps> {
   return ({ node, children, ...props }: HeadingProps) => {
@@ -110,6 +114,16 @@ function getLanguage(children: ReactNode): string | null {
   return className.match(/language-(\S+)/)?.[1] ?? null;
 }
 
+function TaskCheckbox({ checked, content, onContentChange, ...props }: TaskInputProps) {
+  const enabled = Boolean(onContentChange);
+  return <input {...props} type="checkbox" checked={Boolean(checked)} disabled={!enabled} onChange={(event) => {
+    if (!onContentChange) return;
+    const line = Number(event.currentTarget.closest("li")?.dataset.line);
+    const next = toggleTaskAtLine(content, line, event.currentTarget.checked);
+    if (next !== null) onContentChange(next);
+  }} />;
+}
+
 /** 渲染单个双链：拦截 wiki: 协议链接，点击回调目标名 */
 function WikiLink({ href, children, onOpenWiki, resolved }: { href: string; children: React.ReactNode; onOpenWiki?: ((name: string) => void) | undefined; resolved?: boolean | undefined }) {
   const { t } = useTranslation();
@@ -132,11 +146,12 @@ function WikiLink({ href, children, onOpenWiki, resolved }: { href: string; chil
 }
 
 /** Markdown 渲染预览。react-markdown 默认不渲染原始 HTML（当作文本），天然防 XSS（安全红线）。 */
-export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes }: MarkdownPreviewProps) {
+export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onChange }: MarkdownPreviewProps) {
   const document = useMemo(() => parseMarkdownDocument(content), [content]);
   const components = useMemo<Components>(() => ({
     ...blockComponents,
     ...createHeadingComponents(),
+    input: ({ checked, ...props }) => <TaskCheckbox {...props} checked={checked} content={content} onContentChange={onChange} />,
     img: ({ node, src, alt, ...props }) => {
       const local = resolveLocalAssetPath(repoPath ?? "", src ?? "");
       return <PreviewImage src={local ? assetUrl(local) : src} alt={alt ?? ""} line={node?.position?.start.line} {...props} />;
@@ -149,7 +164,7 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes }: Ma
       }
       return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>;
     },
-  }), [onOpenWiki, repoPath, wikiNotes]);
+  }), [content, onChange, onOpenWiki, repoPath, wikiNotes]);
   return (
     <article className="markdown-body max-w-3xl mx-auto">
       {document.frontmatter.length > 0 ? <MarkdownProperties fields={document.frontmatter} /> : null}

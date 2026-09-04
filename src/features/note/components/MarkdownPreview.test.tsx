@@ -121,6 +121,15 @@ describe("MarkdownPreview P1 预览增强", () => {
     const { container } = render(<MarkdownPreview content={"| A | B |\n| - | - |\n| 1 | 2 |"} />);
     expect(container.querySelector(".markdown-table-wrap table")).toBeTruthy();
   });
+
+  it("Preview 任务勾选回写 Markdown 源码", () => {
+    const onChange = vi.fn();
+    const { container } = render(<MarkdownPreview content={"- [ ] 待办"} onChange={onChange} />);
+    const checkbox = container.querySelector<HTMLInputElement>("input[type='checkbox']");
+    expect(checkbox?.disabled).toBe(false);
+    fireEvent.click(checkbox as HTMLInputElement);
+    expect(onChange).toHaveBeenCalledWith("- [x] 待办");
+  });
 });
 
 describe("MarkdownPreview properties and callouts", () => {

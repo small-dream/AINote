@@ -74,7 +74,7 @@ function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, on
     return (
       <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
         {outlineFloat}
-        <SplitPane ratio={ratio} onRatioChange={onRatioChange} left={editor} right={<PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} />} />
+        <SplitPane ratio={ratio} onRatioChange={onRatioChange} left={editor} right={<PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} />} />
       </div>
     );
   }
@@ -82,7 +82,7 @@ function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, on
     return (
       <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
         {outlineFloat}
-        <PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} />
+        <PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} />
       </div>
     );
   }
@@ -100,10 +100,11 @@ interface PreviewPaneProps {
   repoPath: string | null;
   onOpenWiki: (name: string) => void;
   wikiNotes: NoteWikiDto[];
+  onChange: (content: string) => void;
 }
 
-function PreviewPane({ previewRef, content, repoPath, onOpenWiki, wikiNotes }: PreviewPaneProps) {
-  return <div ref={previewRef} className="note-preview-pane h-full min-h-0 flex-1 overflow-y-auto p-6"><Suspense fallback={<PreviewLoading />}><LazyMarkdownPreview content={content} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} /></Suspense></div>;
+function PreviewPane({ previewRef, content, repoPath, onOpenWiki, wikiNotes, onChange }: PreviewPaneProps) {
+  return <div ref={previewRef} className="note-preview-pane h-full min-h-0 flex-1 overflow-y-auto p-6"><Suspense fallback={<PreviewLoading />}><LazyMarkdownPreview content={content} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} /></Suspense></div>;
 }
 
 function PreviewLoading() {
