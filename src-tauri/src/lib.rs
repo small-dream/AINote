@@ -7,6 +7,9 @@ mod domain;
 mod repositories;
 mod services;
 
+#[cfg(test)]
+mod perf_baseline;
+
 pub use services::auth_store::AuthStore;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]

@@ -2,6 +2,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { noteApi, syncApi } from "@/api";
 import type { NoteContent, NoteKind, NoteMeta } from "@/api/types";
 import { useWorkspaceActivityStore } from "@/stores/workspace-activity.store";
+import { reportToastError } from "@/stores/toast.store";
 
 export const noteKeys = {
   list: (repoPath: string | null) => ["notes", repoPath] as const,
@@ -49,7 +50,7 @@ export function useCreateNoteMutation() {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
       void queryClient.removeQueries({ queryKey: ["note-content"] });
-      void syncApi.commit(`note: create ${path}`).finally(() => {
+      void syncApi.commit(`note: create ${path}`).catch(reportToastError).finally(() => {
         void queryClient.invalidateQueries({ queryKey: ["sync"] });
       });
     },
@@ -67,7 +68,7 @@ export function useImportNoteMutation() {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
       markActivity();
-      void syncApi.commit(`note: import ${note.path}`).finally(() => {
+      void syncApi.commit(`note: import ${note.path}`).catch(reportToastError).finally(() => {
         void queryClient.invalidateQueries({ queryKey: ["sync"] });
       });
     },
@@ -79,6 +80,7 @@ export function useUpdateNoteMutation(repoPath: string | null = null) {
   const queryClient = useQueryClient();
   const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
   return useMutation({
+    meta: { silentError: true },
     mutationFn: ({ path, content }: { path: string; content: string }) =>
       noteApi.update(path, content),
     onSuccess: (_data, { path, content }) => {

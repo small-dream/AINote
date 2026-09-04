@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "lint": "eslint .",
+    "perf:baseline": "cargo test perf_baseline --manifest-path src-tauri/Cargo.toml -- --ignored --nocapture",
     "tauri": "tauri",
     "desktop:run": "tauri dev",
     "desktop:build": "tauri build --no-bundle",

@@ -1,12 +1,13 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { assetApi, syncApi } from "@/api";
 import type { AssetInfo } from "@/api/types";
+import { reportToastError } from "@/stores/toast.store";
 
 /** 资产导入成功后的统一副作用：提交版本化 + 刷新笔记/树/同步状态 */
 function invalidateAfterAsset(queryClient: ReturnType<typeof useQueryClient>, path: string) {
   void queryClient.invalidateQueries({ queryKey: ["notes"] });
   void queryClient.invalidateQueries({ queryKey: ["tree"] });
-  void syncApi.commit(`note: asset ${path}`).finally(() => {
+  void syncApi.commit(`note: asset ${path}`).catch(reportToastError).finally(() => {
     void queryClient.invalidateQueries({ queryKey: ["sync"] });
   });
 }

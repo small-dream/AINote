@@ -1,5 +1,6 @@
 import { useConvertNoteMutation } from "@/queries/note.queries";
 import { syncApi } from "@/api";
+import { reportToastError } from "@/stores/toast.store";
 import { markdownToRichTextJson } from "@/features/richtext/utils/markdownConversion";
 import { swapNoteExtension } from "../utils/noteKind";
 
@@ -20,7 +21,7 @@ export function useNoteConversion({ notePath, draft, flush, onOpenNote }: UseNot
       { from: notePath, to, content },
       {
         onSuccess: () => {
-          void syncApi.commit(`note: convert ${to}`).finally(() => onOpenNote(to));
+          void syncApi.commit(`note: convert ${to}`).catch(reportToastError).finally(() => onOpenNote(to));
         },
       }
     );

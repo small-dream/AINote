@@ -1,16 +1,16 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
-import { syncApi } from "@/api";
+import { isAppError, syncApi } from "@/api";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
-/** P0-5 启动时自动检查远端：挂载后静默 pull，无论成败都刷新同步/笔记状态 */
+/** 启动与联网恢复时自动完成 commit → pull → push，确保离线队列最终送达。 */
 export function useStartupSync(repoPath: string | null) {
   const online = useNetworkStatus();
   const queryClient = useQueryClient();
   const startedForRepo = useRef<string | null>(null);
   const { mutate, isPending } = useMutation({
-    mutationFn: () => syncApi.pull(),
-    retry: false,
+    mutationFn: () => syncApi.syncNow(),
+    retry: (failureCount, error) => isAppError(error) && error.retriable && failureCount < 3,
     onSettled: () => {
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       void queryClient.invalidateQueries({ queryKey: ["notes"] });

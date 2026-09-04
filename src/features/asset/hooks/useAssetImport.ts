@@ -83,7 +83,7 @@ export function useAssetImport(view: EditorView | null) {
             { bytes: new Uint8Array(buffer), fileName: file.name },
             { onSuccess: (asset) => insert(asset, file.name), onError: fail }
           );
-        });
+        }).catch(fail);
       });
     },
     [importBytes, insert, fail]

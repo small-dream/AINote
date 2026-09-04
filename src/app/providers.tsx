@@ -1,9 +1,17 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { useEffect, useState, type ReactNode } from "react";
 import { resolveTheme, useUiStore } from "@/stores/ui.store";
 import { useTypographyStore } from "@/stores/typography.store";
+import { reportToastError } from "@/stores/toast.store";
+import { ToastViewport } from "@/components/molecules/ToastViewport";
 
 const queryClient = new QueryClient({
+  mutationCache: new MutationCache({
+    onError: (error, _variables, _onMutateResult, mutation) => {
+      if (mutation.options.meta?.silentError) return;
+      reportToastError(error);
+    },
+  }),
   defaultOptions: {
     queries: { retry: 1, staleTime: 5_000 },
   },
@@ -14,6 +22,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <ThemeApplier />
       <TypographyApplier />
+      <ToastViewport />
       {children}
     </QueryClientProvider>
   );
