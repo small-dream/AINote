@@ -1,10 +1,11 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Check, Cloud, CloudOff, History, RefreshCw, TriangleAlert } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
 import { useSync } from "../hooks/useSync";
 import { deriveSyncHeader, type SyncOperation, type SyncTone } from "../utils/status";
-import { ConflictMergeDialog } from "./ConflictMergeDialog";
 import { useTranslation } from "@/i18n";
+
+const LazyConflictMergeDialog = lazy(() => import("./ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
 
 const TONE_DOT: Record<SyncTone, string> = {
   synced: "bg-success",
@@ -55,7 +56,7 @@ export function SyncBar({ repoPath, startupSyncing = false }: SyncBarProps) {
         syncNow={syncNow}
         onConflict={() => setConflictOpen(true)}
       />
-      <ConflictMergeDialog repoPath={repoPath} open={conflictOpen} onClose={() => setConflictOpen(false)} />
+      {conflictOpen ? <Suspense fallback={null}><LazyConflictMergeDialog repoPath={repoPath} open onClose={() => setConflictOpen(false)} /></Suspense> : null}
     </div>
   );
 }

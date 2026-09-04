@@ -1,14 +1,11 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import { EditorView } from "@codemirror/view";
 import { EditorToolbar, type ViewMode } from "./EditorToolbar";
 import { MarkdownEditorSurface, type MarkdownEditorSurfaceProps } from "./MarkdownEditorSurface";
-import { RichTextEditor } from "@/features/richtext/components/RichTextEditor";
 import { AiWriteControls } from "@/features/ai/components/AiWriteControls";
 import { AskAiPanel } from "@/features/ai/components/AskAiPanel";
-import { HistoryPanel } from "@/features/history/components/HistoryPanel";
 import { WikiPanel } from "@/features/wiki/components/WikiPanel";
-import { PdfExportOverlay } from "@/features/export/components/PdfExportOverlay";
 import { useUiStore } from "@/stores/ui.store";
 import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
 import { useAiSuggest } from "@/features/ai/hooks/useAiSuggest";
@@ -21,6 +18,10 @@ import type { useEditorWiki } from "@/features/wiki/hooks/useEditorWiki";
 import type { useNoteHistory } from "@/features/history/hooks/useNoteHistory";
 import type { usePdfExport } from "@/features/export/hooks/usePdfExport";
 import { useTranslation } from "@/i18n";
+
+const LazyRichTextEditor = lazy(() => import("@/features/richtext/components/RichTextEditor").then(({ RichTextEditor }) => ({ default: RichTextEditor })));
+const LazyHistoryPanel = lazy(() => import("@/features/history/components/HistoryPanel").then(({ HistoryPanel }) => ({ default: HistoryPanel })));
+const LazyPdfExportOverlay = lazy(() => import("@/features/export/components/PdfExportOverlay").then(({ PdfExportOverlay }) => ({ default: PdfExportOverlay })));
 
 export interface NoteEditorContentProps {
   notePath: string;
@@ -53,13 +54,17 @@ export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, o
   const richText = kind === "richText";
   return <div className="flex h-full min-h-0 flex-col bg-bg-primary">
     <EditorToolbar path={notePath} mode={mode} richText={richText} saveError={saveError} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={handleConvertToRichText} onExportPdf={() => void pdf.request()} {...(richText ? {} : { onAi: ai.openMenu })} />
-    {richText ? <RichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}
+    <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
     <AiWriteControls ai={ai} canSummarize={!richText} canSuggest={!richText} suggest={suggest} />
     <AskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} />
-    <HistoryPanel repoPath={repoPath} path={notePath} open={history.open} onClose={history.closeHistory} onRestored={history.onRestored} />
+    {history.open ? <Suspense fallback={null}><LazyHistoryPanel repoPath={repoPath} path={notePath} open onClose={history.closeHistory} onRestored={history.onRestored} /></Suspense> : null}
     <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
-    <PdfExportOverlay open={pdf.open} title={pdf.title} kind={kind} content={draft} repoPath={repoPath} onClose={pdf.close} />
+    {pdf.open ? <Suspense fallback={null}><LazyPdfExportOverlay open title={pdf.title} kind={kind} content={draft} repoPath={repoPath} onClose={pdf.close} /></Suspense> : null}
   </div>;
+}
+
+function EditorLoading() {
+  return <div className="flex min-h-0 flex-1 items-center justify-center bg-bg-primary" aria-busy="true" />;
 }
 
 export function useHistoryRequest(requestPath: string | null, notePath: string | null, onHandled: (() => void) | undefined, openHistory: () => void) {

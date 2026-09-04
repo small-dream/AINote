@@ -1,15 +1,16 @@
 import type { Extension } from "@codemirror/state";
-import type { RefObject } from "react";
+import { lazy, Suspense, type RefObject } from "react";
 import type { EditorView } from "@codemirror/view";
 import type { NoteWikiDto } from "@/api/types";
 import CodeMirror from "@uiw/react-codemirror";
-import { MarkdownPreview } from "./MarkdownPreview";
 import { SplitPane } from "./SplitPane";
 import { NoteOutlineFloating } from "./NoteOutlineFloating";
 import { FormatToolbar } from "./FormatToolbar";
 import type { ViewMode } from "./EditorToolbar";
 import type { OutlineItem } from "../utils/outline";
 import type { NoteTheme } from "@/stores/ui.store";
+
+const LazyMarkdownPreview = lazy(() => import("./MarkdownPreview").then(({ MarkdownPreview }) => ({ default: MarkdownPreview })));
 
 export interface MarkdownEditorSurfaceProps {
   mode: ViewMode;
@@ -73,7 +74,7 @@ function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, on
     return (
       <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
         {outlineFloat}
-        <SplitPane ratio={ratio} onRatioChange={onRatioChange} left={editor} right={<div ref={previewRef} className="note-preview-pane h-full overflow-y-auto p-6"><MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} /></div>} />
+        <SplitPane ratio={ratio} onRatioChange={onRatioChange} left={editor} right={<PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} />} />
       </div>
     );
   }
@@ -81,7 +82,7 @@ function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, on
     return (
       <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
         {outlineFloat}
-        <div ref={previewRef} className="note-preview-pane min-h-0 flex-1 overflow-y-auto p-6"><MarkdownPreview content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} /></div>
+        <PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} />
       </div>
     );
   }
@@ -91,6 +92,22 @@ function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, on
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{editor}</div>
     </div>
   );
+}
+
+interface PreviewPaneProps {
+  previewRef: RefObject<HTMLDivElement | null>;
+  content: string;
+  repoPath: string | null;
+  onOpenWiki: (name: string) => void;
+  wikiNotes: NoteWikiDto[];
+}
+
+function PreviewPane({ previewRef, content, repoPath, onOpenWiki, wikiNotes }: PreviewPaneProps) {
+  return <div ref={previewRef} className="note-preview-pane h-full min-h-0 flex-1 overflow-y-auto p-6"><Suspense fallback={<PreviewLoading />}><LazyMarkdownPreview content={content} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} /></Suspense></div>;
+}
+
+function PreviewLoading() {
+  return <div className="mx-auto h-full max-w-3xl animate-pulse bg-bg-primary/20" aria-busy="true" />;
 }
 
 function EditorShell({ softRender, children }: { softRender: boolean; children: React.ReactNode }) {

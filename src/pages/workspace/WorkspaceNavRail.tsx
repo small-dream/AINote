@@ -1,11 +1,12 @@
-import { useState } from "react";
+import { lazy, Suspense, useState } from "react";
 import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, Search, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
-import { ConflictMergeDialog } from "@/features/sync/components/ConflictMergeDialog";
 import { useSync } from "@/features/sync/hooks/useSync";
 import { deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
 import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
+
+const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
 
 interface WorkspaceNavRailProps {
   repoPath: string | null;
@@ -102,7 +103,7 @@ function SyncNavButton({ repoPath, startupSyncing }: WorkspaceNavRailProps) {
         <Icon size={19} className={display.busy ? "animate-spin" : ""} />
         <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{display.text}</span>
       </button>
-      <ConflictMergeDialog repoPath={repoPath} open={conflictOpen} onClose={() => setConflictOpen(false)} />
+      {conflictOpen ? <Suspense fallback={null}><LazyConflictMergeDialog repoPath={repoPath} open onClose={() => setConflictOpen(false)} /></Suspense> : null}
     </>
   );
 }

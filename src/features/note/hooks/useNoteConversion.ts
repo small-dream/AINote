@@ -1,7 +1,6 @@
 import { useConvertNoteMutation } from "@/queries/note.queries";
 import { syncApi } from "@/api";
 import { reportToastError } from "@/stores/toast.store";
-import { markdownToRichTextJson } from "@/features/richtext/utils/markdownConversion";
 import { swapNoteExtension } from "../utils/noteKind";
 
 interface UseNoteConversionOptions {
@@ -30,6 +29,7 @@ export function useNoteConversion({ notePath, draft, flush, onOpenNote }: UseNot
   const handleConvertToRichText = async () => {
     if (!notePath) return;
     await flush();
+    const { markdownToRichTextJson } = await import("@/features/richtext/utils/markdownConversion");
     handleConvertNote(swapNoteExtension(notePath, "richText"), markdownToRichTextJson(draft));
   };
 

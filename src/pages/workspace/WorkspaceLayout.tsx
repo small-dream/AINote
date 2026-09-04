@@ -1,13 +1,15 @@
-import { useState, type RefObject } from "react";
+import { lazy, Suspense, useState, type RefObject } from "react";
 import { NewFolderDialog } from "@/features/file-tree/components/NewFolderDialog";
 import { MoveNoteDialog } from "@/features/note/components/MoveNoteDialog";
 import { RenameNoteDialog } from "@/features/note/components/RenameNoteDialog";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { WorkspaceNavRail } from "./WorkspaceNavRail";
-import { CommandPalette } from "@/features/search/components/CommandPalette";
-import { SettingsView } from "@/features/settings/components/SettingsView";
 import type { WorkspaceActions } from "./useWorkspaceActions";
 import { WorkspaceColumns } from "./WorkspaceColumns";
+import { CommandPalette } from "@/features/search/components/CommandPalette";
+import { useUiStore } from "@/stores/ui.store";
+
+const LazySettingsView = lazy(() => import("@/features/settings/components/SettingsView").then(({ SettingsView }) => ({ default: SettingsView })));
 
 interface WorkspaceLayoutProps {
   repoPath: string | null;
@@ -58,8 +60,9 @@ function LayoutDialogs({ repoPath, actions, onMoved }: { repoPath: string | null
 }
 
 function WorkspaceOverlays({ repoPath, actions, editorRef, onOpenNote }: { repoPath: string | null; actions: WorkspaceActions; editorRef: RefObject<NoteEditorHandle | null>; onOpenNote: (path: string) => void }) {
+  const settingsOpen = useUiStore((state) => state.settingsOpen);
   return <>
     <CommandPalette repoPath={repoPath} actions={{ onOpenNote, onNewNote: () => { void actions.requestNew(""); }, onNewFolder: () => actions.requestNewFolder(""), onChangeMode: (mode) => editorRef.current?.setMode(mode), onInsertCallout: () => editorRef.current?.insertCallout() }} />
-    <SettingsView />
+    <Suspense fallback={null}>{settingsOpen ? <LazySettingsView /> : null}</Suspense>
   </>;
 }
