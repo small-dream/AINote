@@ -20,6 +20,8 @@ import {
 import { setHeading, toggleBlock, toggleInline, type FormatResult } from "../utils/format";
 import { insertCodeBlock, insertDivider, insertImage, insertTable } from "../utils/insert";
 import { useFormatCommands } from "../hooks/useFormatCommands";
+import { DiagnosticsToolbarButton } from "@/features/diagnostics/components/DiagnosticsToolbarButton";
+import type { DiagnosticIssue } from "@/features/diagnostics/utils/diagnostics";
 import { ToolbarButton } from "./ToolbarButton";
 import { HeadingDropdown } from "./HeadingDropdown";
 import { useTranslation } from "@/i18n";
@@ -32,6 +34,10 @@ interface FormatToolbarProps {
   onImagePicked?: (files: File[]) => void;
   /** 资产导入瞬时状态提示（成功 / 失败） */
   status?: string | null;
+  diagnostics: DiagnosticIssue[];
+  diagnosticsOpen: boolean;
+  onDiagnosticsToggle: () => void;
+  onDiagnosticsSelect: (issue: DiagnosticIssue) => void;
 }
 
 interface ButtonSpec {
@@ -104,7 +110,7 @@ function renderButtons(buttons: ButtonSpec[], opts: RenderButtonsOptions) {
 }
 
 /** Markdown 格式工具栏：按编辑任务分组，紧凑且保持键盘焦点。 */
-export function FormatToolbar({ viewRef, active, onImagePicked, status }: FormatToolbarProps) {
+export function FormatToolbar({ viewRef, active, onImagePicked, status, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect }: FormatToolbarProps) {
   const { t } = useTranslation();
   const { run, runLink } = useFormatCommands(viewRef);
   const opts = { t, active, run, onImagePicked };
@@ -121,11 +127,14 @@ export function FormatToolbar({ viewRef, active, onImagePicked, status }: Format
         <ToolbarButton icon={Link} label={t("note.link")} shortcut="⌘K" onClick={runLink} />
         {renderButtons(INSERT_BUTTONS, opts)}
       </div>
-      {status ? (
-        <span role="status" className="ml-auto max-w-72 truncate text-xs text-text-secondary">
-          {status}
-        </span>
-      ) : null}
+      <div className="ml-auto flex min-w-0 items-center gap-2">
+        {status ? (
+          <span role="status" className="max-w-72 truncate text-xs text-text-secondary">
+            {status}
+          </span>
+        ) : null}
+        <DiagnosticsToolbarButton issues={diagnostics} open={diagnosticsOpen} onToggle={onDiagnosticsToggle} onSelect={onDiagnosticsSelect} />
+      </div>
     </div>
   );
 }

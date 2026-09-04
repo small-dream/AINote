@@ -5,7 +5,6 @@ import type { NoteWikiDto } from "@/api/types";
 import CodeMirror from "@uiw/react-codemirror";
 import { SplitPane } from "./SplitPane";
 import { NoteOutlineFloating } from "./NoteOutlineFloating";
-import { DiagnosticsFloating } from "@/features/diagnostics/components/DiagnosticsFloating";
 import type { DiagnosticIssue } from "@/features/diagnostics/utils/diagnostics";
 import { FormatToolbar } from "./FormatToolbar";
 import type { ViewMode } from "./EditorToolbar";
@@ -47,8 +46,8 @@ export interface MarkdownEditorSurfaceProps {
 export function MarkdownEditorSurface({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect, viewRef, activeFormats, onImagePicked, assetStatus, softRender = true }: MarkdownEditorSurfaceProps) {
   return (
     <>
-      {mode !== "preview" ? <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={onImagePicked} status={assetStatus} /> : null}
-      <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} previewRef={previewRef} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} ratio={ratio} onRatioChange={onRatioChange} outline={outline} outlineOpen={outlineOpen} onOutlineToggle={onOutlineToggle} onOutlineSelect={onOutlineSelect} diagnostics={diagnostics} diagnosticsOpen={diagnosticsOpen} onDiagnosticsToggle={onDiagnosticsToggle} onDiagnosticsSelect={onDiagnosticsSelect} softRender={softRender} />
+      {mode !== "preview" ? <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={onImagePicked} status={assetStatus} diagnostics={diagnostics} diagnosticsOpen={diagnosticsOpen} onDiagnosticsToggle={onDiagnosticsToggle} onDiagnosticsSelect={onDiagnosticsSelect} /> : null}
+      <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} previewRef={previewRef} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} ratio={ratio} onRatioChange={onRatioChange} outline={outline} outlineOpen={outlineOpen} onOutlineToggle={onOutlineToggle} onOutlineSelect={onOutlineSelect} softRender={softRender} />
     </>
   );
 }
@@ -70,22 +69,16 @@ interface EditorBodyProps {
   outlineOpen: boolean;
   onOutlineToggle: () => void;
   onOutlineSelect: (item: OutlineItem) => void;
-  diagnostics: DiagnosticIssue[];
-  diagnosticsOpen: boolean;
-  onDiagnosticsToggle: () => void;
-  onDiagnosticsSelect: (issue: DiagnosticIssue) => void;
   softRender: boolean;
 }
 
-function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect, softRender }: EditorBodyProps) {
+function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, softRender }: EditorBodyProps) {
   const editor = <EditorShell softRender={softRender}><CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" basicSetup={{ syntaxHighlighting: !softRender, lineNumbers: !softRender, highlightActiveLineGutter: !softRender, foldGutter: false }} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} /></EditorShell>;
   const outlineFloat = <NoteOutlineFloating items={outline} open={outlineOpen} onToggle={onOutlineToggle} onSelect={onOutlineSelect} />;
-  const diagnosticsFloat = <DiagnosticsFloating issues={diagnostics} open={diagnosticsOpen} onToggle={onDiagnosticsToggle} onSelect={onDiagnosticsSelect} />;
   if (mode === "split") {
     return (
       <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
         {outlineFloat}
-        {diagnosticsFloat}
         <SplitPane ratio={ratio} onRatioChange={onRatioChange} left={editor} right={<PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} />} />
       </div>
     );
@@ -94,7 +87,6 @@ function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, on
     return (
       <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
         {outlineFloat}
-        {diagnosticsFloat}
         <PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} />
       </div>
     );
@@ -102,7 +94,6 @@ function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, on
   return (
     <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
       {outlineFloat}
-      {diagnosticsFloat}
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{editor}</div>
     </div>
   );

@@ -1,51 +1,60 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 import { AlertCircle, CircleAlert, TriangleAlert } from "lucide-react";
-import { Button } from "@/components/atoms/Button";
 import { useTranslation } from "@/i18n";
 import type { DiagnosticIssue } from "../utils/diagnostics";
 
-interface DiagnosticsFloatingProps {
+interface DiagnosticsToolbarButtonProps {
   issues: DiagnosticIssue[];
   open: boolean;
   onToggle: () => void;
   onSelect: (issue: DiagnosticIssue) => void;
 }
 
-/** 编辑区悬浮的 Markdown 诊断入口：显示问题数徽标，点击展开问题列表。 */
-export function DiagnosticsFloating({ issues, open, onToggle, onSelect }: DiagnosticsFloatingProps) {
+/** 格式工具栏中的 Markdown 诊断入口：显示问题数徽标，点击展开问题列表。 */
+export function DiagnosticsToolbarButton({ issues, open, onToggle, onSelect }: DiagnosticsToolbarButtonProps) {
   const { t } = useTranslation();
   const rootRef = useRef<HTMLDivElement | null>(null);
-  useEffect(() => {
-    if (!open) return undefined;
-    const handlePointer = (event: PointerEvent) => {
-      const target = event.target;
-      if (!(target instanceof Node) || !rootRef.current?.contains(target)) onToggle();
-    };
-    document.addEventListener("pointerdown", handlePointer);
-    return () => document.removeEventListener("pointerdown", handlePointer);
-  }, [open, onToggle]);
+  useCloseOnOutside(rootRef, open, onToggle);
 
   return (
-    <div ref={rootRef} className="note-outline-floating diagnostics-floating">
-      <Button
-        variant="ghost"
+    <div ref={rootRef} className="diagnostics-toolbar relative">
+      <button
         type="button"
         aria-label={t("note.diagnostics")}
+        aria-haspopup="dialog"
         aria-expanded={open}
         title={t("note.diagnostics")}
-        className={`note-outline-floating-trigger diagnostics-trigger ${open ? "is-open" : ""}`}
+        className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors duration-120 ${open ? "bg-accent-soft text-accent" : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"}`}
         onClick={onToggle}
       >
         <CircleAlert size={16} aria-hidden="true" />
         {issues.length > 0 ? <span className="diagnostics-count">{issues.length}</span> : null}
-      </Button>
+      </button>
       {open ? (
-        <div className="note-outline-floating-panel is-visible diagnostics-panel" role="dialog" aria-label={t("note.diagnostics")}>
+        <div className="diagnostics-toolbar-panel" role="dialog" aria-label={t("note.diagnostics")}>
           <DiagnosticsList issues={issues} onSelect={onSelect} />
         </div>
       ) : null}
     </div>
   );
+}
+
+function useCloseOnOutside(ref: RefObject<HTMLDivElement | null>, active: boolean, close: () => void): void {
+  useEffect(() => {
+    if (!active) return undefined;
+    const handlePointer = (event: PointerEvent) => {
+      if (!ref.current?.contains(event.target as Node)) close();
+    };
+    const handleKeydown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") close();
+    };
+    document.addEventListener("pointerdown", handlePointer);
+    document.addEventListener("keydown", handleKeydown);
+    return () => {
+      document.removeEventListener("pointerdown", handlePointer);
+      document.removeEventListener("keydown", handleKeydown);
+    };
+  }, [active, close, ref]);
 }
 
 function DiagnosticsList({ issues, onSelect }: { issues: DiagnosticIssue[]; onSelect: (issue: DiagnosticIssue) => void }) {

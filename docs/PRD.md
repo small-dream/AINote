@@ -134,4 +134,4 @@ flowchart TD
 - **Playwright/Tauri 端到端测试**：新增 `pnpm test:e2e`，以 Playwright 驱动 Vite dev 中的真实前端，Tauri IPC 由 `src/e2e/` mock 在浏览器内模拟（`?e2e` 参数启用，仅 DEV 生效、不进入生产包）。覆盖：切换笔记、自动保存（3s 防抖写盘）、历史恢复、冲突恢复（保留本地并回到已同步）、图片加载（data-uri 成功渲染）、分栏滚动同步。真实 Tauri WebView（`tauri-driver`）执行路径见 `docs/ARCHITECTURE.md` §端到端测试。
 - **首屏体积优化**：KaTeX 由静态导入改为按需懒加载（含其样式与字体，仅在出现数学公式时拉取），主 CSS 不再携带 KaTeX 样式；Mermaid/lowlight 等重依赖保持动态分块，不进入入口静态依赖。
 - **Wiki Link 增强**：反向链接上下文增强——Rust `wiki_index` 现在按行返回全部双链上下文（含行号、单目标上限 20 条），反链面板按笔记聚合展示多条带 `L{line}` 上下文的引用；引用（出链）面板对未创建目标提供「创建笔记」一键创建（文件名与标题取目标名，生成后即时解析为可跳转链接）。
-- **Markdown 诊断**：编辑器新增「Markdown 诊断」悬浮入口与徽标计数，覆盖未闭合代码块、无效表格（缺分隔行 / 列数不一致）、frontmatter 校验（未闭合 / YAML 语法 / 非键值对）、图片缺地址与仓库内图片断链（经新命令 `asset_exists` 批量校验）；点击问题项跳到对应行。
+- **Markdown 诊断**：Markdown 编辑格式工具栏新增「Markdown 诊断」右侧入口与徽标计数，覆盖未闭合代码块、无效表格（缺分隔行 / 列数不一致）、frontmatter 校验（未闭合 / YAML 语法 / 非键值对）、图片缺地址与仓库内图片断链（经新命令 `asset_exists` 批量校验）；点击问题项跳到对应行。
