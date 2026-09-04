@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::domain::asset::AssetInfo;
 use crate::domain::error::AppError;
-use crate::repositories::asset_files;
+use crate::repositories::{asset_files, note_files};
 
 const MAX_ASSET_BYTES: u64 = 20 * 1024 * 1024;
 
@@ -35,6 +35,18 @@ pub fn import_asset_bytes(
         return Err(AppError::InvalidPath("empty file name".into()));
     }
     asset_files::import_bytes(repo_path, bytes, file_name)
+}
+
+/// 用例：批量检查仓库相对路径指向的文件是否存在（Markdown 图片断链诊断）。
+/// 非法路径（穿越/绝对路径）一律视为不存在，不返回错误。
+pub fn asset_exists(repo_path: &Path, paths: &[String]) -> Vec<bool> {
+    paths
+        .iter()
+        .map(|rel| match note_files::validate_rel_path(rel) {
+            Ok(rel_path) => repo_path.join(rel_path).is_file(),
+            Err(_) => false,
+        })
+        .collect()
 }
 
 #[cfg(test)]
@@ -82,5 +94,17 @@ mod tests {
         ));
         let info = import_asset_bytes(root, &[1, 2, 3], "paste.png").unwrap();
         assert_eq!(info.path, "assets/paste.png");
+    }
+
+    #[test]
+    fn asset_exists_checks_files_and_rejects_traversal() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        fs::create_dir_all(root.join("assets")).unwrap();
+        fs::write(root.join("assets/pic.png"), b"png").unwrap();
+        assert_eq!(
+            asset_exists(root, &["assets/pic.png".into(), "assets/missing.png".into(), "../etc/passwd".into()]),
+            vec![true, false, false]
+        );
     }
 }

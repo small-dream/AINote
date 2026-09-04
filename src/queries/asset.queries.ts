@@ -1,4 +1,4 @@
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { assetApi, syncApi } from "@/api";
 import type { AssetInfo } from "@/api/types";
 import { reportToastError } from "@/stores/toast.store";
@@ -32,3 +32,13 @@ export function useImportAssetBytesMutation() {
 }
 
 export type { AssetInfo };
+
+/** 批量资产存在性检查（Markdown 图片断链诊断）；data 与 paths 顺序一致。 */
+export function useAssetExistsQuery(repoPath: string | null, paths: string[]) {
+  return useQuery({
+    queryKey: ["asset-exists", repoPath, paths],
+    queryFn: () => assetApi.exists(paths),
+    enabled: repoPath !== null && paths.length > 0,
+    staleTime: 10_000,
+  });
+}

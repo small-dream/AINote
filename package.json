@@ -9,6 +9,7 @@
     "build": "tsc --noEmit && vite build",
     "test": "vitest run",
     "lint": "eslint .",
+    "test:e2e": "playwright test",
     "perf:baseline": "cargo test perf_baseline --manifest-path src-tauri/Cargo.toml -- --ignored --nocapture",
     "tauri": "tauri",
     "desktop:run": "tauri dev",
@@ -65,6 +66,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/vite": "^4.3.3",
     "@tauri-apps/cli": "^2.11.4",
     "@testing-library/react": "^16.3.3",

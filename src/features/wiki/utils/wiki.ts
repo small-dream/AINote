@@ -79,3 +79,31 @@ export function decodeWikiHref(href: string): string {
     return raw;
   }
 }
+
+/** 反向链接的上下文片段（已按目标解析过滤、带行号）。 */
+export interface BacklinkContext {
+  line: number;
+  snippet: string;
+}
+
+/** 取一篇笔记中所有解析到 targetPath 的双链上下文（支持同一目标多处提及）。 */
+export function backlinkContextsOf(note: NoteWikiDto, notes: NoteWikiDto[], targetPath: string): BacklinkContext[] {
+  return (note.linkContexts ?? [])
+    .filter((context) => resolveWikiTarget(notes, context.target) === targetPath)
+    .map(({ line, snippet }) => ({ line, snippet }));
+}
+
+const WINDOWS_RESERVED = /[<>:"|?*]/g;
+
+/** 由双链目标名生成可创建的仓库相对笔记路径（.md，非法字符转 `-`，保留目录）。 */
+export function wikiCreatePath(name: string): string {
+  const segments = name
+    .trim()
+    .split("/")
+    .map((segment) => segment.replace(WINDOWS_RESERVED, "-").replace(/^[.\s]+|[.\s]+$/g, ""))
+    .filter((segment) => segment.length > 0);
+  if (segments.length === 0) return "untitled.md";
+  const base = segments.at(-1) as string;
+  segments[segments.length - 1] = base.toLocaleLowerCase().endsWith(".md") ? base : `${base}.md`;
+  return segments.join("/");
+}

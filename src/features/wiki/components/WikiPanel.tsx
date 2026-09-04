@@ -1,9 +1,10 @@
-import { Hash, Link2, X } from "lucide-react";
+import { Hash, Link2, Plus, X } from "lucide-react";
 import type { ReactNode } from "react";
 import { useTranslation } from "@/i18n";
 import { useWikiIndexQuery } from "@/queries/wiki.queries";
+import { useCreateNoteMutation } from "@/queries/note.queries";
 import type { NoteWikiDto } from "@/api/types";
-import { findBacklinks, resolveWikiTarget } from "../utils/wiki";
+import { backlinkContextsOf, findBacklinks, resolveWikiTarget, wikiCreatePath } from "../utils/wiki";
 
 interface WikiPanelProps {
   repoPath: string | null;
@@ -18,10 +19,11 @@ interface OutgoingLink {
   target: string | null;
 }
 
-/** 双链与标签面板（P1-5）：当前笔记的标签 / 引用（出链）/ 反向链接 */
+/** 双链与标签面板（P1-5）：标签 / 引用（出链，未创建可快速建笔记）/ 反向链接（多上下文）。 */
 export function WikiPanel({ repoPath, path, open, onClose, onOpenNote }: WikiPanelProps) {
   const { t } = useTranslation();
   const { data: notes = [] } = useWikiIndexQuery(repoPath);
+  const createNote = useCreateNoteMutation();
   if (!open || !path) return null;
 
   const note = notes.find((n) => n.path === path);
@@ -32,14 +34,19 @@ export function WikiPanel({ repoPath, path, open, onClose, onOpenNote }: WikiPan
   }));
   const backlinks = findBacklinks(notes, path);
 
+  const handleCreate = async (name: string) => {
+    const targetPath = wikiCreatePath(name);
+    await createNote.mutateAsync({ path: targetPath, kind: "markdown", content: `# ${name}\n` });
+  };
+
   return (
     <div className="fixed inset-0 z-50 bg-black/40" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={t("wiki.title")} className="mx-auto mt-16 flex h-[70vh] w-[min(680px,90vw)] flex-col overflow-hidden rounded-xl bg-bg-primary shadow-2xl">
         <PanelHeader path={path} onClose={onClose} />
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-5">
           <TagsSection tags={tags} />
-          <OutgoingSection links={outgoing} onOpenNote={onOpenNote} />
-          <BacklinksSection backlinks={backlinks} onOpenNote={onOpenNote} />
+          <OutgoingSection links={outgoing} creating={createNote.isPending} onOpenNote={onOpenNote} onCreate={handleCreate} />
+          <BacklinksSection backlinks={backlinks} notes={notes} targetPath={path} onOpenNote={onOpenNote} />
         </div>
       </div>
     </div>
@@ -77,7 +84,7 @@ function TagsSection({ tags }: { tags: string[] }) {
   );
 }
 
-function OutgoingSection({ links, onOpenNote }: { links: OutgoingLink[]; onOpenNote: (path: string) => void }) {
+function OutgoingSection({ links, creating, onOpenNote, onCreate }: { links: OutgoingLink[]; creating: boolean; onOpenNote: (path: string) => void; onCreate: (name: string) => void }) {
   const { t } = useTranslation();
   if (links.length === 0) return <SectionBlock title={t("wiki.links")} empty={t("wiki.linksEmpty")} />;
   return (
@@ -90,9 +97,20 @@ function OutgoingSection({ links, onOpenNote }: { links: OutgoingLink[]; onOpenN
                 <Link2 size={13} /> {link.name}
               </button>
             ) : (
-              <span className="inline-flex items-center gap-1.5 text-text-tertiary">
-                <Link2 size={13} /> {link.name}
-                <span className="rounded bg-bg-tertiary px-1.5 py-0.5 text-[11px]">{t("wiki.notCreated")}</span>
+              <span className="flex min-w-0 flex-1 items-center justify-between gap-2">
+                <span className="inline-flex min-w-0 items-center gap-1.5 text-text-tertiary">
+                  <Link2 size={13} className="shrink-0" />
+                  <span className="truncate">{link.name}</span>
+                  <span className="shrink-0 rounded bg-bg-tertiary px-1.5 py-0.5 text-[11px]">{t("wiki.notCreated")}</span>
+                </span>
+                <button
+                  type="button"
+                  disabled={creating}
+                  onClick={() => onCreate(link.name)}
+                  className="inline-flex shrink-0 items-center gap-1 rounded-md border border-accent/40 px-2 py-0.5 text-xs text-accent transition-colors hover:bg-accent-soft disabled:opacity-50"
+                >
+                  <Plus size={12} /> {t("wiki.createNote")}
+                </button>
               </span>
             )}
           </li>
@@ -102,21 +120,29 @@ function OutgoingSection({ links, onOpenNote }: { links: OutgoingLink[]; onOpenN
   );
 }
 
-function BacklinksSection({ backlinks, onOpenNote }: { backlinks: NoteWikiDto[]; onOpenNote: (path: string) => void }) {
+function BacklinksSection({ backlinks, notes, targetPath, onOpenNote }: { backlinks: NoteWikiDto[]; notes: NoteWikiDto[]; targetPath: string; onOpenNote: (path: string) => void }) {
   const { t } = useTranslation();
   if (backlinks.length === 0) return <SectionBlock title={t("wiki.backlinks")} empty={t("wiki.noBacklinks")} />;
   return (
     <SectionBlock title={t("wiki.backlinks")}>
-      <ul className="space-y-1">
-          {backlinks.map((note) => (
-            <li key={note.path}>
-              <button type="button" onClick={() => onOpenNote(note.path)} className="text-sm text-accent hover:underline">
+      <ul className="space-y-2">
+        {backlinks.map((note) => {
+          const contexts = backlinkContextsOf(note, notes, targetPath);
+          return (
+            <li key={note.path} className="rounded-lg border border-border/70 bg-bg-secondary/60 p-2">
+              <button type="button" onClick={() => onOpenNote(note.path)} className="text-sm font-medium text-accent hover:underline">
                 {note.title}
               </button>
               <span className="ml-2 text-[11px] text-text-tertiary">{note.path}</span>
-              {note.linkContexts?.[0]?.snippet ? <p className="mt-0.5 truncate text-xs text-text-secondary">{note.linkContexts[0].snippet}</p> : null}
+              {contexts.map((context) => (
+                <p key={`${context.line}-${context.snippet}`} className="mt-0.5 truncate text-xs text-text-secondary">
+                  <span className="mr-1 inline-block rounded bg-bg-tertiary px-1 font-mono text-[10px] text-text-tertiary">L{context.line}</span>
+                  {context.snippet}
+                </p>
+              ))}
             </li>
-        ))}
+          );
+        })}
       </ul>
     </SectionBlock>
   );

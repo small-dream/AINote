@@ -583,3 +583,43 @@ pre,
   border: none;
   border-top: 1px solid var(--bg-secondary);
 }
+
+/* Markdown 诊断悬浮面板（Feature：Markdown 诊断） */
+.diagnostics-floating {
+  left: 3rem;
+}
+.diagnostics-floating .note-outline-floating-panel {
+  width: 300px;
+  max-width: min(320px, calc(100vw - 2rem));
+}
+.diagnostics-count {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  min-width: 16px;
+  height: 16px;
+  display: grid;
+  place-items: center;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: var(--danger, #dc2626);
+  color: #fff;
+  font-size: 10px;
+  line-height: 1;
+  font-weight: 600;
+}
+.diagnostics-list {
+  max-height: min(360px, calc(100dvh - 10rem));
+  overflow-y: auto;
+}
+.diagnostics-item {
+  display: flex;
+  width: 100%;
+  align-items: flex-start;
+  gap: 6px;
+  padding: 7px 10px;
+  text-align: left;
+}
+.diagnostics-item:hover {
+  background: var(--bg-tertiary);
+}

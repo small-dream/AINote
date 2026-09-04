@@ -23,5 +23,6 @@ export default defineConfig({
     environmentOptions: {
       jsdom: { url: "http://localhost/" },
     },
+    exclude: ["e2e/**", "node_modules/**", "dist/**"],
   },
 });

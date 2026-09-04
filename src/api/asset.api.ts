@@ -10,6 +10,8 @@ export const assetApi = {
   /** 从内存字节导入（粘贴图片） */
   importBytes: (bytes: Uint8Array, fileName: string) =>
     call<AssetInfo>("import_asset_bytes", { bytes, fileName }),
+  /** 批量检查仓库相对路径是否指向存在的文件（Markdown 图片断链诊断） */
+  exists: (paths: string[]) => call<boolean[]>("asset_exists", { paths }),
 };
 
 /** 注册桌面端文件拖放监听，返回取消函数；drop 后回调本地文件路径列表 */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseMarkdownTable } from "./table";
+import { escapeCell, parseMarkdownTable, serializeMarkdownTable } from "./table";
 
 describe("parseMarkdownTable", () => {
   it("解析表头与数据行，跳过分隔行", () => {
@@ -35,5 +35,45 @@ describe("parseMarkdownTable", () => {
   it("少于两行或空表头返回 null", () => {
     expect(parseMarkdownTable("| a |")).toBeNull();
     expect(parseMarkdownTable("| --- |\n| 1 |")).toBeNull();
+  });
+});
+
+describe("serializeMarkdownTable", () => {
+  it("序列化后与解析结果互逆（round-trip）", () => {
+    const source = "| a | b |\n| --- | --- |\n| 1 | 2 |";
+    const parsed = parseMarkdownTable(source);
+    if (!parsed) throw new Error("expected parsed table");
+    const serialized = serializeMarkdownTable(parsed);
+    expect(parseMarkdownTable(serialized)).toEqual(parsed);
+  });
+
+  it("保留对齐语法（左/右/居中/默认）", () => {
+    const source = "| a | b | c | d |\n| :--- | ---: | :---: | --- |\n| 1 | 2 | 3 | 4 |";
+    const parsed = parseMarkdownTable(source);
+    if (!parsed) throw new Error("expected parsed table");
+    const serialized = serializeMarkdownTable(parsed);
+    expect(serialized).toContain("| :--- | ---: | :---: | --- |");
+    expect(parseMarkdownTable(serialized)).toEqual(parsed);
+  });
+
+  it("单元格含竖线时转义并可解析回原值", () => {
+    const serialized = serializeMarkdownTable({ header: ["a | b", "c"], rows: [["x", "y"]], align: [null, null] });
+    expect(serialized).toContain("a \\| b");
+    const parsed = parseMarkdownTable(serialized);
+    expect(parsed?.header).toEqual(["a | b", "c"]);
+    expect(parsed?.rows[0]).toEqual(["x", "y"]);
+  });
+
+  it("空表格与单行表格仍输出合法分隔行", () => {
+    expect(serializeMarkdownTable({ header: ["h"], rows: [], align: [null] })).toBe("| h |\n| --- |");
+    expect(serializeMarkdownTable({ header: ["h"], rows: [["1"]], align: [null] })).toBe("| h |\n| --- |\n| 1 |");
+  });
+});
+
+describe("escapeCell", () => {
+  it("转义反斜杠与竖线", () => {
+    expect(escapeCell("a|b")).toBe("a\\|b");
+    expect(escapeCell("a\\b")).toBe("a\\\\b");
+    expect(escapeCell("plain")).toBe("plain");
   });
 });

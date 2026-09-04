@@ -72,6 +72,7 @@ pub fn run() {
             commands::auth::validate::validate_token,
             commands::auth::status::auth_status,
             commands::auth::logout::logout,
+            commands::asset::exists::asset_exists,
             commands::asset::import::import_asset,
             commands::asset::import_bytes::import_asset_bytes,
             commands::app::open_external,

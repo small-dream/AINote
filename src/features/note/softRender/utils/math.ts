@@ -1,5 +1,3 @@
-import katex from "katex";
-import "katex/dist/katex.min.css";
 import type { RangeIndex } from "./ranges";
 
 export type MathMode = "inline" | "block";
@@ -37,14 +35,30 @@ function collectMathRanges(
   }
 }
 
-/** 把数学源码渲染为 KaTeX DOM。 */
+/** 懒加载 KaTeX（含其样式），避免把重依赖与字体带入首屏。 */
+let katexPromise: Promise<typeof import("katex")["default"]> | null = null;
+
+function loadKatex(): Promise<typeof import("katex")["default"]> {
+  katexPromise ??= Promise.all([
+    import("katex"),
+    import("katex/dist/katex.min.css"),
+  ]).then(([module]) => module.default);
+  return katexPromise;
+}
+
+/** 把数学源码渲染为 KaTeX DOM（先回退显示源码，异步完成后再渲染）。 */
 export function renderMath(source: string, mode: MathMode): HTMLElement {
   const el = document.createElement(mode === "block" ? "div" : "span");
   el.className = `cm-sr-math cm-sr-math-${mode}`;
-  try {
-    katex.render(source, el, { displayMode: mode === "block", throwOnError: false });
-  } catch {
-    el.textContent = source;
-  }
+  el.textContent = source;
+  void loadKatex()
+    .then((katex) => {
+      try {
+        katex.render(source, el, { displayMode: mode === "block", throwOnError: false });
+      } catch {
+        el.textContent = source;
+      }
+    })
+    .catch(() => undefined);
   return el;
 }

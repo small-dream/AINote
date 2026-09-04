@@ -31,6 +31,11 @@ function parseRows(lines: string[], cellCount: number): string[][] {
   return rows;
 }
 
+/** 按表格语法拆分单行单元格（转义竖线/代码内竖线不拆分），供表格诊断复用。 */
+export function splitTableRow(line: string): string[] {
+  return splitCells(line);
+}
+
 function splitCells(line: string): string[] {
   const cells: string[] = [];
   let current = "";
@@ -90,4 +95,38 @@ function padCells(cells: string[], length: number): string[] {
   const result = [...cells];
   while (result.length < length) result.push("");
   return result.slice(0, length);
+}
+
+/** 表格编辑模型：与 ParsedTable 相同，序列化时保持对齐语法。 */
+export interface MarkdownTableData {
+  header: string[];
+  rows: string[][];
+  align: ("left" | "center" | "right" | null)[];
+}
+
+/** 把单元格文本编码为可安全放入 Markdown 表格行（竖线/反斜杠转义）的源码。 */
+export function escapeCell(text: string): string {
+  return text.replace(/\\/g, "\\\\").replace(/\|/g, "\\|");
+}
+
+/** 把表格模型序列化为 Markdown 源码，分隔行按列对齐生成 `---` / `:---` / `---:` / `:---:`。 */
+export function serializeMarkdownTable(data: MarkdownTableData): string {
+  const width = Math.max(1, data.header.length, data.align.length, ...data.rows.map((row) => row.length));
+  const row = (cells: string[]): string =>
+    `| ${padCells(cells, width).map(escapeCell).join(" | ")} |`;
+  const separator = Array.from({ length: width }, (_, index) => separatorCell(data.align[index] ?? null)).join(" | ");
+  return [row(data.header), `| ${separator} |`, ...data.rows.map((cells) => row(cells))].join("\n");
+}
+
+function separatorCell(align: "left" | "center" | "right" | null): string {
+  switch (align) {
+    case "left":
+      return ":---";
+    case "right":
+      return "---:";
+    case "center":
+      return ":---:";
+    default:
+      return "---";
+  }
 }

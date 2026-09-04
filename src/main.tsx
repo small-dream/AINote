@@ -13,10 +13,18 @@ const prefersDark = typeof window.matchMedia === "function" ? window.matchMedia(
 document.documentElement.dataset.theme = resolveTheme(readStoredTheme(), prefersDark);
 document.documentElement.lang = readStoredLocale();
 
-ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
-  <React.StrictMode>
-    <AppProviders>
-      <RouterProvider router={router} />
-    </AppProviders>
-  </React.StrictMode>
-);
+async function bootstrap(): Promise<void> {
+  if (import.meta.env.DEV && new URLSearchParams(window.location.search).has("e2e")) {
+    const { installE2eIpcMock } = await import("@/e2e/ipcMock");
+    installE2eIpcMock();
+  }
+  ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
+    <React.StrictMode>
+      <AppProviders>
+        <RouterProvider router={router} />
+      </AppProviders>
+    </React.StrictMode>
+  );
+}
+
+void bootstrap();

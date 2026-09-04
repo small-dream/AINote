@@ -1,4 +1,4 @@
-use std::collections::BTreeSet;
+use std::collections::{BTreeSet, HashMap};
 use std::path::Path;
 
 use crate::domain::error::AppError;
@@ -48,29 +48,53 @@ pub fn wiki_index(repo_path: &Path) -> Result<Vec<NoteWiki>, AppError> {
     Ok(notes)
 }
 
-/// 纯函数：提取双链所在行的简短上下文，供反向链接预览使用。
+/// 单文件内同一目标最多保留的上下文条数（限制 DTO 体积）。
+const MAX_CONTEXTS_PER_TARGET: usize = 20;
+
+/// 纯函数：逐行提取双链上下文（含行号），同一目标保留多条供反链面板展示。
 pub fn extract_link_contexts(content: &str) -> Vec<WikiLinkContext> {
     let mut contexts = Vec::new();
-    let mut seen = BTreeSet::new();
-    for line in content.lines() {
-        let bytes = line.as_bytes();
-        let mut i = 0;
-        while i + 1 < bytes.len() {
-            if bytes[i] == b'[' && bytes[i + 1] == b'[' {
-                if let Some(close) = find_close(bytes, i + 2) {
-                    let raw = &line[i + 2..close];
-                    let target = raw.split('|').next().unwrap_or("").trim();
-                    if !target.is_empty() && seen.insert(target.to_string()) {
-                        contexts.push(WikiLinkContext { target: target.to_string(), snippet: shorten_context(line) });
-                    }
-                    i = close + 2;
-                    continue;
-                }
+    let mut counts: HashMap<&str, usize> = HashMap::new();
+    for (line_index, line) in content.lines().enumerate() {
+        for target in link_targets_in_line(line) {
+            if target.is_empty() {
+                continue;
             }
-            i += 1;
+            let count = counts.entry(target).or_insert(0);
+            if *count >= MAX_CONTEXTS_PER_TARGET {
+                continue;
+            }
+            *count += 1;
+            contexts.push(WikiLinkContext {
+                target: target.to_string(),
+                line: line_index + 1,
+                snippet: shorten_context(line),
+            });
         }
     }
     contexts
+}
+
+/// 纯函数：单行中全部 `[[目标|别名]]` 目标（字节级扫描对 UTF-8 安全）。
+fn link_targets_in_line(line: &str) -> Vec<&str> {
+    let bytes = line.as_bytes();
+    let mut targets = Vec::new();
+    let mut i = 0;
+    while i + 1 < bytes.len() {
+        if bytes[i] == b'[' && bytes[i + 1] == b'[' {
+            if let Some(close) = find_close(bytes, i + 2) {
+                let raw = &line[i + 2..close];
+                let target = raw.split('|').next().unwrap_or("").trim();
+                if !target.is_empty() {
+                    targets.push(target);
+                }
+                i = close + 2;
+                continue;
+            }
+        }
+        i += 1;
+    }
+    targets
 }
 
 fn shorten_context(line: &str) -> String {
@@ -180,12 +204,28 @@ mod tests {
     }
 
     #[test]
-    fn link_contexts_capture_unique_line_snippets() {
+    fn link_contexts_capture_multiple_line_snippets_with_lines() {
         let contexts = extract_link_contexts("前文 [[A]] 后文\n再次 [[A]]\n[[B|别名]]");
-        assert_eq!(contexts.len(), 2);
+        assert_eq!(contexts.len(), 3);
         assert_eq!(contexts[0].target, "A");
+        assert_eq!(contexts[0].line, 1);
         assert_eq!(contexts[0].snippet, "前文 [[A]] 后文");
-        assert_eq!(contexts[1].target, "B");
+        assert_eq!(contexts[1].target, "A");
+        assert_eq!(contexts[1].line, 2);
+        assert_eq!(contexts[1].snippet, "再次 [[A]]");
+        assert_eq!(contexts[2].target, "B");
+        assert_eq!(contexts[2].line, 3);
+    }
+
+    #[test]
+    fn link_contexts_cap_per_target() {
+        let mut content = String::new();
+        for i in 0..30 {
+            content.push_str(&format!("第 {i} 行 [[A]]\n"));
+        }
+        let contexts = extract_link_contexts(&content);
+        assert_eq!(contexts.len(), 20);
+        assert!(contexts.iter().all(|c| c.target == "A"));
     }
 
     #[test]
@@ -205,6 +245,7 @@ mod tests {
         assert_eq!(by_path["a.md"].tags, vec!["tag"]);
         assert_eq!(by_path["a.md"].links, vec!["B 笔记"]);
         assert_eq!(by_path["a.md"].link_contexts[0].target, "B 笔记");
+        assert_eq!(by_path["a.md"].link_contexts[0].line, 2);
         assert_eq!(by_path["sub/b.md"].links, vec!["A 笔记"]);
     }
 

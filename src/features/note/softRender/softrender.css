@@ -287,3 +287,62 @@
     padding: 1rem;
   }
 }
+
+/* 可编辑表格：就地编辑 + 悬浮工具条（Feature：表格就地编辑） */
+.cm-sr-table-shell {
+  position: relative;
+  display: inline-block;
+  max-width: 100%;
+  overflow-x: auto;
+}
+.cm-sr-table-editable th,
+.cm-sr-table-editable td {
+  position: relative;
+  min-width: 3.5em;
+  cursor: text;
+}
+.cm-sr-table-editable th:focus,
+.cm-sr-table-editable td:focus {
+  outline: 2px solid var(--note-accent);
+  outline-offset: -1px;
+}
+.cm-sr-table-toolbar {
+  position: absolute;
+  top: -1.6rem;
+  right: 0;
+  z-index: 5;
+  display: flex;
+  gap: 2px;
+  padding: 2px;
+  border: 1px solid var(--note-border);
+  border-radius: 6px;
+  background: var(--bg-primary);
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.12);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 120ms ease;
+}
+.cm-sr-table-shell:hover .cm-sr-table-toolbar,
+.cm-sr-table-shell:focus-within .cm-sr-table-toolbar {
+  opacity: 1;
+  pointer-events: auto;
+}
+.cm-sr-table-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 1.75rem;
+  height: 1.5rem;
+  padding: 0 0.35rem;
+  border: none;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 0.7rem;
+  line-height: 1;
+  cursor: pointer;
+}
+.cm-sr-table-btn:hover {
+  background: var(--bg-tertiary);
+  color: var(--text-primary);
+}

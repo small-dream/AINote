@@ -6,3 +6,5 @@ src-tauri/target/
 
 # 本地笔记仓库数据，绝不提交
 /local-repos/
+test-results/
+playwright-report/

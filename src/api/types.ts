@@ -177,6 +177,8 @@ export interface NoteWikiDto {
 
 export interface WikiLinkContext {
   target: string;
+  /** 双链所在行号（1 起） */
+  line: number;
   snippet: string;
 }
 

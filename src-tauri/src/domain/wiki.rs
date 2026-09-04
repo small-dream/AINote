@@ -18,5 +18,7 @@ pub struct NoteWiki {
 #[serde(rename_all = "camelCase")]
 pub struct WikiLinkContext {
     pub target: String,
+    /// 双链所在行号（1 起）
+    pub line: usize,
     pub snippet: String,
 }

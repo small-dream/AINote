@@ -1,11 +1,13 @@
 import { describe, expect, it } from "vitest";
 import type { NoteWikiDto } from "@/api/types";
 import {
+  backlinkContextsOf,
   buildTagCloud,
   findBacklinks,
   noteTitle,
   resolveWikiTarget,
   tagsOf,
+  wikiCreatePath,
   wikiNameOf,
 } from "./wiki";
 
@@ -66,5 +68,40 @@ describe("noteTitle / tagsOf", () => {
     expect(noteTitle(NOTES, "missing.md")).toBe("missing");
     expect(tagsOf(NOTES, "a.md")).toEqual(["x", "y"]);
     expect(tagsOf(NOTES, "missing.md")).toEqual([]);
+  });
+});
+
+describe("backlinkContextsOf", () => {
+  const notes = [
+    { path: "a.md", title: "A", tags: [], links: ["B"], linkContexts: [
+      { target: "B", line: 2, snippet: "见 [[B]] 前文" },
+      { target: "B", line: 9, snippet: "再次 [[B]]" },
+      { target: "C", line: 4, snippet: "其它 [[C]]" },
+    ] },
+    { path: "b.md", title: "B", tags: [], links: [], linkContexts: [] },
+  ] as NoteWikiDto[];
+
+  it("返回解析到目标的多条上下文并带行号", () => {
+    expect(backlinkContextsOf(notes[0] as NoteWikiDto, notes, "b.md")).toEqual([
+      { line: 2, snippet: "见 [[B]] 前文" },
+      { line: 9, snippet: "再次 [[B]]" },
+    ]);
+  });
+
+  it("无指向目标的上下文时返回空数组", () => {
+    expect(backlinkContextsOf(notes[1] as NoteWikiDto, notes, "b.md")).toEqual([]);
+  });
+});
+
+describe("wikiCreatePath", () => {
+  it("生成 .md 路径并保留目录", () => {
+    expect(wikiCreatePath("我的笔记")).toBe("我的笔记.md");
+    expect(wikiCreatePath("daily/计划")).toBe("daily/计划.md");
+    expect(wikiCreatePath("已有.md")).toBe("已有.md");
+  });
+
+  it("清理非法字符与空段", () => {
+    expect(wikiCreatePath("a:b?c*d")).toBe("a-b-c-d.md");
+    expect(wikiCreatePath("/  /")).toBe("untitled.md");
   });
 });

@@ -49,6 +49,7 @@ export function useCreateNoteMutation() {
     onSuccess: (_note, { path }) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["wiki"] });
       void queryClient.removeQueries({ queryKey: ["note-content"] });
       void syncApi.commit(`note: create ${path}`).catch(reportToastError).finally(() => {
         void queryClient.invalidateQueries({ queryKey: ["sync"] });
@@ -85,6 +86,7 @@ export function useUpdateNoteMutation(repoPath: string | null = null) {
       noteApi.update(path, content),
     onSuccess: (_data, { path, content }) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
+      void queryClient.invalidateQueries({ queryKey: ["wiki"] });
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       markActivity();
       void queryClient.setQueryData(noteKeys.content(repoPath, path), (old: NoteContent | undefined) =>

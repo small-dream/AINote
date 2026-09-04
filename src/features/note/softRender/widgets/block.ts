@@ -1,5 +1,4 @@
 import { WidgetType } from "@codemirror/view";
-import { parseMarkdownTable } from "../utils/table";
 import { highlightCode } from "../utils/highlight";
 import { renderMath } from "../utils/math";
 import { renderMermaid } from "../utils/mermaidRender";
@@ -26,65 +25,6 @@ export class HrWidget extends WidgetType {
     markRange(el, this.from, this.to);
     return el;
   }
-}
-
-/** 表格：解析 Markdown 表格源码渲染为真实表格 */
-export class TableWidget extends WidgetType {
-  constructor(readonly source: string, readonly from: number, readonly to: number) {
-    super();
-  }
-
-  eq(other: TableWidget): boolean {
-    return (
-      other instanceof TableWidget &&
-      other.source === this.source &&
-      other.from === this.from &&
-      other.to === this.to
-    );
-  }
-
-  toDOM(): HTMLElement {
-    const table = document.createElement("table");
-    table.className = "cm-sr-table";
-    markRange(table, this.from, this.to);
-    const parsed = parseMarkdownTable(this.source);
-    if (!parsed) {
-      table.textContent = this.source;
-      return table;
-    }
-    table.appendChild(buildSection("thead", "th", parsed.header, parsed.align));
-    const tbody = document.createElement("tbody");
-    for (const row of parsed.rows) tbody.appendChild(buildRow(row, "td", parsed.align));
-    table.appendChild(tbody);
-    return table;
-  }
-}
-
-function buildSection(
-  tag: "thead" | "tbody",
-  cellTag: "th" | "td",
-  cells: string[],
-  align: ("left" | "center" | "right" | null)[],
-): HTMLElement {
-  const section = document.createElement(tag);
-  section.appendChild(buildRow(cells, cellTag, align));
-  return section;
-}
-
-function buildRow(
-  cells: string[],
-  cellTag: "th" | "td",
-  align: ("left" | "center" | "right" | null)[],
-): HTMLTableRowElement {
-  const tr = document.createElement("tr");
-  cells.forEach((cell, index) => {
-    const el = document.createElement(cellTag);
-    el.textContent = cell;
-    const a = align[index];
-    if (a) el.style.textAlign = a;
-    tr.appendChild(el);
-  });
-  return tr;
 }
 
 /** 代码块：光标离开时渲染为高亮 DOM。 */
