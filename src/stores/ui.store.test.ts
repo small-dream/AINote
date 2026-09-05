@@ -3,6 +3,7 @@ import {
   LOCALE_STORAGE_KEY,
   NOTE_THEME_STORAGE_KEY,
   NOTE_THEME_SCOPE_STORAGE_KEY,
+  RECENT_NOTES_STORAGE_KEY,
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_WIDTH_STORAGE_KEY,
   THEME_STORAGE_KEY,
@@ -13,6 +14,7 @@ import {
   parseTheme,
   readStoredLocale,
   readStoredSidebarWidth,
+  readStoredRecentNotes,
   readStoredTheme,
   resolveTheme,
   useUiStore,
@@ -105,6 +107,45 @@ describe("ui.store 目录栏宽度", () => {
 
     useUiStore.getState().persistSidebarWidth();
     expect(localStorage.getItem(SIDEBAR_WIDTH_STORAGE_KEY)).toBe("480");
+  });
+});
+
+describe("ui.store 最近打开记录", () => {
+  beforeEach(() => {
+    localStorage.clear();
+    useUiStore.setState({ recentNotes: {} });
+  });
+
+  afterEach(() => useUiStore.setState({ recentNotes: {} }));
+
+  it("按仓库记录最近笔记、去重、限制数量并持久化", () => {
+    const store = useUiStore.getState();
+    store.recordRecentNote("/repo", "a.md");
+    store.recordRecentNote("/repo", "b.md");
+    store.recordRecentNote("/repo", "a.md");
+    store.recordRecentNote("/other", "c.md");
+
+    expect((useUiStore.getState().recentNotes["/repo"] ?? []).map((entry) => entry.path)).toEqual(["a.md", "b.md"]);
+    expect(JSON.parse(localStorage.getItem(RECENT_NOTES_STORAGE_KEY) ?? "{}")).toMatchObject({
+      "/repo": [{ path: "a.md" }, { path: "b.md" }],
+      "/other": [{ path: "c.md" }],
+    });
+  });
+
+  it("解析非法最近记录时回退为空对象", () => {
+    localStorage.setItem(RECENT_NOTES_STORAGE_KEY, "{invalid");
+    expect(readStoredRecentNotes()).toEqual({});
+  });
+
+  it("清除指定仓库的最近记录并保留其他仓库", () => {
+    useUiStore.setState({
+      recentNotes: {
+        "/repo": [{ path: "a.md", openedAt: 1 }],
+        "/other": [{ path: "b.md", openedAt: 2 }],
+      },
+    });
+    useUiStore.getState().clearRecentNotes("/repo");
+    expect(useUiStore.getState().recentNotes).toEqual({ "/other": [{ path: "b.md", openedAt: 2 }] });
   });
 });
 

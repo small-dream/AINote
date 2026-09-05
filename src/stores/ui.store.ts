@@ -4,7 +4,12 @@ export type Theme = "light" | "dark" | "system";
 export type Locale = "zh-CN" | "en-US";
 export type NoteTheme = "classic" | "paper" | "midnight" | "forest" | "solar" | "graphite" | "inkblue" | "warmdark";
 export type NoteThemeScope = "content" | "workspace";
-export type SidebarTab = "tree" | "favorites" | "tags" | "trash";
+export type SidebarTab = "tree" | "recent" | "favorites" | "tags" | "trash";
+/** 最近打开记录条目；按仓库隔离保存到本机。 */
+export interface RecentNoteEntry {
+  path: string;
+  openedAt: number;
+}
 /** 设置页左侧分类导航的激活项 */
 export type SettingsTab = "repositories" | "appearance" | "language" | "ai" | "updates" | "account";
 
@@ -14,6 +19,7 @@ export const LOCALE_STORAGE_KEY = "ainote.locale";
 export const NOTE_THEME_STORAGE_KEY = "ainote.note-theme";
 export const NOTE_THEME_SCOPE_STORAGE_KEY = "ainote.note-theme-scope";
 export const SIDEBAR_WIDTH_STORAGE_KEY = "ainote.sidebar-width";
+export const RECENT_NOTES_STORAGE_KEY = "ainote.recent-notes";
 export const SIDEBAR_MIN_WIDTH = 200;
 export const SIDEBAR_MAX_WIDTH = 480;
 export const SIDEBAR_DEFAULT_WIDTH = 248;
@@ -115,11 +121,35 @@ export function writeStoredSidebarWidth(sidebarWidth: number): void {
   localStorage.setItem(SIDEBAR_WIDTH_STORAGE_KEY, String(clampSidebarWidth(sidebarWidth)));
 }
 
+/** 解析本机最近打开记录；未知仓库或非法 JSON 一律回退空列表。 */
+export function readStoredRecentNotes(): Record<string, RecentNoteEntry[]> {
+  if (!localStorageAvailable) return {};
+  try {
+    const value = JSON.parse(localStorage.getItem(RECENT_NOTES_STORAGE_KEY) ?? "{}") as unknown;
+    if (typeof value !== "object" || value === null) return {};
+    return Object.fromEntries(
+      Object.entries(value).filter((entry): entry is [string, RecentNoteEntry[]] =>
+        Array.isArray(entry[1]) && entry[1].every((entry) =>
+          typeof entry?.path === "string" && typeof entry?.openedAt === "number",
+        ),
+      ),
+    );
+  } catch {
+    return {};
+  }
+}
+
+export function writeStoredRecentNotes(recentNotes: Record<string, RecentNoteEntry[]>): void {
+  if (!localStorageAvailable) return;
+  localStorage.setItem(RECENT_NOTES_STORAGE_KEY, JSON.stringify(recentNotes));
+}
+
 interface UiState {
   sidebarCollapsed: boolean;
   sidebarWidth: number;
   sidebarTab: SidebarTab;
   focusedTag: string | null;
+  recentNotes: Record<string, RecentNoteEntry[]>;
   askAiOpen: boolean;
   settingsOpen: boolean;
   settingsTab: SettingsTab;
@@ -132,6 +162,8 @@ interface UiState {
   persistSidebarWidth: () => void;
   setSidebarTab: (tab: SidebarTab) => void;
   openTagIndex: (tag: string) => void;
+  recordRecentNote: (repoPath: string, path: string) => void;
+  clearRecentNotes: (repoPath: string) => void;
   openAskAi: () => void;
   closeAskAi: () => void;
   openSettings: (tab?: SettingsTab) => void;
@@ -148,6 +180,7 @@ export const useUiStore = create<UiState>((set) => ({
   sidebarWidth: readStoredSidebarWidth(),
   sidebarTab: "tree",
   focusedTag: null,
+  recentNotes: readStoredRecentNotes(),
   askAiOpen: false,
   settingsOpen: false,
   settingsTab: "repositories",
@@ -163,6 +196,23 @@ export const useUiStore = create<UiState>((set) => ({
   }),
   setSidebarTab: (sidebarTab) => set({ sidebarTab }),
   openTagIndex: (tag) => set({ sidebarTab: "tags", focusedTag: tag }),
+  recordRecentNote: (repoPath, path) => set((state) => {
+    const previous = state.recentNotes[repoPath] ?? [];
+    const entry = { path, openedAt: Date.now() };
+    const recentNotes = {
+      ...state.recentNotes,
+      [repoPath]: [entry, ...previous.filter((item) => item.path !== path)].slice(0, 100),
+    };
+    writeStoredRecentNotes(recentNotes);
+    return { recentNotes };
+  }),
+  clearRecentNotes: (repoPath) => set((state) => {
+    const recentNotes = Object.fromEntries(
+      Object.entries(state.recentNotes).filter(([key]) => key !== repoPath),
+    ) as Record<string, RecentNoteEntry[]>;
+    writeStoredRecentNotes(recentNotes);
+    return { recentNotes };
+  }),
   openAskAi: () => set({ askAiOpen: true }),
   closeAskAi: () => set({ askAiOpen: false }),
   openSettings: (tab) => set((s) => ({ settingsOpen: true, settingsTab: tab ?? s.settingsTab })),
