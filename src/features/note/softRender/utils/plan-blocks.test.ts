@@ -48,7 +48,11 @@ describe("planSoftRender 代码块与引用", () => {
     expect(plan.widgets.find((w) => w.kind === "codeblock")).toMatchObject({ alt: "js", value: "const a = 1;" });
     const active = planFor(text, 15);
     expect(active.hides.find((h) => h.from === 8)?.reveal).toBe(true);
-    expect(active.blocks.some((b) => b.cls === "cm-sr-codeblock")).toBe(true);
+    expect(active.gaps.filter((gap) => gap.cls.startsWith("cm-sr-codeblock-line")).map((gap) => gap.cls)).toEqual([
+      "cm-sr-codeblock-line cm-sr-codeblock-line-first",
+      "cm-sr-codeblock-line",
+      "cm-sr-codeblock-line cm-sr-codeblock-line-last",
+    ]);
   });
 
   it("引用块隐藏 > 前缀", () => {

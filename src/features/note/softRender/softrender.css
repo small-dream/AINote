@@ -131,10 +131,21 @@
   border: none;
 }
 
-.cm-sr-codeblock {
+.cm-sr-codeblock-line {
   background: var(--note-muted);
   border-left: 3px solid var(--note-border);
-  padding: 0 1em;
+  padding-inline: 1em;
+  tab-size: 4;
+}
+.cm-sr-codeblock-line-first {
+  border-top-left-radius: 6px;
+  border-top-right-radius: 6px;
+  padding-top: 0.25em;
+}
+.cm-sr-codeblock-line-last {
+  border-bottom-left-radius: 6px;
+  border-bottom-right-radius: 6px;
+  padding-bottom: 0.25em;
 }
 .cm-sr-code-text {
   font-family: var(--note-code-font);

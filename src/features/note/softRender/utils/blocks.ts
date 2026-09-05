@@ -54,19 +54,40 @@ export function planFencedCode(
   const marks = node.getChildren("CodeMark");
   if (marks.length < 2) return;
   if (isActiveRange(node.from, node.to, cursor, selectionTo)) {
-    planActiveCodeBlock(node, plan, marks);
+    planActiveCodeBlock(node, doc, plan, marks);
   } else {
     planInactiveCodeBlock(node, doc, plan);
   }
 }
 
-function planActiveCodeBlock(node: SyntaxNode, plan: SoftRenderPlan, marks: SyntaxNode[]): void {
+function planActiveCodeBlock(node: SyntaxNode, doc: string, plan: SoftRenderPlan, marks: SyntaxNode[]): void {
   for (const mark of marks) plan.hides.push({ from: mark.from, to: mark.to, reveal: true });
   const info = node.getChild("CodeInfo");
   if (info) plan.hides.push({ from: info.from, to: info.to, reveal: true });
-  plan.blocks.push({ from: node.from, to: node.to, cls: "cm-sr-codeblock" });
+  planCodeBlockLines(node, doc, plan);
   const text = node.getChild("CodeText");
   if (text) plan.marks.push({ from: text.from, to: text.to, cls: "cm-sr-code-text" });
+}
+
+function planCodeBlockLines(node: SyntaxNode, doc: string, plan: SoftRenderPlan): void {
+  let lineStart = node.from;
+  for (let index = 0; ; index += 1) {
+    const newline = doc.indexOf("\n", lineStart);
+    const isLast = newline === -1 || newline >= node.to;
+    plan.gaps.push({
+      pos: lineStart,
+      cls: codeBlockLineClass(index === 0, isLast),
+    });
+    if (isLast) break;
+    lineStart = newline + 1;
+  }
+}
+
+function codeBlockLineClass(isFirst: boolean, isLast: boolean): string {
+  const classes = ["cm-sr-codeblock-line"];
+  if (isFirst) classes.push("cm-sr-codeblock-line-first");
+  if (isLast) classes.push("cm-sr-codeblock-line-last");
+  return classes.join(" ");
 }
 
 function planInactiveCodeBlock(node: SyntaxNode, doc: string, plan: SoftRenderPlan): void {
