@@ -9,7 +9,7 @@ use crate::repositories::{file_storage, file_tree, note_files, trash_files};
 
 const NEW_NOTE_TEMPLATE: &str = "# 未命名\n";
 
-/// 用例：列出仓库内全部笔记的元数据（标题取首个 ATX 标题）
+/// 用例：列出仓库内全部笔记的元数据（Markdown 标题优先 frontmatter，否则文件名）
 pub fn list_notes(repo_path: &Path) -> Result<Vec<NoteMeta>, AppError> {
     let files = file_storage::collect_note_files(repo_path)?;
     files.iter().map(|f| to_meta(repo_path, f)).collect()
@@ -103,7 +103,7 @@ pub fn list_tree(repo_path: &Path) -> Result<TreeNode, AppError> {
     file_tree::list_tree(repo_path)
 }
 
-/// re-export：纯函数取首个 ATX 一级标题（自 domain/note.rs，供 search/wiki 复用）
+/// re-export：纯函数取展示标题（自 domain/note.rs，供 search/wiki 复用）
 pub use crate::domain::note::extract_title;
 fn to_meta(root: &Path, file: &Path) -> Result<NoteMeta, AppError> {
     let rel = file
@@ -142,10 +142,11 @@ mod tests {
     }
 
     #[test]
-    fn extract_title_prefers_atx_heading() {
-        assert_eq!(extract_title("# 你好\nbody", "a"), "你好");
-        assert_eq!(extract_title("no heading\n## two", "a.md"), "a.md");
-        assert_eq!(extract_title("#\n# 第二个", "f"), "第二个");
+    fn extract_title_uses_frontmatter_or_file_name() {
+        assert_eq!(extract_title("# 正文标题\nbody", "note"), "note");
+        assert_eq!(extract_title("---\ntitle: 元数据标题\n---\n# 标题", "n"), "元数据标题");
+        assert_eq!(extract_title("---\ntitle: \"Quoted\"\n---\nbody", "a"), "Quoted");
+        assert_eq!(extract_title("body", "fallback"), "fallback");
     }
 
     #[test]
@@ -154,7 +155,7 @@ mod tests {
         let root = tmp.path();
         let meta = create_note(root, "d/n.md", NoteKind::Markdown, None).unwrap();
         assert_eq!(meta.kind, NoteKind::Markdown);
-        assert_eq!(meta.title, "未命名");
+        assert_eq!(meta.title, "n");
         assert_eq!(
             read_note(root, "d/n.md").unwrap().content,
             NEW_NOTE_TEMPLATE
@@ -173,7 +174,7 @@ mod tests {
         create_note(root, "a.md", NoteKind::Markdown, None).unwrap();
         update_note(root, "a.md", "# 自定义").unwrap();
         let meta = create_note(root, "a.md", NoteKind::Markdown, None).unwrap();
-        assert_eq!(meta.title, "自定义");
+        assert_eq!(meta.title, "a");
         assert!(create_note(root, "../evil.md", NoteKind::Markdown, None).is_err());
     }
 
@@ -230,7 +231,7 @@ mod tests {
     }
 
     #[test]
-    fn list_notes_reads_atx_title() {
+    fn list_notes_reads_display_title() {
         let tmp = setup();
         let root = tmp.path();
         update_note(root, "sub/x.md", "# 标题X\n").unwrap();
@@ -240,7 +241,7 @@ mod tests {
             .iter()
             .map(|n| (n.path.as_str(), n.title.as_str()))
             .collect();
-        assert_eq!(by_path["sub/x.md"], "标题X");
+        assert_eq!(by_path["sub/x.md"], "x");
         assert_eq!(by_path["y.md"], "y");
     }
 
@@ -251,7 +252,7 @@ mod tests {
         let meta = import_note(root, "", "README.md", "# 导入\n正文").unwrap();
         assert_eq!(meta.path, "README.md");
         assert_eq!(meta.kind, NoteKind::Markdown);
-        assert_eq!(meta.title, "导入");
+        assert_eq!(meta.title, "README");
         assert_eq!(read_note(root, "README.md").unwrap().content, "# 导入\n正文");
         // 重名自动加序号
         let second = import_note(root, "", "README.md", "other").unwrap();

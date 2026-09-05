@@ -3,6 +3,7 @@ pub mod ai_settings;
 pub mod asset;
 pub mod dto;
 pub mod error;
+pub mod favorite;
 pub mod history;
 pub mod note;
 pub mod rich_text;

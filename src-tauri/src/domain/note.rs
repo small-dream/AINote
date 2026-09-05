@@ -49,16 +49,48 @@ pub struct NoteContent {
     pub content: String,
 }
 
-/// 纯函数：取内容中首个 ATX 一级标题（`# xxx`），无则回退文件名。
+/// 纯函数：取 Markdown 展示标题。优先使用 frontmatter 里的显式 `title`；
+/// 否则使用文件名（不含扩展名）。正文标题属于内容，不参与标题推导。
 /// 置于 domain 供 note/search/wiki/trash 各层复用（repository 只允许依赖 domain）。
 pub fn extract_title(content: &str, fallback: &str) -> String {
-    for line in content.lines() {
-        if let Some(title) = line.strip_prefix("# ") {
-            let title = title.trim();
-            if !title.is_empty() {
-                return title.to_string();
-            }
+    frontmatter_title(content).unwrap_or_else(|| fallback.to_string())
+}
+
+/// 从顶部 YAML frontmatter 中读取常见单行标量 `title`；解析失败或值为空时回退文件名。
+/// domain 保持零外部依赖，这里只支持裸值 / 单引号 / 双引号。
+fn frontmatter_title(content: &str) -> Option<String> {
+    let body = content.strip_prefix("---")?;
+    if !body.starts_with('\n') && !body.starts_with("\r\n") {
+        return None;
+    }
+    for line in content.lines().skip(1) {
+        if line.trim_end() == "---" {
+            break;
+        }
+        if let Some(title) = title_from_line(line) {
+            return Some(title);
         }
     }
-    fallback.to_string()
+    None
+}
+
+fn title_from_line(line: &str) -> Option<String> {
+    let (key, value) = line.split_once(':')?;
+    if key.trim() != "title" || key.starts_with(char::is_whitespace) {
+        return None;
+    }
+    let value = value.trim();
+    if value.is_empty() || value == "|" || value == ">" {
+        return None;
+    }
+    Some(unwrap_quoted(value).trim().to_string())
+}
+
+fn unwrap_quoted(value: &str) -> &str {
+    let quote = value.chars().next().unwrap_or_default();
+    if (quote == '"' || quote == '\'') && value.len() > 1 && value.ends_with(quote) {
+        &value[1..value.len() - 1]
+    } else {
+        value
+    }
 }

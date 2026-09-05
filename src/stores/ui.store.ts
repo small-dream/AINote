@@ -4,7 +4,7 @@ export type Theme = "light" | "dark" | "system";
 export type Locale = "zh-CN" | "en-US";
 export type NoteTheme = "classic" | "paper" | "midnight" | "forest" | "solar" | "graphite" | "inkblue" | "warmdark";
 export type NoteThemeScope = "content" | "workspace";
-export type SidebarTab = "tree" | "tags" | "trash";
+export type SidebarTab = "tree" | "favorites" | "tags" | "trash";
 /** 设置页左侧分类导航的激活项 */
 export type SettingsTab = "repositories" | "appearance" | "language" | "ai" | "updates" | "account";
 

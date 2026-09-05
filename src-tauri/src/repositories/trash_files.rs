@@ -235,7 +235,7 @@ mod tests {
     #[test]
     fn soft_delete_moves_note_into_trash_and_records_original() {
         let (_tmp, root) = setup();
-        seed_note(&root, "daily/a.md", "# 标题A\n正文");
+        seed_note(&root, "daily/a.md", "---\ntitle: 标题A\n---\n正文");
         let item = soft_delete_note(&root, "daily/a.md").unwrap();
         assert_eq!(item.path, "daily/a.md");
         assert_eq!(item.title, "标题A");

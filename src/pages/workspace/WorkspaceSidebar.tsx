@@ -1,4 +1,5 @@
 import { FileTree } from "@/features/file-tree/components/FileTree";
+import { FavoritePanel } from "@/features/favorites/components/FavoritePanel";
 import { TagIndex } from "@/features/wiki/components/TagIndex";
 import { TrashPanel } from "@/features/trash/components/TrashPanel";
 import { useUiStore } from "@/stores/ui.store";
@@ -39,6 +40,8 @@ export function WorkspaceSidebar({
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         {tab === "tree" ? (
           <FileTree repoPath={repoPath} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} createDir={createDir} onRequestMove={onRequestMove} onRequestRename={onRequestRename} onRequestHistory={onRequestHistory} />
+        ) : tab === "favorites" ? (
+          <FavoritePanel repoPath={repoPath} onSelect={onSelect} />
         ) : tab === "tags" ? (
           <TagIndex repoPath={repoPath} onSelect={onSelect} />
         ) : (

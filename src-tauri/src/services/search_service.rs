@@ -156,13 +156,13 @@ mod tests {
         fs::create_dir_all(root.join("sub")).unwrap();
         fs::create_dir_all(root.join(".git")).unwrap();
         fs::write(root.join("sub/body.md"), "notes about Rust here").unwrap();
-        fs::write(root.join("alpha.md"), "# Rust Guide\ncontent").unwrap();
+        fs::write(root.join("alpha.md"), "---\ntitle: Rust Guide\n---\ncontent").unwrap();
         fs::write(root.join(".git/hidden.md"), "hidden rust file").unwrap();
 
         let results = search_notes(root, "rust").unwrap();
         let paths: Vec<&str> = results.iter().map(|r| r.path.as_str()).collect();
         assert_eq!(paths, vec!["alpha.md", "sub/body.md"]);
-        assert_eq!(results[0].line, 1);
+        assert_eq!(results[0].line, 2);
     }
 
     #[test]

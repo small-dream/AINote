@@ -1,8 +1,7 @@
 import { lazy, Suspense, useState } from "react";
-import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, Search, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
+import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
 import { useSync } from "@/features/sync/hooks/useSync";
 import { deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
-import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 
@@ -16,7 +15,7 @@ interface WorkspaceNavRailProps {
 const NAV_ITEMS = [
   { key: "app.notes", icon: FileText, sidebarTab: "tree" },
   { key: "app.recent", icon: Clock3, sidebarTab: undefined },
-  { key: "app.favorites", icon: Star, sidebarTab: undefined },
+  { key: "app.favorites", icon: Star, sidebarTab: "favorites" },
   { key: "wiki.tags", icon: Tags, sidebarTab: "tags" },
   { key: "trash.title", icon: Trash2, sidebarTab: "trash" },
 ] as const;
@@ -33,7 +32,6 @@ export function WorkspaceNavRail({ repoPath, startupSyncing }: WorkspaceNavRailP
     <nav className="workspace-nav-rail flex w-[72px] shrink-0 flex-col items-center border-r border-border bg-bg-tertiary px-2 pb-3" aria-label={t("app.workspaceNavigation")}>
       <div data-tauri-drag-region className="h-11 w-full shrink-0" aria-hidden="true" />
       <SyncNavButton repoPath={repoPath} startupSyncing={startupSyncing} />
-      <SearchNavButton />
       <NavigationItems />
       <SettingsNavButton />
     </nav>
@@ -52,23 +50,6 @@ function NavigationItems() {
         return <button key={key} type="button" aria-label={label} aria-current={active ? "page" : undefined} title={label} onClick={() => targetTab && setSidebarTab(targetTab)} className={`${NAV_BUTTON_CLASS} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /><span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{label}</span></button>;
       })}
     </div>
-  );
-}
-
-function SearchNavButton() {
-  const { t } = useTranslation();
-  const openPalette = useCommandPaletteStore((state) => state.openPalette);
-  return (
-    <button
-      type="button"
-      aria-label={t("palette.searchNotes")}
-      title={t("palette.searchNotes")}
-      onClick={openPalette}
-      className={`${NAV_BUTTON_CLASS} mb-1`}
-    >
-      <Search size={18} strokeWidth={1.9} />
-      <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{t("palette.searchNotes")}</span>
-    </button>
   );
 }
 

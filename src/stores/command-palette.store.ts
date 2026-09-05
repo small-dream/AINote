@@ -13,7 +13,7 @@ interface CommandPaletteState {
   moveSelection: (delta: number, length: number) => void;
 }
 
-/** 命令面板全局态：Cmd+K / 搜索按钮触发，工作区任意位置可用 */
+/** 命令面板全局态：Cmd+K 触发，工作区任意位置可用 */
 export const useCommandPaletteStore = create<CommandPaletteState>((set) => ({
   open: false,
   query: "",

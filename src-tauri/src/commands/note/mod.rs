@@ -4,6 +4,8 @@ pub mod convert;
 pub mod create_folder;
 pub mod delete;
 pub mod delete_folder;
+pub mod favorites_list;
+pub mod toggle_favorite;
 pub mod list;
 pub mod r#move;
 pub mod read;

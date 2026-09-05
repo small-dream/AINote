@@ -27,8 +27,15 @@ function createStore(state: E2eState): MockStore {
 }
 
 function titleOf(content: string, fallback: string): string {
-  const match = /^#\s+(.+)$/m.exec(content);
-  return match?.[1]?.trim() ?? fallback;
+  if (!content.startsWith("---\n") && !content.startsWith("---\r\n")) return fallback;
+  for (const line of content.split("\n").slice(1)) {
+    if (line.trimEnd() === "---") break;
+    const match = /^title:\s*(.+)$/.exec(line);
+    if (!match) continue;
+    const value = (match[1] ?? "").trim();
+    return value.replace(/^["']|["']$/g, "") || fallback;
+  }
+  return fallback;
 }
 
 function fileName(path: string): string {

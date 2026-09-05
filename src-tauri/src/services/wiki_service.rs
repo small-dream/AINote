@@ -241,7 +241,7 @@ mod tests {
             .iter()
             .map(|n| (n.path.as_str(), n))
             .collect();
-        assert_eq!(by_path["a.md"].title, "A 笔记");
+        assert_eq!(by_path["a.md"].title, "a");
         assert_eq!(by_path["a.md"].tags, vec!["tag"]);
         assert_eq!(by_path["a.md"].links, vec!["B 笔记"]);
         assert_eq!(by_path["a.md"].link_contexts[0].target, "B 笔记");

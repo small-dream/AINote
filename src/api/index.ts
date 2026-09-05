@@ -1,5 +1,6 @@
 export { call } from "./client";
 export { noteApi } from "./note.api";
+export { favoriteApi } from "./favorite.api";
 export { repoApi } from "./repo.api";
 export { syncApi } from "./sync.api";
 export { authApi } from "./auth.api";

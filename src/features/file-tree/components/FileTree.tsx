@@ -5,6 +5,7 @@ import type { NoteKind } from "@/api/types";
 import { messageOf } from "@/api";
 import { useDeleteNoteMutation } from "@/queries/note.queries";
 import { useDeleteFolderMutation } from "@/queries/tree.queries";
+import { useFavoriteNotesQuery, useToggleFavoriteMutation } from "@/queries/favorite.queries";
 import { useSessionStore } from "@/stores/session.store";
 import { useFileTree } from "../hooks/useFileTree";
 import { useTreeSearch } from "../hooks/useTreeSearch";
@@ -15,6 +16,7 @@ import { useTranslation } from "@/i18n";
 import { CreateMenu } from "./CreateMenu";
 import { TreeSearchInput, TreeSearchResults } from "./TreeSearch";
 import { TreeNodes } from "./TreeNodes";
+import { favoritePathsOf } from "@/features/favorites/utils/favorites";
 
 interface FileTreeProps {
   repoPath: string | null;
@@ -33,6 +35,8 @@ interface FileTreeProps {
 export function FileTree({ repoPath, onSelect, onRequestNew, onRequestFolder, onRequestImport, onRequestImportNotes, createDir = "", onRequestMove, onRequestRename, onRequestHistory }: FileTreeProps) {
   const { t } = useTranslation();
   const { tree, isLoading, expanded, toggle } = useFileTree(repoPath);
+  const { data: favorites = [] } = useFavoriteNotesQuery(repoPath);
+  const toggleFavorite = useToggleFavoriteMutation();
   const [query, setQuery] = useState("");
   const { results, isSearching, error } = useTreeSearch(repoPath, query);
 
@@ -59,6 +63,8 @@ export function FileTree({ repoPath, onSelect, onRequestNew, onRequestFolder, on
       onRequestMove={onRequestMove}
       onRequestRename={onRequestRename}
       onRequestHistory={onRequestHistory}
+      favoritePaths={favoritePathsOf(favorites)}
+      onToggleFavorite={toggleFavorite.mutate}
     />
   );
 }
@@ -81,9 +87,11 @@ interface TreeContentProps {
   onRequestMove: (path: string) => void;
   onRequestRename: (path: string) => void;
   onRequestHistory: (path: string) => void;
+  favoritePaths: Set<string>;
+  onToggleFavorite: (path: string) => void;
 }
 
-function TreeContent({ tree, expanded, toggle, query, onQueryChange, results, isSearching, error, onSelect, onRequestNew, onRequestFolder, onRequestImport, onRequestImportNotes, createDir, onRequestMove, onRequestRename, onRequestHistory }: TreeContentProps) {
+function TreeContent({ tree, expanded, toggle, query, onQueryChange, results, isSearching, error, onSelect, onRequestNew, onRequestFolder, onRequestImport, onRequestImportNotes, createDir, onRequestMove, onRequestRename, onRequestHistory, favoritePaths, onToggleFavorite }: TreeContentProps) {
   const { t } = useTranslation();
   const currentNotePath = useSessionStore((s) => s.currentNotePath);
   const openNote = useSessionStore((s) => s.openNote);
@@ -103,7 +111,7 @@ function TreeContent({ tree, expanded, toggle, query, onQueryChange, results, is
       <nav className="min-h-0 flex-1 overflow-y-auto px-2 py-2" aria-label={t("tree.navigation")}><TreeNodes node={tree} depth={0} expanded={expanded} currentNotePath={currentNotePath} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} onContextMenu={contextMenu.open} /></nav>
     )}
     {deleteError && <div className="tree-error" role="alert">{t("tree.deleteFailed", { message: deleteError })}</div>}
-    <ContextMenuSlot menu={contextMenu.menu} copied={contextMenu.copied} onClose={contextMenu.close} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} onRequestRename={onRequestRename} onRequestHistory={onRequestHistory} onDelete={(path) => requestDelete(path, false)} onDeleteFolder={(path) => requestDelete(path, true)} onCopy={contextMenu.copy} />
+    <ContextMenuSlot menu={contextMenu.menu} copied={contextMenu.copied} onClose={contextMenu.close} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} onRequestRename={onRequestRename} onRequestHistory={onRequestHistory} onDelete={(path) => requestDelete(path, false)} onDeleteFolder={(path) => requestDelete(path, true)} onCopy={contextMenu.copy} favoritePaths={favoritePaths} onToggleFavorite={onToggleFavorite} />
     <DeleteConfirmDialog pending={pendingDelete} busy={remove.isPending || removeFolder.isPending} onClose={() => setPendingDelete(null)} onConfirm={confirmDelete} />
   </div>;
 }

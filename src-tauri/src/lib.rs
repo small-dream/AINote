@@ -43,6 +43,8 @@ pub fn run() {
             commands::note::r#move::move_note,
             commands::note::tree::note_tree,
             commands::note::list::list_notes,
+            commands::note::favorites_list::list_favorite_notes,
+            commands::note::toggle_favorite::toggle_note_favorite,
             commands::note::search::search_notes,
             commands::note::wiki::wiki_index,
             commands::git::commit::git_commit,
