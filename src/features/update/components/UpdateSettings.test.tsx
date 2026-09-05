@@ -70,6 +70,22 @@ describe("UpdateSettings 安装更新", () => {
     expect(screen.getByText(/50% · 512 KB \/ 1.0 MB/)).toBeTruthy();
   });
 
+  it("下载未知大小时使用扫动占位而非固定进度", async () => {
+    updateApiMock.checkForUpdate.mockResolvedValue(updateInfo);
+    updateApiMock.installUpdate.mockImplementation(async (onEvent?: (event: UpdateInstallEvent) => void) => {
+      onEvent?.({ phase: "downloading", progress: { receivedBytes: 0, totalBytes: null, percent: null } });
+    });
+    render(<UpdateSettings />);
+    fireEvent.click(await screen.findByRole("button", { name: "检查更新" }));
+    await screen.findByText("发现新版本 0.15.0");
+    fireEvent.click(screen.getByRole("button", { name: "更新到 0.15.0" }));
+
+    const progressbar = await screen.findByRole("progressbar");
+    expect(progressbar.getAttribute("aria-valuenow")).toBeNull();
+    expect(progressbar.querySelector(".update-progress-indeterminate")).toBeTruthy();
+    expect(screen.getByText("已下载 0 B")).toBeTruthy();
+  });
+
   it("下载失败后允许重试", async () => {
     updateApiMock.checkForUpdate.mockResolvedValue(updateInfo);
     updateApiMock.installUpdate.mockRejectedValue(new Error("network"));

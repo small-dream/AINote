@@ -20,6 +20,7 @@ export type UpdateInstallEvent =
   | { phase: "preparingInstall" };
 
 let pendingUpdate: Update | null = null;
+const GITHUB_RELEASE_API = "https://api.github.com/repos/small-dream/AINote/releases/tags";
 
 function parseProgress(receivedBytes: number, totalBytes: number | null): UpdateProgress {
   return {
@@ -27,6 +28,19 @@ function parseProgress(receivedBytes: number, totalBytes: number | null): Update
     totalBytes,
     percent: totalBytes ? Math.min(100, Math.round((receivedBytes / totalBytes) * 100)) : null,
   };
+}
+
+async function fetchReleaseNotes(version: string): Promise<string | null> {
+  const response = await fetch(`${GITHUB_RELEASE_API}/v${version}`, {
+    headers: { Accept: "application/vnd.github+json" },
+  });
+  if (!response.ok) throw new Error("UPDATE_RELEASE_NOTES_UNAVAILABLE");
+
+  const release: unknown = await response.json();
+  const body = typeof release === "object" && release !== null && "body" in release
+    ? (release as { body?: unknown }).body
+    : null;
+  return typeof body === "string" && body.trim() ? body : null;
 }
 
 async function closePendingUpdate(): Promise<void> {
@@ -46,9 +60,10 @@ async function checkForUpdate(): Promise<UpdateInfo | null> {
   if (pendingUpdate && pendingUpdate !== update) await closePendingUpdate();
   pendingUpdate = update;
   if (!update) return null;
+  const body = update.body || await fetchReleaseNotes(update.version).catch(() => null);
   return {
     version: update.version,
-    body: update.body ?? null,
+    body,
     date: update.date ?? null,
     currentVersion: update.currentVersion,
   };

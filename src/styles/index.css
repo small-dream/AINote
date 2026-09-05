@@ -68,6 +68,15 @@ input.note-title-input:focus-visible { outline: none; }
   background: transparent;
 }
 
+/* 未知总大小的下载进度：用扫动动画表明处于等待状态，而不是固定在三分之一位置 */
+.update-progress-indeterminate {
+  animation: update-progress-sweep 1.4s ease-in-out infinite;
+}
+@keyframes update-progress-sweep {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(300%); }
+}
+
 .tree-action { color: var(--text-tertiary); }
 .tree-action:hover { color: var(--accent); }
 .tree-create-trigger { position: relative; }

@@ -51,7 +51,7 @@ function getProgressPresentation(
     percent,
     ariaValueNow: percent ?? undefined,
     barClassName: percent === null
-      ? "h-full w-1/3 animate-pulse rounded-full bg-accent"
+      ? "update-progress-indeterminate h-full w-1/3 rounded-full bg-accent"
       : "h-full rounded-full bg-accent transition-[width] duration-200 ease-out",
     barStyle: percent === null ? undefined : { width: `${percent}%` },
     text,
