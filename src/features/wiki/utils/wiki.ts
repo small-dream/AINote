@@ -9,6 +9,12 @@ export interface TagCloudItem {
   count: number;
 }
 
+/** 标签下的一条笔记，附带目录树元数据里的更新时间。 */
+export interface TagNote {
+  note: NoteWikiDto;
+  updatedAt: number;
+}
+
 /** 取笔记显示名：文件名去 .md（忽略目录），双链匹配基准 */
 export function wikiNameOf(path: string): string {
   const normalized = path.replace(/\\/g, "/");
@@ -27,6 +33,24 @@ export function buildTagCloud(notes: NoteWikiDto[]): TagCloudItem[] {
   return [...counts.entries()]
     .map(([name, count]) => ({ name, count }))
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+}
+
+/** 过滤标签名；输入仅做大小写不敏感的包含匹配。 */
+export function filterTagCloud(tags: TagCloudItem[], query: string): TagCloudItem[] {
+  const needle = query.trim().toLocaleLowerCase();
+  return needle ? tags.filter((tag) => tag.name.includes(needle)) : tags;
+}
+
+/** 聚合指定标签下的笔记，并按更新时间倒序展示。 */
+export function buildTagNotes(
+  notes: NoteWikiDto[],
+  tag: string,
+  updatedAtByPath: ReadonlyMap<string, number> = new Map(),
+): TagNote[] {
+  return notes
+    .filter((note) => note.tags.includes(tag))
+    .map((note) => ({ note, updatedAt: updatedAtByPath.get(note.path) ?? 0 }))
+    .sort((a, b) => b.updatedAt - a.updatedAt || a.note.path.localeCompare(b.note.path));
 }
 
 /** 按双链名称解析目标笔记路径（忽略大小写）：先按标题、再按文件名（不含 .md）匹配 */

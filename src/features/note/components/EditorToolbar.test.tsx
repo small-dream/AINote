@@ -88,7 +88,7 @@ describe("EditorToolbar / 更多菜单", () => {
     renderToolbar({ richText: true });
     expect(screen.queryByText("编辑")).toBeNull();
     expect(screen.queryByRole("button", { name: "笔记主题" })).toBeNull();
-    expect(screen.queryByRole("button", { name: "双链与标签" })).toBeNull();
+    expect(screen.getByRole("button", { name: "双链与标签" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "更多" }));
     expect(screen.queryByRole("menuitem", { name: "转换为富文本" })).toBeNull();
     expect(screen.getByRole("menuitem", { name: "移动笔记" })).toBeTruthy();

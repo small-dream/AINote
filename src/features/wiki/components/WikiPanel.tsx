@@ -1,10 +1,11 @@
 import { Hash, Link2, Plus, X } from "lucide-react";
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { useTranslation } from "@/i18n";
 import { useWikiIndexQuery } from "@/queries/wiki.queries";
 import { useCreateNoteMutation } from "@/queries/note.queries";
 import type { NoteWikiDto } from "@/api/types";
 import { backlinkContextsOf, findBacklinks, resolveWikiTarget, wikiCreatePath } from "../utils/wiki";
+import { appendTagToContent, extractTagsFromContent, removeTagFromContent } from "../utils/tagContent";
 
 interface WikiPanelProps {
   repoPath: string | null;
@@ -12,6 +13,9 @@ interface WikiPanelProps {
   open: boolean;
   onClose: () => void;
   onOpenNote: (path: string) => void;
+  draft: string;
+  kind: "markdown" | "richText";
+  onChange: (value: string) => void;
 }
 
 interface OutgoingLink {
@@ -20,14 +24,15 @@ interface OutgoingLink {
 }
 
 /** 双链与标签面板（P1-5）：标签 / 引用（出链，未创建可快速建笔记）/ 反向链接（多上下文）。 */
-export function WikiPanel({ repoPath, path, open, onClose, onOpenNote }: WikiPanelProps) {
+export function WikiPanel({ repoPath, path, open, onClose, onOpenNote, draft, kind, onChange }: WikiPanelProps) {
   const { t } = useTranslation();
   const { data: notes = [] } = useWikiIndexQuery(repoPath);
   const createNote = useCreateNoteMutation();
   if (!open || !path) return null;
 
   const note = notes.find((n) => n.path === path);
-  const tags = note?.tags ?? [];
+  const tags = extractTagsFromContent(draft, kind);
+  const suggestions = buildTagSuggestions(notes, tags);
   const outgoing: OutgoingLink[] = (note?.links ?? []).map((name) => ({
     name,
     target: resolveWikiTarget(notes, name),
@@ -44,7 +49,12 @@ export function WikiPanel({ repoPath, path, open, onClose, onOpenNote }: WikiPan
       <div role="dialog" aria-modal="true" aria-label={t("wiki.title")} className="mx-auto mt-16 flex h-[70vh] w-[min(680px,90vw)] flex-col overflow-hidden rounded-xl bg-bg-primary shadow-2xl">
         <PanelHeader path={path} onClose={onClose} />
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-5">
-          <TagsSection tags={tags} />
+          <TagsSection
+            tags={tags}
+            suggestions={suggestions}
+            onAdd={(tag) => onChange(appendTagToContent(draft, tag, kind))}
+            onRemove={(tag) => onChange(removeTagFromContent(draft, tag, kind))}
+          />
           <OutgoingSection links={outgoing} creating={createNote.isPending} onOpenNote={onOpenNote} onCreate={handleCreate} />
           <BacklinksSection backlinks={backlinks} notes={notes} targetPath={path} onOpenNote={onOpenNote} />
         </div>
@@ -68,19 +78,69 @@ function PanelHeader({ path, onClose }: { path: string; onClose: () => void }) {
   );
 }
 
-function TagsSection({ tags }: { tags: string[] }) {
+function buildTagSuggestions(notes: NoteWikiDto[], currentTags: string[]): string[] {
+  return [...new Set(notes.flatMap((note) => note.tags))]
+    .filter((tag) => !currentTags.includes(tag))
+    .sort((a, b) => a.localeCompare(b));
+}
+
+function TagsSection({ tags, suggestions, onAdd, onRemove }: { tags: string[]; suggestions: string[]; onAdd: (tag: string) => void; onRemove: (tag: string) => void }) {
   const { t } = useTranslation();
-  if (tags.length === 0) return <SectionBlock title={t("wiki.tags")} empty={t("wiki.tagsEmpty")} />;
+  const [input, setInput] = useState("");
   return (
     <SectionBlock title={t("wiki.tags")}>
       <div className="flex flex-wrap gap-1.5">
         {tags.map((tag) => (
           <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-xs text-accent">
             <Hash size={11} /> {tag}
+            <button type="button" aria-label={`${t("wiki.removeTag")} ${tag}`} onClick={() => onRemove(tag)} className="ml-1 rounded-full text-accent/70 transition-colors hover:text-danger">
+              <X size={11} />
+            </button>
           </span>
         ))}
       </div>
+      <TagInput
+        suggestions={suggestions}
+        value={input}
+        onChange={setInput}
+        onSubmit={(tag) => {
+          onAdd(tag);
+          setInput("");
+        }}
+      />
     </SectionBlock>
+  );
+}
+
+function TagInput({ suggestions, value, onChange, onSubmit }: { suggestions: string[]; value: string; onChange: (value: string) => void; onSubmit: (tag: string) => void }) {
+  const { t } = useTranslation();
+  const filtered = suggestions.filter((tag) => tag.includes(value.trim().toLocaleLowerCase()));
+  return (
+    <div className="mt-3">
+      <label className="sr-only" htmlFor="wiki-tag-input">{t("wiki.addTag")}</label>
+      <input
+        id="wiki-tag-input"
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onKeyDown={(event) => {
+          if (event.key !== "Enter") return;
+          event.preventDefault();
+          const tag = value.trim().replace(/^#/, "").toLocaleLowerCase();
+          if (tag) onSubmit(tag);
+        }}
+        placeholder={t("wiki.addTag")}
+        className="w-full rounded-md border border-border bg-bg-primary px-2 py-1.5 text-sm text-text-primary outline-none focus:border-accent"
+      />
+      {suggestions.length > 0 && (
+        <div className="mt-2 flex flex-wrap gap-1.5">
+          {filtered.slice(0, 12).map((tag) => (
+            <button key={tag} type="button" onClick={() => onSubmit(tag)} className="inline-flex items-center gap-1 rounded-full border border-border px-2 py-0.5 text-xs text-text-secondary transition-colors hover:border-accent hover:text-accent">
+              <Hash size={10} /> {tag}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
   );
 }
 

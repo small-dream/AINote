@@ -1,4 +1,4 @@
-import { Eye, History, Link2, Pencil, Split, type LucideIcon } from "lucide-react";
+import { Eye, History, Pencil, Split, Tags, type LucideIcon } from "lucide-react";
 import { IconButton } from "@/components/atoms/IconButton";
 import { useTranslation } from "@/i18n";
 import { NoteThemePicker } from "./NoteThemePicker";
@@ -57,7 +57,7 @@ export function EditorToolbar({ path, mode, richText = false, saving = false, di
             </>
           ) : null}
           <ToolbarIconButton icon={History} label={t("history.title")} onClick={onHistory} />
-          {!richText ? <ToolbarIconButton icon={Link2} label={t("wiki.title")} onClick={onWiki} /> : null}
+          <ToolbarIconButton icon={Tags} label={t("wiki.title")} onClick={onWiki} />
           {onAi ? <AiToolbarButton onOpen={onAi} /> : null}
           <ToolbarDivider />
           <ToolbarOverflowMenu

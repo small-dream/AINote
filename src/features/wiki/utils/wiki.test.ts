@@ -3,6 +3,8 @@ import type { NoteWikiDto } from "@/api/types";
 import {
   backlinkContextsOf,
   buildTagCloud,
+  buildTagNotes,
+  filterTagCloud,
   findBacklinks,
   noteTitle,
   resolveWikiTarget,
@@ -35,6 +37,21 @@ describe("buildTagCloud", () => {
 
   it("空仓库返回空列表", () => {
     expect(buildTagCloud([])).toEqual([]);
+  });
+});
+
+describe("filterTagCloud", () => {
+  it("按名称过滤标签并保留原排序", () => {
+    const tags = buildTagCloud(NOTES);
+    expect(filterTagCloud(tags, "Y")).toEqual([{ name: "y", count: 2 }]);
+  });
+});
+
+describe("buildTagNotes", () => {
+  it("按更新时间倒序输出标签下的笔记", () => {
+    const updatedAtByPath = new Map([["a.md", 3], ["c.md", 8]]);
+    expect(buildTagNotes(NOTES, "x", new Map(updatedAtByPath)).map((item) => item.note.path))
+      .toEqual(["c.md", "a.md"]);
   });
 });
 

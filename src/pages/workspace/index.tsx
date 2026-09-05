@@ -4,6 +4,7 @@ import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { useStartupSync } from "@/features/sync/hooks/useStartupSync";
 import { useAuthStatusQuery } from "@/queries/auth.queries";
 import { useSessionStore } from "@/stores/session.store";
+import { useUiStore } from "@/stores/ui.store";
 import { WorkspaceLayout } from "./WorkspaceLayout";
 import { useWorkspaceActions } from "./useWorkspaceActions";
 import { useTranslation } from "@/i18n";
@@ -14,12 +15,14 @@ export function WorkspacePage() {
   const startupSyncing = useStartupSync(repoPath);
   const currentNotePath = useSessionStore((s) => s.currentNotePath);
   const openNote = useSessionStore((s) => s.openNote);
+  const recordRecentNote = useUiStore((state) => state.recordRecentNote);
   const editorRef = useRef<NoteEditorHandle>(null);
   const actions = useWorkspaceActions(repoPath, handleSelect);
 
   async function handleSelect(path: string) {
     await editorRef.current?.flush();
     openNote(path);
+    if (repoPath) recordRecentNote(repoPath, path);
   }
 
   if (!ready) return <LoadingScreen />;
@@ -32,7 +35,7 @@ export function WorkspacePage() {
       editorRef={editorRef}
       actions={actions}
       onSelect={handleSelect}
-      onMoved={openNote}
+      onMoved={handleSelect}
     />
   );
 }

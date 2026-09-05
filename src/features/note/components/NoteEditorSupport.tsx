@@ -60,7 +60,16 @@ export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, o
     <AiWriteControls ai={ai} canSummarize={!richText} canSuggest={!richText} suggest={suggest} />
     <AskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} />
     {history.open ? <Suspense fallback={null}><LazyHistoryPanel repoPath={repoPath} path={notePath} open onClose={history.closeHistory} onRestored={history.onRestored} /></Suspense> : null}
-    <WikiPanel repoPath={repoPath} path={notePath} open={wiki.open} onClose={wiki.closePanel} onOpenNote={onOpenNote} />
+    <WikiPanel
+      repoPath={repoPath}
+      path={notePath}
+      open={wiki.open}
+      onClose={wiki.closePanel}
+      onOpenNote={onOpenNote}
+      draft={draft}
+      kind={kind}
+      onChange={onChange}
+    />
     {pdf.open ? <Suspense fallback={null}><LazyPdfExportOverlay open title={pdf.title} kind={kind} content={draft} repoPath={repoPath} onClose={pdf.close} /></Suspense> : null}
   </div>;
 }

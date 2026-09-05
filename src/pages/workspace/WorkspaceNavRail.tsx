@@ -14,7 +14,7 @@ interface WorkspaceNavRailProps {
 
 const NAV_ITEMS = [
   { key: "app.notes", icon: FileText, sidebarTab: "tree" },
-  { key: "app.recent", icon: Clock3, sidebarTab: undefined },
+  { key: "app.recent", icon: Clock3, sidebarTab: "recent" },
   { key: "app.favorites", icon: Star, sidebarTab: "favorites" },
   { key: "wiki.tags", icon: Tags, sidebarTab: "tags" },
   { key: "trash.title", icon: Trash2, sidebarTab: "trash" },
@@ -46,8 +46,8 @@ function NavigationItems() {
     <div className="flex w-full flex-col items-center gap-1.5">
       {NAV_ITEMS.map(({ key, icon: Icon, sidebarTab: targetTab }) => {
         const label = t(key);
-        const active = targetTab !== undefined && sidebarTab === targetTab;
-        return <button key={key} type="button" aria-label={label} aria-current={active ? "page" : undefined} title={label} onClick={() => targetTab && setSidebarTab(targetTab)} className={`${NAV_BUTTON_CLASS} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /><span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{label}</span></button>;
+        const active = sidebarTab === targetTab;
+        return <button key={key} type="button" aria-label={label} aria-current={active ? "page" : undefined} title={label} onClick={() => setSidebarTab(targetTab)} className={`${NAV_BUTTON_CLASS} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /><span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{label}</span></button>;
       })}
     </div>
   );

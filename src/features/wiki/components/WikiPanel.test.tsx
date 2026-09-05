@@ -20,6 +20,9 @@ function renderPanel(open = true) {
     open,
     onClose: vi.fn(),
     onOpenNote: vi.fn(),
+    draft: "# A 笔记\n\n#x #y",
+    kind: "markdown" as const,
+    onChange: vi.fn(),
   };
   render(
     <QueryClientProvider client={queryClient}>
@@ -36,8 +39,19 @@ describe("WikiPanel", () => {
 
     expect(await screen.findByText("x")).toBeTruthy();
     expect(screen.getByText("y")).toBeTruthy();
-    expect(screen.getByText("未创建")).toBeTruthy();
+    expect(await screen.findByText("未创建")).toBeTruthy();
     expect(screen.getByText("C 笔记")).toBeTruthy();
+  });
+
+  it("输入标签后更新笔记草稿", async () => {
+    wikiApiMock.index.mockResolvedValue(NOTES);
+    const props = renderPanel();
+
+    const input = await screen.findByLabelText("添加标签（可用逗号分隔）");
+    fireEvent.change(input, { target: { value: "#新标签" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(props.onChange).toHaveBeenCalledWith("# A 笔记\n\n#x #y\n\n#新标签");
   });
 
   it("点击已创建引用打开目标笔记", async () => {
@@ -60,7 +74,7 @@ describe("WikiPanel", () => {
     wikiApiMock.index.mockResolvedValue(NOTES);
     const { container } = render(
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
-        <WikiPanel repoPath="/repo" path="a.md" open={false} onClose={vi.fn()} onOpenNote={vi.fn()} />
+        <WikiPanel repoPath="/repo" path="a.md" open={false} onClose={vi.fn()} onOpenNote={vi.fn()} draft="" kind="markdown" onChange={vi.fn()} />
       </QueryClientProvider>
     );
     expect(container.firstChild).toBeNull();
