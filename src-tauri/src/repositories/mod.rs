@@ -1,11 +1,12 @@
 pub mod asset_files;
+pub mod favorite_files;
 pub mod file_storage;
 pub mod file_tree;
-pub mod favorite_files;
 pub mod git2_backend;
 pub mod git2_history;
 pub mod git2_remote;
 pub mod git_backend;
 pub mod llm;
 pub mod note_files;
+pub mod repo_size;
 pub mod trash_files;

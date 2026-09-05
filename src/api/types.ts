@@ -193,6 +193,11 @@ export interface RepoInfo {
   remoteUrl: string | null;
 }
 
+/** get_repo_size 返回：当前仓库磁盘占用 */
+export interface RepoSizeDto {
+  bytes: number;
+}
+
 /** trash_list 返回：回收站条目（与 Rust domain/trash.rs 一致） */
 export interface TrashItem {
   /** 唯一标识 */

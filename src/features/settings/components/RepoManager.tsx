@@ -7,6 +7,7 @@ import { useRepoManager } from "../hooks/useRepoManager";
 import { AddRepoDialog } from "./AddRepoDialog";
 import { RemoveRepoDialog } from "./RemoveRepoDialog";
 import { RenameRepoDialog } from "./RenameRepoDialog";
+import { RepoSizeCard } from "./RepoSizeCard";
 import { useTranslation } from "@/i18n";
 
 /** 设置页仓库管理内容区：列表 + 添加/设为当前/重命名/移除（标题由设置视图统一提供） */
@@ -18,6 +19,7 @@ export function RepoManager() {
   const [removing, setRemoving] = useState<RepoInfo | null>(null);
   return (<div className="flex flex-col gap-3">
       <RepoToolbar count={repos.length} onAdd={() => setAddOpen(true)} />
+      {activePath && <RepoSizeCard key={activePath} />}
       <ul className="space-y-2">
         {repos.length === 0 ? (
           <EmptyRepos />

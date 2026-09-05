@@ -63,6 +63,7 @@ pub fn run() {
             commands::repo::list::list_repos,
             commands::repo::rename::rename_repo,
             commands::repo::remove::remove_repo,
+            commands::repo::size::get_repo_size,
             commands::repo::switch::switch_repo,
             commands::repo::validate::validate_repo,
             commands::trash::list::trash_list,

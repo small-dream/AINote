@@ -10,6 +10,14 @@ pub fn validate_repo<B: GitBackend>(backend: &B, repo_path: &str) -> Result<bool
     backend.is_git_repo(repo_path)
 }
 
+/// 用例：统计当前 Git 仓库的本地磁盘占用。
+pub fn repo_size<B: GitBackend>(backend: &B, repo_path: &str) -> Result<u64, AppError> {
+    if !backend.is_git_repo(repo_path)? {
+        return Err(AppError::Repo("当前路径不是可用的 Git 仓库".into()));
+    }
+    crate::repositories::repo_size::repo_size(Path::new(repo_path))
+}
+
 /// 用例：绑定远端仓库 —— 先 ls_remote 探测可达性与凭证，再 clone 到 dest。
 /// dest 已存在时报 REPO_3001，避免覆盖用户数据。
 pub fn bind_repo<B: GitBackend>(
@@ -75,7 +83,13 @@ pub fn unique_clone_dir(notes_dir: &Path, seed: &str) -> Result<std::path::PathB
 fn slugify(seed: &str) -> String {
     let mut slug: String = seed
         .chars()
-        .map(|c| if c.is_alphanumeric() { c.to_ascii_lowercase() } else { '-' })
+        .map(|c| {
+            if c.is_alphanumeric() {
+                c.to_ascii_lowercase()
+            } else {
+                '-'
+            }
+        })
         .collect();
     while slug.contains("--") {
         slug = slug.replace("--", "-");
@@ -92,6 +106,12 @@ fn slugify(seed: &str) -> String {
 mod tests {
     use super::*;
     use crate::repositories::git_backend::MockGitBackend;
+
+    #[test]
+    fn repo_size_rejects_non_git_path() {
+        let backend = MockGitBackend::default();
+        assert!(repo_size(&backend, "/tmp/missing").is_err());
+    }
 
     #[test]
     fn bind_rejects_existing_dest() {

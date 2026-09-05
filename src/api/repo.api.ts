@@ -1,5 +1,5 @@
 import { call } from "./client";
-import type { RepoInfo, RepoPathDto } from "./types";
+import type { RepoInfo, RepoPathDto, RepoSizeDto } from "./types";
 
 /** 仓库管理相关 IPC（P0-1 / 设置-多仓库管理） */
 export const repoApi = {
@@ -12,6 +12,8 @@ export const repoApi = {
     call<RepoPathDto>("create_repo", { name, isPrivate }),
   /** 当前 config 中的活动 repoPath（未绑定为 null） */
   path: () => call<string | null>("get_repo_path"),
+  /** 当前活动仓库的本地磁盘占用（字节） */
+  size: () => call<RepoSizeDto>("get_repo_size"),
   /** 列出全部已绑定笔记仓库 */
   list: () => call<RepoInfo[]>("list_repos"),
   /** 重命名仓库展示名 */

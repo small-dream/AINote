@@ -31,3 +31,10 @@ pub struct RepoInfoDto {
     pub path: String,
     pub remote_url: Option<String>,
 }
+
+/// get_repo_size 返回：当前 Git 仓库磁盘占用（字节）。
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RepoSizeDto {
+    pub bytes: u64,
+}

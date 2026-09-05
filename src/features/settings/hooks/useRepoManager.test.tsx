@@ -6,6 +6,7 @@ import { useSessionStore } from "@/stores/session.store";
 import { useRepoManager } from "./useRepoManager";
 
 const repoApiMock = vi.hoisted(() => ({
+  size: vi.fn(),
   list: vi.fn(),
   rename: vi.fn(),
   remove: vi.fn(),
@@ -59,6 +60,7 @@ describe("useRepoManager 列表与重命名", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     resetSession();
+    repoApiMock.size.mockResolvedValue({ bytes: 0 });
   });
 
   it("列出已绑定仓库", async () => {

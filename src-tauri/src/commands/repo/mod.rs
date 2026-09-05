@@ -4,5 +4,6 @@ pub mod list;
 pub mod path;
 pub mod remove;
 pub mod rename;
+pub mod size;
 pub mod switch;
 pub mod validate;
