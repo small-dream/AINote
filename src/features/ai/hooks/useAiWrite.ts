@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { aiApi, messageOf } from "@/api";
 import { useAiModelStore } from "@/stores/aiModel.store";
-import { actionSystem, buildWritePrompt, AI_SUMMARIZE, type AiWriteAction } from "../utils/prompts";
+import { actionSystem, buildWritePrompt, AI_SUMMARIZE, AI_DOCUMENT_ACTIONS, type AiWriteAction } from "../utils/prompts";
 
 export interface AiSelection {
   text: string;
@@ -13,11 +13,12 @@ export interface AiSelection {
 interface UseAiWriteOptions {
   getSelection: () => AiSelection;
   onApply: (text: string) => void;
+  onApplyFull?: (text: string) => void;
   onApplySummary?: (summary: string) => void;
 }
 
-/** 编辑器 AI 写作编排：菜单 → 流式生成（P1-AI-1）→ 预览确认 → 落笔/摘要入 frontmatter */
-export function useAiWrite({ getSelection, onApply, onApplySummary }: UseAiWriteOptions) {
+/** 编辑器 AI 写作编排：菜单 → 流式生成 → 预览确认 → 落笔/摘要入 frontmatter */
+export function useAiWrite({ getSelection, onApply, onApplyFull, onApplySummary }: UseAiWriteOptions) {
   const [menuOpen, setMenuOpen] = useState(false);
   const [hasSelection, setHasSelection] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -33,7 +34,9 @@ export function useAiWrite({ getSelection, onApply, onApplySummary }: UseAiWrite
     lastActionRef.current = action;
     setMenuOpen(false); setLoading(true); setError(null); setPreview("");
     try {
-      const source = action === AI_SUMMARIZE ? (sel.fullText ?? sel.text) : sel.text;
+      const source = action === AI_SUMMARIZE || AI_DOCUMENT_ACTIONS.includes(action)
+        ? (sel.fullText ?? sel.text)
+        : sel.text;
       const full = await aiApi.generateStream(
         actionSystem(action),
         buildWritePrompt(action, source, sel.contextTitle),
@@ -51,9 +54,10 @@ export function useAiWrite({ getSelection, onApply, onApplySummary }: UseAiWrite
   const confirm = useCallback(() => {
     if (preview === null) return;
     if (lastActionRef.current === AI_SUMMARIZE) onApplySummary?.(preview);
+    else if (lastActionRef.current === "optimize" && selectionRef.current?.hasSelection !== true) onApplyFull?.(preview);
     else onApply(preview);
     setPreview(null);
-  }, [preview, onApply, onApplySummary]);
+  }, [preview, onApply, onApplyFull, onApplySummary]);
   const cancel = useCallback(() => setPreview(null), []);
   return { menuOpen, loading, preview, error, hasSelection, openMenu, closeMenu, run, retry, confirm, cancel };
 }

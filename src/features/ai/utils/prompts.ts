@@ -1,11 +1,12 @@
 /** AI 写作动作与提示词模板（纯函数，可单测、可审计；不在此处做任何 IPC/IO） */
 
-export type AiWriteAction = "polish" | "translate" | "shorten" | "expand" | "continue" | "summarize";
+export type AiWriteAction = "polish" | "translate" | "shorten" | "expand" | "continue" | "summarize" | "compose" | "review" | "optimize";
 
 export const AI_WRITE_ACTIONS: readonly AiWriteAction[] = ["polish", "translate", "shorten", "expand", "continue"];
 
 /** 摘要动作：不依赖选区，基于整篇笔记生成（P1-AI-2） */
 export const AI_SUMMARIZE: AiWriteAction = "summarize";
+export const AI_DOCUMENT_ACTIONS: readonly AiWriteAction[] = ["compose", "review", "optimize"];
 
 /** 各动作的系统提示（约束输出为纯文本，不添加解释） */
 export function actionSystem(action: AiWriteAction): string {
@@ -22,26 +23,30 @@ export function actionSystem(action: AiWriteAction): string {
       return "你是写作续写助手。根据上下文自然续写，保持风格一致，只输出续写部分。";
     case "summarize":
       return "你是专业的笔记摘要助手。只输出摘要正文，3-5 句话覆盖核心要点，不添加解释或 Markdown 标题。";
+    case "compose":
+      return "你是专业创作者。根据给定主题创作结构清晰的 Markdown 笔记，只输出可直接保存的 Markdown 正文，不要解释。";
+    case "review":
+      return "你是严谨的笔记审查助手。检查事实与逻辑、表述歧义、结构问题和 Markdown 语法；如果所用模型具备联网检索能力，请优先核实关键事实，否则标注为无法核实。输出 Markdown 审查报告，只列具体问题、修改建议和无法核实的信息，不要重写全文。";
+    case "optimize":
+      return "你是专业的笔记编辑。优化结构与语言表达，保留原意与关键事实；输出优化后的完整内容，不要添加审查报告或解释。";
   }
 }
 
 /** 构造用户消息；续写时携带当前笔记标题增强上下文 */
+const WRITE_PROMPT_TEMPLATES: Record<AiWriteAction, (source: string, title: string) => string> = {
+  polish: (source) => `请润色以下文本，保持原意不变：\n\n${source}`,
+  translate: (source) => `请将以下文本翻译成简体中文：\n\n${source}`,
+  shorten: (source) => `请精简以下文本，保留关键信息：\n\n${source}`,
+  expand: (source) => `请扩写以下文本：\n\n${source}`,
+  continue: (source, title) => `以下是笔记「${title}」的现有内容，请从末尾自然续写：\n\n${source}`,
+  summarize: (source) => `请为以下笔记生成一段简洁摘要，覆盖核心要点：\n\n${source}`,
+  compose: (source, title) => `请围绕主题「${title}」创作一篇结构清晰的 Markdown 笔记：\n\n${source}`,
+  review: (source, title) => `请审查笔记「${title}」中的纰漏、事实风险、逻辑与表达问题：\n\n${source}`,
+  optimize: (source, title) => `请优化笔记「${title}」的结构、组织方式与语言表达，输出完整结果：\n\n${source}`,
+};
+
 export function buildWritePrompt(action: AiWriteAction, text: string, contextTitle?: string): string {
-  const source = text.trim();
-  switch (action) {
-    case "polish":
-      return `请润色以下文本，保持原意不变：\n\n${source}`;
-    case "translate":
-      return `请将以下文本翻译成简体中文：\n\n${source}`;
-    case "shorten":
-      return `请精简以下文本，保留关键信息：\n\n${source}`;
-    case "expand":
-      return `请扩写以下文本：\n\n${source}`;
-    case "continue":
-      return `以下是笔记「${contextTitle || "当前笔记"}」的现有内容，请从末尾自然续写：\n\n${source}`;
-    case "summarize":
-      return `请为以下笔记生成一段简洁摘要，覆盖核心要点：\n\n${source}`;
-  }
+  return WRITE_PROMPT_TEMPLATES[action](text.trim(), contextTitle || "当前笔记");
 }
 
 /** Ask AI 面板上下文范围 */

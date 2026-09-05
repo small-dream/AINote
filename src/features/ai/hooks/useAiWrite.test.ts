@@ -35,6 +35,52 @@ function setup(extra?: { fullText?: string; onApplySummary?: (s: string) => void
   return { result, apply, onApplySummary };
 }
 
+describe("useAiWrite 文档级动作", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("审查使用整篇笔记并插入结果", async () => {
+    mockStream("审查报告");
+    const apply = vi.fn();
+    const { result } = renderHook(() =>
+      useAiWrite({
+        getSelection: () => ({ text: "选中文本", hasSelection: false, fullText: "整篇笔记" }),
+        onApply: apply,
+      }),
+    );
+    act(() => result.current.openMenu());
+    act(() => {
+      void result.current.run("review");
+    });
+    await waitFor(() => expect(result.current.preview).toBe("审查报告"));
+    act(() => result.current.confirm());
+    expect(apply).toHaveBeenCalledWith("审查报告");
+    expect(aiApiMock.generateStream.mock.calls.at(0)?.[1] ?? "").toContain("整篇笔记");
+  });
+
+  it("整文优化走全文档回调", async () => {
+    mockStream("优化后笔记");
+    const apply = vi.fn();
+    const applyFull = vi.fn();
+  const { result } = renderHook(() =>
+    useAiWrite({
+      getSelection: () => ({ text: "", hasSelection: false, fullText: "原全文" }),
+      onApply: apply,
+      onApplyFull: applyFull,
+    }),
+  );
+  act(() => result.current.openMenu());
+    act(() => {
+      void result.current.run("optimize");
+    });
+    await waitFor(() => expect(result.current.preview).toBe("优化后笔记"));
+    act(() => result.current.confirm());
+    expect(apply).not.toHaveBeenCalled();
+    expect(applyFull).toHaveBeenCalledWith("优化后笔记");
+  });
+});
+
 describe("useAiWrite 选区与菜单", () => {
   beforeEach(() => {
     vi.clearAllMocks();

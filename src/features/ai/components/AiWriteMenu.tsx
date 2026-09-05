@@ -6,13 +6,16 @@ import { AiModelSelect } from "./AiModelSelect";
 import { AI_WRITE_ACTIONS, AI_SUMMARIZE, type AiWriteAction } from "../utils/prompts";
 import { useUiStore } from "@/stores/ui.store";
 
-const ACTION_LABELS: Record<AiWriteAction, "ai.polish" | "ai.translate" | "ai.shorten" | "ai.expand" | "ai.continue" | "ai.summarize"> = {
+const ACTION_LABELS: Record<AiWriteAction, "ai.polish" | "ai.translate" | "ai.shorten" | "ai.expand" | "ai.continue" | "ai.summarize" | "ai.compose" | "ai.review" | "ai.optimize"> = {
   polish: "ai.polish",
   translate: "ai.translate",
   shorten: "ai.shorten",
   expand: "ai.expand",
   continue: "ai.continue",
   summarize: "ai.summarize",
+  compose: "ai.compose",
+  review: "ai.review",
+  optimize: "ai.optimize",
 };
 
 type DocIconKey = "write" | "summarize" | "ask" | "title" | "outline";
@@ -52,7 +55,16 @@ export function AiWriteMenu({ open, hasSelection, canSummarize = false, canSugge
         {actions.map((action) => (
           <ActionButton key={action} labelKey={ACTION_LABELS[action]} icon="write" onClick={() => onPick(action)} />
         ))}
-        <DocActionButtons canSummarize={canSummarize} canSuggest={canSuggest} onSummarize={() => onPick(AI_SUMMARIZE)} onTitleSuggest={onTitleSuggest} onOutlineSuggest={onOutlineSuggest} />
+        <DocActionButtons
+          canSummarize={canSummarize}
+          canSuggest={canSuggest}
+          onCompose={() => onPick("compose")}
+          onReview={() => onPick("review")}
+          onOptimize={() => onPick("optimize")}
+          onSummarize={() => onPick(AI_SUMMARIZE)}
+          onTitleSuggest={onTitleSuggest}
+          onOutlineSuggest={onOutlineSuggest}
+        />
         <div className="my-1 border-t border-border" />
         <ActionButton labelKey="ai.ask" icon="ask" onClick={onAsk} />
       </div>
@@ -60,10 +72,21 @@ export function AiWriteMenu({ open, hasSelection, canSummarize = false, canSugge
   );
 }
 
-function DocActionButtons({ canSummarize, canSuggest, onSummarize, onTitleSuggest, onOutlineSuggest }: { canSummarize: boolean; canSuggest: boolean; onSummarize: () => void; onTitleSuggest?: (() => void) | undefined; onOutlineSuggest?: (() => void) | undefined }) {
-  if (!canSummarize && !canSuggest) return null;
+function DocActionButtons({ canSummarize, canSuggest, onCompose, onReview, onOptimize, onSummarize, onTitleSuggest, onOutlineSuggest }: {
+  canSummarize: boolean;
+  canSuggest: boolean;
+  onCompose: () => void;
+  onReview: () => void;
+  onOptimize: () => void;
+  onSummarize: () => void;
+  onTitleSuggest?: (() => void) | undefined;
+  onOutlineSuggest?: (() => void) | undefined;
+}) {
   return (
     <>
+      <ActionButton labelKey="ai.compose" icon="write" onClick={onCompose} />
+      <ActionButton labelKey="ai.review" icon="summarize" onClick={onReview} />
+      <ActionButton labelKey="ai.optimize" icon="outline" onClick={onOptimize} />
       {canSummarize ? <ActionButton labelKey="ai.summarize" icon="summarize" onClick={onSummarize} /> : null}
       {canSuggest && onTitleSuggest ? <ActionButton labelKey="ai.suggestTitle" icon="title" onClick={onTitleSuggest} /> : null}
       {canSuggest && onOutlineSuggest ? <ActionButton labelKey="ai.suggestOutline" icon="outline" onClick={onOutlineSuggest} /> : null}

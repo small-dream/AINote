@@ -12,7 +12,7 @@ import type { OutlineItem } from "@/features/note/utils/outline";
 import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
 import { AiWriteControls } from "@/features/ai/components/AiWriteControls";
 import { AiToolbarButton } from "@/features/ai/components/AiToolbarButton";
-import { getTipTapSelection, applyToTipTapEditor } from "@/features/ai/utils/editorAdapters";
+import { getTipTapSelection, applyToTipTapEditor, applyToTipTapDocument } from "@/features/ai/utils/editorAdapters";
 
 interface RichTextEditorProps {
   /** TipTap JSON 字符串（.ainote 文件内容） */
@@ -40,7 +40,11 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
   const outline = useRichTextOutline(editor);
   const openTagIndex = useUiStore((s) => s.openTagIndex);
   const noteTheme = useUiStore((s) => s.noteTheme);
-  const ai = useAiWrite({ getSelection: () => ({ ...getTipTapSelection(editor, noteTitleOf(notePath)), fullText: editor?.getText() ?? "" }), onApply: (text) => applyToTipTapEditor(editor, text) });
+  const ai = useAiWrite({
+    getSelection: () => ({ ...getTipTapSelection(editor, noteTitleOf(notePath)), fullText: editor?.getText() ?? "" }),
+    onApply: (text) => applyToTipTapEditor(editor, text),
+    onApplyFull: (text) => applyToTipTapDocument(editor, text),
+  });
 
   return (
     <div data-note-theme={noteTheme} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)}>

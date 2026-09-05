@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { actionSystem, buildChatSystem, buildWritePrompt, AI_WRITE_ACTIONS } from "./prompts";
+import { actionSystem, buildChatSystem, buildWritePrompt, AI_WRITE_ACTIONS, AI_DOCUMENT_ACTIONS } from "./prompts";
 
 describe("actionSystem", () => {
   it("每个动作都有对应系统提示", () => {
@@ -28,6 +28,13 @@ describe("buildWritePrompt", () => {
     const prompt = buildWritePrompt("summarize", "全文内容");
     expect(prompt).toContain("全文内容");
     expect(prompt).toContain("摘要");
+  });
+
+  it("文档级动作包含创作、审查和优化上下文", () => {
+    expect(AI_DOCUMENT_ACTIONS).toEqual(["compose", "review", "optimize"]);
+    expect(buildWritePrompt("compose", "主题", "个人成长笔记")).toContain("个人成长");
+    expect(buildWritePrompt("review", "事实陈述")).toContain("审查");
+    expect(buildWritePrompt("optimize", "混乱内容")).toContain("优化");
   });
 
   it("翻译目标为简体中文", () => {

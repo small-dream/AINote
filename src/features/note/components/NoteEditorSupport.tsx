@@ -9,7 +9,7 @@ import { WikiPanel } from "@/features/wiki/components/WikiPanel";
 import { useUiStore } from "@/stores/ui.store";
 import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
 import { useAiSuggest } from "@/features/ai/hooks/useAiSuggest";
-import { getMarkdownSelection, applyToMarkdownEditor } from "@/features/ai/utils/editorAdapters";
+import { getMarkdownSelection, applyToMarkdownEditor, applyToMarkdownDocument } from "@/features/ai/utils/editorAdapters";
 import { upsertFrontmatterSummary } from "@/features/ai/utils/frontmatter";
 import { applyTitleToMarkdown } from "@/features/ai/utils/titles";
 import { noteDisplayName } from "../utils/displayName";
@@ -93,6 +93,7 @@ export function useEditorAi(viewRef: RefObject<EditorView | null>, notePath: str
   const ai = useAiWrite({
     getSelection: () => ({ ...getMarkdownSelection(viewRef.current, notePath ? noteDisplayName(notePath.split("/").at(-1) ?? notePath) : undefined), fullText: draft }),
     onApply: (text) => applyToMarkdownEditor(viewRef.current, text),
+    onApplyFull: (text) => applyToMarkdownDocument(viewRef.current, text),
     onApplySummary: (summary) => onChange(upsertFrontmatterSummary(draft, summary)),
   });
   const suggest = useAiSuggest({

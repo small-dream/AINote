@@ -28,6 +28,13 @@ export function applyToMarkdownEditor(view: EditorView | null, text: string): vo
   view.focus();
 }
 
+/** 把 AI 结果写入整篇 Markdown 笔记；用于无选区的整文优化 */
+export function applyToMarkdownDocument(view: EditorView | null, text: string): void {
+  if (!view) return;
+  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text }, selection: { anchor: 0 } });
+  view.focus();
+}
+
 /** 读取富文本（TipTap）选区：语义同上 */
 export function getTipTapSelection(editor: Editor | null, contextTitle?: string): AiSelection {
   if (!editor) return { text: "", hasSelection: false, contextTitle };
@@ -44,4 +51,9 @@ export function applyToTipTapEditor(editor: Editor | null, text: string): void {
   if (!editor) return;
   const { from, to } = editor.state.selection;
   editor.chain().focus().insertContentAt({ from, to }, text).run();
+}
+
+/** 把 AI 结果写入整篇富文本笔记；用于无选区的整文优化 */
+export function applyToTipTapDocument(editor: Editor | null, text: string): void {
+  editor?.chain().focus().setContent(text).run();
 }
