@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractTitle, extractWikiLinks, findTitleCursorIndex } from "./markdown";
+import { applyMarkdownTitle, extractTitle, extractWikiLinks, findTitleCursorIndex } from "./markdown";
 
 describe("extractTitle", () => {
   it("取第一个 ATX 标题", () => {
@@ -33,5 +33,15 @@ describe("findTitleCursorIndex", () => {
   it("无标题时返回 0", () => {
     expect(findTitleCursorIndex("直接正文")).toBe(0);
     expect(findTitleCursorIndex("")).toBe(0);
+  });
+});
+
+describe("applyMarkdownTitle", () => {
+  it("替换首个一级标题", () => {
+    expect(applyMarkdownTitle("# 旧标题\n正文", "新标题")).toBe("# 新标题\n正文");
+  });
+
+  it("无标题时在文首插入标题", () => {
+    expect(applyMarkdownTitle("正文", "标题")).toBe("# 标题\n\n正文");
   });
 });

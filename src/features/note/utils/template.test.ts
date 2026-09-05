@@ -4,6 +4,7 @@ import {
   formatDate,
   renderNoteTemplate,
   uniqueDateNotePath,
+  uniqueUntitledNotePath,
 } from "./template";
 
 const NOW = new Date(2026, 7, 30);
@@ -53,5 +54,13 @@ describe("uniqueDateNotePath", () => {
     const existing = new Set(["daily/2026-08-30.md", "daily/2026-08-30-2.md"]);
     expect(uniqueDateNotePath("daily", "markdown", existing, NOW)).toBe("daily/2026-08-30-3.md");
     expect(uniqueDateNotePath("", "richText", new Set(), NOW)).toBe("2026-08-30.ainote");
+  });
+});
+
+describe("uniqueUntitledNotePath", () => {
+  it("使用未命名路径并跳过已存在名称", () => {
+    const existing = new Set(["daily/未命名.md", "daily/未命名-2.md"]);
+    expect(uniqueUntitledNotePath("daily", "markdown", existing)).toBe("daily/未命名-3.md");
+    expect(uniqueUntitledNotePath("", "richText", new Set())).toBe("未命名.ainote");
   });
 });

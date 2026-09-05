@@ -28,6 +28,7 @@ interface NoteEditorProps {
   notePath: string | null;
   onMove: (from: string) => void;
   onOpenNote: (path: string) => void;
+  createdPath?: string | null;
   focusTitleOnLoad?: boolean;
   historyRequestPath?: string | null;
   onHistoryRequestHandled?: () => void;
@@ -35,7 +36,7 @@ interface NoteEditorProps {
 
 /** 笔记编辑器：按类型路由编辑器，负责状态编排与跨功能接线。 */
 export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
-  function NoteEditor({ repoPath, notePath, onMove, onOpenNote, focusTitleOnLoad = false, historyRequestPath = null, onHistoryRequestHandled }, ref) {
+  function NoteEditor({ repoPath, notePath, onMove, onOpenNote, createdPath = null, focusTitleOnLoad = false, historyRequestPath = null, onHistoryRequestHandled }, ref) {
     const history = useNoteHistory();
     const [outlineOpen, setOutlineOpen] = useState(false);
     const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
@@ -70,6 +71,6 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
     if (isEditorUnavailable(notePath, loadError)) return <EditorState notePath={notePath} error={loadError?.message ?? null} />;
     const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
-    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} mode={mode} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} handleConvertNote={handleConvertNote} handleConvertToRichText={handleConvertToRichText} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
+    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} handleConvertNote={handleConvertNote} handleConvertToRichText={handleConvertToRichText} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
   },
 );

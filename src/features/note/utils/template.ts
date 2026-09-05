@@ -20,6 +20,18 @@ export function defaultNoteFileName(kind: NoteKind, template: NoteTemplate, date
   return template === "daily" ? `${formatDate(date)}${ext}` : `未命名${ext}`;
 }
 
+/** 生成当前目录下不冲突的「未命名」笔记路径。 */
+export function uniqueUntitledNotePath(dir: string, kind: NoteKind, existingPaths: ReadonlySet<string>): string {
+  const ext = `.${noteExtension(kind)}`;
+  let path = joinNotePath(dir, `未命名${ext}`);
+  let suffix = 1;
+  while (existingPaths.has(path)) {
+    suffix += 1;
+    path = joinNotePath(dir, `未命名-${suffix}${ext}`);
+  }
+  return path;
+}
+
 /** 生成当前目录下不冲突的日期笔记路径。 */
 export function uniqueDateNotePath(dir: string, kind: NoteKind, existingPaths: ReadonlySet<string>, date: Date): string {
   const ext = `.${noteExtension(kind)}`;

@@ -2,7 +2,7 @@ import { Eye, History, Pencil, Split, Tags, type LucideIcon } from "lucide-react
 import { IconButton } from "@/components/atoms/IconButton";
 import { useTranslation } from "@/i18n";
 import { NoteThemePicker } from "./NoteThemePicker";
-import { noteDisplayName } from "../utils/displayName";
+import { NoteTitleField } from "./NoteTitleField";
 import { AiToolbarButton } from "@/features/ai/components/AiToolbarButton";
 import { ToolbarOverflowMenu } from "./ToolbarOverflowMenu";
 
@@ -24,6 +24,11 @@ interface EditorToolbarProps {
   onConvertToRichText?: () => void;
   onExportPdf?: () => void;
   onAi?: () => void;
+  isNewNote?: boolean;
+  draft?: string;
+  onTitleChange?: (content: string) => void;
+  onFlush?: () => Promise<void>;
+  onRenamed?: (path: string) => void;
 }
 
 const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.preview" }[] = [
@@ -33,7 +38,7 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
 ];
 
 /** 笔记操作栏：左侧标题锚点，右侧按「高频视图 → 中频工具 → 低频文件操作」分层分组。 */
-export function EditorToolbar({ path, mode, richText = false, saving = false, dirty = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onAi }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, richText = false, saving = false, dirty = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onAi, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -41,9 +46,7 @@ export function EditorToolbar({ path, mode, richText = false, saving = false, di
       className="workspace-toolbar flex min-h-16 items-center justify-between gap-4 border-b border-border bg-bg-primary px-6 py-2.5"
     >
       <div className="flex min-w-0 items-center gap-3">
-        <span className="truncate text-[15px] font-semibold tracking-[-0.01em]">
-          {noteDisplayName(path.split("/").at(-1) ?? path)}
-        </span>
+        <NoteTitleField key={path} notePath={path} isNewNote={isNewNote} draft={draft} onChange={onTitleChange ?? (() => undefined)} flush={onFlush ?? (async () => undefined)} onRenamed={onRenamed ?? (() => undefined)} />
         <SaveStatus saving={saving} dirty={dirty} />
       </div>
 

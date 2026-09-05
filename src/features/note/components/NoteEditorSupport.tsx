@@ -31,6 +31,7 @@ export interface NoteEditorContentProps {
   onChange: (value: string) => void;
   onMove: (path: string) => void;
   onOpenNote: (path: string) => void;
+  createdPath?: string | null;
   mode: ViewMode;
   setMode: (mode: ViewMode) => void;
   setOutlineOpen: Dispatch<SetStateAction<boolean>>;
@@ -52,10 +53,10 @@ export interface NoteEditorContentProps {
   pdf: ReturnType<typeof usePdfExport>;
 }
 
-export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, mode, setMode, setOutlineOpen, outlineOpen, surfaceProps, handleConvertNote, handleConvertToRichText, flush, saving, dirty, saveError, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf }: NoteEditorContentProps) {
+export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, setMode, setOutlineOpen, outlineOpen, surfaceProps, handleConvertNote, handleConvertToRichText, flush, saving, dirty, saveError, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf }: NoteEditorContentProps) {
   const richText = kind === "richText";
   return <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-    <EditorToolbar path={notePath} mode={mode} richText={richText} saving={saving} dirty={dirty} saveError={saveError} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={handleConvertToRichText} onExportPdf={() => void pdf.request()} {...(richText ? {} : { onAi: ai.openMenu })} />
+    <EditorToolbar path={notePath} mode={mode} richText={richText} saving={saving} dirty={dirty} saveError={saveError} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={handleConvertToRichText} onExportPdf={() => void pdf.request()} {...(richText ? {} : { onAi: ai.openMenu })} isNewNote={notePath === createdPath} draft={draft} onTitleChange={onChange} onFlush={flush} onRenamed={onOpenNote} />
     <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} onConvert={handleConvertNote} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
     <AiWriteControls ai={ai} canSummarize={!richText} canSuggest={!richText} suggest={suggest} />
     <AskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} />

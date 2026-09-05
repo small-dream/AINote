@@ -22,3 +22,23 @@ export function isValidRichText(content: string): boolean {
     return false;
   }
 }
+
+/** 将首个一级标题同步为输入标题；文档缺标题时插入一级标题。 */
+export function applyRichTextTitle(content: string, title: string): string {
+  let parsed: JSONContent;
+  try {
+    parsed = JSON.parse(content) as JSONContent;
+  } catch {
+    parsed = { type: "doc", content: [{ type: "paragraph" }] };
+  }
+  if (parsed.type !== "doc") parsed = { type: "doc", content: [parsed] };
+  parsed.content ??= [];
+  const heading = parsed.content.find((node) => node?.type === "heading" && node.attrs?.level === 1);
+  if (heading) {
+    heading.content = title ? [{ type: "text", text: title }] : [];
+    return JSON.stringify(parsed);
+  }
+  if (!title) return JSON.stringify(parsed);
+  parsed.content.unshift({ type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: title }] });
+  return JSON.stringify(parsed);
+}

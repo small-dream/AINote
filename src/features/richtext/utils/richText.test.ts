@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isValidRichText, parseRichTextContent } from "./richText";
+import { applyRichTextTitle, isValidRichText, parseRichTextContent } from "./richText";
 
 describe("parseRichTextContent", () => {
   it("解析合法 TipTap JSON 文档", () => {
@@ -22,6 +22,28 @@ describe("parseRichTextContent", () => {
 
   it("非 doc 根类型回退为空段落文档", () => {
     expect(parseRichTextContent('{"type":"other"}').type).toBe("doc");
+  });
+});
+
+describe("applyRichTextTitle", () => {
+  it("替换首个一级标题", () => {
+    const content = JSON.stringify({
+      type: "doc",
+      content: [
+        { type: "heading", attrs: { level: 1 }, content: [{ type: "text", text: "旧" }] },
+        { type: "paragraph" },
+      ],
+    });
+    const next = JSON.parse(applyRichTextTitle(content, "新标题"));
+    expect(next.content[0].content[0].text).toBe("新标题");
+  });
+
+  it("没有一级标题时插入标题", () => {
+    const content = JSON.stringify({ type: "doc", content: [{ type: "paragraph" }] });
+    const next = JSON.parse(applyRichTextTitle(content, "标题"));
+    expect(next.content[0].type).toBe("heading");
+    expect(next.content[0].attrs.level).toBe(1);
+    expect(next.content[0].content[0].text).toBe("标题");
   });
 });
 

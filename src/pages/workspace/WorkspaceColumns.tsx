@@ -49,6 +49,7 @@ export function WorkspaceColumns({ repoPath, currentNotePath, createdPath, edito
           notePath={currentNotePath}
           onMove={onSetMove}
           onOpenNote={onSelect}
+          createdPath={createdPath}
           historyRequestPath={historyRequestPath}
           onHistoryRequestHandled={onHistoryRequestHandled}
           focusTitleOnLoad={currentNotePath === createdPath}

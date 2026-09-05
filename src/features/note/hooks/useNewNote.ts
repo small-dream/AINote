@@ -4,11 +4,11 @@ import {
   useNoteListQuery,
 } from "@/queries/note.queries";
 import type { NoteKind } from "@/api/types";
-import { uniqueDateNotePath } from "../utils/template";
+import { uniqueUntitledNotePath } from "../utils/template";
 
 export type CreateNote = (dir: string, kind?: NoteKind) => Promise<void>;
 
-/** 新建笔记编排：日期命名、重名递增、创建成功后打开（P0/P1） */
+/** 新建笔记编排：未命名即时创建、重名递增、创建成功后打开（P0/P1） */
 export function useNewNote(repoPath: string | null, onOpen: (path: string) => void) {
   const create = useCreateNoteMutation();
   const { data: allNotes } = useNoteListQuery(repoPath);
@@ -20,7 +20,7 @@ export function useNewNote(repoPath: string | null, onOpen: (path: string) => vo
   );
 
   const requestNew = useCallback<CreateNote>(async (dir, kind = "markdown") => {
-    const path = uniqueDateNotePath(dir, kind, existingPaths, new Date());
+    const path = uniqueUntitledNotePath(dir, kind, existingPaths);
     const note = await create.mutateAsync({ path, kind, content: "" });
     setCreatedPath(note.path);
     onOpen(note.path);

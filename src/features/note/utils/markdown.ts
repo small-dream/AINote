@@ -22,3 +22,14 @@ export function findTitleCursorIndex(markdown: string): number {
   const firstLine = lineEnd === -1 ? markdown : markdown.slice(0, lineEnd);
   return firstLine.startsWith("# ") ? 2 : 0;
 }
+
+/** 仅用输入值替换首个一级标题；没有一级标题时插入 `# 标题`。 */
+export function applyMarkdownTitle(markdown: string, title: string): string {
+  const lines = markdown.split("\n");
+  const index = lines.findIndex((line) => line.startsWith("# "));
+  if (index !== -1) {
+    lines[index] = `# ${title}`;
+    return lines.join("\n");
+  }
+  return title ? `# ${title}\n\n${markdown}` : markdown;
+}
