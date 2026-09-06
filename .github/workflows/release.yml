@@ -131,10 +131,67 @@ jobs:
         with:
           releaseId: ${{ needs.create-release.outputs.release_id }}
           args: ${{ matrix.args }}
-          includeUpdaterJson: true
+          includeUpdaterJson: false
+
+  publish-updater-manifest:
+    needs: [create-release, publish-tauri]
+    runs-on: ubuntu-22.04
+    steps:
+      - name: Build updater manifest
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPO: ${{ github.repository }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          version="${TAG#v}"
+          download_url="https://github.com/$REPO/releases/download/$TAG"
+          gh release download "$TAG" --repo "$REPO" --pattern '*.sig' --clobber
+          python3 - "$version" "$download_url" <<'PY'
+          import json
+          import sys
+          from datetime import datetime, timezone
+          from pathlib import Path
+
+          version, download_url = sys.argv[1:]
+          signatures = {
+              "app": ("AINote_{version}_aarch64.app.tar.gz.sig", "AINote_{version}_aarch64.app.tar.gz"),
+              "msi": ("AINote_{version}_x64_en-US.msi.sig", "AINote_{version}_x64_en-US.msi"),
+              "nsis": ("AINote_{version}_x64-setup.exe.sig", "AINote_{version}_x64-setup.exe"),
+              "appimage": ("AINote_{version}_amd64.AppImage.sig", "AINote_{version}_amd64.AppImage"),
+              "deb": ("AINote_{version}_amd64.deb.sig", "AINote_{version}_amd64.deb"),
+              "rpm": ("AINote-{version}-1.x86_64.rpm.sig", "AINote-{version}-1.x86_64.rpm"),
+          }
+
+          def entry(kind: str) -> dict[str, str]:
+              signature_name, asset_name = signatures[kind]
+              return {
+                  "signature": Path(signature_name.format(version=version)).read_text(encoding="utf-8").strip(),
+                  "url": f"{download_url}/{asset_name.format(version=version)}",
+              }
+
+          manifest = {
+              "version": version,
+              "notes": "",
+              "pub_date": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
+              "platforms": {
+                  "darwin-aarch64": entry("app"),
+                  "darwin-aarch64-app": entry("app"),
+                  "windows-x86_64": entry("msi"),
+                  "windows-x86_64-msi": entry("msi"),
+                  "windows-x86_64-nsis": entry("nsis"),
+                  "linux-x86_64": entry("appimage"),
+                  "linux-x86_64-appimage": entry("appimage"),
+                  "linux-x86_64-deb": entry("deb"),
+                  "linux-x86_64-rpm": entry("rpm"),
+              },
+          }
+          Path("latest.json").write_text(json.dumps(manifest, ensure_ascii=False) + "\n", encoding="utf-8")
+          PY
+          gh release upload "$TAG" latest.json --repo "$REPO" --clobber
 
   publish-release:
-    needs: [create-release, publish-tauri]
+    needs: [create-release, publish-tauri, publish-updater-manifest]
     runs-on: ubuntu-22.04
     steps:
       - name: Verify updater latest.json
