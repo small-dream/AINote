@@ -7,6 +7,7 @@ pub mod git2_history;
 pub mod git2_remote;
 pub mod git_backend;
 pub mod llm;
+pub(crate) mod llm_stream;
 pub mod note_files;
 pub mod repo_size;
 pub mod trash_files;

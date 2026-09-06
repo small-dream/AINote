@@ -1,6 +1,7 @@
 //! AI LLM Provider 抽象（Repository 层）：统一 OpenAI 兼容 chat/completions 协议。
 //! Service 只依赖 `LlmClient` trait，不感知厂商差异；网络调用走 ureq（由 Command 工作线程承载）。
 
+use super::llm_stream::{parse_sse_delta, StreamAssembler};
 use crate::domain::ai::{AiChatMessage, AiConfig, AiProvider};
 use crate::domain::error::AppError;
 
@@ -90,7 +91,7 @@ impl LlmClient for OpenAiCompatClient {
         cfg: &AiConfig,
         key: Option<&str>,
         messages: &[AiChatMessage],
-        on_delta: &mut dyn FnMut(&str),
+        mut on_delta: &mut dyn FnMut(&str),
     ) -> Result<String, AppError> {
         let url = chat_url(&cfg.base_url, cfg.provider);
         let config = ureq::Agent::config_builder()
@@ -112,7 +113,7 @@ impl LlmClient for OpenAiCompatClient {
         });
         let mut resp = req.send_json(payload).map_err(map_llm_http)?;
         let reader = resp.body_mut().as_reader();
-        let mut full = String::new();
+        let mut assembler = StreamAssembler::default();
         let mut line = String::new();
         let mut buf_reader = std::io::BufReader::new(reader);
         loop {
@@ -123,11 +124,11 @@ impl LlmClient for OpenAiCompatClient {
             if n == 0 {
                 break;
             }
-            if let Some(delta) = parse_sse_line(&line) {
-                full.push_str(&delta);
-                on_delta(&delta);
+            if let Some(delta) = parse_sse_delta(&line) {
+                assembler.push(delta, on_delta);
             }
         }
+        let full = assembler.finish(&mut on_delta);
         if full.is_empty() {
             return Err(AppError::Ai("AI 未返回有效内容".into()));
         }
@@ -176,30 +177,6 @@ pub fn parse_completions(body: serde_json::Value) -> Result<String, AppError> {
         .map(str::to_owned)
         .filter(|s| !s.is_empty())
         .ok_or_else(|| AppError::Ai("AI 响应缺少有效内容".into()))
-}
-
-/// 纯函数：解析一行 SSE（`data: {...}`），返回 choices[0].delta.content 增量。
-/// 部分推理模型会把可读内容放在 `reasoning_content`；仅当 `content` 缺失或为空时才回退到它。
-/// 遇到 `[DONE]` 或非数据行返回 None。
-pub fn parse_sse_line(line: &str) -> Option<String> {
-    let data = line.trim().strip_prefix("data:")?.trim();
-    if data == "[DONE]" {
-        return None;
-    }
-    let json: serde_json::Value = serde_json::from_str(data).ok()?;
-    let delta = json
-        .get("choices")?
-        .as_array()?
-        .first()?
-        .get("delta")?;
-    let content = delta.get("content").and_then(|value| value.as_str());
-    if let Some(text) = content.filter(|text| !text.is_empty()) {
-        return Some(text.to_owned());
-    }
-    delta
-        .get("reasoning_content")
-        .and_then(|value| value.as_str())
-        .map(str::to_owned)
 }
 
 /// 纯函数：解析 OpenAI 兼容 /models 响应（Ollama /v1 同结构）。
@@ -286,34 +263,5 @@ mod tests {
         assert!(parse_completions(empty).is_err());
         let missing = serde_json::json!({ "choices": [] });
         assert!(parse_completions(missing).is_err());
-    }
-
-    #[test]
-    fn parses_sse_delta() {
-        let line = "data: {\"choices\":[{\"delta\":{\"content\":\"你好\"}}]}";
-        assert_eq!(parse_sse_line(line).as_deref(), Some("你好"));
-    }
-
-    #[test]
-    fn parses_sse_reasoning_fallback() {
-        let line = "data: {\"choices\":[{\"delta\":{\"content\":null,\"reasoning_content\":\"审查报告\"}}]}";
-        assert_eq!(parse_sse_line(line).as_deref(), Some("审查报告"));
-    }
-
-    #[test]
-    fn prefers_non_empty_sse_content() {
-        let line = "data: {\"choices\":[{\"delta\":{\"content\":\"正文\",\"reasoning_content\":\"思考\"}}]}";
-        assert_eq!(parse_sse_line(line).as_deref(), Some("正文"));
-    }
-
-    #[test]
-    fn sse_done_marker_returns_none() {
-        assert_eq!(parse_sse_line("data: [DONE]"), None);
-    }
-
-    #[test]
-    fn sse_non_data_or_malformed_returns_none() {
-        assert_eq!(parse_sse_line("event: message"), None);
-        assert_eq!(parse_sse_line("data: not-json"), None);
     }
 }
