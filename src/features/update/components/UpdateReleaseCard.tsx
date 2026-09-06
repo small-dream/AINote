@@ -1,6 +1,8 @@
 import { FileText } from "lucide-react";
 import type { UpdateInfo } from "@/api/update.api";
 import { useTranslation } from "@/i18n";
+import { UpdateReleaseNotes } from "./UpdateReleaseNotes";
+import { extractReleaseNotes } from "../utils/releaseNotes";
 import { formatUpdateDate } from "../utils/updateFormat";
 
 interface UpdateReleaseCardProps {
@@ -8,8 +10,9 @@ interface UpdateReleaseCardProps {
 }
 
 export function UpdateReleaseCard({ info }: UpdateReleaseCardProps) {
-  const { t } = useTranslation();
+  const { locale, t } = useTranslation();
   const releasedAt = formatUpdateDate(info.date);
+  const notes = extractReleaseNotes(info.body, locale);
 
   return (
     <section className="rounded-lg border border-border bg-bg-primary">
@@ -19,8 +22,8 @@ export function UpdateReleaseCard({ info }: UpdateReleaseCardProps) {
         {releasedAt && <span className="ml-auto text-xs text-text-secondary">{releasedAt}</span>}
       </header>
       <div className="px-4 py-3">
-        {info.body ? (
-          <p className="whitespace-pre-wrap text-sm leading-6 text-text-secondary">{info.body}</p>
+        {notes ? (
+          <UpdateReleaseNotes content={notes} />
         ) : (
           <p className="text-sm text-text-secondary">{t("update.noNotes")}</p>
         )}

@@ -14,7 +14,7 @@ vi.mock("@/api", () => ({ updateApi: updateApiMock }));
 
 const updateInfo = {
   version: "0.15.0",
-  body: "修复同步冲突\n提升启动速度",
+  body: "## 更新内容\n\n- **修复同步冲突**\n- 提升启动速度\n\n## 安装与更新\n\n- 请前往 Release 页面。",
   date: "2026-08-01T00:00:00.000Z",
   currentVersion: "0.14.2",
 };
@@ -34,7 +34,9 @@ describe("UpdateSettings 检查更新", () => {
     fireEvent.click(screen.getByRole("button", { name: "检查更新" }));
     expect(await screen.findByText("发现新版本 0.15.0")).toBeTruthy();
     expect(screen.getByText("更新到 0.15.0")).toBeTruthy();
-    expect(screen.getByText(/修复同步冲突/)).toBeTruthy();
+    const notes = screen.getByText("修复同步冲突").closest("div.markdown-body");
+    expect(notes).toBeTruthy();
+    expect(notes?.querySelector("strong")).toBeTruthy();
   });
 
   it("没有新版本时提供再次检查入口", async () => {
