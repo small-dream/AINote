@@ -81,7 +81,13 @@ jobs:
           - The Windows package is unsigned. SmartScreen may appear on first launch; verify that you downloaded it from this Release page.
           EOF
           )
-          release_id=$(gh api "repos/$REPO/releases/tags/$TAG" --jq '.id' 2>/dev/null | grep -E '^[0-9]+$' || true)
+          release_ids=$(gh api "repos/$REPO/releases?per_page=100" --paginate --jq ".[] | select(.tag_name == \"$TAG\") | .id")
+          if [ "$(printf '%s\n' "$release_ids" | sed '/^$/d' | wc -l)" -gt 1 ]; then
+            echo "::error::发现多个 tag 为 $TAG 的 Release，请先手动清理草稿"
+            printf '%s\n' "$release_ids"
+            exit 1
+          fi
+          release_id=$(printf '%s\n' "$release_ids" | head -n1)
           if [ -z "$release_id" ]; then
             release_id=$(gh api --method POST "repos/$REPO/releases" -f tag_name="$TAG" -f name="AINote $TAG" -f body="$release_body" -F draft=true --jq '.id')
           else
