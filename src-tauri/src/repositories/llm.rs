@@ -179,6 +179,7 @@ pub fn parse_completions(body: serde_json::Value) -> Result<String, AppError> {
 }
 
 /// 纯函数：解析一行 SSE（`data: {...}`），返回 choices[0].delta.content 增量。
+/// 部分推理模型会把可读内容放在 `reasoning_content`；仅当 `content` 缺失或为空时才回退到它。
 /// 遇到 `[DONE]` 或非数据行返回 None。
 pub fn parse_sse_line(line: &str) -> Option<String> {
     let data = line.trim().strip_prefix("data:")?.trim();
@@ -186,12 +187,18 @@ pub fn parse_sse_line(line: &str) -> Option<String> {
         return None;
     }
     let json: serde_json::Value = serde_json::from_str(data).ok()?;
-    json.get("choices")?
+    let delta = json
+        .get("choices")?
         .as_array()?
         .first()?
-        .get("delta")?
-        .get("content")?
-        .as_str()
+        .get("delta")?;
+    let content = delta.get("content").and_then(|value| value.as_str());
+    if let Some(text) = content.filter(|text| !text.is_empty()) {
+        return Some(text.to_owned());
+    }
+    delta
+        .get("reasoning_content")
+        .and_then(|value| value.as_str())
         .map(str::to_owned)
 }
 
@@ -285,6 +292,18 @@ mod tests {
     fn parses_sse_delta() {
         let line = "data: {\"choices\":[{\"delta\":{\"content\":\"你好\"}}]}";
         assert_eq!(parse_sse_line(line).as_deref(), Some("你好"));
+    }
+
+    #[test]
+    fn parses_sse_reasoning_fallback() {
+        let line = "data: {\"choices\":[{\"delta\":{\"content\":null,\"reasoning_content\":\"审查报告\"}}]}";
+        assert_eq!(parse_sse_line(line).as_deref(), Some("审查报告"));
+    }
+
+    #[test]
+    fn prefers_non_empty_sse_content() {
+        let line = "data: {\"choices\":[{\"delta\":{\"content\":\"正文\",\"reasoning_content\":\"思考\"}}]}";
+        assert_eq!(parse_sse_line(line).as_deref(), Some("正文"));
     }
 
     #[test]
