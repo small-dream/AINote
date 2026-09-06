@@ -155,7 +155,7 @@ jobs:
 
           version, download_url = sys.argv[1:]
           signatures = {
-              "app": ("AINote_{version}_aarch64.app.tar.gz.sig", "AINote_{version}_aarch64.app.tar.gz"),
+              "app": ("AINote_aarch64.app.tar.gz.sig", "AINote_aarch64.app.tar.gz"),
               "msi": ("AINote_{version}_x64_en-US.msi.sig", "AINote_{version}_x64_en-US.msi"),
               "nsis": ("AINote_{version}_x64-setup.exe.sig", "AINote_{version}_x64-setup.exe"),
               "appimage": ("AINote_{version}_amd64.AppImage.sig", "AINote_{version}_amd64.AppImage"),
