@@ -37,6 +37,11 @@ describe("buildWritePrompt", () => {
     expect(buildWritePrompt("optimize", "混乱内容")).toContain("优化");
   });
 
+  it("审查提示禁止联网和工具调用", () => {
+    const system = actionSystem("review");
+    expect(system).toContain("不要联网检索、调用工具");
+  });
+
   it("翻译目标为简体中文", () => {
     expect(buildWritePrompt("translate", "hello")).toContain("简体中文");
   });

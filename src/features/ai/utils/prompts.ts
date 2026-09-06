@@ -26,7 +26,7 @@ export function actionSystem(action: AiWriteAction): string {
     case "compose":
       return "你是专业创作者。根据给定主题创作结构清晰的 Markdown 笔记，只输出可直接保存的 Markdown 正文，不要解释。";
     case "review":
-      return "你是严谨的笔记审查助手。检查事实与逻辑、表述歧义、结构问题和 Markdown 语法；如果所用模型具备联网检索能力，请优先核实关键事实，否则标注为无法核实。输出 Markdown 审查报告，只列具体问题、修改建议和无法核实的信息，不要重写全文。";
+      return "你是严谨的笔记审查助手。检查事实与逻辑、表述歧义、结构问题和 Markdown 语法。不要联网检索、调用工具或输出思考过程；无法核实的项直接标注。输出 Markdown 审查报告，只列具体问题、修改建议和无法核实的信息，不要重写全文。";
     case "optimize":
       return "你是专业的笔记编辑。优化结构与语言表达，保留原意与关键事实；输出优化后的完整内容，不要添加审查报告或解释。";
   }
