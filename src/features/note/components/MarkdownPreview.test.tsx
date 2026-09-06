@@ -197,6 +197,16 @@ describe("MarkdownPreview properties and callouts", () => {
   });
 });
 
+describe("MarkdownPreview tag chips", () => {
+  it("将行内标签渲染为标签胶囊，不把标题误判为标签", () => {
+    const { container } = render(<MarkdownPreview content={"# 标题\n\n正文 #AI"} />);
+    const tags = container.querySelectorAll(".markdown-tag");
+    expect(tags).toHaveLength(1);
+    expect(tags[0]?.getAttribute("data-tag")).toBe("AI");
+    expect(tags[0]?.textContent).toBe("#AI");
+  });
+});
+
 describe("MarkdownPreview edge cases", () => {
   it("渲染 important/caution callout 时不保留语法前缀", () => {
     const { container } = render(<MarkdownPreview content={"> [!IMPORTANT] 重要\n\n> [!CAUTION] 注意"} />);

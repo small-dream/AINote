@@ -16,6 +16,7 @@ import {
   transformWikiLinks,
   WIKI_PROTOCOL,
 } from "@/features/wiki/utils/wiki";
+import { remarkMarkdownTags } from "@/features/wiki/utils/markdownTags";
 import type { NoteWikiDto } from "@/api/types";
 import { parseMarkdownDocument, remarkCallouts, remarkRemoveFrontmatter, type CalloutKind } from "../utils/markdownPipeline";
 import { slugifyHeading, textContent } from "../utils/preview";
@@ -153,6 +154,11 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onCh
     ...blockComponents,
     ...createHeadingComponents(),
     input: ({ checked, ...props }) => <TaskCheckbox {...props} checked={checked} content={content} onContentChange={onChange} />,
+    em: ({ node, children, ...props }) => {
+      const tag = (node as { properties?: Record<string, unknown> }).properties?.["data-tag"];
+      if (typeof tag !== "string") return <em {...props}>{children}</em>;
+      return <span className="markdown-tag" data-tag={tag}>#{children}</span>;
+    },
     img: ({ node, src, alt, ...props }) => {
       const local = resolveLocalAssetPath(repoPath ?? "", src ?? "");
       const imageSrc = local ? assetUrl(local) : src;
@@ -171,7 +177,7 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onCh
     <article className="markdown-body max-w-3xl mx-auto">
       {document.frontmatter.length > 0 ? <MarkdownProperties fields={document.frontmatter} /> : null}
       <ReactMarkdown
-        remarkPlugins={[remarkGfm, remarkMath, remarkBreaks, [remarkFrontmatter, ["yaml", "toml"]], remarkCallouts, remarkRemoveFrontmatter]}
+        remarkPlugins={[remarkGfm, remarkMath, remarkBreaks, [remarkFrontmatter, ["yaml", "toml"]], remarkCallouts, remarkRemoveFrontmatter, remarkMarkdownTags]}
         rehypePlugins={[rehypeHighlight, rehypeKatex]}
         components={components}
         urlTransform={(url) => (url.startsWith(WIKI_PROTOCOL) ? url : defaultUrlTransform(url))}
