@@ -27,6 +27,7 @@ export function AiWriteControls({ ai, canSummarize = false, canSuggest = false, 
         error={ai.error}
         loading={ai.loading}
         hasSelection={ai.hasSelection}
+        applyDocument={ai.applyDocument}
         onConfirm={ai.confirm}
         onRetry={ai.retry}
         onCancel={ai.cancel}

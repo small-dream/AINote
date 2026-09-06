@@ -42,6 +42,11 @@ describe("buildWritePrompt", () => {
     expect(system).toContain("不要联网检索、调用工具");
   });
 
+  it("审查输出修订后的完整笔记而不是报告", () => {
+    expect(actionSystem("review")).toContain("输出修正后的完整笔记");
+    expect(buildWritePrompt("review", "原文")).toContain("输出修正后的完整内容");
+  });
+
   it("翻译目标为简体中文", () => {
     expect(buildWritePrompt("translate", "hello")).toContain("简体中文");
   });

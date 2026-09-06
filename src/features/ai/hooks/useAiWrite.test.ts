@@ -40,13 +40,15 @@ describe("useAiWrite 文档级动作", () => {
     vi.clearAllMocks();
   });
 
-  it("审查使用整篇笔记并插入结果", async () => {
+  it("审查使用整篇笔记并替换原文", async () => {
     mockStream("审查报告");
     const apply = vi.fn();
+    const applyFull = vi.fn();
     const { result } = renderHook(() =>
       useAiWrite({
         getSelection: () => ({ text: "选中文本", hasSelection: false, fullText: "整篇笔记" }),
         onApply: apply,
+        onApplyFull: applyFull,
       }),
     );
     act(() => result.current.openMenu());
@@ -54,8 +56,10 @@ describe("useAiWrite 文档级动作", () => {
       void result.current.run("review");
     });
     await waitFor(() => expect(result.current.preview).toBe("审查报告"));
+    expect(result.current.applyDocument).toBe(true);
     act(() => result.current.confirm());
-    expect(apply).toHaveBeenCalledWith("审查报告");
+    expect(apply).not.toHaveBeenCalled();
+    expect(applyFull).toHaveBeenCalledWith("审查报告");
     expect(aiApiMock.generateStream.mock.calls.at(0)?.[1] ?? "").toContain("整篇笔记");
   });
 

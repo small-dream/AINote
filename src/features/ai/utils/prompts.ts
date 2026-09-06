@@ -26,7 +26,7 @@ export function actionSystem(action: AiWriteAction): string {
     case "compose":
       return "你是专业创作者。根据给定主题创作结构清晰的 Markdown 笔记，只输出可直接保存的 Markdown 正文，不要解释。";
     case "review":
-      return "你是严谨的笔记审查助手。检查事实与逻辑、表述歧义、结构问题和 Markdown 语法。不要联网检索、调用工具或输出思考过程；无法核实的项直接标注。输出 Markdown 审查报告，只列具体问题、修改建议和无法核实的信息，不要重写全文。";
+      return "你是严谨的笔记修订助手。不要联网检索、调用工具或输出思考过程。检查事实与逻辑、表述歧义、结构问题和 Markdown 语法后，输出修正后的完整笔记。保留原意、关键事实、作者风格和笔记类型语义，只修改确认有问题的部分；不要输出审查报告、解释、前后缀或无法核实的猜测。";
     case "optimize":
       return "你是专业的笔记编辑。优化结构与语言表达，保留原意与关键事实；输出优化后的完整内容，不要添加审查报告或解释。";
   }
@@ -41,7 +41,7 @@ const WRITE_PROMPT_TEMPLATES: Record<AiWriteAction, (source: string, title: stri
   continue: (source, title) => `以下是笔记「${title}」的现有内容，请从末尾自然续写：\n\n${source}`,
   summarize: (source) => `请为以下笔记生成一段简洁摘要，覆盖核心要点：\n\n${source}`,
   compose: (source, title) => `请围绕主题「${title}」创作一篇结构清晰的 Markdown 笔记：\n\n${source}`,
-  review: (source, title) => `请审查笔记「${title}」中的纰漏、事实风险、逻辑与表达问题：\n\n${source}`,
+  review: (source, title) => `请审查并修订笔记「${title}」，输出修正后的完整内容：\n\n${source}`,
   optimize: (source, title) => `请优化笔记「${title}」的结构、组织方式与语言表达，输出完整结果：\n\n${source}`,
 };
 

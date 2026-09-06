@@ -10,13 +10,14 @@ interface AiPreviewDialogProps {
   error: string | null;
   loading: boolean;
   hasSelection: boolean;
+  applyDocument: boolean;
   onConfirm: () => void;
   onRetry: () => void;
   onCancel: () => void;
 }
 
 /** AI 结果预览确认：流式边生成边展示；确认后由宿主写入编辑器（P1-AI-1） */
-export function AiPreviewDialog({ open, text, error, loading, hasSelection, onConfirm, onRetry, onCancel }: AiPreviewDialogProps) {
+export function AiPreviewDialog({ open, text, error, loading, hasSelection, applyDocument, onConfirm, onRetry, onCancel }: AiPreviewDialogProps) {
   const { t } = useTranslation();
   const noteTheme = useUiStore((state) => state.noteTheme);
   if (!open) return null;
@@ -26,7 +27,7 @@ export function AiPreviewDialog({ open, text, error, loading, hasSelection, onCo
         <div className="min-h-0 flex-1 overflow-y-auto rounded-md border border-border bg-bg-secondary p-3">
           {loading ? <StreamingPreview text={text} /> : error ? <p className="text-sm text-danger">{error}</p> : <PreviewText text={text} />}
         </div>
-        <PreviewActions loading={loading} error={error} hasSelection={hasSelection} onConfirm={onConfirm} onRetry={onRetry} onCancel={onCancel} />
+        <PreviewActions loading={loading} error={error} hasSelection={hasSelection} applyDocument={applyDocument} onConfirm={onConfirm} onRetry={onRetry} onCancel={onCancel} />
       </div>
     </Modal>
   );
@@ -49,7 +50,7 @@ function PreviewText({ text }: { text: string }) {
   return <pre className="whitespace-pre-wrap break-words font-sans text-sm leading-relaxed">{text}</pre>;
 }
 
-function PreviewActions({ loading, error, hasSelection, onConfirm, onRetry, onCancel }: { loading: boolean; error: string | null; hasSelection: boolean; onConfirm: () => void; onRetry: () => void; onCancel: () => void }) {
+function PreviewActions({ loading, error, hasSelection, applyDocument, onConfirm, onRetry, onCancel }: { loading: boolean; error: string | null; hasSelection: boolean; applyDocument: boolean; onConfirm: () => void; onRetry: () => void; onCancel: () => void }) {
   const { t } = useTranslation();
   if (error) {
     return (
@@ -64,7 +65,9 @@ function PreviewActions({ loading, error, hasSelection, onConfirm, onRetry, onCa
       <span className="text-xs text-text-tertiary">{t("ai.previewHint")}</span>
       <div className="flex shrink-0 gap-2">
         <Button variant="ghost" onClick={onCancel}>{t("common.cancel")}</Button>
-        <Button onClick={onConfirm} disabled={loading}>{hasSelection ? t("ai.replace") : t("ai.insert")}</Button>
+        <Button onClick={onConfirm} disabled={loading}>
+          {applyDocument ? t("ai.applyDocument") : hasSelection ? t("ai.replace") : t("ai.insert")}
+        </Button>
       </div>
     </div>
   );

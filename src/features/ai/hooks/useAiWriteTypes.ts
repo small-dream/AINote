@@ -7,6 +7,7 @@ export interface UseAiWriteReturn {
   preview: string | null;
   error: string | null;
   hasSelection: boolean;
+  applyDocument: boolean;
   openMenu: () => void;
   closeMenu: () => void;
   run: (action: AiWriteAction) => Promise<void>;

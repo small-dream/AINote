@@ -24,6 +24,7 @@ export function useAiWrite({ getSelection, onApply, onApplyFull, onApplySummary 
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [applyDocument, setApplyDocument] = useState(false);
   const selectionRef = useRef<AiSelection | null>(null);
   const lastActionRef = useRef<AiWriteAction | null>(null);
   const openMenu = useCallback(() => { const selection = getSelection(); selectionRef.current = selection; setHasSelection(selection.hasSelection); setMenuOpen(true); }, [getSelection]);
@@ -32,7 +33,8 @@ export function useAiWrite({ getSelection, onApply, onApplyFull, onApplySummary 
     const sel = selectionRef.current;
     if (!sel) return;
     lastActionRef.current = action;
-    setMenuOpen(false); setLoading(true); setError(null); setPreview("");
+    const documentAction = action === "review" || (action === "optimize" && selectionRef.current?.hasSelection !== true);
+    setMenuOpen(false); setLoading(true); setError(null); setPreview(""); setApplyDocument(documentAction);
     try {
       const source = action === AI_SUMMARIZE || AI_DOCUMENT_ACTIONS.includes(action)
         ? (sel.fullText ?? sel.text)
@@ -54,10 +56,10 @@ export function useAiWrite({ getSelection, onApply, onApplyFull, onApplySummary 
   const confirm = useCallback(() => {
     if (preview === null) return;
     if (lastActionRef.current === AI_SUMMARIZE) onApplySummary?.(preview);
-    else if (lastActionRef.current === "optimize" && selectionRef.current?.hasSelection !== true) onApplyFull?.(preview);
+    else if (applyDocument) onApplyFull?.(preview);
     else onApply(preview);
     setPreview(null);
-  }, [preview, onApply, onApplyFull, onApplySummary]);
+  }, [preview, applyDocument, onApply, onApplyFull, onApplySummary]);
   const cancel = useCallback(() => setPreview(null), []);
-  return { menuOpen, loading, preview, error, hasSelection, openMenu, closeMenu, run, retry, confirm, cancel };
+  return { menuOpen, loading, preview, error, hasSelection, applyDocument, openMenu, closeMenu, run, retry, confirm, cancel };
 }
