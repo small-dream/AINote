@@ -82,6 +82,15 @@ AppError { code: "SYNC_4013", kind: Conflict, message: "...", retriable: true }
 - **AI 强制测试义务**：实现核心业务逻辑（Service 用例、纯函数 utils、数据转换）时必须同时交付对应单元测试；UI 组件只要求关键交互集成测试，不追求快照覆盖。
 - **测试金字塔**：纯函数单测（多）→ Hook/Service 逻辑测试（中）→ 页面级冒烟（少）。
 
+### 5.1 移动端额外义务
+
+- 移动端业务必须复用现有 `api/`、Query、Store 和 Rust Service；禁止复制一套平台专用业务实现。
+- 平台差异只能进入 `src/platform/` 或 `src-tauri/src/platform/`，组件不得直接判断 User-Agent 或操作原生 API。
+- 每个移动端页面必须覆盖窄屏、软键盘、safe-area、系统返回键和无 hover 状态。
+- Git/文件/网络长任务必须继续通过 `spawn_blocking`，应用暂停前必须尽力 flush 编辑器保存队列。
+- Token/API Key 不得进入 React state、Query cache、日志、错误文本或 IPC 返回值；凭证只经 `SecureStore` 读写。
+- 移动端新增核心流程必须增加至少一个模拟器/真机黑盒用例；跨平台能力变更必须同时通过 iOS 与 Android release 构建检查。
+
 ## 6. Git 提交规范
 
 - Commit message：`type(scope): summary`，type ∈ `feat | fix | refactor | test | docs | chore`。

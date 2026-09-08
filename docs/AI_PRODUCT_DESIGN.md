@@ -25,7 +25,7 @@
 
 | ID | User Story | 验收要点 |
 |---|---|---|
-| P0-AI-1 | 作为用户，我可以在「设置 → AI」管理 AI Provider 与模型 | 支持多个 Provider 连接（OpenAI 兼容 API / Ollama）；每个 Provider 下添加多个模型并独立启用；Provider 与模型支持启停；设置全局默认模型；可拉取 OpenAI 兼容 `/models`；API Key 按 Provider 加密存储，前端拿不到明文；无可用模型时入口引导去设置 |
+| P0-AI-1 | 作为用户，我可以在「设置 → AI」管理 AI Provider 与模型 | 支持多个 Provider 连接（OpenAI 兼容 API / Ollama）；每个 Provider 下添加多个模型并独立启用；Provider 与模型支持启停；设置全局默认模型；可拉取 OpenAI 兼容 `/models`；API Key 按 Provider 经 `SecureStore` 存入平台系统安全存储，前端拿不到明文；无可用模型时入口引导去设置 |
 | P0-AI-2 | 作为用户，我可以在编辑器中选中文本，一键完成「润色 / 翻译 / 缩写 / 扩写」 | Markdown（CodeMirror）与富文本（TipTap）编辑器均有选中态气泡入口；结果以「替换选中」方式落笔；请求中有加载态，可取消；失败可重试 |
 | P0-AI-3 | 作为用户，我可以在光标处让 AI 续写当前笔记 | 未选中文本时入口为「续写」；结果插入光标处并保持编辑器焦点 |
 | P0-AI-4 | 作为用户，我可以打开「AI 问答」面板，基于笔记提问 | 上下文范围可在「当前笔记」与「当前笔记 + 全库关键词检索」间切换；回答以 Markdown 渲染（走既有 sanitize 管线）；可一键把回答插入当前笔记末尾 |
@@ -75,7 +75,7 @@ flowchart TD
 - **隐私与数据边界**
   - 上下文默认仅当前笔记；「全库上下文」仅取关键词检索 top-k 命中段落（默认 5 段），绝不发送整个仓库。
   - 每次 AI 请求都必须是用户显式触发；禁止隐式/后台自动改写。
-  - API Key 只存本地加密文件，绝不落盘明文、绝不提交仓库，前端永远拿不到明文。
+  - API Key 只经 `SecureStore` 存入平台系统安全存储（iOS Keychain / Android Keystore / 桌面系统凭证库），绝不落盘明文、绝不提交仓库，前端永远拿不到明文；旧版加密文件仅用于一次性迁移。
 - **Provider 兼容**
   - 统一使用 OpenAI 兼容 `chat/completions` 协议；Ollama 通过其 `/v1` OpenAI 兼容端点接入。
   - 请求体与响应结构收敛在 Rust Repository 层，Service 不感知厂商差异。
