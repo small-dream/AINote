@@ -41,6 +41,20 @@ export function useNoteEditor(repoPath: string | null, notePath: string | null, 
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [flush]);
 
+  // 移动端进入后台时系统可能立即冻结 WebView，先把当前草稿送入保存队列。
+  useEffect(() => {
+    const flushOnHidden = () => {
+      if (document.visibilityState === "hidden") void flush().catch(() => undefined);
+    };
+    const flushOnPageHide = () => { void flush().catch(() => undefined); };
+    document.addEventListener("visibilitychange", flushOnHidden);
+    window.addEventListener("pagehide", flushOnPageHide);
+    return () => {
+      document.removeEventListener("visibilitychange", flushOnHidden);
+      window.removeEventListener("pagehide", flushOnPageHide);
+    };
+  }, [flush]);
+
   function onChange(value: string) {
     reset();
     setDraft(value);

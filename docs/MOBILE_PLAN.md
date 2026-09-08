@@ -29,6 +29,14 @@
 
 结论：业务层和 Git 层可复用，主要工作集中在移动壳、平台能力、安全存储、生命周期和触摸交互，方案可行。
 
+### 2.1 本轮实施状态（阶段 1-4）
+
+- 阶段 1：已生成 iOS/Android 工程；移动端接入 `tauri-plugin-keyring-store`，GitHub Token 与 AI Key 走 Keychain/Keystore，打印命令在移动端返回结构化不支持错误。
+- 阶段 2：已加入窄屏单栏工作区，使用列表/编辑器栈式切换、底部导航、网络状态和同步入口，并处理 safe-area 与 `100dvh`。
+- 阶段 3：编辑器在 `visibilitychange`、`pagehide` 和移动返回动作前主动 flush，继续复用现有 CodeMirror/TipTap、自动保存和编辑器偏好。
+- 阶段 4：继续复用现有 `app_data_dir/notes/` clone 路径、启动/联网恢复同步、离线状态和冲突二选一逻辑；未引入依赖进程被系统杀死后的后台任务。
+- 门禁：前端构建、前端单测、ESLint、桌面 Rust 测试、Android/iOS Rust target 检查已通过；iOS 完整 Archive 仍需补齐 libgit2 的 zlib/iconv 链接配置，真机签名需配置 Apple Development Team。
+
 ## 3. 技术选型
 
 | 能力 | 选型 | 约束 |

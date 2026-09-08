@@ -3,6 +3,7 @@
   "identifier": "default",
   "description": "AINote desktop capabilities",
   "windows": ["main"],
+  "platforms": ["macOS", "windows", "linux"],
   "permissions": [
     "core:default",
     "core:window:allow-start-dragging",

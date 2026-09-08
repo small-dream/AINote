@@ -207,6 +207,49 @@ input.note-title-input:focus-visible { outline: none; }
   outline: none;
 }
 
+/* 移动端单栏工作区（由 767px 断点启用） */
+.mobile-workspace-shell { padding-top: env(safe-area-inset-top); }
+.mobile-workspace-header { min-height: 56px; }
+.mobile-icon-button {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  place-items: center;
+  border-radius: 10px;
+  color: var(--text-secondary);
+  transition: background-color 120ms ease, color 120ms ease;
+}
+.mobile-icon-button:hover, .mobile-icon-button:focus-visible { background: var(--bg-secondary); color: var(--text-primary); }
+.mobile-icon-button:disabled { opacity: .45; }
+.mobile-network-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--text-tertiary); }
+.mobile-network-dot.is-online { background: var(--success); }
+.mobile-bottom-nav { min-height: 64px; }
+.mobile-nav-button {
+  display: flex;
+  min-width: 64px;
+  min-height: 56px;
+  flex: 1;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  color: var(--text-tertiary);
+  font-size: 11px;
+  line-height: 1.2;
+}
+.mobile-nav-button.is-active { color: var(--accent); }
+.mobile-nav-button:disabled { opacity: .4; }
+.mobile-sidebar-pane .workspace-sidebar { width: 100% !important; }
+.mobile-editor-pane .workspace-toolbar { min-height: 52px; padding: 6px 12px; }
+.mobile-editor-pane .note-preview-pane { padding: 16px; }
+@media (min-width: 768px) { .mobile-workspace-shell { display: none; } }
+@media (max-width: 767px) {
+  .workspace-shell { display: block; }
+  .mobile-editor-pane .format-toolbar { overflow-x: auto; }
+  .mobile-editor-pane .workspace-toolbar > div:last-child { gap: 4px; }
+}
+
 .sidebar-resizer::after {
   content: "";
   position: absolute;

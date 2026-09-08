@@ -2,21 +2,30 @@
 //! 供 GitHub Token / AI API Key 等敏感凭证复用：明文永不落盘，前端永远拿不到明文。
 //! 文件名约定：{name}.key（AES 密钥）+ {name}.cred（密文），magic 按 name 区分域。
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 use std::fs;
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 use std::io::ErrorKind;
 use std::path::Path;
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 use aes_gcm::aead::{Aead, KeyInit};
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 use aes_gcm::{Aes256Gcm, Nonce};
 
 use crate::domain::error::AppError;
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 const KEY_LEN: usize = 32;
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 const NONCE_LEN: usize = 12;
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 const KEY_RECORD_LEN: usize = 5 + KEY_LEN;
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 const CRED_HEADER_LEN: usize = 5 + NONCE_LEN;
 
 /// 保存（覆盖）一条加密凭证。
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 pub fn save_secret(root: &Path, name: &str, secret: &str) -> Result<(), AppError> {
     fs::create_dir_all(root)?;
     let key = ensure_key(root, name)?;
@@ -31,6 +40,7 @@ pub fn save_secret(root: &Path, name: &str, secret: &str) -> Result<(), AppError
 }
 
 /// 读取加密凭证；未配置返回 None。
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 pub fn read_secret(root: &Path, name: &str) -> Result<Option<String>, AppError> {
     if !key_path(root, name).is_file() {
         return Ok(None);
@@ -52,12 +62,14 @@ pub fn read_secret(root: &Path, name: &str) -> Result<Option<String>, AppError> 
 }
 
 /// 删除加密凭证（含密钥）。
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 pub fn delete_secret(root: &Path, name: &str) -> Result<(), AppError> {
     remove_if_exists(&key_path(root, name))?;
     remove_if_exists(&cred_path(root, name))?;
     Ok(())
 }
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn ensure_key(root: &Path, name: &str) -> Result<[u8; KEY_LEN], AppError> {
     let path = key_path(root, name);
     if path.is_file() {
@@ -69,11 +81,13 @@ fn ensure_key(root: &Path, name: &str) -> Result<[u8; KEY_LEN], AppError> {
     Ok(key)
 }
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn load_key(root: &Path, name: &str) -> Result<[u8; KEY_LEN], AppError> {
     let record = fs::read(key_path(root, name)).map_err(|e| AppError::Io(e.to_string()))?;
     decode_key_record(&record)
 }
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn write_secure(path: &Path, bytes: Vec<u8>) -> Result<(), AppError> {
     fs::write(path, bytes)?;
     #[cfg(unix)]
@@ -84,6 +98,7 @@ fn write_secure(path: &Path, bytes: Vec<u8>) -> Result<(), AppError> {
     Ok(())
 }
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn remove_if_exists(path: &Path) -> Result<(), AppError> {
     match fs::remove_file(path) {
         Ok(()) => Ok(()),
@@ -92,18 +107,22 @@ fn remove_if_exists(path: &Path) -> Result<(), AppError> {
     }
 }
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn key_path(root: &Path, name: &str) -> std::path::PathBuf {
     root.join(format!("{name}.key"))
 }
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn cred_path(root: &Path, name: &str) -> std::path::PathBuf {
     root.join(format!("{name}.cred"))
 }
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn cipher_from_key(key: &[u8; KEY_LEN]) -> Result<Aes256Gcm, AppError> {
     Aes256Gcm::new_from_slice(key).map_err(|e| AppError::Io(e.to_string()))
 }
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn encode_key_record(key: &[u8; KEY_LEN]) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(KEY_RECORD_LEN);
     bytes.extend_from_slice(b"SEKR");
@@ -112,6 +131,7 @@ fn encode_key_record(key: &[u8; KEY_LEN]) -> Vec<u8> {
     bytes
 }
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn decode_key_record(bytes: &[u8]) -> Result<[u8; KEY_LEN], AppError> {
     if bytes.len() != KEY_RECORD_LEN || &bytes[..4] != b"SEKR" || bytes[4] != 1 {
         return Err(AppError::Io("本地加密密钥格式无效".into()));
@@ -121,6 +141,7 @@ fn decode_key_record(bytes: &[u8]) -> Result<[u8; KEY_LEN], AppError> {
     Ok(key)
 }
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn encode_cred_record(nonce: &[u8; NONCE_LEN], ciphertext: &[u8]) -> Vec<u8> {
     let mut bytes = Vec::with_capacity(CRED_HEADER_LEN + ciphertext.len());
     bytes.extend_from_slice(b"SECR");
@@ -130,6 +151,7 @@ fn encode_cred_record(nonce: &[u8; NONCE_LEN], ciphertext: &[u8]) -> Vec<u8> {
     bytes
 }
 
+#[cfg(not(any(target_os = "ios", target_os = "android")))]
 fn decode_cred_record(bytes: &[u8]) -> Result<([u8; NONCE_LEN], &[u8]), AppError> {
     if bytes.len() <= CRED_HEADER_LEN || &bytes[..4] != b"SECR" || bytes[4] != 1 {
         return Err(AppError::Io("本地加密凭证格式无效".into()));
@@ -137,6 +159,27 @@ fn decode_cred_record(bytes: &[u8]) -> Result<([u8; NONCE_LEN], &[u8]), AppError
     let mut nonce = [0u8; NONCE_LEN];
     nonce.copy_from_slice(&bytes[5..CRED_HEADER_LEN]);
     Ok((nonce, &bytes[CRED_HEADER_LEN..]))
+}
+
+#[cfg(any(target_os = "ios", target_os = "android"))]
+pub fn save_secret(_root: &Path, name: &str, secret: &str) -> Result<(), AppError> {
+    tauri_plugin_keyring_store::KeyringStore::new("dev.ainote.app.credentials")
+        .set_password(name, secret)
+        .map_err(|err| AppError::Io(err.to_string()))
+}
+
+#[cfg(any(target_os = "ios", target_os = "android"))]
+pub fn read_secret(_root: &Path, name: &str) -> Result<Option<String>, AppError> {
+    tauri_plugin_keyring_store::KeyringStore::new("dev.ainote.app.credentials")
+        .get_password(name)
+        .map_err(|err| AppError::Io(err.to_string()))
+}
+
+#[cfg(any(target_os = "ios", target_os = "android"))]
+pub fn delete_secret(_root: &Path, name: &str) -> Result<(), AppError> {
+    tauri_plugin_keyring_store::KeyringStore::new("dev.ainote.app.credentials")
+        .delete(name)
+        .map_err(|err| AppError::Io(err.to_string()))
 }
 
 #[cfg(test)]
