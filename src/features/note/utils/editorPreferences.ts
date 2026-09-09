@@ -42,7 +42,7 @@ function normalizePreferences(value: unknown): EditorPreferences {
   if (!value || typeof value !== "object") return DEFAULT_EDITOR_PREFERENCES;
   const data = value as Partial<EditorPreferences>;
   return {
-    mode: data.mode === "split" || data.mode === "preview" ? data.mode : "edit",
+    mode: data.mode === "split" || data.mode === "source" || data.mode === "preview" ? data.mode : "edit",
     ratio: clampNumber(data.ratio, 0.5, 0.2, 0.8),
     editorScrollTop: clampNumber(data.editorScrollTop, 0, 0, Number.MAX_SAFE_INTEGER),
     previewScrollTop: clampNumber(data.previewScrollTop, 0, 0, Number.MAX_SAFE_INTEGER),

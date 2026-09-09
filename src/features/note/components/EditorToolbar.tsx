@@ -1,16 +1,19 @@
-import { Eye, History, Pencil, Split, Tags, type LucideIcon } from "lucide-react";
+import { Code, Eye, History, Split, SquarePen, Tags, type LucideIcon } from "lucide-react";
 import { IconButton } from "@/components/atoms/IconButton";
 import { useTranslation } from "@/i18n";
+import type { TranslationKey } from "@/i18n/messages";
 import { NoteThemePicker } from "./NoteThemePicker";
 import { NoteTitleField } from "./NoteTitleField";
 import { AiToolbarButton } from "@/features/ai/components/AiToolbarButton";
 import { ToolbarOverflowMenu } from "./ToolbarOverflowMenu";
 
-export type ViewMode = "edit" | "split" | "preview";
+export type ViewMode = "edit" | "source" | "split" | "preview";
 
 interface EditorToolbarProps {
   path: string;
   mode: ViewMode;
+  /** 窄屏单栏布局：用「源码」替代「分栏」 */
+  compact?: boolean;
   /** 富文本笔记：隐藏视图切换、主题与大纲（所见即所得无需分栏） */
   richText?: boolean;
   saving?: boolean;
@@ -32,14 +35,24 @@ interface EditorToolbarProps {
   onRenamed?: (path: string) => void;
 }
 
-const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.preview" }[] = [
+interface ModeTab { key: ViewMode; labelKey: TranslationKey }
+
+const DESKTOP_MODE_TABS: ModeTab[] = [
   { key: "edit", labelKey: "note.edit" },
   { key: "split", labelKey: "note.split" },
   { key: "preview", labelKey: "note.preview" },
 ];
 
+const COMPACT_MODE_TABS: ModeTab[] = [
+  { key: "edit", labelKey: "note.edit" },
+  { key: "source", labelKey: "note.source" },
+  { key: "preview", labelKey: "note.preview" },
+];
+
+const MODE_ICONS: Record<ViewMode, LucideIcon> = { edit: SquarePen, source: Code, split: Split, preview: Eye };
+
 /** 笔记操作栏：左侧标题锚点，右侧按「高频视图 → 中频工具 → 低频文件操作」分层分组。 */
-export function EditorToolbar({ path, mode, richText = false, saving = false, dirty = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onExportMarkdown, onAi, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, compact = false, richText = false, saving = false, dirty = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onExportMarkdown, onAi, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -55,7 +68,7 @@ export function EditorToolbar({ path, mode, richText = false, saving = false, di
         <div className="flex items-center gap-1">
           {!richText ? (
             <>
-              <ModeTabs mode={mode} onChange={onModeChange} />
+              <ModeTabs mode={mode} compact={compact} onChange={onModeChange} />
               <ToolbarDivider />
               <NoteThemePicker />
             </>
@@ -116,14 +129,15 @@ function SaveErrorMessage({ message, onRetry }: { message: string | null | undef
   );
 }
 
-function ModeTabs({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) => void }) {
+function ModeTabs({ mode, compact, onChange }: { mode: ViewMode; compact: boolean; onChange: (m: ViewMode) => void }) {
   const { t } = useTranslation();
+  const tabs = compact ? COMPACT_MODE_TABS : DESKTOP_MODE_TABS;
   const tabClass = (active: boolean) =>
     `inline-flex h-8 items-center gap-1.5 px-2.5 text-xs font-medium transition-colors ${active ? "bg-accent/10 text-accent shadow-sm" : "text-text-secondary hover:text-text-primary"}`;
   return (
     <div role="tablist" aria-label={t("note.viewMode")} className="flex h-9 items-center overflow-hidden rounded-lg border border-border bg-bg-secondary p-0.5">
-      {MODE_TABS.map(({ key, labelKey }) => {
-        const Icon = key === "edit" ? Pencil : key === "split" ? Split : Eye;
+      {tabs.map(({ key, labelKey }) => {
+        const Icon = MODE_ICONS[key];
         return (
           <button
             key={key}
@@ -137,9 +151,9 @@ function ModeTabs({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) 
             onKeyDown={(event) => {
               if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
               event.preventDefault();
-              const current = MODE_TABS.findIndex((item) => item.key === mode);
+              const current = Math.max(0, tabs.findIndex((item) => item.key === mode));
               const delta = event.key === "ArrowRight" ? 1 : -1;
-              const next = MODE_TABS[(current + delta + MODE_TABS.length) % MODE_TABS.length];
+              const next = tabs[(current + delta + tabs.length) % tabs.length];
               if (next) onChange(next.key);
             }}
           >

@@ -117,3 +117,17 @@ test.describe("AINote 桌面核心流程", () => {
     expect(Number(selectionLayerZ)).toBeGreaterThan(0);
   });
 });
+
+test.describe("AINote 移动端窄屏", () => {
+  test.use({ viewport: { width: 390, height: 844 } });
+
+  test("窄屏用「源码」替代「分栏」并切换为全宽源码编辑", async ({ page }) => {
+    await openWorkspace(page, baseState([{ path: "mobile.md", content: "# 移动端\n\n移动端正文内容" }]));
+    await openNote(page, "mobile", "移动端正文内容");
+    await expect(page.getByRole("tab", { name: "源码" })).toBeVisible();
+    await expect(page.getByRole("tab", { name: "分栏" })).toHaveCount(0);
+    await expect(page.locator(".cm-gutters")).toHaveCount(0);
+    await page.getByRole("tab", { name: "源码" }).click();
+    await expect(page.locator(".cm-gutters").first()).toBeVisible();
+  });
+});

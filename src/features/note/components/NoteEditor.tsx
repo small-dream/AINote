@@ -22,6 +22,8 @@ import type { DiagnosticIssue } from "@/features/diagnostics/utils/diagnostics";
 import { EditorState, isEditorUnavailable, NoteEditorContent, selectOutline, useEditorAi, useHistoryRequest } from "./NoteEditorSupport";
 import { reportToastError, useToastStore } from "@/stores/toast.store";
 import { useTranslation } from "@/i18n";
+import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
+import { resolveViewMode, usesSoftRender } from "../utils/viewMode";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -48,9 +50,11 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const wiki = useEditorWiki(repoPath, onOpenNote);
     const noteTheme = useUiStore((state) => state.noteTheme);
-    const { preferences: { mode, editorScrollTop, previewScrollTop, ratio }, setMode, setRatio, setEditorScrollTop, setPreviewScrollTop } = preferences;
+    const { preferences: { mode: preferredMode, editorScrollTop, previewScrollTop, ratio }, setMode, setRatio, setEditorScrollTop, setPreviewScrollTop } = preferences;
+    const isCompact = useIsMobileViewport();
+    const mode = resolveViewMode(preferredMode, isCompact);
     const pdf = usePdfExport({ notePath, kind, repoPath, flush });
-    const softRenderEnabled = mode !== "split";
+    const softRenderEnabled = usesSoftRender(mode);
     const { extensions, activeFormats } = useEditorExtensions({ notes: wiki.notes, repoPath, onOpenWiki: wiki.handleOpenWiki, softRenderEnabled });
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
     const outline = useMemo(() => extractOutline(draft), [draft]);
@@ -80,6 +84,6 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
     if (isEditorUnavailable(notePath, loadError)) return <EditorState notePath={notePath} error={loadError?.message ?? null} />;
     const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
-    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} handleConvertToRichText={handleConvertToRichText} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
+    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} handleConvertToRichText={handleConvertToRichText} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
   },
 );

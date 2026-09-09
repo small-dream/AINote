@@ -19,4 +19,9 @@ describe("editor preferences", () => {
     localStorage.setItem("ainote.editor-preferences:%2Frepo:a.md", JSON.stringify({ mode: "edit", ratio: 0.5, softRender: false }));
     expect(readEditorPreferences("/repo", "a.md")).toEqual(DEFAULT_EDITOR_PREFERENCES);
   });
+
+  it("保留窄屏源码模式", () => {
+    writeEditorPreferences("/repo", "notes/a.md", { ...DEFAULT_EDITOR_PREFERENCES, mode: "source" });
+    expect(readEditorPreferences("/repo", "notes/a.md").mode).toBe("source");
+  });
 });

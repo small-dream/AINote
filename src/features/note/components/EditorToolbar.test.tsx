@@ -34,6 +34,7 @@ describe("EditorToolbar", () => {
   it("展示三种视图模式并支持分栏切换", () => {
     const onModeChange = vi.fn();
     renderToolbar({ onModeChange });
+    expect(screen.getByRole("tab", { name: "写作" }).getAttribute("aria-selected")).toBe("true");
     fireEvent.click(screen.getByText("分栏"));
     expect(onModeChange).toHaveBeenCalledWith("split");
     fireEvent.click(screen.getByText("预览"));
@@ -54,6 +55,14 @@ describe("EditorToolbar", () => {
     renderToolbar({ mode: "split" });
     const tab = screen.getByRole("tab", { name: "分栏" });
     expect(tab.getAttribute("aria-selected")).toBe("true");
+  });
+
+  it("窄屏用「源码」替代「分栏」", () => {
+    const onModeChange = vi.fn();
+    renderToolbar({ compact: true, onModeChange });
+    expect(screen.queryByText("分栏")).toBeNull();
+    fireEvent.click(screen.getByText("源码"));
+    expect(onModeChange).toHaveBeenCalledWith("source");
   });
 });
 
@@ -86,7 +95,7 @@ describe("EditorToolbar / 更多菜单", () => {
 
   it("富文本模式隐藏视图切换、主题与「转换为富文本」", () => {
     renderToolbar({ richText: true });
-    expect(screen.queryByText("编辑")).toBeNull();
+    expect(screen.queryByText("写作")).toBeNull();
     expect(screen.queryByRole("button", { name: "笔记主题" })).toBeNull();
     expect(screen.getByRole("button", { name: "双链与标签" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "更多" }));
