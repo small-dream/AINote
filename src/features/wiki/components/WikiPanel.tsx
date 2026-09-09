@@ -45,7 +45,7 @@ export function WikiPanel({ repoPath, path, open, onClose, onOpenNote, draft, ki
   };
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div data-mobile-overlay="wiki" className="fixed inset-0 z-50 bg-black/40" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={t("wiki.title")} className="mx-auto mt-16 flex h-[70vh] w-[min(680px,90vw)] flex-col overflow-hidden rounded-xl bg-bg-primary shadow-2xl">
         <PanelHeader path={path} onClose={onClose} />
         <div className="min-h-0 flex-1 space-y-6 overflow-y-auto p-5">

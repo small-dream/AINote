@@ -1,19 +1,29 @@
 import type { RefObject } from "react";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileWorkspaceShell } from "./MobileWorkspaceShell";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { useSessionStore } from "@/stores/session.store";
+import { useCommandPaletteStore } from "@/stores/command-palette.store";
+import { useUiStore } from "@/stores/ui.store";
+
+const useSyncMock = vi.fn();
 
 vi.mock("@/features/sync/hooks/useSync", () => ({
-  useSync: vi.fn(() => ({
+  useSync: (...args: Parameters<typeof import("@/features/sync/hooks/useSync")["useSync"]>) => useSyncMock(...args),
+}));
+
+vi.mock("@/features/sync/components/ConflictMergeDialog", () => ({
+  ConflictMergeDialog: ({ open }: { open: boolean }) => (open ? <div>mobile-conflict-dialog</div> : null),
+}));
+
+useSyncMock.mockReturnValue({
     online: true,
     status: { conflicted: false, hasUncommitted: false },
     label: { text: "已同步", tone: "synced" },
     syncNow: { mutate: vi.fn() },
     isSyncing: false,
-  })),
-}));
+});
 
 const flush = vi.fn().mockResolvedValue(undefined);
 const editorRef = { current: { flush, setMode: vi.fn(), openHistory: vi.fn(), insertCallout: vi.fn() } } as unknown as RefObject<NoteEditorHandle>;
@@ -35,6 +45,8 @@ const editorRef = { current: { flush, setMode: vi.fn(), openHistory: vi.fn(), in
 describe("MobileWorkspaceShell", () => {
   beforeEach(() => {
     useSessionStore.setState({ repoPath: "/mock-repo", currentNotePath: null });
+    useUiStore.setState({ sidebarTab: "tree" });
+    useCommandPaletteStore.setState({ open: false, query: "", selected: 0 });
     window.history.replaceState({}, "");
     vi.clearAllMocks();
   });
@@ -63,5 +75,26 @@ describe("MobileWorkspaceShell", () => {
     expect(screen.getByText("mobile-editor")).toBeTruthy();
     screen.getByRole("button", { name: "返回列表" }).click();
     expect(editorRef.current?.flush).toHaveBeenCalled();
+  });
+
+  it("shows list filters and opens the command palette", () => {
+    renderShell();
+    screen.getByRole("tab", { name: "标签" }).click();
+    expect(useUiStore.getState().sidebarTab).toBe("tags");
+    screen.getByRole("button", { name: "搜索" }).click();
+    expect(useCommandPaletteStore.getState().open).toBe(true);
+  });
+
+  it("opens the conflict resolver from the sync pill", async () => {
+    useSyncMock.mockReturnValue({
+      online: true,
+      status: { conflicted: true, hasUncommitted: false },
+      label: { text: "存在冲突", tone: "conflict" },
+      syncNow: { mutate: vi.fn() },
+      isSyncing: false,
+    });
+    renderShell();
+    screen.getByRole("button", { name: "存在冲突" }).click();
+    await waitFor(() => expect(screen.getByText("mobile-conflict-dialog")).toBeTruthy());
   });
 });

@@ -24,6 +24,7 @@ export function HistoryPanel({ repoPath, path, open, onClose, onRestored }: Hist
 
   return (
     <div
+      data-mobile-overlay="history"
       className="fixed inset-0 z-50 bg-black/40"
       role="presentation"
       onMouseDown={(event) => {
@@ -37,7 +38,7 @@ export function HistoryPanel({ repoPath, path, open, onClose, onRestored }: Hist
         className="mx-auto mt-16 flex h-[70vh] w-[min(900px,90vw)] flex-col overflow-hidden rounded-xl bg-bg-primary shadow-2xl"
       >
         <PanelHeader path={path} onClose={onClose} />
-        <div className="flex min-h-0 flex-1">
+        <div className="history-panel-body flex min-h-0 flex-1">
           <CommitList commits={history.commits} selectedId={history.selectedId} onSelect={history.onSelect} />
           <DiffPane history={history} />
         </div>

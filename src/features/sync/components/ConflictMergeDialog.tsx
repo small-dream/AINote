@@ -17,10 +17,10 @@ export function ConflictMergeDialog({ repoPath, open, onClose }: ConflictMergeDi
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/40" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
+    <div data-mobile-overlay="conflict" className="fixed inset-0 z-50 bg-black/40" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <div role="dialog" aria-modal="true" aria-label={merge.file?.path ?? "conflict"} className="mx-auto mt-10 flex h-[80vh] w-[min(1120px,94vw)] flex-col overflow-hidden rounded-xl bg-bg-primary shadow-2xl">
         <MergeHeader conflicts={merge.conflicts} current={merge.current} onSelect={merge.setCurrent} keepAll={merge.keepAll} onClose={onClose} />
-        <div className="grid min-h-0 flex-1 grid-cols-3 divide-x divide-border">
+        <div className="conflict-panel-body grid min-h-0 flex-1 grid-cols-3 divide-x divide-border">
           <LinePane titleKey="sync.localPane" lines={splitLines(merge.file?.local ?? "")} onAddLine={merge.addLine} />
           <MergePane
             merged={merge.merged}

@@ -1,10 +1,14 @@
-import type { ReactNode, RefObject } from "react";
-import { ArrowLeft, List, RefreshCw, Settings, Star, type LucideIcon } from "lucide-react";
+import { lazy, Suspense, useState, type ReactNode, type RefObject } from "react";
+import { ArrowLeft, Clock, FolderTree, Hash, List, RefreshCw, Search, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
+import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useSync } from "@/features/sync/hooks/useSync";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 import { useMobileEditorView } from "../hooks/useMobileEditorView";
+import type { SidebarTab } from "@/stores/ui.store";
+
+const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
 
 interface MobileWorkspaceShellProps {
   repoPath: string | null;
@@ -22,6 +26,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
   const sidebarTab = useUiStore((state) => state.sidebarTab);
   const setSidebarTab = useUiStore((state) => state.setSidebarTab);
   const { online, status, label, syncNow, isSyncing } = useSync(repoPath);
+  const [conflictOpen, setConflictOpen] = useState(false);
   const title = currentNotePath?.split(/[\\/]/).pop() ?? t("app.notes");
   const { showEditor, backToList } = useMobileEditorView({
     currentNotePath,
@@ -39,11 +44,20 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
         label={label.text}
         tone={label.tone}
         isSyncing={isSyncing}
+        conflicted={status.conflicted}
         onBack={backToList}
         onSync={() => syncNow.mutate()}
+        onOpenConflict={() => setConflictOpen(true)}
       />
       <main className="min-h-0 flex-1 overflow-hidden">
-        {showEditor ? <div className="mobile-editor-pane h-full min-h-0">{editor}</div> : <div className="mobile-sidebar-pane h-full min-h-0 overflow-hidden">{sidebar}</div>}
+        {showEditor ? (
+          <div className="mobile-editor-pane h-full min-h-0">{editor}</div>
+        ) : (
+          <div className="flex h-full min-h-0 flex-col overflow-hidden">
+            <MobileListTabs active={sidebarTab} onChange={setSidebarTab} />
+            <div className="mobile-list-content min-h-0 flex-1 overflow-hidden">{sidebar}</div>
+          </div>
+        )}
       </main>
       {showEditor ? null : (
         <MobileBottomNav
@@ -54,23 +68,62 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
           onOpenSettings={() => useUiStore.getState().openSettings()}
         />
       )}
+      {conflictOpen ? (
+        <Suspense fallback={null}>
+          <LazyConflictMergeDialog repoPath={repoPath} open onClose={() => setConflictOpen(false)} />
+        </Suspense>
+      ) : null}
       <span className="sr-only" aria-live="polite">{status.conflicted ? t("sync.conflict") : status.hasUncommitted ? t("sync.unsaved") : null}</span>
     </div>
   );
 }
 
-function MobileHeader({ showEditor, title, online, label, tone, isSyncing, onBack, onSync }: { showEditor: boolean; title: string; online: boolean; label: string; tone: string; isSyncing: boolean; onBack: () => void; onSync: () => void }) {
+function MobileHeader({ showEditor, title, online, label, tone, isSyncing, conflicted, onBack, onSync, onOpenConflict }: { showEditor: boolean; title: string; online: boolean; label: string; tone: string; isSyncing: boolean; conflicted: boolean; onBack: () => void; onSync: () => void; onOpenConflict: () => void }) {
   const { t } = useTranslation();
   return (
     <header className="mobile-workspace-header flex min-h-14 shrink-0 items-center gap-2 border-b border-border bg-bg-primary px-3 pt-[env(safe-area-inset-top)]">
       {showEditor ? <MobileIconButton label={t("mobile.backToList")} icon={ArrowLeft} onClick={onBack} /> : null}
       <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">{showEditor ? title : t("app.notes")}</h1>
-      <span className={`mobile-sync-pill is-${tone}`} title={label}>
-        <span className={`mobile-status-dot ${online ? "is-online" : ""}`} aria-hidden="true" />
-        {label}
-      </span>
+      {conflicted ? (
+        <button type="button" className={`mobile-sync-pill is-${tone}`} title={label} onClick={onOpenConflict}>
+          <span className={`mobile-status-dot ${online ? "is-online" : ""}`} aria-hidden="true" />
+          {label}
+        </button>
+      ) : (
+        <span className={`mobile-sync-pill is-${tone}`} title={label}>
+          <span className={`mobile-status-dot ${online ? "is-online" : ""}`} aria-hidden="true" />
+          {label}
+        </span>
+      )}
       <MobileIconButton label={t("sync.now")} icon={RefreshCw} onClick={onSync} disabled={!online || isSyncing} spinning={isSyncing} />
+      {!showEditor ? <MobileSearchButton /> : null}
     </header>
+  );
+}
+
+function MobileSearchButton() {
+  const { t } = useTranslation();
+  return <MobileIconButton label={t("palette.searchNotes")} icon={Search} onClick={useCommandPaletteStore.getState().openPalette} />;
+}
+
+function MobileListTabs({ active, onChange }: { active: SidebarTab; onChange: (tab: SidebarTab) => void }) {
+  const { t } = useTranslation();
+  const tabs: { id: SidebarTab; label: string; icon: LucideIcon }[] = [
+    { id: "tree", label: t("tree.label"), icon: FolderTree },
+    { id: "recent", label: t("app.recent"), icon: Clock },
+    { id: "favorites", label: t("app.favorites"), icon: Star },
+    { id: "tags", label: t("wiki.tags"), icon: Hash },
+    { id: "trash", label: t("trash.title"), icon: Trash2 },
+  ];
+  return (
+    <div className="mobile-list-tabs flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-bg-primary px-2 py-1.5" role="tablist" aria-label={t("app.workspaceNavigation")}>
+      {tabs.map(({ id, label, icon: Icon }) => (
+        <button key={id} type="button" role="tab" aria-selected={active === id} className={`mobile-list-tab ${active === id ? "is-active" : ""}`} onClick={() => onChange(id)}>
+          <Icon size={14} aria-hidden="true" />
+          {label}
+        </button>
+      ))}
+    </div>
   );
 }
 

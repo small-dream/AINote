@@ -25,6 +25,7 @@ export function Modal({ open, title, onClose, children, className = "", noteThem
 
   return createPortal(
     <div
+      data-modal-sheet="true"
       className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40"
       role="presentation"
       onMouseDown={(event) => {
