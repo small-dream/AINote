@@ -111,5 +111,9 @@ test.describe("AINote 桌面核心流程", () => {
     await page.mouse.up();
     await expect(page.locator(".cm-selectionBackground").first()).toBeAttached();
     expect(await page.evaluate(() => window.getSelection()?.toString() ?? "")).toContain("这是一段");
+    // 回归：分栏（源码）模式开启 highlightActiveLine，其不透明背景会盖住 CodeMirror 内联的 z-index:-1 选区层，
+    // 造成「已选中但看不见」。选区层必须被提升到活动行之上。
+    const selectionLayerZ = await page.locator(".cm-selectionLayer").first().evaluate((el) => getComputedStyle(el).zIndex);
+    expect(Number(selectionLayerZ)).toBeGreaterThan(0);
   });
 });
