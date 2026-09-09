@@ -9,10 +9,11 @@ import { WorkspaceColumns } from "./WorkspaceColumns";
 import { CommandPalette } from "@/features/search/components/CommandPalette";
 import { useUiStore } from "@/stores/ui.store";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
-import { MobileWorkspaceShell } from "./MobileWorkspaceShell";
+import { MobileWorkspaceShell } from "@/features/mobile-shell/components/MobileWorkspaceShell";
 import { WorkspaceSidebar } from "./WorkspaceSidebar";
 import { NoteEditor } from "@/features/note/components/NoteEditor";
 import { getDirectoryPath } from "@/features/file-tree/utils/path";
+import { useSessionStore } from "@/stores/session.store";
 
 const LazySettingsView = lazy(() => import("@/features/settings/components/SettingsView").then(({ SettingsView }) => ({ default: SettingsView })));
 
@@ -62,9 +63,12 @@ export function WorkspaceLayout({ repoPath, startupSyncing, currentNotePath, edi
 }
 
 function MobileContent({ repoPath, currentNotePath, editorRef, actions, onSelect, historyRequestPath, setHistoryRequestPath }: { repoPath: string | null; currentNotePath: string | null; editorRef: RefObject<NoteEditorHandle | null>; actions: WorkspaceActions; onSelect: (path: string) => void; historyRequestPath: string | null; setHistoryRequestPath: (path: string | null) => void }) {
-  const sidebar = <WorkspaceSidebar repoPath={repoPath} onSelect={onSelect} onRequestNew={actions.requestNew} onRequestFolder={actions.requestNewFolder} onRequestImport={actions.importFiles} onRequestImportNotes={actions.importNotes} createDir={currentNotePath ? getDirectoryPath(currentNotePath) : ""} onRequestMove={actions.setMoveTarget} onRequestRename={actions.setRenameTarget} onRequestHistory={(path) => { setHistoryRequestPath(path); onSelect(path); }} sidebarWidth={320} />;
-  const editor = <NoteEditor ref={editorRef} repoPath={repoPath} notePath={currentNotePath} onMove={actions.setMoveTarget} onOpenNote={onSelect} createdPath={actions.createdPath} historyRequestPath={historyRequestPath} onHistoryRequestHandled={() => setHistoryRequestPath(null)} focusTitleOnLoad={currentNotePath === actions.createdPath} />;
-  return <MobileWorkspaceShell repoPath={repoPath} currentNotePath={currentNotePath} editorRef={editorRef} sidebar={sidebar} editor={editor} onBackToList={() => undefined} />;
+  const [selectionEpoch, setSelectionEpoch] = useState(0);
+  const openNote = useSessionStore((s) => s.openNote);
+  const openMobileEditor = () => setSelectionEpoch((epoch) => epoch + 1);
+  const sidebar = <WorkspaceSidebar repoPath={repoPath} onSelect={(path) => { void onSelect(path); openMobileEditor(); }} onRequestNew={actions.requestNew} onRequestFolder={actions.requestNewFolder} onRequestImport={actions.importFiles} onRequestImportNotes={actions.importNotes} createDir={currentNotePath ? getDirectoryPath(currentNotePath) : ""} onRequestMove={actions.setMoveTarget} onRequestRename={actions.setRenameTarget} onRequestHistory={(path) => { setHistoryRequestPath(path); onSelect(path); }} sidebarWidth={320} />;
+  const editor = <NoteEditor ref={editorRef} repoPath={repoPath} notePath={currentNotePath} onMove={actions.setMoveTarget} onOpenNote={(path) => { void onSelect(path); setSelectionEpoch((epoch) => epoch + 1); }} createdPath={actions.createdPath} historyRequestPath={historyRequestPath} onHistoryRequestHandled={() => setHistoryRequestPath(null)} focusTitleOnLoad={currentNotePath === actions.createdPath} />;
+  return <MobileWorkspaceShell repoPath={repoPath} currentNotePath={currentNotePath} editorRef={editorRef} openEditorSignal={selectionEpoch} sidebar={sidebar} editor={editor} onBackToList={() => openNote(null)} />;
 }
 
 function LayoutDialogs({ repoPath, actions, onMoved }: { repoPath: string | null; actions: WorkspaceActions; onMoved: (path: string) => void }) {

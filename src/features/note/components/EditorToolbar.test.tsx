@@ -52,8 +52,8 @@ describe("EditorToolbar", () => {
 
   it("分栏模式下高亮对应标签", () => {
     renderToolbar({ mode: "split" });
-    const tab = screen.getByText("分栏");
-    expect(tab.className).toContain("bg-accent");
+    const tab = screen.getByRole("tab", { name: "分栏" });
+    expect(tab.getAttribute("aria-selected")).toBe("true");
   });
 });
 

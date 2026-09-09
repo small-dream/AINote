@@ -115,7 +115,7 @@ export function FormatToolbar({ viewRef, active, onImagePicked, status, diagnost
   const { run, runLink } = useFormatCommands(viewRef);
   const opts = { t, active, run, onImagePicked };
   return (
-    <div className="flex h-10 items-center gap-1 border-b border-border bg-bg-secondary/60 px-6">
+    <div className="format-toolbar flex h-10 items-center gap-1 border-b border-border bg-bg-secondary/60 px-6">
       <div className="flex items-center gap-0.5">{renderButtons(INLINE_BUTTONS, opts)}</div>
       <Divider />
       <div className="flex items-center gap-0.5">

@@ -5,6 +5,7 @@ import { AppProviders } from "@/app/providers";
 import { router } from "@/app/router";
 import { readStoredLocale, readStoredTheme, resolveTheme } from "@/stores/ui.store";
 import "@/styles/index.css";
+import "@/features/mobile-shell/styles.css";
 import "@/features/richtext/rich-text.css";
 import "@/features/export/export.css";
 

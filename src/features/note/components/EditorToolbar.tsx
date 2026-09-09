@@ -83,7 +83,7 @@ function SaveStatus({ saving, dirty }: { saving: boolean; dirty: boolean }) {
   const label = saving ? t("common.saving") : dirty ? t("note.unsaved") : t("note.saved");
   const tone = saving ? "text-text-secondary" : dirty ? "text-warning" : "text-success";
   return (
-    <span role="status" aria-live="polite" className={`inline-flex shrink-0 items-center gap-1 text-xs ${tone}`}>
+    <span role="status" aria-live="polite" className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs ${tone}`}>
       <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
       {label}
     </span>
@@ -128,6 +128,7 @@ function ModeTabs({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) 
             type="button"
             role="tab"
             aria-selected={mode === key}
+            aria-label={t(labelKey)}
             tabIndex={mode === key ? 0 : -1}
             className={tabClass(mode === key)}
             onClick={() => onChange(key)}
@@ -141,7 +142,7 @@ function ModeTabs({ mode, onChange }: { mode: ViewMode; onChange: (m: ViewMode) 
             }}
           >
             <Icon size={16} />
-            {t(labelKey)}
+            <span className="mode-tab-label">{t(labelKey)}</span>
           </button>
         );
       })}

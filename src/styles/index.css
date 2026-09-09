@@ -222,8 +222,6 @@ input.note-title-input:focus-visible { outline: none; }
 }
 .mobile-icon-button:hover, .mobile-icon-button:focus-visible { background: var(--bg-secondary); color: var(--text-primary); }
 .mobile-icon-button:disabled { opacity: .45; }
-.mobile-network-dot { width: 8px; height: 8px; border-radius: 999px; background: var(--text-tertiary); }
-.mobile-network-dot.is-online { background: var(--success); }
 .mobile-bottom-nav { min-height: 64px; }
 .mobile-nav-button {
   display: flex;
@@ -240,14 +238,9 @@ input.note-title-input:focus-visible { outline: none; }
 }
 .mobile-nav-button.is-active { color: var(--accent); }
 .mobile-nav-button:disabled { opacity: .4; }
-.mobile-sidebar-pane .workspace-sidebar { width: 100% !important; }
-.mobile-editor-pane .workspace-toolbar { min-height: 52px; padding: 6px 12px; }
-.mobile-editor-pane .note-preview-pane { padding: 16px; }
 @media (min-width: 768px) { .mobile-workspace-shell { display: none; } }
 @media (max-width: 767px) {
   .workspace-shell { display: block; }
-  .mobile-editor-pane .format-toolbar { overflow-x: auto; }
-  .mobile-editor-pane .workspace-toolbar > div:last-child { gap: 4px; }
 }
 
 .sidebar-resizer::after {

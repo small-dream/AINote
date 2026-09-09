@@ -1,0 +1,103 @@
+import type { ReactNode, RefObject } from "react";
+import { ArrowLeft, List, RefreshCw, Settings, Star, type LucideIcon } from "lucide-react";
+import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
+import { useSync } from "@/features/sync/hooks/useSync";
+import { useUiStore } from "@/stores/ui.store";
+import { useTranslation } from "@/i18n";
+import { useMobileEditorView } from "../hooks/useMobileEditorView";
+
+interface MobileWorkspaceShellProps {
+  repoPath: string | null;
+  currentNotePath: string | null;
+  editorRef: RefObject<NoteEditorHandle | null>;
+  openEditorSignal: number;
+  sidebar: ReactNode;
+  editor: ReactNode;
+  onBackToList: () => void;
+}
+
+/** 移动端单栏工作区：列表为根部，编辑器是详情路由。 */
+export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, openEditorSignal, sidebar, editor, onBackToList }: MobileWorkspaceShellProps) {
+  const { t } = useTranslation();
+  const sidebarTab = useUiStore((state) => state.sidebarTab);
+  const setSidebarTab = useUiStore((state) => state.setSidebarTab);
+  const { online, status, label, syncNow, isSyncing } = useSync(repoPath);
+  const title = currentNotePath?.split(/[\\/]/).pop() ?? t("app.notes");
+  const { showEditor, backToList } = useMobileEditorView({
+    currentNotePath,
+    openEditorSignal,
+    onBackToList,
+    onFlush: () => editorRef.current?.flush(),
+  });
+
+  return (
+    <div className="mobile-workspace-shell flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-bg-primary">
+      <MobileHeader
+        showEditor={showEditor}
+        title={title}
+        online={online}
+        label={label.text}
+        tone={label.tone}
+        isSyncing={isSyncing}
+        onBack={backToList}
+        onSync={() => syncNow.mutate()}
+      />
+      <main className="min-h-0 flex-1 overflow-hidden">
+        {showEditor ? <div className="mobile-editor-pane h-full min-h-0">{editor}</div> : <div className="mobile-sidebar-pane h-full min-h-0 overflow-hidden">{sidebar}</div>}
+      </main>
+      {showEditor ? null : (
+        <MobileBottomNav
+          notesActive={sidebarTab === "tree"}
+          favoritesActive={sidebarTab === "favorites"}
+          onOpenNotes={() => setSidebarTab("tree")}
+          onOpenFavorites={() => setSidebarTab("favorites")}
+          onOpenSettings={() => useUiStore.getState().openSettings()}
+        />
+      )}
+      <span className="sr-only" aria-live="polite">{status.conflicted ? t("sync.conflict") : status.hasUncommitted ? t("sync.unsaved") : null}</span>
+    </div>
+  );
+}
+
+function MobileHeader({ showEditor, title, online, label, tone, isSyncing, onBack, onSync }: { showEditor: boolean; title: string; online: boolean; label: string; tone: string; isSyncing: boolean; onBack: () => void; onSync: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <header className="mobile-workspace-header flex min-h-14 shrink-0 items-center gap-2 border-b border-border bg-bg-primary px-3 pt-[env(safe-area-inset-top)]">
+      {showEditor ? <MobileIconButton label={t("mobile.backToList")} icon={ArrowLeft} onClick={onBack} /> : null}
+      <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">{showEditor ? title : t("app.notes")}</h1>
+      <span className={`mobile-sync-pill is-${tone}`} title={label}>
+        <span className={`mobile-status-dot ${online ? "is-online" : ""}`} aria-hidden="true" />
+        {label}
+      </span>
+      <MobileIconButton label={t("sync.now")} icon={RefreshCw} onClick={onSync} disabled={!online || isSyncing} spinning={isSyncing} />
+    </header>
+  );
+}
+
+function MobileBottomNav({ notesActive, favoritesActive, onOpenNotes, onOpenFavorites, onOpenSettings }: { notesActive: boolean; favoritesActive: boolean; onOpenNotes: () => void; onOpenFavorites: () => void; onOpenSettings: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <nav className="mobile-bottom-nav flex min-h-16 shrink-0 items-stretch justify-around border-t border-border bg-bg-secondary pb-[env(safe-area-inset-bottom)]" aria-label={t("app.workspaceNavigation")}>
+      <MobileNavButton active={notesActive} label={t("app.notes")} icon={List} onClick={onOpenNotes} />
+      <MobileNavButton active={favoritesActive} label={t("app.favorites")} icon={Star} onClick={onOpenFavorites} />
+      <MobileNavButton label={t("settings.title")} icon={Settings} onClick={onOpenSettings} />
+    </nav>
+  );
+}
+
+function MobileIconButton({ icon: Icon, label, onClick, disabled = false, spinning = false }: { icon: LucideIcon; label: string; onClick?: () => void; disabled?: boolean; spinning?: boolean }) {
+  return (
+    <button type="button" className="mobile-icon-button" aria-label={label} title={label} onClick={onClick} disabled={disabled}>
+      <Icon size={20} className={spinning ? "animate-spin" : ""} />
+    </button>
+  );
+}
+
+function MobileNavButton({ active = false, label, icon: Icon, onClick }: { active?: boolean; label: string; icon: LucideIcon; onClick: () => void }) {
+  return (
+    <button type="button" aria-label={label} aria-current={active ? "page" : undefined} onClick={onClick} className={`mobile-nav-button ${active ? "is-active" : ""}`}>
+      <Icon size={20} />
+      <span>{label}</span>
+    </button>
+  );
+}
