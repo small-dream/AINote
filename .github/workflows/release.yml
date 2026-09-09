@@ -46,18 +46,7 @@ jobs:
           REPO: ${{ github.repository }}
         run: |
           release_body=$(node scripts/build-release-notes.mjs "$TAG")
-          release_ids=$(gh api "repos/$REPO/releases?per_page=100" --paginate --jq ".[] | select(.tag_name == \"$TAG\") | .id")
-          if [ "$(printf '%s\n' "$release_ids" | sed '/^$/d' | wc -l)" -gt 1 ]; then
-            echo "::error::发现多个 tag 为 $TAG 的 Release，请先手动清理草稿"
-            printf '%s\n' "$release_ids"
-            exit 1
-          fi
-          release_id=$(printf '%s\n' "$release_ids" | head -n1)
-          if [ -z "$release_id" ]; then
-            release_id=$(gh api --method POST "repos/$REPO/releases" -f tag_name="$TAG" -f name="AINote $TAG" -f body="$release_body" -F draft=true --jq '.id')
-          else
-            gh api --method PATCH "repos/$REPO/releases/$release_id" -F draft=true -f body="$release_body" >/dev/null
-          fi
+          release_id=$(node scripts/resolve-release.mjs "$TAG" "$release_body")
           echo "release_id=$release_id" >> "$GITHUB_OUTPUT"
 
   publish-tauri:

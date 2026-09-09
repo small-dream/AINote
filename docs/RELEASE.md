@@ -43,6 +43,7 @@ GitHub 提供的 macOS DMG 仅面向 Apple Silicon（Apple 芯片）Mac，且未
 - 版本遵循 SemVer（`MAJOR.MINOR.PATCH`）；破坏性配置或数据迁移升级 MAJOR，向后兼容功能升级 MINOR，缺陷修复升级 PATCH。
 - `latest.json` 由 Tauri CLI 生成并使用 updater 私钥签名；客户端只接受匹配 `pubkey` 的资产，禁止关闭签名校验。
 - 发布失败时 Draft Release 保持草稿，修复后可重新运行同一标签；不得删除并复用不同版本的标签。
+- 若标签被删除后重新推送（retag），GitHub 会把原 Draft Release 的 `tag_name` 改写为 `untagged-<hash>`，导致按标签查不到；工作流会自动按 `name` 找回同名孤立草稿并修复 `tag_name`，但同名孤立草稿多于一个时会中止并要求人工清理。
 - 发现严重问题时，先将 Release 标记为 pre-release 或撤回资产，再发布修复版本。不要重写已经公开的标签或签名资产。
 - 更新失败不应影响本地笔记数据；客户端保留当前版本，用户可继续离线编辑和同步。
 
