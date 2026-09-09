@@ -4,6 +4,7 @@ import { useUiStore } from "@/stores/ui.store";
 import { SETTINGS_SECTIONS } from "../settingsSections";
 import { SettingsNav } from "./SettingsNav";
 import { useTranslation } from "@/i18n";
+import "../settings.css";
 
 /** 全屏设置视图：左侧分类导航 + 右侧内容区，取代旧设置弹窗（参考 Obsidian / VS Code）。 */
 export function SettingsView() {
@@ -27,13 +28,13 @@ export function SettingsView() {
   const Active = section.component;
 
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-bg-primary" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <div data-tauri-drag-region className="h-11 shrink-0" aria-hidden="true" />
+    <div className="settings-view fixed inset-0 z-[60] flex flex-col bg-bg-primary" role="dialog" aria-modal="true" aria-labelledby="settings-title">
+      <div data-tauri-drag-region className="settings-drag-region h-11 shrink-0" aria-hidden="true" />
       <SettingsHeader onClose={close} />
-      <div className="flex min-h-0 flex-1">
+      <div className="settings-body flex min-h-0 flex-1">
         <SettingsNav />
-        <main className="min-h-0 min-w-0 flex-1 overflow-y-auto bg-bg-primary">
-          <div className="mx-auto w-full max-w-2xl px-6 py-8">
+        <main className="settings-main min-h-0 min-w-0 flex-1 overflow-y-auto bg-bg-primary">
+          <div className="settings-content mx-auto w-full max-w-2xl px-6 py-8">
             <header className="mb-6">
               <h2 className="text-xl font-semibold text-text-primary">{t(section.labelKey)}</h2>
               <p className="mt-1 text-sm text-text-secondary">{t(section.descriptionKey)}</p>
@@ -66,7 +67,7 @@ function SettingsHeader({ onClose }: { onClose: () => void }) {
         onClick={onClose}
         aria-label={t("common.close")}
         title={t("common.close")}
-        className="ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+        className="settings-close-button ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
       >
         <X size={18} />
       </button>

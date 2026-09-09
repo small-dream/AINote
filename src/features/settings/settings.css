@@ -1,0 +1,32 @@
+/* 设置页共享布局；移动端仅通过断点接管，不改变桌面双栏结构。 */
+.settings-view { padding-top: 0; }
+.settings-nav { width: 13rem; }
+.settings-main { padding-bottom: 0; }
+.settings-content { max-width: 42rem; }
+
+@media (max-width: 767px) {
+  .settings-view { padding-top: env(safe-area-inset-top); }
+  .settings-view [data-tauri-drag-region] { display: none; }
+  .settings-body { flex-direction: column; }
+  .settings-nav {
+    width: 100%;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+    padding: 8px 12px;
+    scrollbar-width: none;
+  }
+  .settings-nav::-webkit-scrollbar { display: none; }
+  .settings-nav-item {
+    flex: 0 0 auto;
+    min-height: 40px;
+    border-radius: 999px;
+    padding: 0 12px;
+  }
+  .settings-close-button { display: none; }
+  .settings-main { min-height: 0; }
+  .settings-content { padding: 18px 16px calc(28px + env(safe-area-inset-bottom)); }
+  .settings-view h1 { min-height: 44px; }
+}

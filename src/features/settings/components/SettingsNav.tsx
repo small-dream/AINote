@@ -8,7 +8,7 @@ export function SettingsNav() {
   const active = useUiStore((s) => s.settingsTab);
   const setTab = useUiStore((s) => s.setSettingsTab);
   return (
-    <nav className="flex w-52 shrink-0 flex-col gap-1 border-r border-border bg-bg-secondary/80 p-3" aria-label={t("settings.sectionNav")}>
+    <nav className="settings-nav flex w-52 shrink-0 flex-col gap-1 border-r border-border bg-bg-secondary/80 p-3" aria-label={t("settings.sectionNav")}>
       {SETTINGS_SECTIONS.map(({ id, labelKey, icon: Icon }) => {
         const isActive = active === id;
         return (
@@ -17,7 +17,7 @@ export function SettingsNav() {
             type="button"
             onClick={() => setTab(id)}
             aria-current={isActive ? "page" : undefined}
-            className={`flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
+            className={`settings-nav-item flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors ${
               isActive ? "bg-accent-soft text-accent" : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
             }`}
           >
