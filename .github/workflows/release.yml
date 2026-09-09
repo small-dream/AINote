@@ -164,26 +164,70 @@ jobs:
           RANLIB_aarch64_linux_android: ${{ env.ANDROID_TOOLCHAIN_BIN }}/llvm-ranlib
           AARCH64_LINUX_ANDROID_RANLIB: ${{ env.ANDROID_TOOLCHAIN_BIN }}/llvm-ranlib
         run: pnpm tauri android build --ci --target aarch64 --apk --aab
+      - name: Sign and verify Android artifacts
+        env:
+          TAG: ${{ needs.create-release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          unsigned_apks=(src-tauri/gen/android/app/build/outputs/apk/**/*-unsigned.apk)
+          signed_apks=(src-tauri/gen/android/app/build/outputs/apk/**/*.apk)
+          filtered_apks=()
+          for artifact in "${signed_apks[@]}"; do
+            if [[ "$artifact" != *-unsigned* ]]; then
+              filtered_apks+=("$artifact")
+            fi
+          done
+          signed_apks=("${filtered_apks[@]}")
+          if [ "${#unsigned_apks[@]}" -gt 0 ]; then
+            if [ "${#unsigned_apks[@]}" -ne 1 ]; then
+              echo "::error::未签名 APK 数量异常: ${#unsigned_apks[@]}"
+              exit 1
+            fi
+            apksigner=$(find "$ANDROID_HOME/build-tools" -type f -name apksigner | sort -V | tail -n 1)
+            signed_apk="$RUNNER_TEMP/AINote-${TAG}-android-arm64.apk"
+            "$apksigner" sign \
+              --ks "$ANDROID_KEYSTORE_PATH" \
+              --ks-key-alias "$ANDROID_KEY_ALIAS" \
+              --ks-pass env:ANDROID_KEYSTORE_PASSWORD \
+              --key-pass env:ANDROID_KEY_PASSWORD \
+              --out "$signed_apk" \
+              "${unsigned_apks[0]}"
+            "$apksigner" verify --print-certs "$signed_apk"
+          else
+            if [ "${#signed_apks[@]}" -ne 1 ]; then
+              echo "::error::已签名 APK 数量异常: ${#signed_apks[@]}"
+              exit 1
+            fi
+            signed_apk="${signed_apks[0]}"
+          fi
+          aabs=(src-tauri/gen/android/app/build/outputs/bundle/**/*.aab)
+          if [ "${#aabs[@]}" -ne 1 ]; then
+            echo "::error::AAB 数量异常: ${#aabs[@]}"
+            exit 1
+          fi
+          signed_aab="$RUNNER_TEMP/AINote-${TAG}.aab"
+          jarsigner \
+            -keystore "$ANDROID_KEYSTORE_PATH" \
+            -storepass "$ANDROID_KEYSTORE_PASSWORD" \
+            -keypass "$ANDROID_KEY_PASSWORD" \
+            -signedjar "$signed_aab" \
+            "${aabs[0]}" \
+            "$ANDROID_KEY_ALIAS"
+          jarsigner -verify "$signed_aab"
+          echo "ANDROID_APK_PATH=$signed_apk" >> "$GITHUB_ENV"
+          echo "ANDROID_AAB_PATH=$signed_aab" >> "$GITHUB_ENV"
       - name: Upload Android artifacts
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           TAG: ${{ needs.create-release.outputs.tag }}
         run: |
           set -euo pipefail
-          shopt -s globstar nullglob
-          apks=(src-tauri/gen/android/app/build/outputs/apk/**/*.apk)
-          aabs=(src-tauri/gen/android/app/build/outputs/bundle/**/*.aab)
-          for artifact in "${apks[@]}" "${aabs[@]}"; do
-            if [[ "$artifact" == *-unsigned* ]]; then
-              echo "::error::Android 产物未签名: $artifact"
-              exit 1
-            fi
-          done
-          if [ "${#apks[@]}" -ne 1 ] || [ "${#aabs[@]}" -ne 1 ]; then
-            echo "::error::Android 产物数量异常: APK=${#apks[@]}, AAB=${#aabs[@]}"
+          if [ ! -s "$ANDROID_APK_PATH" ] || [ ! -s "$ANDROID_AAB_PATH" ]; then
+            echo "::error::Android 签名产物缺失: $ANDROID_APK_PATH, $ANDROID_AAB_PATH"
             exit 1
           fi
-          gh release upload "$TAG" "${apks[0]}" "${aabs[0]}" --clobber
+          gh release upload "$TAG" "$ANDROID_APK_PATH" "$ANDROID_AAB_PATH" --clobber
 
   publish-updater-manifest:
     needs: [create-release, publish-tauri]
