@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { CornerDownLeft, Search } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { useBackHandler } from "@/platform/back-navigation";
 import { useCommandPalette } from "../hooks/useCommandPalette";
 import { usePaletteShortcut } from "../hooks/usePaletteShortcut";
 import type { CommandPaletteActions } from "../types";
@@ -22,6 +23,8 @@ export function CommandPalette({ repoPath, actions }: CommandPaletteProps) {
   useEffect(() => {
     if (open) inputRef.current?.focus();
   }, [open]);
+
+  useBackHandler(open, closePalette);
 
   if (!open) return null;
   const hasQuery = query.trim().length > 0;

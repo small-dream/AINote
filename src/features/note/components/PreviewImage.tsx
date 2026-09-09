@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type ImgHTMLAttributes, type Ref, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { useTranslation } from "@/i18n";
+import { useBackHandler } from "@/platform/back-navigation";
 
 interface PreviewImageProps extends ImgHTMLAttributes<HTMLImageElement> {
   line?: number | undefined;
@@ -16,6 +17,7 @@ export function PreviewImage({ src, alt = "", line, ...props }: PreviewImageProp
   const triggerRef = useRef<HTMLButtonElement>(null);
   const label = alt || src || t("note.image");
   useLightboxLifecycle(open, setOpen, triggerRef);
+  useBackHandler(open, () => setOpen(false));
 
   return (
     <>

@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { ArrowLeft, X } from "lucide-react";
 import { useUiStore } from "@/stores/ui.store";
+import { useBackHandler } from "@/platform/back-navigation";
 import { SETTINGS_SECTIONS } from "../settingsSections";
 import { SettingsNav } from "./SettingsNav";
 import { useTranslation } from "@/i18n";
@@ -12,6 +13,8 @@ export function SettingsView() {
   const open = useUiStore((s) => s.settingsOpen);
   const tab = useUiStore((s) => s.settingsTab);
   const close = useUiStore((s) => s.closeSettings);
+
+  useBackHandler(open, close);
 
   useEffect(() => {
     if (!open) return;

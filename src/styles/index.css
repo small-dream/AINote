@@ -208,7 +208,6 @@ input.note-title-input:focus-visible { outline: none; }
 }
 
 /* 移动端单栏工作区（由 767px 断点启用） */
-.mobile-workspace-shell { padding-top: env(safe-area-inset-top); }
 .mobile-workspace-header { min-height: 56px; }
 .mobile-icon-button {
   display: grid;

@@ -1,5 +1,6 @@
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
+import { useBackHandler } from "@/platform/back-navigation";
 
 interface ModalProps {
   open: boolean;
@@ -10,8 +11,10 @@ interface ModalProps {
   noteTheme?: string;
 }
 
-/** 通用模态框：ESC / 遮罩点击关闭 + dialog 语义（P2 可访问性） */
+/** 通用模态框：ESC / 系统返回键 / 遮罩点击关闭 + dialog 语义（P2 可访问性） */
 export function Modal({ open, title, onClose, children, className = "", noteTheme }: ModalProps) {
+  useBackHandler(open, onClose);
+
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {

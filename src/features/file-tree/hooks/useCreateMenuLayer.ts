@@ -1,9 +1,12 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { useBackHandler } from "@/platform/back-navigation";
 
 export function useCreateMenuLayer(open: boolean, close: () => void) {
   const triggerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState<CSSProperties>({});
+
+  useBackHandler(open, close);
 
   useEffect(() => {
     if (!open) return;

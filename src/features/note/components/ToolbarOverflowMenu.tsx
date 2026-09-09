@@ -2,6 +2,7 @@ import { ArrowLeftRight, Ellipsis, FolderInput, Printer } from "lucide-react";
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { IconButton } from "@/components/atoms/IconButton";
 import { useTranslation } from "@/i18n";
+import { useBackHandler } from "@/platform/back-navigation";
 
 interface ToolbarOverflowMenuProps {
   richText: boolean;
@@ -25,6 +26,7 @@ export function ToolbarOverflowMenu({ richText, hasConvert, isPdfAvailable, onEx
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   useCloseOnOutside(rootRef, open, () => setOpen(false));
+  useBackHandler(open, () => setOpen(false));
 
   const items: MenuItem[] = [
     ...(isPdfAvailable && onExportPdf

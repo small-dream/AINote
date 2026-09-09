@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { useBackHandler } from "@/platform/back-navigation";
 
 export type MobileWorkspaceView = "list" | "editor";
 
@@ -35,5 +36,8 @@ export function useMobileEditorView({ currentNotePath, openEditorSignal, onBackT
     if (window.history.state?.ainoteMobileEditor) window.history.back();
   }, [onBackToList, onFlush, openEditorSignal]);
 
-  return { showEditor: currentNotePath !== null && openEditorSignal > dismissedSignal, backToList };
+  const showEditor = currentNotePath !== null && openEditorSignal > dismissedSignal;
+  useBackHandler(showEditor, backToList);
+
+  return { showEditor, backToList };
 }

@@ -1,5 +1,5 @@
 /* 移动端只通过 shell 类名作用，避免影响桌面工作区样式。 */
-.mobile-workspace-shell { padding-top: env(safe-area-inset-top); }
+.mobile-workspace-shell { background: var(--bg-primary); }
 .mobile-workspace-header { min-height: 56px; }
 .mobile-icon-button {
   display: grid;
@@ -101,8 +101,8 @@
 
 /* 移动端把核心覆盖层统一成全屏工作面；桌面壳不加载这些规则。 */
 @media (max-width: 767px) {
-  [data-mobile-overlay] { align-items: stretch; justify-content: stretch; padding: 0; }
-  [data-mobile-overlay] > [role="dialog"] { width: 100vw; height: 100dvh; margin: 0; border-radius: 0; }
+  [data-mobile-overlay] { align-items: stretch; justify-content: stretch; padding: env(safe-area-inset-top) 0 0; }
+  [data-mobile-overlay] > [role="dialog"] { width: 100vw; height: 100%; margin: 0; border-radius: 0; }
   [data-mobile-overlay="palette"] { align-items: stretch; }
   [data-modal-sheet] { align-items: flex-end; }
   [data-modal-sheet] > [role="dialog"] { max-height: 92dvh; overflow-y: auto; border-radius: 16px 16px 0 0; padding: 18px 16px calc(18px + env(safe-area-inset-bottom)); }

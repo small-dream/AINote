@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, type RefObject } from "react";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { useBackHandler } from "@/platform/back-navigation";
 
 const OPTIONS = [
   { level: 0, labelKey: "note.body" },
@@ -23,6 +24,7 @@ export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
   useCloseOnOutside(rootRef, open, () => setOpen(false));
+  useBackHandler(open, () => setOpen(false));
 
   const current = OPTIONS.find((o) => o.level > 0 && active.has(`h${o.level}`)) ?? OPTIONS[0];
   return (

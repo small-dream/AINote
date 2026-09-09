@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 import { useTranslation } from "@/i18n";
 import { useUiStore, type NoteTheme } from "@/stores/ui.store";
 import { IconButton } from "@/components/atoms/IconButton";
+import { useBackHandler } from "@/platform/back-navigation";
 import { NOTE_THEME_GROUPS, NOTE_THEME_OPTIONS, type NoteThemeOption } from "../utils/noteThemes";
 
 /** 编辑器与预览共用的主题选择器，偏好存储在 UI store。 */
@@ -13,6 +14,7 @@ export function NoteThemePicker() {
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
   useCloseOnOutside(rootRef, open, () => setOpen(false));
+  useBackHandler(open, () => setOpen(false));
 
   return (
     <div ref={rootRef} className="relative">

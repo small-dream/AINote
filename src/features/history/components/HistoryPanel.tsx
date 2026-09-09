@@ -3,6 +3,7 @@ import { RotateCcw, X } from "lucide-react";
 import { messageOf } from "@/api";
 import { Button } from "@/components/atoms/Button";
 import { useTranslation } from "@/i18n";
+import { useBackHandler } from "@/platform/back-navigation";
 import { useFileHistory } from "../hooks/useFileHistory";
 import { CommitList } from "./CommitList";
 import { DiffView } from "./DiffView";
@@ -20,6 +21,7 @@ interface HistoryPanelProps {
 export function HistoryPanel({ repoPath, path, open, onClose, onRestored }: HistoryPanelProps) {
   const { t } = useTranslation();
   const history = useFileHistory({ repoPath, path, open, onClose, onRestored });
+  useBackHandler(open, onClose);
   if (!open) return null;
 
   return (

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { Check, ChevronDown, type LucideIcon } from "lucide-react";
+import { useBackHandler } from "@/platform/back-navigation";
 
 export interface ToolbarMenuItem {
   key: string;
@@ -26,6 +27,8 @@ const triggerState = (active: boolean) => active
 /** 工具栏折叠菜单：点击外部/Escape 关闭，保留编辑器当前选区 */
 export function ToolbarPopover({ label, icon: Icon, text, active = false, align = "left", items }: ToolbarPopoverProps) {
   const [open, setOpen] = useState(false);
+
+  useBackHandler(open, () => setOpen(false));
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {

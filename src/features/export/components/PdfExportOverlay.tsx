@@ -5,6 +5,7 @@ import { Button } from "@/components/atoms/Button";
 import type { NoteKind } from "@/api/types";
 import { printPage } from "@/api";
 import { MarkdownPreview } from "@/features/note/components/MarkdownPreview";
+import { useBackHandler } from "@/platform/back-navigation";
 import { richTextJsonToHtml } from "../utils/richTextHtml";
 import { useTranslation } from "@/i18n";
 
@@ -22,6 +23,7 @@ interface PdfExportOverlayProps {
 
 /** 导出 PDF：全屏浅色打印预览 + 系统打印对话框（可在其中选择“存储为 PDF”）。 */
 export function PdfExportOverlay({ open, title, kind, content, repoPath, onClose }: PdfExportOverlayProps) {
+  useBackHandler(open, onClose);
   if (!open) return null;
   return createPortal(
     <PdfExportScreen title={title} kind={kind} content={content} repoPath={repoPath} onClose={onClose} />,

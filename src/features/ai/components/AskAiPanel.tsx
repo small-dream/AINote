@@ -4,6 +4,7 @@ import { Loader2, MessageSquareText, Send, Trash2, X, CornerDownLeft } from "luc
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "@/i18n";
+import { useBackHandler } from "@/platform/back-navigation";
 import { useAskAi } from "../hooks/useAskAi";
 import { useAiConfig } from "../hooks/useAiConfig";
 import { usableAiModels } from "../utils/models";
@@ -26,6 +27,7 @@ export function AskAiPanel({ open, noteContent, canInsert = true, onClose, onIns
   const { data } = useAiConfig();
   const noteTheme = useUiStore((state) => state.noteTheme);
   const configured = usableAiModels(data).length > 0;
+  useBackHandler(open, onClose);
   if (!open) return null;
   return (
     <aside data-note-theme={noteTheme} className="note-theme-surface ai-ask-panel flex h-full w-96 shrink-0 flex-col border-l border-border bg-bg-secondary">

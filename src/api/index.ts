@@ -12,6 +12,7 @@ export { searchApi } from "./search.api";
 export { updateApi } from "./update.api";
 export { trashApi } from "./trash.api";
 export { openExternal, printPage } from "./app.api";
+export { isTauriRuntime, onAndroidBackButton } from "./back-button.api";
 export { isAppError, messageOf } from "./error";
 export type { AppError, ErrorKind } from "./error";
 export type {

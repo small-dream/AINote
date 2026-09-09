@@ -1,6 +1,7 @@
 import { Hash, Link2, Plus, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "@/i18n";
+import { useBackHandler } from "@/platform/back-navigation";
 import { useWikiIndexQuery } from "@/queries/wiki.queries";
 import { useCreateNoteMutation } from "@/queries/note.queries";
 import type { NoteWikiDto } from "@/api/types";
@@ -28,6 +29,7 @@ export function WikiPanel({ repoPath, path, open, onClose, onOpenNote, draft, ki
   const { t } = useTranslation();
   const { data: notes = [] } = useWikiIndexQuery(repoPath);
   const createNote = useCreateNoteMutation();
+  useBackHandler(open, onClose);
   if (!open || !path) return null;
 
   const note = notes.find((n) => n.path === path);

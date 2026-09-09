@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
 import { useTranslation } from "@/i18n";
+import { useBackHandler } from "@/platform/back-navigation";
 import { useConflictMerge } from "../hooks/useConflictMerge";
 import { splitLines } from "../utils/merge";
 import type { ConflictFile } from "@/api/types";
@@ -14,6 +15,7 @@ interface ConflictMergeDialogProps {
 /** 合并冲突图形化处理（P1-3）：本地 | 合并结果 | 远端 三栏，行级挑选 + 手动编辑 */
 export function ConflictMergeDialog({ repoPath, open, onClose }: ConflictMergeDialogProps) {
   const merge = useConflictMerge(repoPath, open, onClose);
+  useBackHandler(open, onClose);
   if (!open) return null;
 
   return (

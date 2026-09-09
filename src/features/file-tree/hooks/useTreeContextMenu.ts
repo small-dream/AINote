@@ -1,11 +1,13 @@
 import { useEffect, useState, type MouseEvent } from "react";
 import type { TreeNode } from "@/api/types";
+import { useBackHandler } from "@/platform/back-navigation";
 
 export interface TreeContextMenuState { node: TreeNode; x: number; y: number; }
 
 export function useTreeContextMenu() {
   const [menu, setMenu] = useState<TreeContextMenuState | null>(null);
   const [copied, setCopied] = useState(false);
+  useBackHandler(menu !== null, () => setMenu(null));
   useEffect(() => {
     const close = () => setMenu(null);
     const escape = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
