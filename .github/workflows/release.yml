@@ -104,6 +104,71 @@ jobs:
           args: ${{ matrix.args }}
           includeUpdaterJson: false
 
+  publish-android:
+    needs: create-release
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.create-release.outputs.tag }}
+      - uses: pnpm/action-setup@v6
+        with:
+          version: 10.33.0
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: pnpm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+      - run: pnpm install --frozen-lockfile
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: aarch64-linux-android
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+      - name: Validate Android signing secrets
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          for variable in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD; do
+            if [ -z "${!variable:-}" ]; then
+              echo "::error::$variable 未配置，无法生成可安装的 Android Release 包"
+              exit 1
+            fi
+          done
+          key_path="$RUNNER_TEMP/ainote-release.keystore"
+          printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$key_path"
+          echo "ANDROID_KEYSTORE_PATH=$key_path" >> "$GITHUB_ENV"
+      - name: Build Android APK and AAB
+        run: pnpm tauri android build --ci --target aarch64 --apk --aab
+      - name: Upload Android artifacts
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAG: ${{ needs.create-release.outputs.tag }}
+        run: |
+          set -euo pipefail
+          shopt -s globstar nullglob
+          apks=(src-tauri/gen/android/app/build/outputs/apk/**/*.apk)
+          aabs=(src-tauri/gen/android/app/build/outputs/bundle/**/*.aab)
+          for artifact in "${apks[@]}" "${aabs[@]}"; do
+            if [[ "$artifact" == *-unsigned* ]]; then
+              echo "::error::Android 产物未签名: $artifact"
+              exit 1
+            fi
+          done
+          if [ "${#apks[@]}" -ne 1 ] || [ "${#aabs[@]}" -ne 1 ]; then
+            echo "::error::Android 产物数量异常: APK=${#apks[@]}, AAB=${#aabs[@]}"
+            exit 1
+          fi
+          gh release upload "$TAG" "${apks[0]}" "${aabs[0]}" --clobber
+
   publish-updater-manifest:
     needs: [create-release, publish-tauri]
     runs-on: ubuntu-22.04
@@ -162,7 +227,7 @@ jobs:
           gh release upload "$TAG" latest.json --repo "$REPO" --clobber
 
   publish-release:
-    needs: [create-release, publish-tauri, publish-updater-manifest]
+    needs: [create-release, publish-tauri, publish-android, publish-updater-manifest]
     runs-on: ubuntu-22.04
     steps:
       - name: Verify updater latest.json

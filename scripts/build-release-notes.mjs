@@ -32,6 +32,7 @@ const installNotes = [
   "- Windows：下载 `.msi` 或 `.exe` 安装包。",
   "- macOS：Apple Silicon（Apple 芯片）Mac 下载 `.dmg` 安装包。",
   "- Linux：下载 `.AppImage`、`.deb` 或 `.rpm` 安装包。",
+  "- Android：64 位设备下载 `.apk` 安装包；如需上架商店，使用 `.aab`。",
   "- 本版本支持应用内更新；可在 **设置 → 软件更新** 中检查更新。",
   "- macOS 安装包未签名。若浏览器下载后显示“已损坏”，将应用移至“应用程序”目录后执行 `xattr -cr /Applications/AINote.app`。",
   "- Windows 安装包未签名，首次运行时可能出现 SmartScreen 提示；请确认下载来源为本 Release 页面。",

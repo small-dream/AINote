@@ -1,6 +1,6 @@
 # AINote Release 发布步骤与规范
 
-本流程参考 AISwitch 的发布设计：先创建唯一 Draft Release，再由 macOS（仅 Apple Silicon）、Linux、Windows 并行上传安装包和 updater 签名清单，全部成功后才公开 Release。AINote 暂不提供 Intel macOS 安装包。
+本流程参考 AISwitch 的发布设计：先创建唯一 Draft Release，再由 macOS（仅 Apple Silicon）、Linux、Windows、Android 并行上传安装包和 updater 签名清单，全部成功后才公开 Release。AINote 暂不提供 Intel macOS 安装包。
 
 ## 一次性配置
 
@@ -10,14 +10,15 @@
    - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD`
 3. 将生成的 `.pub` 内容写入 `src-tauri/tauri.conf.json` 的 `plugins.updater.pubkey`。公钥可以提交；私钥和密码绝不进入日志、Issue 或 Release。
 4. 确认仓库 Actions 允许 `contents: write`，并启用 GitHub Releases。
+5. 配置 Android 签名 Secret：`ANDROID_KEYSTORE_BASE64`、`ANDROID_KEYSTORE_PASSWORD`、`ANDROID_KEY_ALIAS`、`ANDROID_KEY_PASSWORD`。Keystore 私钥只保存于密码管理器，不提交仓库。
 
 ## 发布步骤
 
 1. 从 `main` 创建发布 PR，更新 `package.json`、`src-tauri/tauri.conf.json`、`src-tauri/Cargo.toml` 三处版本，并更新变更日志。
 2. 本地执行 `pnpm build && pnpm test && pnpm lint && (cd src-tauri && cargo test)`。
 3. 创建并推送 SemVer 标签：`git tag vMAJOR.MINOR.PATCH && git push origin vMAJOR.MINOR.PATCH`。标签必须与三处版本完全一致。
-4. GitHub Actions 自动校验版本，创建/复用同标签 Draft Release，并执行 Apple Silicon macOS、Linux、Windows 构建。不要手动上传未签名或未校验的安装包。
-5. 检查所有矩阵任务成功，确认 Release 包含 `latest.json` 及各平台 `.app.tar.gz`、`.AppImage`、`.deb`、`.msi`/`.exe` 资产；再由 `publish-release` 自动公开 Release。
+4. GitHub Actions 自动校验版本，创建/复用同标签 Draft Release，并执行 Apple Silicon macOS、Linux、Windows 与 Android `arm64-v8a` 构建。不要手动上传未签名或未校验的安装包。
+5. 检查所有矩阵任务成功，确认 Release 包含 `latest.json` 及各平台 `.app.tar.gz`、`.AppImage`、`.deb`、`.msi`/`.exe`、`.apk`、`.aab` 资产；再由 `publish-release` 自动公开 Release。
 6. 在干净环境安装每个平台包，启动 AINote，进入「设置 → 软件更新」，验证能发现新版本、下载、安装并自动重启。
 
 ## macOS 安装提示
@@ -50,3 +51,7 @@ GitHub 提供的 macOS DMG 仅面向 Apple Silicon（Apple 芯片）Mac，且未
 - `pnpm release:check <tag>`：校验标签与三处版本一致。
 - `pnpm build`、`pnpm test`、`pnpm lint`、`cargo test` 全部通过后才允许合并发布 PR。
 - 任何 Secret 泄漏、签名失败、资产缺平台或 updater 清单缺失，均视为发布失败并阻止公开 Release。
+
+## Android 发布包
+
+GitHub Release 提供 Android `arm64-v8a` universal Release APK 和 AAB。APK 可直接安装，AAB 面向 Google Play 上传。当前 GitHub 自动打包只覆盖 64 位 Android；iOS 需要 Apple 签名与分发账号，不通过本流程自动出包。

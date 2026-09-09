@@ -1,5 +1,13 @@
 # 更新日志
 
+## v0.24.7 — 2026-09-09
+
+### 移动端发布
+
+- GitHub Release 新增 Android `arm64-v8a` Release APK 和 AAB，移动端可直接从 Release 页面获取安装包。
+- Android 包使用 CI 签名产物构建，发布流程会阻止未签名包进入 Release。
+- 新增 Android arm64 构建与签名配置，并同步更新发布说明与安装指引。
+
 ## v0.24.6 — 2026-09-06
 
 ### AI 写作

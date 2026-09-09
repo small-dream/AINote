@@ -13,6 +13,11 @@ val tauriProperties = Properties().apply {
     }
 }
 
+val androidKeyStorePath = System.getenv("ANDROID_KEYSTORE_PATH")?.takeIf { it.isNotBlank() }
+val androidKeyStorePassword = System.getenv("ANDROID_KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
+val androidKeyAlias = System.getenv("ANDROID_KEY_ALIAS")?.takeIf { it.isNotBlank() }
+val androidKeyPassword = System.getenv("ANDROID_KEY_PASSWORD")?.takeIf { it.isNotBlank() }
+
 android {
     compileSdk = 36
     namespace = "dev.ainote.app"
@@ -23,6 +28,16 @@ android {
         targetSdk = 36
         versionCode = tauriProperties.getProperty("tauri.android.versionCode", "1").toInt()
         versionName = tauriProperties.getProperty("tauri.android.versionName", "1.0")
+    }
+    signingConfigs {
+        if (androidKeyStorePath != null && androidKeyStorePassword != null && androidKeyAlias != null && androidKeyPassword != null) {
+            create("release") {
+                storeFile = file(androidKeyStorePath)
+                storePassword = androidKeyStorePassword
+                keyAlias = androidKeyAlias
+                keyPassword = androidKeyPassword
+            }
+        }
     }
     buildTypes {
         getByName("debug") {
@@ -43,6 +58,9 @@ android {
                     .plus(getDefaultProguardFile("proguard-android-optimize.txt"))
                     .toList().toTypedArray()
             )
+            if (androidKeyStorePath != null && androidKeyStorePassword != null && androidKeyAlias != null && androidKeyPassword != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
         }
     }
     kotlinOptions {
