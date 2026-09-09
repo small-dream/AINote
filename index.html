@@ -4,9 +4,95 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <title>AINote</title>
+    <script>
+      // 在样式与 React 之前解析主题偏好，避免启动占位与应用主题不一致
+      (function () {
+        var stored = null;
+        try {
+          stored = window.localStorage.getItem("ainote.theme");
+        } catch (error) {
+          stored = null;
+        }
+        var systemDark =
+          typeof window.matchMedia === "function" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches;
+        document.documentElement.dataset.theme =
+          stored === "dark" || (stored === "system" && systemDark) ? "dark" : "light";
+      })();
+    </script>
+    <style>
+      /* 启动占位：WebView 解析 JS 期间避免纯白屏；样式内联，不依赖外部 CSS */
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #ffffff;
+      }
+      html[data-theme="dark"],
+      html[data-theme="dark"] body {
+        background: #0d1117;
+      }
+      #root {
+        height: 100%;
+      }
+      #app-splash {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 18px;
+        background: #ffffff;
+      }
+      html[data-theme="dark"] #app-splash {
+        background: #0d1117;
+      }
+      #app-splash .splash-mark {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 56px;
+        height: 56px;
+        border-radius: 14px;
+        background: #3f6fe5;
+        color: #ffffff;
+        font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Microsoft YaHei", sans-serif;
+        font-size: 26px;
+        font-weight: 600;
+        line-height: 1;
+      }
+      #app-splash .splash-spinner {
+        width: 18px;
+        height: 18px;
+        border: 2px solid rgba(154, 163, 178, 0.35);
+        border-top-color: #3f6fe5;
+        border-radius: 50%;
+        animation: splash-spin 0.8s linear infinite;
+      }
+      html[data-theme="dark"] #app-splash .splash-spinner {
+        border-top-color: #58a6ff;
+      }
+      @keyframes splash-spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
+      @media (prefers-reduced-motion: reduce) {
+        #app-splash .splash-spinner {
+          animation: none;
+        }
+      }
+    </style>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="app-splash" role="status" aria-label="Loading">
+        <div class="splash-mark" aria-hidden="true">A</div>
+        <div class="splash-spinner" aria-hidden="true"></div>
+      </div>
+    </div>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
