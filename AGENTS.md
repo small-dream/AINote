@@ -29,6 +29,7 @@ pnpm desktop:build    # 编译 Release 可执行文件（不打安装包，快�
 pnpm desktop:bundle   # 编译并产出平台安装包
 pnpm android:dev      # 开发模式运行 Android 应用（注入 OpenSSL CA 构建补丁）
 pnpm android:build    # 编译 Android APK/AAB（注入 OpenSSL CA 构建补丁）
+pnpm icons:mobile     # 从桌面端图标几何重新生成 Android/iOS 应用图标（含 gen/ 构建资源）
 pnpm build            # 前端构建（tsc --noEmit + vite build）
 pnpm test             # 前端单测（vitest run）
 pnpm lint             # 静态检查（eslint）
