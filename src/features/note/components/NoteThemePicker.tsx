@@ -1,10 +1,13 @@
 import { Check, Palette } from "lucide-react";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useRef, useState, type CSSProperties, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { useTranslation } from "@/i18n";
 import { useUiStore, type NoteTheme } from "@/stores/ui.store";
 import { IconButton } from "@/components/atoms/IconButton";
-import { useBackHandler } from "@/platform/back-navigation";
+import { useAnchoredLayer } from "@/hooks/useAnchoredLayer";
 import { NOTE_THEME_GROUPS, NOTE_THEME_OPTIONS, type NoteThemeOption } from "../utils/noteThemes";
+
+const THEME_MENU_WIDTH = 208;
 
 /** 编辑器与预览共用的主题选择器，偏好存储在 UI store。 */
 export function NoteThemePicker() {
@@ -13,8 +16,7 @@ export function NoteThemePicker() {
   const setNoteTheme = useUiStore((state) => state.setNoteTheme);
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
-  useCloseOnOutside(rootRef, open, () => setOpen(false));
-  useBackHandler(open, () => setOpen(false));
+  const { menuRef, position } = useAnchoredLayer({ triggerRef: rootRef, open, close: () => setOpen(false), width: THEME_MENU_WIDTH });
 
   return (
     <div ref={rootRef} className="relative">
@@ -26,26 +28,18 @@ export function NoteThemePicker() {
         aria-expanded={open}
         onClick={() => setOpen((value) => !value)}
       />
-      {open ? <ThemeMenu noteTheme={noteTheme} onSelect={(value) => { setNoteTheme(value); setOpen(false); }} /> : null}
+      {open ? createPortal(
+        <ThemeMenu menuRef={menuRef} position={position} noteTheme={noteTheme} onSelect={(value) => { setNoteTheme(value); setOpen(false); }} />,
+        document.body,
+      ) : null}
     </div>
   );
 }
 
-function useCloseOnOutside(ref: RefObject<HTMLDivElement | null>, active: boolean, close: () => void): void {
-  useEffect(() => {
-    if (!active) return;
-    const onPointerDown = (event: PointerEvent) => { if (!ref.current?.contains(event.target as Node)) close(); };
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === "Escape") close(); };
-    document.addEventListener("pointerdown", onPointerDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => { document.removeEventListener("pointerdown", onPointerDown); document.removeEventListener("keydown", onKeyDown); };
-  }, [active, close, ref]);
-}
-
-function ThemeMenu({ noteTheme, onSelect }: { noteTheme: NoteTheme; onSelect: (value: NoteTheme) => void }) {
+function ThemeMenu({ menuRef, position, noteTheme, onSelect }: { menuRef: RefObject<HTMLDivElement | null>; position: CSSProperties; noteTheme: NoteTheme; onSelect: (value: NoteTheme) => void }) {
   const { t } = useTranslation();
   return (
-    <div role="menu" aria-label={t("note.theme")} className="note-theme-menu absolute right-0 top-[calc(100%+0.5rem)] z-50 w-52 rounded-lg border border-border bg-bg-primary p-1.5 shadow-sm">
+    <div ref={menuRef} role="menu" aria-label={t("note.theme")} style={position} className="note-theme-menu fixed z-50 w-52 rounded-lg border border-border bg-bg-primary p-1.5 shadow-sm">
       <p className="px-2 py-1 text-[11px] font-medium text-text-tertiary">{t("note.theme")}</p>
       {NOTE_THEME_GROUPS.map(({ mode, labelKey }) => (
         <div key={mode}>

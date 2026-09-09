@@ -89,14 +89,13 @@
 .mobile-editor-pane .format-toolbar button,
 .mobile-editor-pane .format-toolbar label { width: 36px; height: 36px; }
 .mobile-editor-pane .format-toolbar .relative > button { min-width: 36px; white-space: nowrap; padding: 0 4px; font-size: 11px; }
-.note-theme-menu { right: 0; }
-.mobile-editor-pane .note-theme-menu { left: 0; right: auto; }
 .mobile-editor-pane .note-title-input { max-width: min(60vw, 220px); }
 .mobile-editor-pane .format-toolbar { height: auto; min-height: 48px; padding: 4px 8px; overflow-x: auto; }
 .mobile-editor-pane .format-toolbar button { height: 36px; width: 36px; }
 .mobile-editor-pane .format-toolbar .relative > button { min-height: 36px; }
 .mobile-editor-pane .note-outline-floating { left: auto; right: 12px; }
 .mobile-editor-pane .note-outline-floating-trigger { width: 40px; height: 40px; }
+.mobile-editor-pane .note-outline-floating-panel { left: auto; right: 0; }
 .mobile-editor-pane .note-preview-pane { padding: 16px; }
 
 /* 移动端把核心覆盖层统一成全屏工作面；桌面壳不加载这些规则。 */

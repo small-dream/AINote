@@ -3,7 +3,6 @@ import { useEffect } from "react";
 import { parseRichTextContent } from "../utils/richText";
 import { createRichTextExtensions } from "../utils/extensions";
 import { useRichTextAssets } from "./useRichTextAssets";
-import { useTranslation } from "@/i18n";
 
 interface UseRichTextEditorOptions {
   /** TipTap JSON 字符串（.ainote 文件内容） */
@@ -16,7 +15,6 @@ interface UseRichTextEditorOptions {
 
 /** 富文本编辑器核心逻辑：TipTap 实例、资源插入与 Markdown 互转 */
 export function useRichTextEditor({ content, onChange, repoPath }: UseRichTextEditorOptions) {
-  const { t } = useTranslation();
   const editor = useEditor({
     extensions: createRichTextExtensions(repoPath),
     content: parseRichTextContent(content),
@@ -28,23 +26,7 @@ export function useRichTextEditor({ content, onChange, repoPath }: UseRichTextEd
     if (JSON.stringify(editor.getJSON()) === JSON.stringify(nextContent)) return;
     editor.commands.setContent(nextContent, { emitUpdate: false });
   }, [content, editor]);
-  const { handleFiles, status, showStatus } = useRichTextAssets(editor);
+  const { handleFiles, status } = useRichTextAssets(editor);
 
-  const exportMarkdown = () => {
-    if (!editor) return;
-    const storage = editor.storage as unknown as { markdown: { getMarkdown: () => string } };
-    const markdown = storage.markdown.getMarkdown();
-    void navigator.clipboard.writeText(markdown).then(() => showStatus(t("richtext.markdownCopied")));
-  };
-
-  const importMarkdown = async () => {
-    if (!editor) return;
-    const text = await navigator.clipboard.readText().catch(() => "");
-    if (text.trim()) {
-      editor.commands.setContent(text);
-      showStatus(t("richtext.markdownImported"));
-    }
-  };
-
-  return { editor, handleFiles, status, exportMarkdown, importMarkdown };
+  return { editor, handleFiles, status };
 }

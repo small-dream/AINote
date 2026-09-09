@@ -45,17 +45,4 @@ describe("RichTextToolbar", () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
-  it("把 Markdown 互转与导出折叠进更多菜单", () => {
-    const { editor } = createEditor();
-    const onConvert = vi.fn();
-    const onExport = vi.fn();
-    render(<RichTextToolbar editor={editor} onConvertToMarkdown={onConvert} onExportMarkdown={onExport} onImportMarkdown={vi.fn()} />);
-
-    fireEvent.click(screen.getByTitle("更多"));
-    expect(screen.getAllByRole("menuitem")).toHaveLength(3);
-
-    fireEvent.click(screen.getByRole("menuitem", { name: "转换为 Markdown" }));
-    expect(onConvert).toHaveBeenCalledTimes(1);
-    expect(onExport).not.toHaveBeenCalled();
-  });
 });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { markdownToRichTextJson } from "./markdownConversion";
+import { markdownToRichTextJson, richTextJsonToMarkdown } from "./markdownConversion";
 
 interface JsonNode {
   type?: string;
@@ -29,5 +29,18 @@ describe("markdownToRichTextJson", () => {
   it("空内容仍返回合法 doc", () => {
     const doc = parse("");
     expect(doc.type).toBe("doc");
+  });
+});
+
+describe("richTextJsonToMarkdown", () => {
+  it("把 TipTap JSON 序列化为 Markdown", () => {
+    const markdown = richTextJsonToMarkdown(markdownToRichTextJson("# 标题\n\n正文段落"));
+
+    expect(markdown).toContain("# 标题");
+    expect(markdown).toContain("正文段落");
+  });
+
+  it("非法 JSON 兜底为空文档", () => {
+    expect(richTextJsonToMarkdown("not-json").trim()).toBe("");
   });
 });

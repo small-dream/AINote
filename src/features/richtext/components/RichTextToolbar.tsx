@@ -1,7 +1,7 @@
 import { useTranslation } from "@/i18n";
 import type { ChangeEvent, ReactNode } from "react";
 import type { Editor } from "@tiptap/core";
-import { ArrowLeftRight, ClipboardPaste, Download, Image as ImageIcon, MoreHorizontal, Redo, Trash2, Undo } from "lucide-react";
+import { Image as ImageIcon, Redo, Undo } from "lucide-react";
 import { ToolbarPopover, type ToolbarMenuItem } from "./ToolbarPopover";
 import { BLOCK_COMMANDS, getActiveHeadingCommand, HEADING_COMMANDS, INLINE_COMMANDS, INSERT_COMMANDS, type EditorToolbarCommand } from "../utils/toolbarCommands";
 import { NoteThemePicker } from "@/features/note/components/NoteThemePicker";
@@ -10,18 +10,15 @@ interface RichTextToolbarProps {
   editor: Editor | null;
   onImagePicked?: ((files: File[]) => void) | undefined;
   status?: string | null | undefined;
-  onExportMarkdown?: (() => void) | undefined;
-  onImportMarkdown?: (() => void) | undefined;
-  onConvertToMarkdown?: (() => void) | undefined;
   trailing?: ReactNode | undefined;
 }
 
-export function RichTextToolbar({ editor, onImagePicked, status, onExportMarkdown, onImportMarkdown, onConvertToMarkdown, trailing }: RichTextToolbarProps) {
+export function RichTextToolbar({ editor, onImagePicked, status, trailing }: RichTextToolbarProps) {
   const { t } = useTranslation();
   return (
-    <div className="flex w-full min-h-10 items-center gap-1 border-b border-border bg-bg-secondary px-2 py-1.5">
+    <div className="format-toolbar flex w-full min-h-10 items-center gap-1 overflow-x-auto border-b border-border bg-bg-secondary px-2 py-1.5">
       {editor ? (
-        <div className="flex min-w-0 flex-1 items-center gap-0.5">
+        <div className="flex shrink-0 items-center gap-0.5">
           <HeadingSelector editor={editor} />
           <ToolbarDivider />
           <ToolbarCommandGroup editor={editor} commands={INLINE_COMMANDS} />
@@ -32,7 +29,7 @@ export function RichTextToolbar({ editor, onImagePicked, status, onExportMarkdow
           {onImagePicked ? <ImagePickerButton label={t("richtext.image")} onPicked={onImagePicked} /> : null}
         </div>
       ) : null}
-      <ToolbarHistoryGroup editor={editor} status={status} onExportMarkdown={onExportMarkdown} onImportMarkdown={onImportMarkdown} onConvertToMarkdown={onConvertToMarkdown} trailing={trailing} />
+      <ToolbarHistoryGroup editor={editor} status={status} trailing={trailing} />
     </div>
   );
 }
@@ -58,33 +55,20 @@ function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (file
   );
 }
 
-type ToolbarHistoryGroupProps = Pick<RichTextToolbarProps, "editor" | "status" | "onExportMarkdown" | "onImportMarkdown" | "onConvertToMarkdown" | "trailing">;
+type ToolbarHistoryGroupProps = Pick<RichTextToolbarProps, "editor" | "status" | "trailing">;
 
-function ToolbarHistoryGroup({ editor, status, onExportMarkdown, onImportMarkdown, onConvertToMarkdown, trailing }: ToolbarHistoryGroupProps) {
+function ToolbarHistoryGroup({ editor, status, trailing }: ToolbarHistoryGroupProps) {
   const { t } = useTranslation();
-  const moreItems = getMoreItems({ editor, onExportMarkdown, onImportMarkdown, onConvertToMarkdown }, t);
 
   return (
     <div className="ml-auto flex shrink-0 items-center gap-0.5">
       {status ? <span role="status" className="mr-1 hidden truncate text-xs text-text-secondary lg:block">{status}</span> : null}
-      {moreItems.length > 0 ? (
-        <ToolbarPopover label={t("note.more")} icon={MoreHorizontal} align="right" items={moreItems} />
-      ) : null}
       <ToolbarButton icon={Undo} label={t("richtext.undo")} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} />
       <ToolbarButton icon={Redo} label={t("richtext.redo")} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} />
       <NoteThemePicker />
       {trailing}
     </div>
   );
-}
-
-function getMoreItems({ editor, onExportMarkdown, onImportMarkdown, onConvertToMarkdown }: Pick<ToolbarHistoryGroupProps, "editor" | "onExportMarkdown" | "onImportMarkdown" | "onConvertToMarkdown">, t: ReturnType<typeof useTranslation>["t"]): ToolbarMenuItem[] {
-  const items: ToolbarMenuItem[] = [];
-  if (onConvertToMarkdown) items.push({ key: "convert", label: t("richtext.convertToMarkdown"), icon: ArrowLeftRight, onSelect: onConvertToMarkdown });
-  if (onExportMarkdown) items.push({ key: "export", label: t("richtext.exportMarkdown"), icon: Download, onSelect: onExportMarkdown });
-  if (onImportMarkdown) items.push({ key: "import", label: t("richtext.importMarkdown"), icon: ClipboardPaste, onSelect: () => void onImportMarkdown() });
-  if (editor?.isActive("table")) items.push({ key: "deleteTable", label: t("richtext.deleteTable"), icon: Trash2, onSelect: () => editor.chain().focus().deleteTable().run() });
-  return items;
 }
 
 function HEADING_ITEMS(editor: Editor, t: ReturnType<typeof useTranslation>["t"]): ToolbarMenuItem[] {

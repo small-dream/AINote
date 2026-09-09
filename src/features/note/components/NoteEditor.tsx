@@ -20,6 +20,8 @@ import { usePdfExport } from "@/features/export/hooks/usePdfExport";
 import { useMarkdownDiagnostics } from "@/features/diagnostics/hooks/useMarkdownDiagnostics";
 import type { DiagnosticIssue } from "@/features/diagnostics/utils/diagnostics";
 import { EditorState, isEditorUnavailable, NoteEditorContent, selectOutline, useEditorAi, useHistoryRequest } from "./NoteEditorSupport";
+import { reportToastError, useToastStore } from "@/stores/toast.store";
+import { useTranslation } from "@/i18n";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -37,6 +39,7 @@ interface NoteEditorProps {
 /** 笔记编辑器：按类型路由编辑器，负责状态编排与跨功能接线。 */
 export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
   function NoteEditor({ repoPath, notePath, onMove, onOpenNote, createdPath = null, focusTitleOnLoad = false, historyRequestPath = null, onHistoryRequestHandled }, ref) {
+    const { t } = useTranslation();
     const history = useNoteHistory();
     const [outlineOpen, setOutlineOpen] = useState(false);
     const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
@@ -53,7 +56,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const outline = useMemo(() => extractOutline(draft), [draft]);
     const asset = useAssetImport(readyView);
     const previewRef = useRef<HTMLDivElement | null>(null);
-    const { handleConvertNote, handleConvertToRichText } = useNoteConversion({ notePath, draft, flush, onOpenNote });
+    const { handleConvertToRichText } = useNoteConversion({ notePath, draft, flush, onOpenNote });
     const { ai, suggest, askAiOpen, closeAskAi, insertAnswer } = useEditorAi(viewRef, notePath, draft, onChange);
     useEditorScrollPersistence(readyView, previewRef, mode, { editorScrollTop, previewScrollTop, setEditorScrollTop, setPreviewScrollTop });
     useSyncScroll(readyView, previewRef, mode);
@@ -68,9 +71,15 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
       view.focus();
     };
     const handleOutlineSelect = (item: OutlineItem) => selectOutline(item, mode, viewRef.current ?? readyView, previewRef.current);
+    const exportMarkdown = () => {
+      void import("@/features/richtext/utils/markdownConversion")
+        .then(({ richTextJsonToMarkdown }) => navigator.clipboard.writeText(richTextJsonToMarkdown(draft)))
+        .then(() => useToastStore.getState().push(t("richtext.markdownCopied"), "success"))
+        .catch(reportToastError);
+    };
 
     if (isEditorUnavailable(notePath, loadError)) return <EditorState notePath={notePath} error={loadError?.message ?? null} />;
     const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
-    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} handleConvertNote={handleConvertNote} handleConvertToRichText={handleConvertToRichText} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
+    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} handleConvertToRichText={handleConvertToRichText} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
   },
 );

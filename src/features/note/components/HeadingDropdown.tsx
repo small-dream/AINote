@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useRef, useState, type CSSProperties, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
 import { useTranslation } from "@/i18n";
-import { useBackHandler } from "@/platform/back-navigation";
+import { useAnchoredLayer } from "@/hooks/useAnchoredLayer";
 
 const OPTIONS = [
   { level: 0, labelKey: "note.body" },
@@ -13,18 +14,19 @@ const OPTIONS = [
 type HeadingLevel = (typeof OPTIONS)[number]["level"];
 type Option = (typeof OPTIONS)[number];
 
+const MENU_WIDTH = 96;
+
 interface HeadingDropdownProps {
   active: Set<string>;
   onSelect: (level: HeadingLevel) => void;
 }
 
-/** 标题级别下拉：按钮显示当前行级别，点击外部 / Escape 关闭 */
+/** 标题级别下拉：portal 到 body 定位，避免被工具栏滚动容器裁剪 */
 export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement>(null);
-  useCloseOnOutside(rootRef, open, () => setOpen(false));
-  useBackHandler(open, () => setOpen(false));
+  const { menuRef, position } = useAnchoredLayer<HTMLUListElement>({ triggerRef: rootRef, open, close: () => setOpen(false), width: MENU_WIDTH, align: "start" });
 
   const current = OPTIONS.find((o) => o.level > 0 && active.has(`h${o.level}`)) ?? OPTIONS[0];
   return (
@@ -45,20 +47,23 @@ export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
         {current.labelKey === "H1" ? "H1" : current.labelKey === "H2" ? "H2" : current.labelKey === "H3" ? "H3" : t(current.labelKey)}
         <ChevronDown size={12} />
       </button>
-      {open && (
+      {open ? createPortal(
         <MenuList
           current={current}
+          position={position}
+          menuRef={menuRef}
           onPick={(level) => {
             onSelect(level);
             setOpen(false);
           }}
-        />
-      )}
+        />,
+        document.body,
+      ) : null}
     </div>
   );
 }
 
-function MenuList({ current, onPick }: { current: Option; onPick: (l: HeadingLevel) => void }) {
+function MenuList({ current, position, menuRef, onPick }: { current: Option; position: CSSProperties; menuRef: RefObject<HTMLUListElement | null>; onPick: (l: HeadingLevel) => void }) {
   const { t } = useTranslation();
   const itemClass = (o: Option) =>
     `block w-full px-3 py-1.5 text-left text-xs transition-colors duration-120 ${
@@ -67,7 +72,7 @@ function MenuList({ current, onPick }: { current: Option; onPick: (l: HeadingLev
         : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
     }`;
   return (
-    <ul className="absolute left-0 top-full z-10 mt-1 min-w-20 overflow-hidden rounded-md border border-border bg-bg-primary py-1 shadow-md">
+    <ul ref={menuRef} style={position} className="fixed z-50 min-w-20 rounded-md border border-border bg-bg-primary py-1 shadow-md">
       {OPTIONS.map((o) => (
         <li key={o.level}>
           <button
@@ -82,26 +87,4 @@ function MenuList({ current, onPick }: { current: Option; onPick: (l: HeadingLev
       ))}
     </ul>
   );
-}
-
-function useCloseOnOutside(
-  rootRef: RefObject<HTMLDivElement | null>,
-  open: boolean,
-  close: () => void
-) {
-  useEffect(() => {
-    if (!open) return;
-    const onMouseDown = (e: MouseEvent) => {
-      if (!rootRef.current?.contains(e.target as Node)) close();
-    };
-    const onKeyDown = (e: KeyboardEvent) => {
-      if (e.key === "Escape") close();
-    };
-    document.addEventListener("mousedown", onMouseDown);
-    document.addEventListener("keydown", onKeyDown);
-    return () => {
-      document.removeEventListener("mousedown", onMouseDown);
-      document.removeEventListener("keydown", onKeyDown);
-    };
-  }, [rootRef, open, close]);
 }

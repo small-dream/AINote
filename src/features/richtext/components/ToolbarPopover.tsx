@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState, type CSSProperties, type RefObject } from "react";
+import { createPortal } from "react-dom";
 import { Check, ChevronDown, type LucideIcon } from "lucide-react";
-import { useBackHandler } from "@/platform/back-navigation";
+import { useAnchoredLayer } from "@/hooks/useAnchoredLayer";
 
 export interface ToolbarMenuItem {
   key: string;
@@ -20,32 +21,17 @@ interface ToolbarPopoverProps {
   items: ToolbarMenuItem[];
 }
 
+const MENU_MIN_WIDTH = 192;
+
 const triggerState = (active: boolean) => active
   ? "border-accent/30 bg-accent-soft text-accent"
   : "border-transparent text-text-secondary hover:border-border hover:bg-bg-tertiary hover:text-text-primary";
 
-/** 工具栏折叠菜单：点击外部/Escape 关闭，保留编辑器当前选区 */
+/** 工具栏折叠菜单：portal 到 body 定位，避免被工具栏滚动容器裁剪；保留编辑器当前选区 */
 export function ToolbarPopover({ label, icon: Icon, text, active = false, align = "left", items }: ToolbarPopoverProps) {
   const [open, setOpen] = useState(false);
-
-  useBackHandler(open, () => setOpen(false));
   const containerRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (!open) return;
-    const closeOnOutside = (event: PointerEvent) => {
-      if (!containerRef.current?.contains(event.target as Node)) setOpen(false);
-    };
-    const closeOnEscape = (event: KeyboardEvent) => {
-      if (event.key === "Escape") setOpen(false);
-    };
-    document.addEventListener("pointerdown", closeOnOutside);
-    document.addEventListener("keydown", closeOnEscape);
-    return () => {
-      document.removeEventListener("pointerdown", closeOnOutside);
-      document.removeEventListener("keydown", closeOnEscape);
-    };
-  }, [open]);
+  const { menuRef, position } = useAnchoredLayer({ triggerRef: containerRef, open, close: () => setOpen(false), width: MENU_MIN_WIDTH, align: align === "right" ? "end" : "start" });
 
   return (
     <div ref={containerRef} className="relative shrink-0">
@@ -54,14 +40,14 @@ export function ToolbarPopover({ label, icon: Icon, text, active = false, align 
         {text ? <span>{text}</span> : null}
         <ChevronDown size={13} strokeWidth={2.2} aria-hidden="true" />
       </button>
-      {open ? <ToolbarMenuItems items={items} align={align} label={label} onClose={() => setOpen(false)} /> : null}
+      {open ? createPortal(<ToolbarMenuItems items={items} label={label} position={position} menuRef={menuRef} onClose={() => setOpen(false)} />, document.body) : null}
     </div>
   );
 }
 
-function ToolbarMenuItems({ items, align, label, onClose }: { items: ToolbarMenuItem[]; align: "left" | "right"; label: string; onClose: () => void }) {
+function ToolbarMenuItems({ items, label, position, menuRef, onClose }: { items: ToolbarMenuItem[]; label: string; position: CSSProperties; menuRef: RefObject<HTMLDivElement | null>; onClose: () => void }) {
   return (
-    <div role="menu" aria-label={label} className={`absolute top-[calc(100%+6px)] z-50 min-w-48 rounded-xl border border-border bg-bg-primary p-1 shadow-xl ${align === "right" ? "right-0" : "left-0"}`}>
+    <div ref={menuRef} role="menu" aria-label={label} style={position} className="fixed z-50 min-w-48 rounded-xl border border-border bg-bg-primary p-1 shadow-xl">
       {items.map(({ key, label: itemLabel, icon: ItemIcon, active = false, disabled = false, onSelect }) => (
         <button key={key} type="button" role="menuitem" aria-current={active} className={`flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors ${active ? "bg-accent/10 text-accent" : "text-text-primary hover:bg-bg-tertiary"} disabled:pointer-events-none disabled:opacity-40`} onMouseDown={(event) => event.preventDefault()} disabled={disabled} onClick={() => { onClose(); onSelect(); }}>
           <ItemIcon size={15} strokeWidth={1.9} aria-hidden="true" />

@@ -12,6 +12,8 @@ export default defineConfig({
   server: {
     port: 1420,
     strictPort: true,
+    // 移动端 dev：Tauri 注入 TAURI_DEV_HOST（局域网 IP），需让 Vite 监听该网卡供真机访问。
+    host: process.env.TAURI_DEV_HOST || false,
   },
   build: {
     target: "es2022",

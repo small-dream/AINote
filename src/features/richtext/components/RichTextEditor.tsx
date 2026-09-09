@@ -6,7 +6,6 @@ import { RichTextBubbleMenu } from "./RichTextBubbleMenu";
 import { useRichTextEditor } from "../hooks/useRichTextEditor";
 import { useRichTextOutline } from "../hooks/useRichTextOutline";
 import { useUiStore } from "@/stores/ui.store";
-import { swapNoteExtension } from "@/features/note/utils/noteKind";
 import { NoteOutlineFloating } from "@/features/note/components/NoteOutlineFloating";
 import type { OutlineItem } from "@/features/note/utils/outline";
 import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
@@ -23,20 +22,18 @@ interface RichTextEditorProps {
   repoPath: string | null;
   /** 点击 `[[双链]]` 时回调目标名（与 Markdown 预览一致） */
   onOpenWiki?: (name: string) => void;
-  /** 当前笔记仓库相对路径（用于计算转换目标路径） */
+  /** 当前笔记仓库相对路径（用于提取 AI 续写标题） */
   notePath: string;
-  /** 请求把当前富文本转换为 Markdown；to 为目标路径，content 为已转换的 Markdown */
-  onConvert?: (to: string, content: string) => void;
   /** 是否保持大纲浮层展开 */
   outlineOpen?: boolean;
   onOutlineToggle?: () => void;
 }
 
 /** 真富文本所见即所得编辑器：TipTap 读写 TipTap JSON。
- * 支持图片/表格/任务列表、斜杠命令、双链与标签 mark、Markdown 互转导出。
+ * 支持图片/表格/任务列表、斜杠命令、双链与标签 mark。
  * 通过父组件 key 重挂载以切换笔记；异步加载的 content 会由 hook 同步到编辑器。 */
-export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, onConvert, outlineOpen = false, onOutlineToggle = () => undefined }: RichTextEditorProps) {
-  const { editor, handleFiles, status, exportMarkdown, importMarkdown } = useRichTextEditor({ content, onChange, repoPath });
+export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, outlineOpen = false, onOutlineToggle = () => undefined }: RichTextEditorProps) {
+  const { editor, handleFiles, status } = useRichTextEditor({ content, onChange, repoPath });
   const outline = useRichTextOutline(content);
   const openTagIndex = useUiStore((s) => s.openTagIndex);
   const noteTheme = useUiStore((s) => s.noteTheme);
@@ -48,7 +45,7 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
 
   return (
     <div data-note-theme={noteTheme} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)}>
-      <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} onExportMarkdown={exportMarkdown} onImportMarkdown={importMarkdown} onConvertToMarkdown={() => convertToMarkdown(editor, notePath, onConvert)} trailing={<AiToolbarButton onOpen={ai.openMenu} compact />} />
+      <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} trailing={<AiToolbarButton onOpen={ai.openMenu} compact />} />
       <RichTextBubbleMenu editor={editor} />
       <AiWriteControls ai={ai} />
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
@@ -62,13 +59,6 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
 /** 提取笔记标题（续写上下文）。 */
 function noteTitleOf(notePath: string): string {
   return notePath.split("/").at(-1)?.replace(/\.(ainote|md)$/, "") ?? "";
-}
-
-/** 富文本转 Markdown：写新扩展名文件并删除旧文件由 command 层完成。 */
-function convertToMarkdown(editor: Editor | null, notePath: string, onConvert?: (to: string, content: string) => void): void {
-  if (!editor) return;
-  const storage = editor.storage as unknown as { markdown: { getMarkdown: () => string } };
-  onConvert?.(swapNoteExtension(notePath, "markdown"), storage.markdown.getMarkdown());
 }
 
 /** 点击委托：双链跳转 + 标签索引。 */

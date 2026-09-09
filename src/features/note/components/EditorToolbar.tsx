@@ -23,6 +23,7 @@ interface EditorToolbarProps {
   onWiki: () => void;
   onConvertToRichText?: () => void;
   onExportPdf?: () => void;
+  onExportMarkdown?: (() => void) | undefined;
   onAi?: () => void;
   isNewNote?: boolean;
   draft?: string;
@@ -38,7 +39,7 @@ const MODE_TABS: { key: ViewMode; labelKey: "note.edit" | "note.split" | "note.p
 ];
 
 /** 笔记操作栏：左侧标题锚点，右侧按「高频视图 → 中频工具 → 低频文件操作」分层分组。 */
-export function EditorToolbar({ path, mode, richText = false, saving = false, dirty = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onAi, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, richText = false, saving = false, dirty = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onExportMarkdown, onAi, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -68,6 +69,7 @@ export function EditorToolbar({ path, mode, richText = false, saving = false, di
             hasConvert={Boolean(onConvertToRichText)}
             isPdfAvailable={Boolean(onExportPdf)}
             onExportPdf={onExportPdf}
+            onExportMarkdown={onExportMarkdown}
             onConvert={onConvertToRichText}
             onMove={onMove}
           />
