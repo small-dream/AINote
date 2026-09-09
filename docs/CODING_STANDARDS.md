@@ -100,6 +100,7 @@ AppError { code: "SYNC_4013", kind: Conflict, message: "...", retriable: true }
 
 - PR / 提交说明必须写明 `Desktop Impact`、`Mobile Impact` 与实际验证结果；无法判定平台影响时按 `shared` 处理。
 - 平台专属代码不得从共享组件中直接判断；新增平台差异先更新本规范，再进入 `src/platform/` 或 `src-tauri/src/platform/`。
+- Android release 构建检查统一走 `pnpm android:build`（注入 `OPENSSL_SRC_PERL`，见 `docs/ARCHITECTURE.md` §6）；直接 `pnpm tauri android build` 会被 `src-tauri/build.rs` 拒绝。
 
 ### 5.3 移动端额外义务
 

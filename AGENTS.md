@@ -27,6 +27,8 @@ AINote 是「Git 即数据库」的跨平台 Markdown 笔记软件：笔记 = Gi
 pnpm desktop:run      # 开发模式运行桌面应用（tauri dev）
 pnpm desktop:build    # 编译 Release 可执行文件（不打安装包，快速验证）
 pnpm desktop:bundle   # 编译并产出平台安装包
+pnpm android:dev      # 开发模式运行 Android 应用（注入 OpenSSL CA 构建补丁）
+pnpm android:build    # 编译 Android APK/AAB（注入 OpenSSL CA 构建补丁）
 pnpm build            # 前端构建（tsc --noEmit + vite build）
 pnpm test             # 前端单测（vitest run）
 pnpm lint             # 静态检查（eslint）

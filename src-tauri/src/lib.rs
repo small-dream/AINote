@@ -27,6 +27,16 @@ pub fn run() {
                 _app.handle()
                     .plugin(tauri_plugin_updater::Builder::new().build())?;
             }
+            #[cfg(target_os = "android")]
+            {
+                use tauri::Manager;
+                match _app.path().app_cache_dir() {
+                    Ok(dir) => repositories::ca_bundle::set_bundle_dir(dir),
+                    Err(error) => {
+                        eprintln!("[ainote] 无法解析应用 cache 目录，HTTPS 证书校验将失败: {error}")
+                    }
+                }
+            }
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![

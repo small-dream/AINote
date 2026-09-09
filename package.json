@@ -12,6 +12,8 @@
     "test:e2e": "playwright test",
     "perf:baseline": "cargo test perf_baseline --manifest-path src-tauri/Cargo.toml -- --ignored --nocapture",
     "tauri": "tauri",
+    "android:dev": "node scripts/tauri-android.mjs dev",
+    "android:build": "node scripts/tauri-android.mjs build",
     "desktop:run": "tauri dev",
     "desktop:build": "tauri build --no-bundle",
     "desktop:bundle": "tauri build",

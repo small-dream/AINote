@@ -205,3 +205,11 @@ AINote/
 - **端到端测试**：`e2e/`（Playwright）+ `src/e2e/`（浏览器内 IPC mock：`backend.ts` 命令策略表 + `ipcMock.ts` 安装器）。运行方式：`pnpm test:e2e`（自动启动 Vite dev，浏览器走 `?e2e` 启用 mock，仅 `import.meta.env.DEV` 生效，生产构建不包含）；完整 Tauri WebDriver 运行需 `cargo install tauri-driver` 并在真实 `tauri dev`/打包应用上执行同一批 spec（IPC 边界一致，断言无需改动）。
 - **首屏体积**：KaTeX 从静态导入改为 `math.ts` 内懒加载（`import("katex")` + 样式并行，渲染前先显示源码占位、异步替换）；入口不静态依赖 katex/mermaid/lowlight/TipTap，重依赖均按动态分块加载。Rust/其余依赖与工具链无新增。
 - **wiki 反链与出链增强**：`WikiLinkContext` 增加行号并改为逐行多条（单目标 ≤ 20 防 DTO 膨胀），`wiki_service::extract_link_contexts` 用逐行目标提取 + HashMap 计数；前端 `backlinkContextsOf` 过滤解析到当前笔记的上下文，反链按笔记分组展示多条带行号摘要。出链对未创建目标提供一键创建：`wikiCreatePath`（纯函数，清理保留字与非法段）→ `create_note`（内容 `# 目标名`，标题即目标，创建后 wiki 索引失效重取即变为可跳转）。笔记创建/更新 mutation 增加 `["wiki"]` 索引失效，保证双链即时解析。
+
+## 6. Android HTTPS 信任链（平台专属）
+
+- **问题根因**：`openssl-src` 在 Android 上固定给 OpenSSL `Configure` 传 `no-stdio`，`BIO_new_file` 退化为空实现，libgit2 无法读取任何文件型信任库；同时 Android 系统 CA 目录使用 OpenSSL 1.0 的旧式 subject hash，与 OpenSSL 1.1+ 的目录查找不兼容。两者叠加会导致所有 HTTPS 证书校验失败。
+- **实现**：`repositories/ca_bundle.rs` 在首个网络操作前把 `/apex/com.android.conscrypt/cacerts`（Android 14+）或 `/system/etc/security/cacerts` 下的 PEM 证书合并为去重后的单个 bundle（并附带 `sectigo_e46.pem` 兜底根），写入应用 cache 目录后通过 `git2::opts::set_ssl_cert_file` 交给 libgit2。证书链校验保持开启，不再对 `github.com` 放行。
+- **构建要求**：Android 构建必须走 `pnpm android:dev` / `pnpm android:build`（`scripts/tauri-android.mjs` 注入 `OPENSSL_SRC_PERL=scripts/openssl-src-perl-wrapper.sh`，该包装脚本剥掉 `no-stdio`）。直接调用 `pnpm tauri android build` 会被 `src-tauri/build.rs` 拒绝，避免构建出无法校验 HTTPS 的包。
+- **工具链版本**：Gradle 8.14.3 / AGP 8.11.0 / Kotlin 1.9.25（Tauri 2.11.5 官方支持矩阵），要求 JDK 17–21。Tauri CLI 在 `JAVA_HOME` 为空时会强制使用 Android Studio 自带的 JBR（可能已是 25），因此包装脚本会自动挑选本机 JDK 17–21 后再调用 Tauri。AGP 9 + Kotlin 2.4 曾验证可编译，但 AGP 内置 lint 的 Kotlin 分析 API 会崩溃（`findFirCompiledSymbol`），待 Tauri 上游适配后再升级。
+- **边界**：仅使用系统信任锚，不默认信任用户安装的 CA（与 Android `targetSdk ≥ 24` 默认行为一致）；后续如需企业代理，走 Android network security config 或 JNI `AndroidCAStore` 显式接入。

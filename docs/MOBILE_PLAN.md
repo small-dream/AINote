@@ -234,7 +234,7 @@ trait SecureStore {
 
 | 风险 | 应对 |
 |---|---|
-| libgit2/OpenSSL 交叉编译失败 | 阶段 0 先做 release 构建；必要时调整 TLS feature |
+| libgit2/OpenSSL 交叉编译失败 | 阶段 0 先做 release 构建；Android 统一走 `pnpm android:build` 注入 `OPENSSL_SRC_PERL` 剥离 `no-stdio`，见 `docs/ARCHITECTURE.md` §6 |
 | iOS 后台执行受限 | 首版仅承诺前台恢复同步，本地保存优先 |
 | 移动 WebView 输入行为差异 | 模拟器 + 真机覆盖输入法、选区和滚动 |
 | 大仓库内存或磁盘压力 | 仓库大小提示、分阶段索引、可取消操作 |

@@ -152,7 +152,7 @@ jobs:
           RANLIB: ${{ env.ANDROID_TOOLCHAIN_BIN }}/llvm-ranlib
           RANLIB_aarch64_linux_android: ${{ env.ANDROID_TOOLCHAIN_BIN }}/llvm-ranlib
           AARCH64_LINUX_ANDROID_RANLIB: ${{ env.ANDROID_TOOLCHAIN_BIN }}/llvm-ranlib
-        run: pnpm tauri android build --ci --target aarch64 --apk --aab
+        run: pnpm android:build --ci --target aarch64 --apk --aab
       - name: Sign and verify Android artifacts
         env:
           TAG: ${{ needs.create-release.outputs.tag }}

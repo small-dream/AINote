@@ -7,6 +7,8 @@
 - GitHub Release 新增 Android `arm64-v8a` Release APK 和 AAB，移动端可直接从 Release 页面获取安装包。
 - Android 包使用 CI 签名产物构建，发布流程会阻止未签名包进入 Release。
 - 新增 Android arm64 构建与签名配置，并同步更新发布说明与安装指引。
+- 修复 Android 端 Git HTTPS 证书校验被整体放行的问题：改为合并系统 CA bundle 交给 libgit2，恢复完整信任链校验。
+- 修复 Android 构建入口：自动选择 JDK 17–21，避免 Tauri CLI 默认使用 Android Studio JBR 25 导致 Gradle 8 / Kotlin 1.9 配置阶段失败。
 
 ## v0.24.6 — 2026-09-06
 
