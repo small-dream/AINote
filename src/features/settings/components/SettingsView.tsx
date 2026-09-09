@@ -64,7 +64,7 @@ function SettingsHeader({ onClose }: { onClose: () => void }) {
         <ArrowLeft size={16} />
         {t("settings.back")}
       </button>
-      <h1 id="settings-title" className="min-w-0 truncate text-base font-semibold text-text-primary">{t("settings.title")}</h1>
+      <h1 id="settings-title" className="min-w-0 truncate text-sm font-semibold text-text-primary">{t("settings.title")}</h1>
       <button
         type="button"
         onClick={onClose}

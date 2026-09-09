@@ -28,5 +28,5 @@
   .settings-close-button { display: none; }
   .settings-main { min-height: 0; }
   .settings-content { padding: 18px 16px calc(28px + env(safe-area-inset-bottom)); }
-  .settings-view h1 { min-height: 44px; }
+  .settings-view h1 { display: flex; min-height: 44px; align-items: center; }
 }
