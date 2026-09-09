@@ -1,5 +1,5 @@
 import type { Extension } from "@codemirror/state";
-import { lazy, Suspense, type RefObject } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, type RefObject } from "react";
 import type { EditorView } from "@codemirror/view";
 import type { NoteWikiDto } from "@/api/types";
 import CodeMirror from "@uiw/react-codemirror";
@@ -12,6 +12,10 @@ import type { OutlineItem } from "../utils/outline";
 import type { NoteTheme } from "@/stores/ui.store";
 
 const LazyMarkdownPreview = lazy(() => import("./MarkdownPreview").then(({ MarkdownPreview }) => ({ default: MarkdownPreview })));
+
+/** CodeMirror 基础扩展配置：模块级常量，避免每次渲染生成新对象导致 @uiw/react-codemirror 重建全部扩展。 */
+const SOURCE_BASIC_SETUP = { syntaxHighlighting: true, lineNumbers: true, highlightActiveLine: true, highlightActiveLineGutter: true, foldGutter: false };
+const SOFT_RENDER_BASIC_SETUP = { syntaxHighlighting: false, lineNumbers: false, highlightActiveLine: false, highlightActiveLineGutter: false, foldGutter: false };
 
 export interface MarkdownEditorSurfaceProps {
   mode: ViewMode;
@@ -73,7 +77,8 @@ interface EditorBodyProps {
 }
 
 function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, softRender }: EditorBodyProps) {
-  const editor = <EditorShell softRender={softRender}><CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" basicSetup={{ syntaxHighlighting: !softRender, lineNumbers: !softRender, highlightActiveLine: !softRender, highlightActiveLineGutter: !softRender, foldGutter: false }} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} /></EditorShell>;
+  const stableOnChange = useStableCallback(onChange);
+  const editor = <EditorShell softRender={softRender}><CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" basicSetup={softRender ? SOFT_RENDER_BASIC_SETUP : SOURCE_BASIC_SETUP} onChange={stableOnChange} extensions={extensions} onCreateEditor={onCreateEditor} /></EditorShell>;
   const outlineFloat = <NoteOutlineFloating items={outline} open={outlineOpen} onToggle={onOutlineToggle} onSelect={onOutlineSelect} />;
   if (mode === "split") {
     return (
@@ -118,4 +123,13 @@ function PreviewLoading() {
 
 function EditorShell({ softRender, children }: { softRender: boolean; children: React.ReactNode }) {
   return <div className={softRender ? "cm-soft-render-shell h-full" : "h-full"}>{children}</div>;
+}
+
+/** 稳定回调引用：onChange 引用变化会触发 CodeMirror 重建全部扩展，进而打断鼠标选择。 */
+function useStableCallback(callback: (value: string) => void): (value: string) => void {
+  const ref = useRef(callback);
+  useEffect(() => {
+    ref.current = callback;
+  });
+  return useCallback((value: string) => ref.current(value), []);
 }

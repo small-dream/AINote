@@ -85,10 +85,20 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     formatKeymap,
     ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki, t("note.copyCode"), t("note.copied")) : [syntaxHighlighting(getAinoteHighlightStyle())]),
     EditorView.updateListener.of((update) => {
-      if (update.selectionSet || update.docChanged) setActiveFormats(getActiveFormats(update.state));
+      if (!update.selectionSet && !update.docChanged) return;
+      // 只有激活格式真正变化才更新：否则每次移动光标/拖选都会触发重渲染，
+      // 进而让 @uiw/react-codemirror 重建扩展，打断进行中的鼠标选择。
+      const next = getActiveFormats(update.state);
+      setActiveFormats((prev) => (sameFormats(prev, next) ? prev : next));
     }),
   ], [noteTheme, notes, repoPath, onOpenWiki, softRenderEnabled, t]);
   return { extensions, activeFormats };
+}
+
+function sameFormats(a: Set<string>, b: Set<string>): boolean {
+  if (a.size !== b.size) return false;
+  for (const value of a) if (!b.has(value)) return false;
+  return true;
 }
 
 function softRenderExtension(repoPath: string | null, onOpenWiki: ((name: string) => void) | undefined, copyCodeLabel: string, copiedLabel: string): Extension[] {

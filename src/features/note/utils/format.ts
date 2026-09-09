@@ -98,9 +98,11 @@ const NODE_TO_FORMAT: Record<string, string> = {
 
 /** 光标处的激活格式集合：bold/italic/strikethrough/code/quote/bulletList/orderedList/task/h1-h3 */
 export function getActiveFormats(state: EditorState): Set<string> {
-  const tree = ensureSyntaxTree(state, state.doc.length, 50) ?? syntaxTree(state);
+  // 只解析到光标位置：按 doc.length 解析整篇文档会让长笔记里每次移动光标/拖选都卡顿。
+  const head = state.selection.main.head;
+  const tree = ensureSyntaxTree(state, head, 50) ?? syntaxTree(state);
   const active = new Set<string>();
-  let node: SyntaxNode | null = tree.resolveInner(state.selection.main.head, 0);
+  let node: SyntaxNode | null = tree.resolveInner(head, 0);
   while (node) {
     const format = NODE_TO_FORMAT[node.name];
     if (format) active.add(format);

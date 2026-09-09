@@ -94,4 +94,22 @@ test.describe("AINote 桌面核心流程", () => {
     await editorScroller.evaluate((el) => { el.scrollTop = el.scrollHeight; });
     await expect.poll(async () => previewPane.evaluate((el) => el.scrollTop), { timeout: 5_000 }).toBeGreaterThan(0);
   });
+
+  test("分栏选择：拖选编辑区文本后保留选区", async ({ page }) => {
+    await openWorkspace(page, baseState([{ path: "select.md", content: "# 选择测试\n\n这是一段用于验证拖选的文本内容。\n" }]));
+    await openNote(page, "select", "选择测试");
+    await page.getByRole("tab", { name: "分栏" }).click();
+    const content = page.locator(".cm-content").first();
+    await expect(content).toContainText("这是一段用于验证拖选的文本内容", { timeout: 15_000 });
+    const line = page.locator(".cm-line").filter({ hasText: "这是一段用于验证拖选的文本内容" }).first();
+    const box = await line.boundingBox();
+    if (!box) throw new Error("编辑器未渲染");
+    const y = box.y + box.height / 2;
+    await page.mouse.move(box.x + 4, y);
+    await page.mouse.down();
+    await page.mouse.move(box.x + Math.min(box.width - 4, 200), y, { steps: 20 });
+    await page.mouse.up();
+    await expect(page.locator(".cm-selectionBackground").first()).toBeAttached();
+    expect(await page.evaluate(() => window.getSelection()?.toString() ?? "")).toContain("这是一段");
+  });
 });
