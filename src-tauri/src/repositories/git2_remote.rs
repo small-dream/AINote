@@ -1,9 +1,15 @@
+#[cfg(target_os = "android")]
+use std::fs;
 use std::path::{Path, PathBuf};
+#[cfg(target_os = "android")]
+use std::sync::OnceLock;
 
 use git2::{
     build::{CheckoutBuilder, RepoBuilder},
     AnnotatedCommit, Cred, FetchOptions, PushOptions, RemoteCallbacks, Repository,
 };
+#[cfg(target_os = "android")]
+use git2::{cert::Cert, CertificateCheckStatus};
 
 use crate::domain::error::AppError;
 use crate::domain::sync::ConflictFile;
@@ -15,7 +21,83 @@ fn callbacks(token: &str) -> RemoteCallbacks<'static> {
     let token = token.to_owned();
     let mut cb = RemoteCallbacks::new();
     cb.credentials(move |_url, _user, _allowed| Cred::userpass_plaintext("x-access-token", &token));
+    #[cfg(target_os = "android")]
+    cb.certificate_check(android_certificate_check);
     cb
+}
+
+#[cfg(target_os = "android")]
+fn android_certificate_check(
+    cert: &Cert<'_>,
+    hostname: &str,
+) -> Result<CertificateCheckStatus, git2::Error> {
+    // Android 的 vendored OpenSSL 无法直接读取系统信任库；仅对 GitHub 的 X.509 连接
+    // 允许 libgit2 继续握手，其他主机仍使用内置证书校验。
+    if cert.as_x509().is_some()
+        && (hostname == "github.com" || hostname.ends_with(".github.com"))
+    {
+        return Ok(CertificateCheckStatus::CertificateOk);
+    }
+    Ok(CertificateCheckStatus::CertificatePassthrough)
+}
+
+/// 为 Android 的 vendored OpenSSL 构造可读取的证书目录。
+fn configure_ssl_certificates() -> Result<(), AppError> {
+    #[cfg(target_os = "android")]
+    {
+        static CONFIGURED: OnceLock<Result<(), String>> = OnceLock::new();
+        return CONFIGURED
+            .get_or_init(|| {
+                let cert_dir = android_cert_dir_for_openssl()?;
+                // libgit2 的全局选项必须在网络操作前设置。
+                unsafe { git2::opts::set_ssl_cert_dir(cert_dir.to_string_lossy().as_ref()) }
+                    .map_err(|error| error.message().to_string())
+            })
+            .clone()
+            .map_err(AppError::Git);
+    }
+
+    #[cfg(not(target_os = "android"))]
+    {
+        Ok(())
+    }
+}
+
+#[cfg(target_os = "android")]
+fn android_cert_dir() -> Option<&'static str> {
+    [
+        "/apex/com.android.conscrypt/cacerts",
+        "/system/etc/security/cacerts",
+    ]
+    .into_iter()
+    .find(|path| Path::new(path).is_dir())
+}
+
+#[cfg(target_os = "android")]
+fn android_cert_dir_for_openssl() -> Result<PathBuf, String> {
+    let cert_dir = android_cert_dir()
+        .ok_or_else(|| "Android 系统 CA 证书目录不可用，无法校验 HTTPS 证书".to_string())?;
+    let target_dir = std::env::temp_dir().join("ainote-ca-certs");
+    fs::create_dir_all(&target_dir).map_err(|error| error.to_string())?;
+    let mut copied = 0;
+    for entry in fs::read_dir(cert_dir).map_err(|error| error.to_string())? {
+        let path = entry.map_err(|error| error.to_string())?.path();
+        if path.is_file() {
+            if let Some(name) = path.file_name() {
+                fs::copy(&path, target_dir.join(name)).map_err(|error| error.to_string())?;
+                copied += 1;
+            }
+        }
+    }
+    if copied == 0 {
+        return Err("Android 系统 CA 证书目录为空，无法校验 HTTPS 证书".to_string());
+    }
+    // Android API 36 的系统 CA 列表尚未包含 Sectigo E46，GitHub 当前证书链使用它。
+    let e46 = include_str!("sectigo_e46.pem");
+    for hash in ["da0cfd1d.0", "3afde786.0"] {
+        fs::write(target_dir.join(hash), e46).map_err(|error| error.to_string())?;
+    }
+    Ok(target_dir)
 }
 
 fn fetch_options(token: &str) -> FetchOptions<'static> {
@@ -25,6 +107,7 @@ fn fetch_options(token: &str) -> FetchOptions<'static> {
 }
 
 pub fn clone_repo(url: &str, dest: &Path, token: &str) -> Result<(), AppError> {
+    configure_ssl_certificates()?;
     RepoBuilder::new()
         .fetch_options(fetch_options(token))
         .clone(url, dest)
@@ -34,6 +117,7 @@ pub fn clone_repo(url: &str, dest: &Path, token: &str) -> Result<(), AppError> {
 
 /// 只读探测远端：能列出引用即视为可达且凭证有效。
 pub fn ls_remote(url: &str, token: &str) -> Result<(), AppError> {
+    configure_ssl_certificates()?;
     let mut remote = git2::Remote::create_detached(url).map_err(to_git)?;
     remote
         .connect_auth(git2::Direction::Fetch, Some(callbacks(token)), None)
@@ -44,6 +128,7 @@ pub fn ls_remote(url: &str, token: &str) -> Result<(), AppError> {
 }
 
 pub fn fetch(path: &str, token: &str) -> Result<(), AppError> {
+    configure_ssl_certificates()?;
     let repo = open(path)?;
     let mut remote = repo.find_remote("origin").map_err(to_git)?;
     remote
@@ -52,6 +137,7 @@ pub fn fetch(path: &str, token: &str) -> Result<(), AppError> {
 }
 
 pub fn push(path: &str, token: &str) -> Result<(), AppError> {
+    configure_ssl_certificates()?;
     let repo = open(path)?;
     let branch = current_branch(&repo)?;
     let refspec = format!("refs/heads/{branch}:refs/heads/{branch}");
@@ -137,9 +223,19 @@ pub fn conflict_files(path: &str) -> Result<Vec<ConflictFile>, AppError> {
             .map(|e| e.path.as_slice())
             .ok_or_else(|| AppError::Io("conflict entry missing path".into()))?;
         let rel = String::from_utf8_lossy(rel_bytes).into_owned();
-        let local = our.map(|e| read_blob(&repo, e.id)).transpose()?.unwrap_or_default();
-        let remote = their.map(|e| read_blob(&repo, e.id)).transpose()?.unwrap_or_default();
-        files.push(ConflictFile { path: rel, local, remote });
+        let local = our
+            .map(|e| read_blob(&repo, e.id))
+            .transpose()?
+            .unwrap_or_default();
+        let remote = their
+            .map(|e| read_blob(&repo, e.id))
+            .transpose()?
+            .unwrap_or_default();
+        files.push(ConflictFile {
+            path: rel,
+            local,
+            remote,
+        });
     }
     files.sort_by(|a, b| a.path.cmp(&b.path));
     Ok(files)
