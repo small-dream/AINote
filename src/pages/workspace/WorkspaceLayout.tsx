@@ -73,9 +73,9 @@ function MobileContent({ repoPath, currentNotePath, editorRef, actions, onSelect
 
 function LayoutDialogs({ repoPath, actions, onMoved }: { repoPath: string | null; actions: WorkspaceActions; onMoved: (path: string) => void }) {
   return <>
-    <NewFolderDialog key={actions.folderDialog.open ? actions.folderDialog.dir : "closed"} open={actions.folderDialog.open} dir={actions.folderDialog.dir} existingDirs={actions.existingDirs} onClose={actions.closeFolder} onCreate={actions.handleCreateFolder} />
-    <MoveNoteDialog key={actions.moveTarget ?? "none"} repoPath={repoPath} path={actions.moveTarget} onClose={() => actions.setMoveTarget(null)} onMoved={onMoved} />
-    <RenameNoteDialog key={actions.renameTarget ?? "none"} path={actions.renameTarget} onClose={() => actions.setRenameTarget(null)} onRenamed={onMoved} />
+    <NewFolderDialog key={`new-folder:${actions.folderDialog.open ? actions.folderDialog.dir : "closed"}`} open={actions.folderDialog.open} dir={actions.folderDialog.dir} existingDirs={actions.existingDirs} onClose={actions.closeFolder} onCreate={actions.handleCreateFolder} />
+    <MoveNoteDialog key={`move:${actions.moveTarget ?? "none"}`} repoPath={repoPath} path={actions.moveTarget} onClose={() => actions.setMoveTarget(null)} onMoved={onMoved} />
+    <RenameNoteDialog key={`rename:${actions.renameTarget ?? "none"}`} path={actions.renameTarget} onClose={() => actions.setRenameTarget(null)} onRenamed={onMoved} />
   </>;
 }
 
