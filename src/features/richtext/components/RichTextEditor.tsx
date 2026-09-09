@@ -37,7 +37,7 @@ interface RichTextEditorProps {
  * 通过父组件 key 重挂载以切换笔记；异步加载的 content 会由 hook 同步到编辑器。 */
 export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, onConvert, outlineOpen = false, onOutlineToggle = () => undefined }: RichTextEditorProps) {
   const { editor, handleFiles, status, exportMarkdown, importMarkdown } = useRichTextEditor({ content, onChange, repoPath });
-  const outline = useRichTextOutline(editor);
+  const outline = useRichTextOutline(content);
   const openTagIndex = useUiStore((s) => s.openTagIndex);
   const noteTheme = useUiStore((s) => s.noteTheme);
   const ai = useAiWrite({
