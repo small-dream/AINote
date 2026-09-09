@@ -79,8 +79,8 @@
 .mobile-editor-pane .workspace-toolbar { min-height: 52px; padding: 6px 12px; }
 .mobile-editor-pane .workspace-toolbar { flex-wrap: wrap; gap: 4px; padding: 4px 8px; }
 .mobile-editor-pane .workspace-toolbar > div:first-child { width: 100%; }
-.mobile-editor-pane .workspace-toolbar > div:last-child { width: 100%; justify-content: flex-start; overflow-x: auto; }
-.mobile-editor-pane .workspace-toolbar > div:last-child > div { gap: 2px; }
+.mobile-editor-pane .workspace-toolbar > div:last-child { width: 100%; justify-content: flex-start; overflow: visible; }
+.mobile-editor-pane .workspace-toolbar > div:last-child > div { flex-wrap: wrap; gap: 2px; }
 .mobile-editor-pane .workspace-toolbar [role="tablist"] button { width: 36px; justify-content: center; padding: 0; }
 .mobile-editor-pane .workspace-toolbar [role="tablist"] .mode-tab-label { display: none; }
 .mobile-editor-pane .workspace-toolbar .inline-flex { width: 36px; height: 36px; }
@@ -90,6 +90,7 @@
 .mobile-editor-pane .format-toolbar label { width: 36px; height: 36px; }
 .mobile-editor-pane .format-toolbar .relative > button { min-width: 36px; white-space: nowrap; padding: 0 4px; font-size: 11px; }
 .note-theme-menu { right: 0; }
+.mobile-editor-pane .note-theme-menu { left: 0; right: auto; }
 .mobile-editor-pane .note-title-input { max-width: min(60vw, 220px); }
 .mobile-editor-pane .format-toolbar { height: auto; min-height: 48px; padding: 4px 8px; overflow-x: auto; }
 .mobile-editor-pane .format-toolbar button { height: 36px; width: 36px; }
