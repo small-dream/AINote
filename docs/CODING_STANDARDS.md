@@ -82,7 +82,26 @@ AppError { code: "SYNC_4013", kind: Conflict, message: "...", retriable: true }
 - **AI 强制测试义务**：实现核心业务逻辑（Service 用例、纯函数 utils、数据转换）时必须同时交付对应单元测试；UI 组件只要求关键交互集成测试，不追求快照覆盖。
 - **测试金字塔**：纯函数单测（多）→ Hook/Service 逻辑测试（中）→ 页面级冒烟（少）。
 
-### 5.1 移动端额外义务
+### 5.1 跨端保护策略（强制）
+
+- 改动前必须先判定影响面：`desktop`（桌面壳或桌面专属能力）、`mobile`（移动壳或移动专属能力）、`shared`（共享 Hook、组件、Store、Query、API、Rust Command/Service）。无法判定时一律按 `shared` 处理。
+- 桌面壳只保留在 `src/pages/workspace/`；移动壳固定在 `src/features/mobile-shell/`。两个壳不得互相 import。桌面专属交互（三栏、hover、右键、窗口菜单、打印、updater）不得泄漏到移动路径；移动专属交互（底部导航、系统返回、safe-area、软键盘、无 hover）不得破坏桌面布局。
+- 共享 Hook、Query、Store、API、业务组件和 Rust Command 默认必须同时兼容桌面与移动。若确需平台分支，先收敛为 `src/platform/` 或 `src-tauri/src/platform/` 的接口；组件、Hook 和 Command 业务层不得散落 User-Agent / OS 判断。
+- 共享 UI 不得只按窄屏断点调整桌面样式；移动适配必须保持触控目标、无 hover 依赖、软键盘、safe-area 和返回行为。桌面适配不得依赖移动专属手势或视口假设。
+
+### 5.2 验证门禁（按影响面强制）
+
+| 影响面 | 最低验证 |
+|---|---|
+| `desktop` | `pnpm build && pnpm test && pnpm lint`；若改动 Rust，另跑 `cargo test` 和桌面冒烟 |
+| `mobile` | `pnpm build && pnpm test && pnpm lint && pnpm test:e2e`；移动 UI/原生能力需 Android release 构建检查；涉及 Rust 时跑 `cargo test` 和 Android 交叉编译检查 |
+| `shared` | `pnpm build && pnpm test && pnpm lint`；移动 UI 加 `pnpm test:e2e`；桌面冒烟 + Android release 构建检查；涉及 Rust 另跑 `cargo test` |
+| iOS 相关 | 在上一行基础上增加 iOS release/Archive 可行性检查；无法执行时必须在变更说明中记录原因和补验任务 |
+
+- PR / 提交说明必须写明 `Desktop Impact`、`Mobile Impact` 与实际验证结果；无法判定平台影响时按 `shared` 处理。
+- 平台专属代码不得从共享组件中直接判断；新增平台差异先更新本规范，再进入 `src/platform/` 或 `src-tauri/src/platform/`。
+
+### 5.3 移动端额外义务
 
 - 移动端业务必须复用现有 `api/`、Query、Store 和 Rust Service；禁止复制一套平台专用业务实现。
 - 平台差异只能进入 `src/platform/` 或 `src-tauri/src/platform/`，组件不得直接判断 User-Agent 或操作原生 API。

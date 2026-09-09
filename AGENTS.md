@@ -59,6 +59,14 @@ View → Hooks/Queries → api/ → IPC → commands → services → repositori
 - 服务端/Git 状态 → TanStack Query（唯一权威来源，禁止 `useState` 镜像）
 - 全局 UI 态 → Zustand；局部态 → `useState`；编辑器瞬态 → CodeMirror 内部态
 
+### 跨端保护铁律（桌面 / 移动）
+
+- 任何改动先声明影响面：`desktop` / `mobile` / `shared`；无法判断时按 `shared` 处理。
+- 桌面壳在 `src/pages/workspace/`，移动壳在 `src/features/mobile-shell/`；两个壳不得互相 import，也不得把桌面三栏/hover 交互或移动单栏/safe-area 行为泄漏给对方。
+- 共享 Hook、API、Query、Store 和业务组件必须平台中立；平台差异只能收敛到 `src/platform/` 或 `src-tauri/src/platform/`。
+- 触碰共享代码、编辑器、Rust Command 或平台能力时，桌面端与移动端至少各验证一次；提交说明/PR 描述必须写明 `Desktop Impact` 与 `Mobile Impact`。
+- 验证门禁详见 `docs/CODING_STANDARDS.md` §5.2；缺一端证据不得认为跨端改动完成。
+
 ### 错误处理
 
 - Rust Command 一律返回 `Result<T, AppErrorDto>`；原始 `git2::Error`/IO 错误在 Repository 边界转换，**不泄漏到前端**。

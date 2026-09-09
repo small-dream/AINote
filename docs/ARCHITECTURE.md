@@ -95,6 +95,8 @@ View → Hooks/Queries → api/ → IPC → commands → services → repositori
 
 - 禁止反向依赖；`domain/` 不依赖任何其他层。
 - 前端 `components/`（通用组件）不得依赖 `features/`。
+- 桌面壳与移动壳单向组装共享业务：桌面入口只在 `pages/workspace/`，移动壳固定在 `features/mobile-shell/`；禁止桌面壳 import 移动壳，反之亦然。共享领域组件和 Hook 不感知平台，平台差异必须收敛到 `src/platform/` 或 `src-tauri/src/platform/`。
+- 改动归属必须显式判定为 `desktop`、`mobile` 或 `shared`；判定不了时按 `shared` 处理。共享改动必须保留桌面交互，并通过桌面与移动验证门禁。
 - ESLint `no-restricted-imports` 机器强制上述边界。
 
 ## 4. 目录结构
@@ -131,7 +133,8 @@ AINote/
 │   │   ├── export/              # 导出 PDF：打印预览 overlay + TipTap JSON → HTML
 │   │   ├── auth/                 # 登录（Token 校验/保存）
 │   │   ├── repo/                 # 绑定/创建仓库
-│   │   └── settings/             # 设置页（左分类导航 + 右内容区，取代设置弹窗）
+│   │   ├── settings/             # 设置页（左分类导航 + 右内容区，取代设置弹窗）
+│   │   └── mobile-shell/          # 移动端壳：单栏导航、编辑器路由栈、触控样式
 │   ├── components/               # 业务无关组件
 │   │   ├── atoms/
 │   │   └── molecules/
