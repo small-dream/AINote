@@ -129,6 +129,18 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+      - name: Configure Android NDK toolchain
+        run: |
+          set -euo pipefail
+          ndk_root=$(find "$ANDROID_HOME/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          toolchain_bin="$ndk_root/toolchains/llvm/prebuilt/linux-x86_64/bin"
+          if [ ! -x "$toolchain_bin/llvm-ranlib" ]; then
+            echo "::error::未找到 Android NDK llvm-ranlib: $toolchain_bin/llvm-ranlib"
+            exit 1
+          fi
+          echo "ANDROID_NDK_HOME=$ndk_root" >> "$GITHUB_ENV"
+          echo "NDK_HOME=$ndk_root" >> "$GITHUB_ENV"
+          echo "ANDROID_TOOLCHAIN_BIN=$toolchain_bin" >> "$GITHUB_ENV"
       - name: Validate Android signing secrets
         env:
           ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
@@ -147,6 +159,10 @@ jobs:
           printf '%s' "$ANDROID_KEYSTORE_BASE64" | base64 --decode > "$key_path"
           echo "ANDROID_KEYSTORE_PATH=$key_path" >> "$GITHUB_ENV"
       - name: Build Android APK and AAB
+        env:
+          RANLIB: ${{ env.ANDROID_TOOLCHAIN_BIN }}/llvm-ranlib
+          RANLIB_aarch64_linux_android: ${{ env.ANDROID_TOOLCHAIN_BIN }}/llvm-ranlib
+          AARCH64_LINUX_ANDROID_RANLIB: ${{ env.ANDROID_TOOLCHAIN_BIN }}/llvm-ranlib
         run: pnpm tauri android build --ci --target aarch64 --apk --aab
       - name: Upload Android artifacts
         env:
