@@ -1,5 +1,13 @@
+import { Channel } from "@tauri-apps/api/core";
 import { call } from "./client";
-import type { IntegrityReport, RepoInfo, RepoPathDto, RepoSizeDto } from "./types";
+import type {
+  BackupExportDto,
+  BackupProgress,
+  IntegrityReport,
+  RepoInfo,
+  RepoPathDto,
+  RepoSizeDto,
+} from "./types";
 
 /** 仓库管理相关 IPC（P0-1 / 设置-多仓库管理） */
 export const repoApi = {
@@ -16,6 +24,14 @@ export const repoApi = {
   size: () => call<RepoSizeDto>("get_repo_size"),
   /** 只读检查当前活动仓库的完整性 */
   integrity: () => call<IntegrityReport>("check_repo_integrity"),
+  /** 导出整库备份；用户取消保存或中途取消时返回 null */
+  exportBackup: (excludeAssets: boolean, onProgress: (progress: BackupProgress) => void) => {
+    const channel = new Channel<BackupProgress>();
+    channel.onmessage = onProgress;
+    return call<BackupExportDto | null>("export_repo_backup", { excludeAssets, onEvent: channel });
+  },
+  /** 请求取消进行中的备份 */
+  cancelBackup: () => call<null>("cancel_repo_backup"),
   /** 列出全部已绑定笔记仓库 */
   list: () => call<RepoInfo[]>("list_repos"),
   /** 重命名仓库展示名 */

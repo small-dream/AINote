@@ -22,6 +22,7 @@ pub fn run() {
                 .service("dev.ainote.app.credentials")
                 .build(),
         )
+        .manage(commands::repo::backup::BackupState::default())
         .setup(|_app| {
             apply_logging_preference(_app.handle());
             log::info!(target: "ainote::startup", "AINote {} 启动", env!("CARGO_PKG_VERSION"));
@@ -79,6 +80,8 @@ pub fn run() {
             commands::git::restore::git_restore_file,
             commands::repo::bind::bind_repo,
             commands::repo::create::create_repo,
+            commands::repo::backup::export_repo_backup,
+            commands::repo::backup::cancel_repo_backup,
             commands::repo::integrity::check_repo_integrity,
             commands::repo::list::list_repos,
             commands::repo::rename::rename_repo,

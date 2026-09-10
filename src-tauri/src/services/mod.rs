@@ -3,6 +3,7 @@ pub mod ai_service;
 pub mod ai_store;
 pub mod auth_service;
 pub mod auth_store;
+pub(crate) mod backup_service;
 pub(crate) mod diagnostics_service;
 pub mod github_api;
 pub mod history_service;

@@ -1,4 +1,5 @@
 pub mod bind;
+pub mod backup;
 pub mod create;
 pub mod integrity;
 pub mod list;

@@ -1,4 +1,5 @@
 pub mod asset_files;
+pub(crate) mod backup_files;
 pub(crate) mod ca_bundle;
 pub(crate) mod diagnostics_files;
 pub mod favorite_files;

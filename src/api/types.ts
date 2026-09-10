@@ -240,3 +240,21 @@ export interface IntegrityReport {
   ok: boolean;
   issues: IntegrityIssue[];
 }
+
+/** 备份阶段：扫描文件列表 / 写入压缩包 */
+export type BackupPhase = "scanning" | "writing";
+
+/** 备份进度事件（经 Tauri Channel 下发） */
+export interface BackupProgress {
+  phase: BackupPhase;
+  processed: number;
+  total: number;
+}
+
+/** 整库备份导出结果 */
+export interface BackupExportDto {
+  path: string;
+  bytes: number;
+  fileCount: number;
+  totalBytes: number;
+}

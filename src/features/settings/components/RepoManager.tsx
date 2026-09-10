@@ -9,6 +9,7 @@ import { RemoveRepoDialog } from "./RemoveRepoDialog";
 import { RenameRepoDialog } from "./RenameRepoDialog";
 import { RepoSizeCard } from "./RepoSizeCard";
 import { RepoIntegrityCard } from "./RepoIntegrityCard";
+import { RepoBackupCard } from "./RepoBackupCard";
 import { useTranslation } from "@/i18n";
 
 /** 设置页仓库管理内容区：列表 + 添加/设为当前/重命名/移除（标题由设置视图统一提供） */
@@ -22,6 +23,7 @@ export function RepoManager() {
       <RepoToolbar count={repos.length} onAdd={() => setAddOpen(true)} />
       {activePath && <RepoSizeCard key={activePath} />}
       {activePath && <RepoIntegrityCard key={`${activePath}-integrity`} />}
+      {activePath && <RepoBackupCard key={`${activePath}-backup`} />}
       <ul className="space-y-2">
         {repos.length === 0 ? (
           <EmptyRepos />

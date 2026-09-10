@@ -1,6 +1,7 @@
 pub mod ai;
 pub mod ai_settings;
 pub mod asset;
+pub mod backup;
 pub mod dto;
 pub mod diagnostics;
 pub mod error;
