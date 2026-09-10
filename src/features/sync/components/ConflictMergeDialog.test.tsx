@@ -8,6 +8,7 @@ const syncApiMock = vi.hoisted(() => ({
   resolveFile: vi.fn(),
   push: vi.fn(),
   resolveConflict: vi.fn(),
+  exportConflicts: vi.fn(),
   status: vi.fn(),
   commit: vi.fn(),
   pull: vi.fn(),
@@ -64,5 +65,30 @@ describe("ConflictMergeDialog", () => {
       </QueryClientProvider>
     );
     expect(container.firstChild).toBeNull();
+  });
+
+  it("提供「导出冲突文件」兜底并回显保存位置", async () => {
+    syncApiMock.conflicts.mockResolvedValue([FILE]);
+    syncApiMock.exportConflicts.mockResolvedValue({
+      path: "/tmp/ainote-conflicts.zip",
+      bytes: 128,
+      files: ["local/daily/a.md", "remote/daily/a.md"],
+    });
+    renderDialog();
+
+    const button = await screen.findByRole("button", { name: "导出冲突文件" });
+    fireEvent.click(button);
+    await waitFor(() => expect(syncApiMock.exportConflicts).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole("button", { name: "已导出冲突文件" })).toBeTruthy();
+    expect(screen.getByTitle("/tmp/ainote-conflicts.zip")).toBeTruthy();
+  });
+
+  it("导出失败时提示重试", async () => {
+    syncApiMock.conflicts.mockResolvedValue([FILE]);
+    syncApiMock.exportConflicts.mockRejectedValue(new Error("disk full"));
+    renderDialog();
+
+    fireEvent.click(await screen.findByRole("button", { name: "导出冲突文件" }));
+    expect(await screen.findByRole("button", { name: "导出失败，请重试" })).toBeTruthy();
   });
 });

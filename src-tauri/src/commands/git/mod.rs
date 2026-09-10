@@ -1,5 +1,6 @@
 pub mod commit;
 pub mod conflicts;
+pub mod conflicts_export;
 pub mod diff;
 pub mod history;
 pub mod pull;

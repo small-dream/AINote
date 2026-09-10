@@ -94,7 +94,7 @@
 | M1-E3-T2 | 数据安全 | 整库备份 / 导出 | shared | — | M | ✅ |
 | M1-E3-T3 | 数据安全 | 从备份恢复 | shared | T2 | M | ✅ |
 | M1-E3-T4 | 数据安全 | 故障恢复演练与自动化 | shared | T1–T3 | M | ✅ |
-| M1-E3-T5 | 数据安全 | 可恢复 UI 收口 | shared | T1–T3 | M | 📋 |
+| M1-E3-T5 | 数据安全 | 可恢复 UI 收口 | shared | T1–T3 | M | ✅ |
 | M1-E4-T1 | 同步可靠性 | 同步错误分类与可读提示 | shared | — | M | 📋 |
 | M1-E4-T2 | 同步可靠性 | 幂等操作重试策略 | shared | T1 | M | 📋 |
 | M1-E4-T3 | 同步可靠性 | 大仓库性能基准 | shared | — | M | ✅ |
@@ -330,6 +330,13 @@
 - **验收标准**：三类失败均有明确下一步动作；不出现只有错误码、无操作建议的界面。
 - **测试义务**：RTL 覆盖三类失败态；移动端人工验证。
 - **跨端影响**：`Desktop Impact`：有；`Mobile Impact`：有。
+- **实现备注（2026-09-10）**：
+  - 同步失败：新增纯函数 `deriveSyncFailure`（`src/features/sync/utils/status.ts`）把错误码映射为「阶段 + 原因 + 建议动作 + 是否可重试」，`SYNC_4004 → 推送`、`SYNC_4002/4003 → 拉取·推送`、本地 `GIT_* / IO_* / NOTE_* → 本地提交`；新增 `SyncFailureBanner` / `SyncFailureNotice`（`shared`，桌面与移动共用），凭证失效时主按钮为「重新登录」并直达设置页账户分区，其余为「重试同步」；横幅恒带「导出诊断包」入口。桌面把同步编排上提到 `WorkspaceLayout` 的 `DesktopContent`，导航轨与横幅共享同一实例（否则失败态只留在按钮实例里不可见），失败时导航按钮转为危险色并显示「同步失败」。启动同步失败仍由全局错误中心（toast，含本地化建议）承担，阶段化收敛留给 M1-E4-T4。
+  - 保存失败：`useNoteSaveQueue` 的 `AppError` 一路传到 `EditorToolbar`（新增 `saveErrorCode`），错误行改为「原因 + 建议 + 重试保存」两行，建议由纯函数 `saveFailureHintKey` 给出（IO 类指向磁盘与权限，其余指向重试与诊断包）；dirty 不回滚、不替换编辑区内容（既有行为，回归用例在 `useNoteSaveQueue.test.tsx` 与 `EditorToolbar.test.tsx`）。
+  - 删除：确认框补「恢复入口：侧边栏「回收站」」与内联「打开回收站」按钮，点击后直接切到回收站面板（桌面侧边栏 / 移动标签页共用同一 `sidebarTab`）。
+  - 冲突：三栏合并头部新增「导出冲突文件」兜底，新增 Rust 命令 `export_conflicts`（`services/conflict_export_service.rs` 构建条目 + 复用 zip 写入），包内为 `local/<路径>` 与 `remote/<路径>` 两侧内容，拒绝绝对路径与 `..`。
+  - 清理：删除长期未被引用的 `src/features/sync/components/SyncBar.tsx`（桌面同步状态早已由 `WorkspaceNavRail` 承担），避免两套同步状态界面分叉。
+  - 验证：单测新增 `status.test.ts`（阶段推断 / 建议映射）、`SyncFailureNotice.test.tsx`、`EditorToolbar.test.tsx`（保存失败）、`DeleteConfirmDialog.test.tsx`、`ConflictMergeDialog.test.tsx`（导出兜底）、`saveFailure.test.ts`、`MobileWorkspaceShell.test.tsx`（移动壳失败横幅）、Rust `conflict_export_service` 4 项；新增 `e2e/recoverable-ui.spec.ts` 4 条真实前端流程（同步失败 / 冲突导出 / 删除恢复入口 / 窄屏移动壳）。**移动端人工验证未完成**：当前环境无 Android 设备或模拟器（`adb devices` 为空），已完成的是窄屏移动单栏壳的真实前端 e2e 与移动壳 RTL；真机验证步骤见 `docs/INCIDENT_RECOVERY.md`，建议发布前在 Android 设备上复查一遍同步失败横幅与回收站入口。
 
 ---
 
@@ -455,7 +462,7 @@
 
 ### Wave 4 — 收口与发布（第 5–6 周）
 
-- [ ] M1-E3-T5 可恢复 UI 收口。
+- [x] M1-E3-T5 可恢复 UI 收口。
 - [ ] M1-E1-T6 分发与排查文档定稿。
 - [ ] 全量门禁 + 三平台安装验证（未签名平台按文档放行）+ 故障演练 + 发布 v0.25。
 
@@ -539,7 +546,7 @@
 | M1-E3-T2 整库备份 | ✅ | | repo/ 前缀 + manifest.sha256；Channel 进度 + 可取消 |
 | M1-E3-T3 从备份恢复 | ✅ | | 校验 sha256 + 防穿越/符号链接 + 完整性检查 + 原子落盘 |
 | M1-E3-T4 故障恢复演练 | ✅ | | INCIDENT_RECOVERY.md + 3 条自动化演练 + RELEASE 清单 |
-| M1-E3-T5 可恢复 UI | 📋 | | |
+| M1-E3-T5 可恢复 UI | ✅ | | 同步失败横幅（阶段/原因/重试/诊断包）+ 保存失败建议 + 删除恢复入口 + 冲突导出；新增 export_conflicts |
 | M1-E4-T1 同步错误分类 | ✅ | | SYNC_4002/4003/4004 + 前端 i18n 可操作提示 |
 | M1-E4-T2 幂等重试 | 📋 | | |
 | M1-E4-T3 性能基准 | ✅ | | 7 项 Rust + 5000 行软渲染；docs/PERF_BASELINE.md |
@@ -554,6 +561,7 @@
 
 | 日期 | 变更 | 作者 |
 |---|---|---|
+| 2026-09-10 | v1.9：M1-E3-T5 交付（可恢复 UI 收口：同步失败横幅 + 保存失败建议 + 删除恢复入口 + 冲突导出兜底；新增 `export_conflicts` 与 4 条真实前端 e2e） | PM |
 | 2026-09-10 | v1.8：M1-E3-T4 交付（故障恢复手册 + 3 条自动化演练 + 发布前演练清单） | PM |
 | 2026-09-10 | v1.7：M1-E3-T3 交付（从备份恢复：校验 + 安全解压 + 完整性检查 + 注册仓库） | PM |
 | 2026-09-10 | v1.6：M1-E3-T2 交付（整库备份导出：zip + manifest.sha256 + 进度/取消） | PM |

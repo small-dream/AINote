@@ -1,7 +1,7 @@
 import { lazy, Suspense, useState } from "react";
 import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
-import { useSync } from "@/features/sync/hooks/useSync";
-import { deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
+import type { SyncController } from "@/features/sync/hooks/useSync";
+import { deriveSyncFailure, deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 
@@ -10,6 +10,7 @@ const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/Co
 interface WorkspaceNavRailProps {
   repoPath: string | null;
   startupSyncing: boolean;
+  sync: SyncController;
 }
 
 const NAV_ITEMS = [
@@ -26,12 +27,12 @@ const NAV_BUTTON_CLASS = "group relative grid h-10 w-10 shrink-0 place-items-cen
 const NAV_TOOLTIP_CLASS = "pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-bg-primary px-2 py-1 text-xs text-text-primary opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100";
 
 /** 独立于 App Shell 主体的功能导航轨道。 */
-export function WorkspaceNavRail({ repoPath, startupSyncing }: WorkspaceNavRailProps) {
+export function WorkspaceNavRail({ repoPath, startupSyncing, sync }: WorkspaceNavRailProps) {
   const { t } = useTranslation();
   return (
     <nav className="workspace-nav-rail flex w-[72px] shrink-0 flex-col items-center border-r border-border bg-bg-tertiary px-2 pb-3" aria-label={t("app.workspaceNavigation")}>
       <div data-tauri-drag-region className="h-11 w-full shrink-0" aria-hidden="true" />
-      <SyncNavButton repoPath={repoPath} startupSyncing={startupSyncing} />
+      <SyncNavButton repoPath={repoPath} startupSyncing={startupSyncing} sync={sync} />
       <NavigationItems />
       <SettingsNavButton />
     </nav>
@@ -63,26 +64,30 @@ function SettingsNavButton() {
   );
 }
 
-function SyncNavButton({ repoPath, startupSyncing }: WorkspaceNavRailProps) {
+function SyncNavButton({ repoPath, startupSyncing, sync }: WorkspaceNavRailProps) {
   const { locale, t } = useTranslation();
-  const { online, syncNow, isSyncing, status, resolving } = useSync(repoPath);
+  const { online, syncNow, isSyncing, status, resolving } = sync;
   const [conflictOpen, setConflictOpen] = useState(false);
   const display = deriveSyncHeader(status, online, resolveSyncOperation(startupSyncing, isSyncing, resolving), locale);
+  const failure = deriveSyncFailure(syncNow.error, locale);
   const hasConflict = display.tone === "conflict";
-  const Icon = SYNC_ICON[display.tone];
+  const tone = failure && !hasConflict ? "conflict" : display.tone;
+  const Icon = SYNC_ICON[tone];
+  const label = hasConflict ? t("sync.resolveConflict") : (failure?.title ?? display.buttonLabel);
+  const tip = failure ? `${failure.title} · ${t("sync.failedStage", { stage: failure.stage })}` : display.text;
 
   return (
     <>
       <button
         type="button"
-        aria-label={hasConflict ? t("sync.resolveConflict") : display.buttonLabel}
-        title={display.text}
+        aria-label={label}
+        title={tip}
         onClick={() => (hasConflict ? setConflictOpen(true) : syncNow.mutate())}
         disabled={display.busy || (!online && !hasConflict)}
-        className={`group relative mb-4 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${SYNC_COLOR[display.tone]}`}
+        className={`group relative mb-4 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${SYNC_COLOR[tone]}`}
       >
         <Icon size={19} className={display.busy ? "animate-spin" : ""} />
-        <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{display.text}</span>
+        <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{tip}</span>
       </button>
       {conflictOpen ? <Suspense fallback={null}><LazyConflictMergeDialog repoPath={repoPath} open onClose={() => setConflictOpen(false)} /></Suspense> : null}
     </>

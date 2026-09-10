@@ -6,6 +6,8 @@ import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { WorkspaceNavRail } from "./WorkspaceNavRail";
 import type { WorkspaceActions } from "./useWorkspaceActions";
 import { WorkspaceColumns } from "./WorkspaceColumns";
+import { useSync } from "@/features/sync/hooks/useSync";
+import { SyncFailureNotice } from "@/features/sync/components/SyncFailureNotice";
 import { CommandPalette } from "@/features/search/components/CommandPalette";
 import { useUiStore } from "@/stores/ui.store";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
@@ -35,34 +37,53 @@ export function WorkspaceLayout({ repoPath, startupSyncing, currentNotePath, edi
   const isMobile = useIsMobileViewport();
   return (
     <div className={`workspace-shell flex h-dvh min-h-0 overflow-hidden bg-bg-tertiary ${noteThemeScope === "workspace" ? "workspace-theme-linked" : ""}`} data-note-theme={noteThemeScope === "workspace" ? noteTheme : undefined}>
-      {isMobile ? <MobileContent repoPath={repoPath} currentNotePath={currentNotePath} editorRef={editorRef} actions={actions} onSelect={onSelect} historyRequestPath={historyRequestPath} setHistoryRequestPath={setHistoryRequestPath} /> : <>
-        <WorkspaceNavRail repoPath={repoPath} startupSyncing={startupSyncing} />
-        <main className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary">
-          <WorkspaceColumns
-            repoPath={repoPath}
-            currentNotePath={currentNotePath}
-            createdPath={actions.createdPath}
-            editorRef={editorRef}
-            onSelect={onSelect}
-            onRequestHistory={(path) => { setHistoryRequestPath(path); onSelect(path); }}
-            historyRequestPath={historyRequestPath}
-            onHistoryRequestHandled={() => setHistoryRequestPath(null)}
-            onRequestNew={actions.requestNew}
-            onRequestFolder={actions.requestNewFolder}
-            onRequestImport={actions.importFiles}
-            onRequestImportNotes={actions.importNotes}
-            onSetMove={actions.setMoveTarget}
-            onSetRename={actions.setRenameTarget}
-          />
-        </main>
-      </>}
+      {isMobile ? <MobileContent repoPath={repoPath} currentNotePath={currentNotePath} editorRef={editorRef} actions={actions} onSelect={onSelect} historyRequestPath={historyRequestPath} setHistoryRequestPath={setHistoryRequestPath} /> : <DesktopContent repoPath={repoPath} startupSyncing={startupSyncing} currentNotePath={currentNotePath} editorRef={editorRef} actions={actions} onSelect={onSelect} historyRequestPath={historyRequestPath} setHistoryRequestPath={setHistoryRequestPath} />}
       <LayoutDialogs repoPath={repoPath} actions={actions} onMoved={onMoved} />
       <WorkspaceOverlays repoPath={repoPath} actions={actions} editorRef={editorRef} onOpenNote={onSelect} />
     </div>
   );
 }
 
-function MobileContent({ repoPath, currentNotePath, editorRef, actions, onSelect, historyRequestPath, setHistoryRequestPath }: { repoPath: string | null; currentNotePath: string | null; editorRef: RefObject<NoteEditorHandle | null>; actions: WorkspaceActions; onSelect: (path: string) => void; historyRequestPath: string | null; setHistoryRequestPath: (path: string | null) => void }) {
+type ContentProps = {
+  repoPath: string | null;
+  currentNotePath: string | null;
+  editorRef: RefObject<NoteEditorHandle | null>;
+  actions: WorkspaceActions;
+  onSelect: (path: string) => void;
+  historyRequestPath: string | null;
+  setHistoryRequestPath: (path: string | null) => void;
+};
+
+/** 桌面三栏：同步编排在此持有单一实例，导航轨与失败横幅共享同一份失败态。 */
+function DesktopContent({ repoPath, startupSyncing, currentNotePath, editorRef, actions, onSelect, historyRequestPath, setHistoryRequestPath }: ContentProps & { startupSyncing: boolean }) {
+  const sync = useSync(repoPath);
+  return <>
+    <WorkspaceNavRail repoPath={repoPath} startupSyncing={startupSyncing} sync={sync} />
+    <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-bg-primary">
+      <SyncFailureNotice sync={sync} />
+      <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
+        <WorkspaceColumns
+          repoPath={repoPath}
+          currentNotePath={currentNotePath}
+          createdPath={actions.createdPath}
+          editorRef={editorRef}
+          onSelect={onSelect}
+          onRequestHistory={(path) => { setHistoryRequestPath(path); onSelect(path); }}
+          historyRequestPath={historyRequestPath}
+          onHistoryRequestHandled={() => setHistoryRequestPath(null)}
+          onRequestNew={actions.requestNew}
+          onRequestFolder={actions.requestNewFolder}
+          onRequestImport={actions.importFiles}
+          onRequestImportNotes={actions.importNotes}
+          onSetMove={actions.setMoveTarget}
+          onSetRename={actions.setRenameTarget}
+        />
+      </div>
+    </main>
+  </>;
+}
+
+function MobileContent({ repoPath, currentNotePath, editorRef, actions, onSelect, historyRequestPath, setHistoryRequestPath }: ContentProps) {
   const [selectionEpoch, setSelectionEpoch] = useState(0);
   const openNote = useSessionStore((s) => s.openNote);
   const openMobileEditor = () => setSelectionEpoch((epoch) => epoch + 1);

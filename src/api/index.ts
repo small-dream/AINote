@@ -32,6 +32,7 @@ export type {
   BackupPhase,
   BackupProgress,
   CommitInfo,
+  ConflictExportDto,
   DiagnosticsExportDto,
   DiffLine,
   DiffLineKind,

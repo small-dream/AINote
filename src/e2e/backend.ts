@@ -90,7 +90,7 @@ function needNote(map: MockStore["notes"], path: string) {
 const commandHandlers: Record<string, CommandHandler> = {
   auth_status: (_args, ctx) => ({ hasToken: true, repoPath: ctx.state.repoPath }),
   sync_status: (_args, ctx) => syncStatus(ctx.store),
-  sync_now: (_args, ctx) => syncStatus(ctx.store),
+  sync_now: (_args, ctx) => (ctx.state.syncFailure ? Promise.reject(ctx.state.syncFailure) : syncStatus(ctx.store)),
   git_pull: (_args, ctx) => syncStatus(ctx.store),
   git_push: (_args, ctx) => syncStatus(ctx.store),
   git_commit: () => "e2e-commit",
@@ -124,6 +124,7 @@ const commandHandlers: Record<string, CommandHandler> = {
     return paths.map((path) => Object.keys(assets).some((key) => path.endsWith(`/${key}`)));
   },
   list_conflicts: (_args, ctx) => (ctx.store.conflicted ? ctx.store.conflicts : []),
+  export_conflicts: () => ({ path: "/tmp/ainote-conflicts.zip", bytes: 64, files: ["local/a.md", "remote/a.md"] }),
   resolve_conflict: (args, ctx) => {
     const useLocal = args.useLocal === true;
     for (const conflict of ctx.store.conflicts) {

@@ -27,6 +27,8 @@ export interface E2eState {
   versions?: Record<string, E2eVersionSeed[]>;
   conflicted?: boolean;
   conflicts?: E2eConflictSeed[];
+  /** 注入一次同步失败（用于验证失败态 UI 与恢复入口） */
+  syncFailure?: { code: string; kind: string; message: string; retriable: boolean };
 }
 
 export interface E2eRecord {

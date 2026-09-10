@@ -5,6 +5,7 @@ import { useBackHandler } from "@/platform/back-navigation";
 import { useConflictMerge } from "../hooks/useConflictMerge";
 import { splitLines } from "../utils/merge";
 import type { ConflictFile } from "@/api/types";
+import { ExportConflictsButton } from "./ExportConflictsButton";
 
 interface ConflictMergeDialogProps {
   repoPath: string | null;
@@ -65,6 +66,7 @@ function MergeHeader({ conflicts, current, onSelect, keepAll, onClose }: MergeHe
         ))}
       </div>
       <div className="flex shrink-0 items-center gap-1.5">
+        <ExportConflictsButton />
         <Button variant="ghost" className="px-2 text-xs" onClick={() => keepAll(true)}>{t("sync.keepLocalAll")}</Button>
         <Button variant="ghost" className="px-2 text-xs" onClick={() => keepAll(false)}>{t("sync.keepRemoteAll")}</Button>
       </div>

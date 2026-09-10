@@ -66,6 +66,28 @@ describe("EditorToolbar", () => {
   });
 });
 
+describe("EditorToolbar / 保存失败", () => {
+  it("展示失败原因、可操作建议与内联重试，并保留未保存状态", () => {
+    const onSave = vi.fn();
+    renderToolbar({ dirty: true, saveError: "笔记保存失败", saveErrorCode: "IO_5001", onSave });
+    expect(screen.getByText("笔记保存失败")).toBeTruthy();
+    expect(screen.getByText("写入本地文件失败，请检查磁盘空间与目录权限后重试")).toBeTruthy();
+    expect(screen.getByText("有未保存修改")).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "重试保存" }));
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("未知错误码仍给出重试与诊断包建议", () => {
+    renderToolbar({ saveError: "未知故障", saveErrorCode: "NOTE_1001" });
+    expect(screen.getByText("请重试；若持续失败，请在「设置 → 诊断与反馈」导出诊断包")).toBeTruthy();
+  });
+
+  it("没有保存失败时不渲染错误区", () => {
+    renderToolbar();
+    expect(screen.queryByRole("button", { name: "重试保存" })).toBeNull();
+  });
+});
+
 describe("EditorToolbar / 更多菜单", () => {
   it("低频文件操作收进「更多」菜单", () => {
     renderToolbar();

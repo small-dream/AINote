@@ -98,3 +98,22 @@ describe("MobileWorkspaceShell", () => {
     await waitFor(() => expect(screen.getByText("mobile-conflict-dialog")).toBeTruthy());
   });
 });
+
+describe("MobileWorkspaceShell / 同步失败", () => {
+  it("移动端同步失败时展示阶段、原因与重试入口", () => {
+    useSyncMock.mockReturnValue({
+      online: true,
+      status: { conflicted: false, hasUncommitted: false },
+      label: { text: "已同步", tone: "synced" },
+      syncNow: {
+        mutate: vi.fn(),
+        error: { code: "SYNC_4002", kind: "network", message: "连接超时", retriable: true },
+      },
+      isSyncing: false,
+    });
+    renderShell();
+    expect(screen.getByRole("alert").textContent).toContain("同步失败 · 拉取 / 推送阶段");
+    expect(screen.getByText("连接超时")).toBeTruthy();
+    expect(screen.getByRole("button", { name: "重试同步" })).toBeTruthy();
+  });
+});

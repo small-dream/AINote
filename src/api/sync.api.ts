@@ -1,5 +1,5 @@
 import { call } from "./client";
-import type { ConflictFile, SyncStatus } from "./types";
+import type { ConflictExportDto, ConflictFile, SyncStatus } from "./types";
 
 /** 同步相关 IPC（P0-4 / P0-5 / P0-6） */
 export const syncApi = {
@@ -19,4 +19,6 @@ export const syncApi = {
   /** 以指定内容解决单个冲突文件；全部解决后完成 merge commit（P1-3） */
   resolveFile: (path: string, content: string) =>
     call<SyncStatus>("resolve_file_conflict", { path, content }),
+  /** 导出冲突文件两侧内容兜底；用户取消保存时返回 null（E3-T5） */
+  exportConflicts: () => call<ConflictExportDto | null>("export_conflicts"),
 };

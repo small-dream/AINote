@@ -217,6 +217,13 @@ export interface DiagnosticsExportDto {
   files: string[];
 }
 
+/** export_conflicts 返回：冲突兜底导出的 zip 位置与条目 */
+export interface ConflictExportDto {
+  path: string;
+  bytes: number;
+  files: string[];
+}
+
 /** support_info 返回：设置页诊断信息 */
 export interface SupportInfoDto {
   logDir: string;

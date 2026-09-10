@@ -45,3 +45,6 @@ export function useSync(repoPath: string | null) {
     committing,
   };
 }
+
+/** 同步编排结果：供桌面 / 移动外壳共享同一实例，避免失败态丢失。 */
+export type SyncController = ReturnType<typeof useSync>;

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { SyncStatus } from "@/api/types";
-import { deriveSyncLabel } from "./status";
+import { deriveSyncFailure, deriveSyncLabel, syncStageOf } from "./status";
 
 function status(partial: Partial<SyncStatus>): SyncStatus {
   return { ahead: 0, behind: 0, hasUncommitted: false, conflicted: false, ...partial };
@@ -30,5 +30,78 @@ describe("deriveSyncLabel", () => {
 
   it("已同步", () => {
     expect(deriveSyncLabel(status({}), true)).toEqual({ text: "已同步", tone: "synced" });
+  });
+});
+
+const appError = (code: string, message: string, retriable = true) => ({
+  code,
+  kind: "network" as const,
+  message,
+  retriable,
+});
+
+describe("syncStageOf", () => {
+  it("远端拒绝只可能发生在推送阶段", () => {
+    expect(syncStageOf("SYNC_4004")).toBe("push");
+  });
+
+  it("网络与凭证错误落在网络阶段", () => {
+    expect(syncStageOf("SYNC_4002")).toBe("remote");
+    expect(syncStageOf("SYNC_4003")).toBe("remote");
+    expect(syncStageOf("AUTH_2001")).toBe("remote");
+  });
+
+  it("本地错误落在提交阶段", () => {
+    expect(syncStageOf("GIT_4001")).toBe("commit");
+    expect(syncStageOf("IO_5001")).toBe("commit");
+    expect(syncStageOf("NOTE_1001")).toBe("commit");
+  });
+
+  it("未知错误码回落到通用同步阶段", () => {
+    expect(syncStageOf("")).toBe("sync");
+    expect(syncStageOf("REPO_3001")).toBe("sync");
+  });
+});
+
+describe("deriveSyncFailure", () => {
+  it("无错误时不产生失败态", () => {
+    expect(deriveSyncFailure(null)).toBeNull();
+    expect(deriveSyncFailure(undefined)).toBeNull();
+  });
+
+  it("网络失败：阶段 + 原因 + 可重试建议", () => {
+    expect(deriveSyncFailure(appError("SYNC_4002", "连接超时"))).toEqual({
+      title: "同步失败",
+      stage: "拉取 / 推送",
+      reason: "连接超时",
+      suggestion: "网络连接异常，请检查网络后重试",
+      action: "retry",
+      retriable: true,
+    });
+  });
+
+  it("凭证失效引导重新登录", () => {
+    const failure = deriveSyncFailure(appError("SYNC_4003", "401", false));
+    expect(failure?.action).toBe("relogin");
+    expect(failure?.stage).toBe("拉取 / 推送");
+    expect(failure?.suggestion).toBe("登录凭证已失效，请重新登录 GitHub");
+  });
+
+  it("远端拒绝落到推送阶段并提示权限", () => {
+    const failure = deriveSyncFailure(appError("SYNC_4004", "non-fast-forward", false));
+    expect(failure?.stage).toBe("推送");
+    expect(failure?.suggestion).toBe("远端拒绝本次操作，请检查仓库权限或先拉取远端更新");
+  });
+
+  it("本地提交失败落到提交阶段并给出通用建议", () => {
+    const failure = deriveSyncFailure(appError("GIT_4001", "commit failed"));
+    expect(failure?.stage).toBe("本地提交");
+    expect(failure?.suggestion).toBe("请重试；若持续失败，请导出诊断包随反馈提交");
+  });
+
+  it("非 AppError 也给出可操作文案", () => {
+    const failure = deriveSyncFailure(new Error("boom"));
+    expect(failure?.reason).toBe("boom");
+    expect(failure?.action).toBe("retry");
   });
 });

@@ -77,6 +77,7 @@ pub fn run() {
             commands::git::sync::sync_now,
             commands::git::resolve::resolve_conflict,
             commands::git::conflicts::list_conflicts,
+            commands::git::conflicts_export::export_conflicts,
             commands::git::resolve_file::resolve_file_conflict,
             commands::git::history::git_file_history,
             commands::git::diff::git_file_diff,

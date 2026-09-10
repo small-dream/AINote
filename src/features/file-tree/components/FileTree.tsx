@@ -7,6 +7,7 @@ import { useDeleteNoteMutation } from "@/queries/note.queries";
 import { useDeleteFolderMutation } from "@/queries/tree.queries";
 import { useFavoriteNotesQuery, useToggleFavoriteMutation } from "@/queries/favorite.queries";
 import { useSessionStore } from "@/stores/session.store";
+import { useUiStore } from "@/stores/ui.store";
 import { useFileTree } from "../hooks/useFileTree";
 import { useTreeSearch } from "../hooks/useTreeSearch";
 import { useTreeContextMenu } from "../hooks/useTreeContextMenu";
@@ -112,7 +113,7 @@ function TreeContent({ tree, expanded, toggle, query, onQueryChange, results, is
     )}
     {deleteError && <div className="tree-error" role="alert">{t("tree.deleteFailed", { message: deleteError })}</div>}
     <ContextMenuSlot menu={contextMenu.menu} copied={contextMenu.copied} onClose={contextMenu.close} onToggle={toggle} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestMove={onRequestMove} onRequestRename={onRequestRename} onRequestHistory={onRequestHistory} onDelete={(path) => requestDelete(path, false)} onDeleteFolder={(path) => requestDelete(path, true)} onCopy={contextMenu.copy} favoritePaths={favoritePaths} onToggleFavorite={onToggleFavorite} />
-    <DeleteConfirmDialog pending={pendingDelete} busy={remove.isPending || removeFolder.isPending} onClose={() => setPendingDelete(null)} onConfirm={confirmDelete} />
+    <DeleteConfirmDialog pending={pendingDelete} busy={remove.isPending || removeFolder.isPending} onClose={() => setPendingDelete(null)} onConfirm={confirmDelete} onOpenTrash={() => { setPendingDelete(null); useUiStore.getState().setSidebarTab("trash"); }} />
   </div>;
 }
 

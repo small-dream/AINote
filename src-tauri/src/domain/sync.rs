@@ -12,6 +12,15 @@ pub struct ConflictFile {
     pub remote: String,
 }
 
+/// 冲突兜底导出结果（export_conflicts 返回）：条目为 `local/<路径>` 与 `remote/<路径>`。
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ConflictExportDto {
+    pub path: String,
+    pub bytes: u64,
+    pub files: Vec<String>,
+}
+
 /// 仓库同步状态（sync_status / sync_now / git_pull / git_push 返回）
 #[derive(Debug, Clone, Serialize, Default)]
 #[serde(rename_all = "camelCase")]

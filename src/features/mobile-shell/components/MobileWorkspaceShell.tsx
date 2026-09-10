@@ -3,6 +3,8 @@ import { ArrowLeft, Clock, FolderTree, Hash, List, RefreshCw, Search, Settings, 
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useSync } from "@/features/sync/hooks/useSync";
+import { SyncFailureNotice } from "@/features/sync/components/SyncFailureNotice";
+import { deriveSyncFailure } from "@/features/sync/utils/status";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 import { useMobileEditorView } from "../hooks/useMobileEditorView";
@@ -22,10 +24,12 @@ interface MobileWorkspaceShellProps {
 
 /** 移动端单栏工作区：列表为根部，编辑器是详情路由。 */
 export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, openEditorSignal, sidebar, editor, onBackToList }: MobileWorkspaceShellProps) {
-  const { t } = useTranslation();
+  const { locale, t } = useTranslation();
   const sidebarTab = useUiStore((state) => state.sidebarTab);
   const setSidebarTab = useUiStore((state) => state.setSidebarTab);
-  const { online, status, label, syncNow, isSyncing } = useSync(repoPath);
+  const sync = useSync(repoPath);
+  const { online, status, label, syncNow, isSyncing } = sync;
+  const failure = deriveSyncFailure(syncNow.error, locale);
   const [conflictOpen, setConflictOpen] = useState(false);
   const title = currentNotePath?.split(/[\\/]/).pop() ?? t("app.notes");
   const { showEditor, backToList } = useMobileEditorView({
@@ -49,6 +53,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
         onSync={() => syncNow.mutate()}
         onOpenConflict={() => setConflictOpen(true)}
       />
+      <SyncFailureNotice sync={sync} />
       <main className="min-h-0 flex-1 overflow-hidden">
         {showEditor ? (
           <div className="mobile-editor-pane h-full min-h-0">{editor}</div>
@@ -73,7 +78,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
           <LazyConflictMergeDialog repoPath={repoPath} open onClose={() => setConflictOpen(false)} />
         </Suspense>
       ) : null}
-      <span className="sr-only" aria-live="polite">{status.conflicted ? t("sync.conflict") : status.hasUncommitted ? t("sync.unsaved") : null}</span>
+      <span className="sr-only" aria-live="polite">{failure ? `${failure.title} · ${failure.suggestion}` : status.conflicted ? t("sync.conflict") : status.hasUncommitted ? t("sync.unsaved") : null}</span>
     </div>
   );
 }

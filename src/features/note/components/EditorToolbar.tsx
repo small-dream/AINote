@@ -6,6 +6,7 @@ import { NoteThemePicker } from "./NoteThemePicker";
 import { NoteTitleField } from "./NoteTitleField";
 import { AiToolbarButton } from "@/features/ai/components/AiToolbarButton";
 import { ToolbarOverflowMenu } from "./ToolbarOverflowMenu";
+import { saveFailureHintKey } from "../utils/saveFailure";
 
 export type ViewMode = "edit" | "source" | "split" | "preview";
 
@@ -19,6 +20,8 @@ interface EditorToolbarProps {
   saving?: boolean;
   dirty?: boolean;
   saveError?: string | null;
+  /** 保存失败的错误码：用于给出与原因匹配的下一步建议（E3-T5） */
+  saveErrorCode?: string | null;
   onModeChange: (mode: ViewMode) => void;
   onSave: () => void;
   onMove: () => void;
@@ -52,7 +55,7 @@ const COMPACT_MODE_TABS: ModeTab[] = [
 const MODE_ICONS: Record<ViewMode, LucideIcon> = { edit: SquarePen, source: Code, split: Split, preview: Eye };
 
 /** 笔记操作栏：左侧标题锚点，右侧按「高频视图 → 中频工具 → 低频文件操作」分层分组。 */
-export function EditorToolbar({ path, mode, compact = false, richText = false, saving = false, dirty = false, saveError, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onExportMarkdown, onAi, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, compact = false, richText = false, saving = false, dirty = false, saveError, saveErrorCode, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onExportPdf, onExportMarkdown, onAi, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
   const { t } = useTranslation();
   return (
     <div
@@ -87,7 +90,7 @@ export function EditorToolbar({ path, mode, compact = false, richText = false, s
             onMove={onMove}
           />
         </div>
-        <SaveErrorMessage message={saveError} onRetry={onSave} />
+        <SaveErrorMessage message={saveError} code={saveErrorCode} onRetry={onSave} />
       </div>
     </div>
   );
@@ -116,15 +119,18 @@ function ToolbarDivider() {
   return <span aria-hidden="true" className="mx-1 h-5 w-px bg-border" />;
 }
 
-function SaveErrorMessage({ message, onRetry }: { message: string | null | undefined; onRetry: () => void }) {
+function SaveErrorMessage({ message, code, onRetry }: { message: string | null | undefined; code: string | null | undefined; onRetry: () => void }) {
   const { t } = useTranslation();
   if (!message) return null;
   return (
-    <span role="status" className="flex max-w-72 items-center gap-2 text-xs text-danger">
-      <span className="truncate" title={message}>{message}</span>
-      <button type="button" className="shrink-0 underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={onRetry}>
-        {t("note.retrySave")}
-      </button>
+    <span role="status" className="flex max-w-72 flex-col items-end gap-0.5 text-xs text-danger">
+      <span className="flex max-w-full items-center gap-2">
+        <span className="truncate" title={message}>{message}</span>
+        <button type="button" className="shrink-0 underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={onRetry}>
+          {t("note.retrySave")}
+        </button>
+      </span>
+      <span className="text-text-tertiary">{t(saveFailureHintKey(code))}</span>
     </span>
   );
 }
