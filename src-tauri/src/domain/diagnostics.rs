@@ -58,3 +58,12 @@ pub struct DiagnosticsConfigSummary {
     pub has_active_repo: bool,
     pub has_token: bool,
 }
+
+/// 设置页「诊断与反馈」展示的运行信息。
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SupportInfoDto {
+    pub log_dir: String,
+    pub logging_enabled: bool,
+    pub log_bytes: u64,
+}

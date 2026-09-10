@@ -24,6 +24,9 @@ pub(crate) struct AppConfig {
     pub(crate) active_repo_id: Option<String>,
     #[serde(default)]
     pub(crate) has_token: Option<bool>,
+    /// 本地日志开关；None 视为开启。
+    #[serde(default)]
+    pub(crate) logging_enabled: Option<bool>,
     /// 旧版单仓库字段（repoPath），加载时迁移进 repos。
     #[serde(default, rename = "repoPath")]
     legacy_repo_path: Option<String>,
@@ -88,6 +91,18 @@ pub fn summary(app: &AppHandle) -> Result<DiagnosticsConfigSummary, AppError> {
         has_active_repo: repos::active_path_cfg(&cfg).is_some(),
         has_token: cfg.has_token.unwrap_or(false),
     })
+}
+
+/// 本地日志是否开启（默认开启）。
+pub fn logging_enabled(app: &AppHandle) -> Result<bool, AppError> {
+    Ok(load_config(app)?.logging_enabled.unwrap_or(true))
+}
+
+/// 持久化本地日志开关。
+pub fn set_logging_enabled(app: &AppHandle, enabled: bool) -> Result<(), AppError> {
+    let mut cfg = load_config(app)?;
+    cfg.logging_enabled = Some(enabled);
+    save_config(app, &cfg)
 }
 
 /// 读取活动仓库路径，未绑定时报 REPO_3001（供各 Command 统一前置校验）。

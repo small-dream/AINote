@@ -216,3 +216,10 @@ export interface DiagnosticsExportDto {
   bytes: number;
   files: string[];
 }
+
+/** support_info 返回：设置页诊断信息 */
+export interface SupportInfoDto {
+  logDir: string;
+  loggingEnabled: boolean;
+  logBytes: number;
+}

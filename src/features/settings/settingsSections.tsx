@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import { CircleUser, FolderGit2, Languages, Palette, RefreshCw, Sparkles } from "lucide-react";
+import { CircleUser, FolderGit2, Languages, LifeBuoy, Palette, RefreshCw, Sparkles } from "lucide-react";
 import type { TranslationKey } from "@/i18n/messages";
 import type { SettingsTab } from "@/stores/ui.store";
 import { UpdateSettings } from "@/features/update/components/UpdateSettings";
@@ -7,6 +7,7 @@ import { AccountSettings } from "./components/AccountSettings";
 import { AiSettings } from "./components/AiSettings";
 import { LanguageSettings } from "./components/LanguageSettings";
 import { RepoManager } from "./components/RepoManager";
+import { SupportSettings } from "./components/SupportSettings";
 import { ThemeSettings } from "./components/ThemeSettings";
 
 export interface SettingsSectionMeta {
@@ -24,5 +25,6 @@ export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSectionMeta> = [
   { id: "language", labelKey: "settings.language", descriptionKey: "settings.languageDescription", icon: Languages, component: LanguageSettings },
   { id: "ai", labelKey: "ai.settings", descriptionKey: "settings.aiDescription", icon: Sparkles, component: AiSettings },
   { id: "updates", labelKey: "update.title", descriptionKey: "settings.updatesDescription", icon: RefreshCw, component: UpdateSettings },
+  { id: "support", labelKey: "settings.sectionSupport", descriptionKey: "settings.supportDescription", icon: LifeBuoy, component: SupportSettings },
   { id: "account", labelKey: "settings.account", descriptionKey: "settings.accountDescription", icon: CircleUser, component: AccountSettings },
 ];

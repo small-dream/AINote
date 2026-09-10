@@ -23,6 +23,7 @@ pub fn run() {
                 .build(),
         )
         .setup(|_app| {
+            apply_logging_preference(_app.handle());
             log::info!(target: "ainote::startup", "AINote {} 启动", env!("CARGO_PKG_VERSION"));
             #[cfg(desktop)]
             {
@@ -100,7 +101,21 @@ pub fn run() {
             commands::print::print_current_page,
             commands::support::log_frontend::log_frontend,
             commands::support::export::export_diagnostics,
+            commands::support::settings::support_info,
+            commands::support::settings::set_logging_enabled,
+            commands::support::settings::clear_logs,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AINote");
+}
+
+/// 启动时应用用户保存的日志开关；读取失败保持默认开启。
+fn apply_logging_preference(app: &tauri::AppHandle) {
+    if let Ok(enabled) = config::logging_enabled(app) {
+        log::set_max_level(if enabled {
+            log::LevelFilter::Info
+        } else {
+            log::LevelFilter::Off
+        });
+    }
 }

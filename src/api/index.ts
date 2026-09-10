@@ -42,6 +42,7 @@ export type {
   RepoPathDto,
   SearchResult,
   SyncStatus,
+  SupportInfoDto,
   TrashItem,
   TreeNode,
 } from "./types";

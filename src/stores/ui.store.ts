@@ -11,7 +11,7 @@ export interface RecentNoteEntry {
   openedAt: number;
 }
 /** 设置页左侧分类导航的激活项 */
-export type SettingsTab = "repositories" | "appearance" | "language" | "ai" | "updates" | "account";
+export type SettingsTab = "repositories" | "appearance" | "language" | "ai" | "updates" | "support" | "account";
 
 /** 主题偏好持久化键（localStorage，纯前端全局 UI 态） */
 export const THEME_STORAGE_KEY = "ainote.theme";

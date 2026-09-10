@@ -115,6 +115,12 @@ View → Hooks/Queries → api/ → IPC → commands → services → repositori
 - Markdown 渲染默认不解析原始 HTML，降低 XSS 风险。
 - 请勿在 Issue、截图或提交中泄漏 Token、API Key 和私人笔记数据。
 
+### 隐私与诊断数据
+
+- 本地日志只写入本机应用日志目录，写入前统一脱敏，不记录 Token、API Key 或笔记正文；可在「设置 → 诊断与反馈」随时关闭或清理。
+- 导出诊断包只含应用版本、平台、脱敏日志与计数摘要，不含笔记内容、仓库路径或凭证；仅在用户主动点击时生成，不会自动上传。
+- M1 阶段不做远程崩溃上报；如需反馈问题，请手动把诊断包附到 GitHub Issue。
+
 如需报告安全漏洞，请优先使用 GitHub 的 [私下安全报告](https://github.com/small-dream/AINote/security/advisories/new)，不要直接创建公开 Issue。
 
 ## License
