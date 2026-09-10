@@ -15,12 +15,14 @@ pub use services::auth_store::AuthStore;
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(config::logging::plugin())
         .plugin(
             tauri_plugin_keyring_store::Builder::new()
                 .service("dev.ainote.app.credentials")
                 .build(),
         )
         .setup(|_app| {
+            log::info!(target: "ainote::startup", "AINote {} 启动", env!("CARGO_PKG_VERSION"));
             #[cfg(desktop)]
             {
                 _app.handle().plugin(tauri_plugin_process::init())?;

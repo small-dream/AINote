@@ -2,6 +2,7 @@
 //! 注册表纯逻辑见 config/repos.rs（可单测）。
 
 pub(crate) mod repos;
+pub(crate) mod logging;
 
 use std::fs;
 use std::path::PathBuf;

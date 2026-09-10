@@ -57,10 +57,25 @@ pub fn sync<B: GitBackend>(
     if backend.is_merging(&path)? {
         return Err(AppError::Conflict("存在未解决的合并冲突".into()));
     }
-    commit_pending(backend, repo_path, "note: auto commit")?;
-    backend.pull(&path, token)?;
-    backend.push(&path, token)?;
-    status(backend, repo_path)
+    log::info!(target: "ainote::sync", "同步开始 repo={}", crate::config::logging::redact(&path));
+    run_stage("commit", commit_pending(backend, repo_path, "note: auto commit"))?;
+    run_stage("pull", backend.pull(&path, token))?;
+    run_stage("push", backend.push(&path, token))?;
+    let result = status(backend, repo_path)?;
+    log::info!(
+        target: "ainote::sync",
+        "同步完成 ahead={} behind={}",
+        result.ahead,
+        result.behind
+    );
+    Ok(result)
+}
+
+fn run_stage<T>(stage: &str, result: Result<T, AppError>) -> Result<T, AppError> {
+    result.map_err(|err| {
+        log::error!(target: "ainote::sync", "同步失败 stage={stage} error={err}");
+        err
+    })
 }
 
 /// 用例：解决冲突 —— use_local 保留本地侧，完成后 push。

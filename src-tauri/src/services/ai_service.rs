@@ -159,7 +159,11 @@ fn complete(
 ) -> Result<String, AppError> {
     let store = AiStore::from_app(app)?;
     let (runtime, key) = resolve_request(&store, model_id)?;
-    client.complete(&runtime, key.as_deref(), messages)
+    let result = client.complete(&runtime, key.as_deref(), messages);
+    result.map_err(|err| {
+        log::error!(target: "ainote::ai", "AI 请求失败 model={} error={err}", runtime.model);
+        err
+    })
 }
 
 fn complete_stream(
@@ -172,7 +176,11 @@ fn complete_stream(
     let store = AiStore::from_app(app)?;
     let (runtime, key) = resolve_request(&store, model_id)?;
     let mut on_delta = on_delta;
-    client.complete_stream(&runtime, key.as_deref(), messages, &mut on_delta)
+    let result = client.complete_stream(&runtime, key.as_deref(), messages, &mut on_delta);
+    result.map_err(|err| {
+        log::error!(target: "ainote::ai", "AI 流式请求失败 model={} error={err}", runtime.model);
+        err
+    })
 }
 
 fn resolve_request(
