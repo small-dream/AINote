@@ -41,6 +41,15 @@ pub enum AppError {
     /// AI Provider 网络错误（可重试）
     #[error("ai network error: {0}")]
     AiNetwork(String),
+    /// 更新包下载失败（网络中断等，可重试）
+    #[error("update download error: {0}")]
+    UpdateDownload(String),
+    /// 更新包校验和不匹配（下载可能被篡改或损坏，不自动重试）
+    #[error("update checksum mismatch: {0}")]
+    UpdateChecksum(String),
+    /// 应用内安装不可用（非 Android 平台或系统桥调用失败）
+    #[error("update install unavailable: {0}")]
+    UpdateInstall(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -101,6 +110,9 @@ impl From<AppError> for AppErrorDto {
             AppError::Io(_) => ("IO_5001", ErrorKind::Io, true),
             AppError::Ai(_) => ("AI_6001", ErrorKind::Unknown, false),
             AppError::AiNetwork(_) => ("AI_6002", ErrorKind::Unknown, true),
+            AppError::UpdateDownload(_) => ("UPDATE_7001", ErrorKind::Network, true),
+            AppError::UpdateChecksum(_) => ("UPDATE_7002", ErrorKind::Unknown, false),
+            AppError::UpdateInstall(_) => ("UPDATE_7003", ErrorKind::Unknown, false),
         };
         AppErrorDto {
             code: code.to_string(),
@@ -181,6 +193,9 @@ mod tests {
         assert_eq!(dto(AppError::Io("i".into())).code, "IO_5001");
         assert_eq!(dto(AppError::Ai("no key".into())).code, "AI_6001");
         assert_eq!(dto(AppError::AiNetwork("down".into())).code, "AI_6002");
+        assert_eq!(dto(AppError::UpdateDownload("net".into())).code, "UPDATE_7001");
+        assert_eq!(dto(AppError::UpdateChecksum("bad".into())).code, "UPDATE_7002");
+        assert_eq!(dto(AppError::UpdateInstall("bridge".into())).code, "UPDATE_7003");
     }
 
     #[test]

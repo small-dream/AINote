@@ -5,7 +5,7 @@ import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useSync } from "@/features/sync/hooks/useSync";
 import { SyncNotice } from "@/features/sync/components/SyncNotice";
 import { deriveSyncFailure } from "@/features/sync/utils/status";
-import { MobileUpdateBanner } from "@/features/update/components/MobileUpdateBanner";
+import { MobileUpdateDialog } from "@/features/update/components/MobileUpdateDialog";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 import { useMobileEditorView } from "../hooks/useMobileEditorView";
@@ -61,7 +61,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
         onOpenConflict={() => setConflictOpen(true)}
       />
       <SyncNotice sync={sync} />
-      <MobileUpdateBanner />
+      <MobileUpdateDialog />
       <MobileContent
         showEditor={showEditor}
         sidebarTab={sidebarTab}

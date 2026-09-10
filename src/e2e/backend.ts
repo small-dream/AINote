@@ -285,6 +285,14 @@ const commandHandlers: Record<string, CommandHandler> = {
     return { path: `/tmp/ainote-metrics-0.24.12.${format}`, bytes: 1536 };
   },
   open_external: () => null,
+  download_update: (args, ctx) => {
+    if (ctx.state.updateDownloadFails) throw appError("update download failed");
+    const channel = args.onEvent as { onmessage?: (message: unknown) => void } | undefined;
+    channel?.onmessage?.({ receivedBytes: 1024, totalBytes: 1024, percent: 100 });
+    return { path: "/mock-cache/updates/ainote-update.apk" };
+  },
+  cancel_update_download: () => null,
+  install_update: () => ({ needsPermission: false }),
   print_current_page: () => null,
   "plugin:event|register_listener": () => 1,
   "plugin:event|unlisten": () => null,

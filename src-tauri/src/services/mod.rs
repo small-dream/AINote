@@ -20,3 +20,4 @@ pub mod sync_service;
 pub mod wiki_service;
 pub mod secure_store;
 pub mod trash_service;
+pub mod update_service;

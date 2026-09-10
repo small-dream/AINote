@@ -219,7 +219,10 @@ jobs:
             echo "::error::Android 签名产物缺失: $ANDROID_APK_PATH, $ANDROID_AAB_PATH"
             exit 1
           fi
-          gh release upload "$TAG" "$ANDROID_APK_PATH" "$ANDROID_AAB_PATH" --clobber
+          # 应用内更新按此校验和验证下载完整性（update_service::verify）
+          apk_sha256="$RUNNER_TEMP/$(basename "$ANDROID_APK_PATH").sha256"
+          (cd "$(dirname "$ANDROID_APK_PATH")" && sha256sum "$(basename "$ANDROID_APK_PATH")") > "$apk_sha256"
+          gh release upload "$TAG" "$ANDROID_APK_PATH" "$ANDROID_AAB_PATH" "$apk_sha256" --clobber
 
   publish-updater-manifest:
     needs: [create-release, publish-tauri]

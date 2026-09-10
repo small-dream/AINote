@@ -12,6 +12,8 @@ export { searchApi } from "./search.api";
 export { updateApi } from "./update.api";
 export { releaseApi } from "./release.api";
 export type { ReleaseInfo } from "./release.api";
+export { mobileUpdateApi } from "./mobile-update.api";
+export type { ApkDownloadProgress, ApkDownloadResult, InstallApkResult } from "./mobile-update.api";
 export { metricsApi, recordMetric } from "./metrics.api";
 export type {
   MetricEventName,

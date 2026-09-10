@@ -6,12 +6,23 @@ const state = vi.hoisted(() => ({
   offline: false,
   version: "0.25.0",
   current: "0.24.12",
+  downloadResult: null as { path: string } | null,
+  downloadFails: false,
+  installNeedsPermission: false,
+  installFails: false,
+}));
+
+const api = vi.hoisted(() => ({
+  downloadUpdate: vi.fn(),
+  cancelUpdateDownload: vi.fn(),
+  installApk: vi.fn(),
 }));
 
 vi.mock("@/platform/runtime", () => ({ isAndroidApp: () => state.android }));
 vi.mock("@/features/support/error-report", () => ({ reportFrontendError: vi.fn() }));
 vi.mock("@/api", () => ({
   recordMetric: vi.fn(),
+  mobileUpdateApi: api,
   releaseApi: {
     fetchLatestRelease: () =>
       state.offline
@@ -21,6 +32,8 @@ vi.mock("@/api", () => ({
             htmlUrl: `https://github.com/small-dream/AINote/releases/tag/v${state.version}`,
             body: null,
             currentVersion: state.current,
+            apkUrl: "https://github.com/small-dream/AINote/releases/download/v0.25.0/AINote-v0.25.0-android-arm64.apk",
+            apkSha256Url: "https://github.com/small-dream/AINote/releases/download/v0.25.0/AINote-v0.25.0-android-arm64.apk.sha256",
           }),
   },
 }));
@@ -28,15 +41,41 @@ vi.mock("@/api", () => ({
 import { useMobileUpdate } from "./useMobileUpdate";
 import { useMobileUpdateStore } from "../stores/mobile-update.store";
 
+function resetStore() {
+  useMobileUpdateStore.setState({
+    phase: "idle",
+    currentVersion: null,
+    release: null,
+    dismissedVersion: null,
+    progress: null,
+    apkPath: null,
+    installNeedsPermission: false,
+  });
+}
+
 beforeEach(() => {
   state.android = true;
   state.offline = false;
   state.version = "0.25.0";
   state.current = "0.24.12";
-  useMobileUpdateStore.setState({ phase: "idle", currentVersion: null, release: null, dismissedVersion: null });
+  state.downloadResult = null;
+  state.downloadFails = false;
+  state.installNeedsPermission = false;
+  state.installFails = false;
+  api.downloadUpdate.mockReset().mockImplementation(async (_args, onProgress) => {
+    onProgress?.({ receivedBytes: 50, totalBytes: 100, percent: 50 });
+    if (state.downloadFails) throw new Error("network");
+    return state.downloadResult;
+  });
+  api.cancelUpdateDownload.mockReset().mockResolvedValue(undefined);
+  api.installApk.mockReset().mockImplementation(async () => {
+    if (state.installFails) throw new Error("bridge");
+    return { needsPermission: state.installNeedsPermission };
+  });
+  resetStore();
 });
 
-describe("useMobileUpdate", () => {
+describe("useMobileUpdate 检查", () => {
   it("发现新版本时进入 available 并带上 Release 信息", async () => {
     const { result } = renderHook(() => useMobileUpdate());
     await waitFor(() => expect(result.current.phase).toBe("available"));
@@ -80,5 +119,74 @@ describe("useMobileUpdate", () => {
     state.offline = false;
     await result.current.check();
     await waitFor(() => expect(result.current.phase).toBe("available"));
+  });
+});
+
+describe("useMobileUpdate 下载与安装", () => {
+  async function renderAvailable() {
+    const rendered = renderHook(() => useMobileUpdate());
+    await waitFor(() => expect(rendered.result.current.phase).toBe("available"));
+    return rendered;
+  }
+
+  it("下载成功后自动调起安装器", async () => {
+    state.downloadResult = { path: "/cache/updates/ainote-0.25.0.apk" };
+    const { result } = await renderAvailable();
+
+    await result.current.download();
+
+    expect(api.downloadUpdate).toHaveBeenCalledWith(
+      {
+        url: expect.stringContaining("-android-arm64.apk"),
+        sha256Url: expect.stringContaining(".apk.sha256"),
+        version: "0.25.0",
+      },
+      expect.any(Function),
+    );
+    await waitFor(() => expect(result.current.phase).toBe("installing"));
+    expect(api.installApk).toHaveBeenCalledWith("/cache/updates/ainote-0.25.0.apk");
+    expect(result.current.apkPath).toBe("/cache/updates/ainote-0.25.0.apk");
+  });
+
+  it("缺安装权限时标记 installNeedsPermission", async () => {
+    state.downloadResult = { path: "/cache/updates/ainote-0.25.0.apk" };
+    state.installNeedsPermission = true;
+    const { result } = await renderAvailable();
+
+    await result.current.download();
+    await waitFor(() => expect(result.current.installNeedsPermission).toBe(true));
+  });
+
+  it("用户取消下载时回到 available", async () => {
+    state.downloadResult = null;
+    const { result } = await renderAvailable();
+
+    await result.current.download();
+    await waitFor(() => expect(result.current.phase).toBe("available"));
+    expect(api.installApk).not.toHaveBeenCalled();
+  });
+
+  it("下载失败进入 downloadFailed，可重试", async () => {
+    state.downloadFails = true;
+    const { result } = await renderAvailable();
+
+    await result.current.download();
+    await waitFor(() => expect(result.current.phase).toBe("downloadFailed"));
+
+    state.downloadFails = false;
+    state.downloadResult = { path: "/cache/updates/ainote-0.25.0.apk" };
+    await result.current.download();
+    await waitFor(() => expect(result.current.phase).toBe("installing"));
+  });
+
+  it("reopenInstaller 复用已下载的 APK 路径", async () => {
+    state.downloadResult = { path: "/cache/updates/ainote-0.25.0.apk" };
+    const { result } = await renderAvailable();
+    await result.current.download();
+    await waitFor(() => expect(result.current.phase).toBe("installing"));
+
+    api.installApk.mockClear();
+    await result.current.reopenInstaller();
+    expect(api.installApk).toHaveBeenCalledWith("/cache/updates/ainote-0.25.0.apk");
   });
 });

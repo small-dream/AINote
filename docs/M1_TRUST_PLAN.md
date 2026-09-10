@@ -43,7 +43,7 @@
 |---|---|---|---|---|
 | D1 | Windows 代码签名方案 | SignPath Foundation（开源免费）/ Azure Trusted Signing / OV 证书 / EV 证书 | **🧊 暂缓到 M1.5**：证书类签名当前阶段不启动。已调研结论备查：优先 SignPath Foundation（MIT + 公开仓库可申请，审批不保证），未通过转 Azure Trusted Signing（≈$10/月、CI 友好） | M1.5-E1-T2 |
 | D2 | 崩溃上报方案 | 本地日志 + 手动反馈 / Sentry 等第三方 / 自建上报 | **M1 先做本地日志 + 手动诊断包**，远程上报作为 M1b，需先出隐私说明 | M1-E2-T4 |
-| D3 | Android 分发方式 | Google Play / 仅 GitHub APK + 应用内更新提示 / 两者 | **✅ 已确认（2026-09-10）**：仅 GitHub APK + 应用内更新提示（只提示、不静默下载安装），Play 上架排入 M4 | M1-E1-T5 |
+| D3 | Android 分发方式 | Google Play / 仅 GitHub APK + 应用内更新提示 / 两者 | **✅ 已确认（2026-09-10）**：仅 GitHub APK + 应用内更新提示，Play 上架排入 M4。**更新（2026-09-11）**：提示升级为应用内下载 + SHA-256 校验 + 调起系统安装器（安装确认仍由用户完成，非静默） | M1-E1-T5 |
 | D4 | 度量采集边界 | 仅本地 / 本地 + opt-in 远程 | **✅ 已确认（2026-09-10）**：本地事件计数默认开启、不含任何笔记内容；远程上报默认关闭、需显式同意（远程上报本身属 M1b/E2-T4） | M1-E5-T1/T2 |
 | D5 | iOS 发布节奏 | M1 只做 TestFlight / M1 直接上架 | **🧊 暂缓到 M1.5 / M4**：真机签名依赖 Apple 账号，当前阶段不启动 | M1.5-E1-T4 |
 
@@ -186,9 +186,16 @@
   - 版本比较落在 `src/features/update/utils/version.ts`（纯函数）：`parseVersion`（容忍 `v` 前缀与 `+build` 元数据）、`compareVersions`（缺段补 0、正式版 > 同号预发布版、数字标识符 < 字母）、`isNewerVersion`（**严格大于**，任一无法解析返回 false——宁可漏报不误报）。
   - 数据源走 GitHub Releases API（`src/api/release.api.ts` 的 `releaseApi.fetchLatestRelease`，与 `getVersion()` 并发取回；`tag_name` 归一化去掉 `v` 前缀，`html_url` 缺失时按 tag 兜底拼接）。**不接 updater 插件**：`capabilities/mobile.json` 只有 `core:default`，移动端也没有 `plugin-process` 依赖。
   - 平台判定抽到 `src/platform/runtime.ts` 的 `isAndroidApp()`（`back-navigation.ts` 改为从该文件导入并继续对外导出，行为不变）：只有 Android 壳才自动检查，桌面壳不受影响。
-  - `useMobileUpdate` + `useMobileUpdateStore`（`zustand`）收敛检查状态，提示条与设置页共用一份结果并发去重；请求失败一律静默降级为 `failed`，不弹错、不打扰。「忽略此版本」按版本号持久化到 localStorage，出现更新的版本时会重新提示。
-  - UI 两处：移动壳顶部的 `MobileUpdateBanner`（新版本提示 + 「前往 Release 页面下载」+ 忽略）与设置页 `MobileUpdateSettings`；`UpdateSettings` 现在按平台分流，顺带修掉「Android 上渲染桌面 updater 面板必然检查失败」的问题。
-  - 验证：`version.test.ts` 14 项（含 `1.2.3 < 1.2.10`、预发布、同版本/降级不误报、非法输入）；`useMobileUpdate` 6 项 + `MobileUpdateBanner` 5 项；e2e 新增 `e2e/mobile-update.spec.ts` 5 条（430px + Android UA：有新版本提示并跳转、忽略后不再提示、已最新只在设置页说明、接口不可用静默降级、桌面壳不显示移动提示），IPC mock 补 `plugin:app|version` / `open_external` 并置位 `isTauri`。真机验证缺口：本机 `adb devices` 为空，移动端 UI 以窄屏 e2e + RTL 替代。
+  - `useMobileUpdate` + `useMobileUpdateStore`（`zustand`）收敛检查状态，弹窗与设置页共用一份结果并发去重；请求失败一律静默降级为 `failed`，不弹错、不打扰。「忽略此版本」按版本号持久化到 localStorage，出现更新的版本时会重新提示。
+  - UI 两处：移动壳的 `MobileUpdateDialog` 弹窗（新版本提示 + 「前往 Release 页面下载」+ 「稍后再说」仅本次会话 + 忽略）与设置页 `MobileUpdateSettings`；`UpdateSettings` 现在按平台分流，顺带修掉「Android 上渲染桌面 updater 面板必然检查失败」的问题。（2026-09-10 由顶部 `MobileUpdateBanner` 提示条改为 `Modal` 弹窗。）
+  - 验证：`version.test.ts` 14 项（含 `1.2.3 < 1.2.10`、预发布、同版本/降级不误报、非法输入）；`useMobileUpdate` 6 项 + `MobileUpdateDialog` 7 项；e2e 新增 `e2e/mobile-update.spec.ts` 6 条（430px + Android UA：有新版本弹窗提示并跳转、忽略后不再提示、稍后再说仅关闭本次会话、已最新只在设置页说明、接口不可用静默降级、桌面壳不显示移动提示），IPC mock 补 `plugin:app|version` / `open_external` 并置位 `isTauri`。真机验证缺口：本机 `adb devices` 为空，移动端 UI 以窄屏 e2e + RTL 替代。
+- **实现备注（2026-09-11，升级为应用内下载安装）**：
+  - 弹窗主按钮从「前往 Release 页面下载」升级为「立即更新」：Rust `download_update`（`commands/update.rs` + `services/update_service.rs`）经 ureq 分块下载 APK 到 `app_cache_dir/updates/`（Channel 回传进度、AtomicBool 可取消、临时文件 `*.part` 失败即清理），随后下载随 Release 上传的 `.sha256` 校验和并比对（`sha2`；发布工作流 publish-android 同步上传）。下载地址白名单限定 `https://github.com/small-dream/AINote/releases/download/`。
+  - 安装经 `src-tauri/src/platform/` JNI 桥调 Kotlin `ApkInstaller`（`gen/android/app/.../ApkInstaller.kt`）：FileProvider 暴露 APK（manifest 已声明 provider，补 `REQUEST_INSTALL_PACKAGES` 权限），`canRequestPackageInstalls` 不足时先跳系统授权页并返回 `needsPermission`。系统安装确认由用户完成，非静默。
+  - 顺带修复：`opener` crate 无 Android 实现（回落 xdg-open），`open_external` 在 Android 改走同一 Kotlin 桥。
+  - 前端：`ReleaseInfo` 增加 `apkUrl`/`apkSha256Url`（缺资产时弹窗降级为浏览器跳转）；store 增加 `downloading`/`installing`/`downloadFailed` 相位与进度字段；弹窗复用桌面 `UpdateProgressBar`。
+  - 错误码新增 UPDATE_7001（下载失败，可重试）/ 7002（校验和不匹配）/ 7003（安装不可用）。
+  - 验证：`update_service` 纯函数 5 项（URL 白名单、sha256 解析/校验、安装路径防穿越）；`release.api` 资产解析 6 项；`useMobileUpdate` 11 项、`MobileUpdateDialog` 10 项；e2e 8 条（含应用内下载→install_update 调用、缺资产降级、下载失败重试）。真机验证缺口同前。
 
 #### M1-E1-T6 分发与排查文档（S）
 

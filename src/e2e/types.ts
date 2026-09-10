@@ -53,6 +53,8 @@ export interface E2eState {
   changedFiles?: Array<{ path: string; status: "added" | "modified" | "deleted" }>;
   conflicted?: boolean;
   conflicts?: E2eConflictSeed[];
+  /** 注入一次更新包下载失败（download_update 抛错，验证失败态与重试） */
+  updateDownloadFails?: boolean;
   /** 注入一次同步失败（用于验证失败态 UI 与恢复入口） */
   syncFailure?: {
     code: string;

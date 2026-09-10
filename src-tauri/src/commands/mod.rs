@@ -12,3 +12,4 @@ pub mod repo;
 pub mod save_file;
 pub mod support;
 pub mod trash;
+pub mod update;

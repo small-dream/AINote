@@ -1,11 +1,11 @@
 import { useCallback, useEffect } from "react";
-import { recordMetric, releaseApi } from "@/api";
+import { mobileUpdateApi, recordMetric, releaseApi } from "@/api";
 import { reportFrontendError } from "@/features/support/error-report";
 import { isAndroidApp } from "@/platform/runtime";
 import { useMobileUpdateStore } from "../stores/mobile-update.store";
 import { isNewerVersion } from "../utils/version";
 
-/** 同一时刻只允许一次检查（提示条与设置页可能同时挂载）。 */
+/** 同一时刻只允许一次检查（弹窗与设置页可能同时挂载）。 */
 let inFlight: Promise<void> | null = null;
 
 async function checkLatestRelease(): Promise<void> {
@@ -36,14 +36,58 @@ function requestCheck(): Promise<void> {
   return inFlight;
 }
 
-/** 移动端更新检查：进入应用或设置页自动查一次，也可手动重新检查。 */
+/** 调起系统安装器；缺安装权限时由系统设置页引导用户授权。 */
+async function installApk(path: string): Promise<void> {
+  const { needsPermission } = await mobileUpdateApi.installApk(path);
+  useMobileUpdateStore.getState().setInstallNeedsPermission(needsPermission);
+}
+
+/** 应用内下载 APK 并校验，成功后自动调起系统安装器；取消时回到「有新版本」。 */
+async function downloadAndInstall(): Promise<void> {
+  const store = useMobileUpdateStore.getState();
+  const release = store.release;
+  if (!release?.apkUrl || !release.apkSha256Url || store.phase === "downloading") return;
+
+  store.beginDownload();
+  try {
+    const result = await mobileUpdateApi.downloadUpdate(
+      { url: release.apkUrl, sha256Url: release.apkSha256Url, version: release.version },
+      (progress) => useMobileUpdateStore.getState().reportProgress(progress),
+    );
+    if (!result) {
+      useMobileUpdateStore.getState().resetDownload();
+      return;
+    }
+    useMobileUpdateStore.getState().reportDownloaded(result.path);
+    await installApk(result.path);
+  } catch (error) {
+    reportFrontendError(error, "mobile-update-download");
+    useMobileUpdateStore.getState().reportDownloadFailed();
+  }
+}
+
+/** 移动端更新：自动检查 + 应用内下载安装编排。 */
 export function useMobileUpdate() {
   const state = useMobileUpdateStore();
   const check = useCallback(() => requestCheck(), []);
+  const download = useCallback(() => downloadAndInstall(), []);
+  const cancelDownload = useCallback(() => {
+    void mobileUpdateApi.cancelUpdateDownload();
+  }, []);
+  const reopenInstaller = useCallback(async () => {
+    const { apkPath } = useMobileUpdateStore.getState();
+    if (!apkPath) return;
+    try {
+      await installApk(apkPath);
+    } catch (error) {
+      reportFrontendError(error, "mobile-update-install");
+      useMobileUpdateStore.getState().reportDownloadFailed();
+    }
+  }, []);
 
   useEffect(() => {
     if (isAndroidApp()) void requestCheck();
   }, []);
 
-  return { ...state, check };
+  return { ...state, check, download, cancelDownload, reopenInstaller };
 }

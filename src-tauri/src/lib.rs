@@ -4,6 +4,7 @@
 mod commands;
 mod config;
 mod domain;
+mod platform;
 mod repositories;
 mod services;
 
@@ -26,6 +27,7 @@ pub fn run() {
                 .build(),
         )
         .manage(commands::repo::backup::BackupState::default())
+        .manage(commands::update::UpdateDownloadState::default())
         .manage(commands::git::sync::SyncRetryState::default())
         .manage(commands::close_guard::CloseGuard::default())
         .manage(commands::close_guard::DraftState::default())
@@ -164,6 +166,9 @@ pub fn run() {
             commands::metrics::metrics_clear,
             commands::metrics::metrics_set_enabled,
             commands::metrics::export::metrics_export,
+            commands::update::download_update,
+            commands::update::cancel_update_download,
+            commands::update::install_update,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AINote");

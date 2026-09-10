@@ -9,12 +9,23 @@ pub(crate) fn is_allowed_external_url(url: &str) -> bool {
 
 /// 使用系统默认程序打开外部 URL。
 /// 禁止用于仓库内部路径或潜在文件路径；仅用于 http/https 链接。
+/// Android 走平台桥（opener 无 Android 实现），桌面保持 opener。
 #[command]
 pub fn open_external(url: String) -> Result<(), AppErrorDto> {
     if !is_allowed_external_url(&url) {
         return Err(AppError::InvalidPath(format!("unsupported url scheme: {url}")).into());
     }
-    opener::open(&url).map_err(|err| AppErrorDto::from(AppError::Io(err.to_string())))
+    open_url(&url).map_err(AppErrorDto::from)
+}
+
+#[cfg(target_os = "android")]
+fn open_url(url: &str) -> Result<(), AppError> {
+    crate::platform::open_url(url)
+}
+
+#[cfg(not(target_os = "android"))]
+fn open_url(url: &str) -> Result<(), AppError> {
+    opener::open(url).map_err(|err| AppError::Io(err.to_string()))
 }
 
 #[cfg(test)]
