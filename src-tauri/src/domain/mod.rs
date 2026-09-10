@@ -6,6 +6,7 @@ pub mod diagnostics;
 pub mod error;
 pub mod favorite;
 pub mod history;
+pub mod maintenance;
 pub mod note;
 pub mod rich_text;
 pub mod search;

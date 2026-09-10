@@ -223,3 +223,20 @@ export interface SupportInfoDto {
   loggingEnabled: boolean;
   logBytes: number;
 }
+
+/** 完整性问题严重度 */
+export type IntegritySeverity = "info" | "warning" | "error";
+
+/** 单项完整性问题 */
+export interface IntegrityIssue {
+  code: string;
+  severity: IntegritySeverity;
+  message: string;
+  fixHint: string;
+}
+
+/** 仓库完整性检查报告 */
+export interface IntegrityReport {
+  ok: boolean;
+  issues: IntegrityIssue[];
+}

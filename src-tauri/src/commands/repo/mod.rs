@@ -1,5 +1,6 @@
 pub mod bind;
 pub mod create;
+pub mod integrity;
 pub mod list;
 pub mod path;
 pub mod remove;

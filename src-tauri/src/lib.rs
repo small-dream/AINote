@@ -79,6 +79,7 @@ pub fn run() {
             commands::git::restore::git_restore_file,
             commands::repo::bind::bind_repo,
             commands::repo::create::create_repo,
+            commands::repo::integrity::check_repo_integrity,
             commands::repo::list::list_repos,
             commands::repo::rename::rename_repo,
             commands::repo::remove::remove_repo,

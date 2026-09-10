@@ -76,7 +76,7 @@ flowchart TB
 
 - `commands/`（Controller）：一命令一文件。只做参数反序列化、调用 Service、把 `Result<T, AppError>` 返回给前端。**禁止出现业务逻辑**。
 - `services/`（Service）：一个业务用例一个文件/模块。编排 Repository，实现 PRD 中的业务规则（如防抖提交策略）。
-- `repositories/`：trait 与实现分离。`git_backend.rs` 定义 `GitBackend` trait，`git2_backend.rs`（本地操作）+ `git2_remote.rs`（网络操作）是 libgit2 实现；`file_storage.rs` / `note_files.rs` / `file_tree.rs` / `trash_files.rs` 为文件系统访问（受 300 行上限拆分）。未来可换实现，Service 零感知。
+- `repositories/`：trait 与实现分离。`git_backend.rs` 定义 `GitBackend` trait，`git2_backend.rs`（本地操作）+ `git2_remote.rs`（网络操作）是 libgit2 实现；`repo_maintenance.rs` 定义 `RepoMaintenanceBackend` trait（完整性检查，避免继续膨胀 `GitBackend`），`git2_maintenance.rs` 为 libgit2 只读实现；`file_storage.rs` / `note_files.rs` / `file_tree.rs` / `trash_files.rs` 为文件系统访问（受 300 行上限拆分）。未来可换实现，Service 零感知。
 - `domain/`：实体（`Note`）、值对象、统一错误 `AppError`。**零外部依赖**，不 import git2 / tauri。
 
 ### 前端
@@ -163,7 +163,7 @@ AINote/
 │   │   │   ├── trash/            # list.rs / restore.rs / delete.rs / empty.rs
 │   │   │   └── support/          # log_frontend.rs / export.rs（诊断包）
 │   │   ├── services/             # 一用例一模块（含 search_service / history_service / asset_service / wiki_service / trash_service / ai_service / ai_store / secure_store / diagnostics_service）
-│   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / file_storage / note_files / file_tree / asset_files / trash_files / diagnostics_files / llm）
+│   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / repo_maintenance / git2_maintenance / file_storage / note_files / file_tree / asset_files / trash_files / diagnostics_files / llm）
 │   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs / wiki.rs / trash.rs / rich_text.rs / ai.rs / diagnostics.rs）
 │   │   └── config/            # mod.rs（持久化）+ repos.rs（仓库注册表纯逻辑）+ logging.rs（结构化日志与脱敏）
 │   └── Cargo.toml

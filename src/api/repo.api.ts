@@ -1,5 +1,5 @@
 import { call } from "./client";
-import type { RepoInfo, RepoPathDto, RepoSizeDto } from "./types";
+import type { IntegrityReport, RepoInfo, RepoPathDto, RepoSizeDto } from "./types";
 
 /** 仓库管理相关 IPC（P0-1 / 设置-多仓库管理） */
 export const repoApi = {
@@ -14,6 +14,8 @@ export const repoApi = {
   path: () => call<string | null>("get_repo_path"),
   /** 当前活动仓库的本地磁盘占用（字节） */
   size: () => call<RepoSizeDto>("get_repo_size"),
+  /** 只读检查当前活动仓库的完整性 */
+  integrity: () => call<IntegrityReport>("check_repo_integrity"),
   /** 列出全部已绑定笔记仓库 */
   list: () => call<RepoInfo[]>("list_repos"),
   /** 重命名仓库展示名 */
