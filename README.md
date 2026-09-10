@@ -97,7 +97,7 @@ View → Hooks/Queries → api/ → IPC → commands → services → repositori
 - 编辑器：CodeMirror 6（Markdown）与 TipTap（富文本）。
 - 数据：本地 Git 仓库是唯一权威数据源；同步协议是 Git，而不是私有云接口。
 
-更多细节见 [架构文档](docs/ARCHITECTURE.md)、[产品需求文档](docs/PRD.md)、[编码规范](docs/CODING_STANDARDS.md) 和 [更新日志](docs/CHANGELOG.md)。
+更多细节见 [产品路线图](docs/ROADMAP.md)、[架构文档](docs/ARCHITECTURE.md)、[产品需求文档](docs/PRD.md)、[编码规范](docs/CODING_STANDARDS.md) 和 [更新日志](docs/CHANGELOG.md)。
 
 ## 参与贡献
 

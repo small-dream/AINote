@@ -16,6 +16,7 @@ AINote 是「Git 即数据库」的跨平台 Markdown 笔记软件：笔记 = Gi
 | 文档 | 内容 |
 |---|---|
 | `docs/PRD.md` | 需求、User Story 优先级（P0/P1/P2）、业务规则 |
+| `docs/ROADMAP.md` | 里程碑顺序、退出标准、北极星与指标、优先级取舍 |
 | `docs/ARCHITECTURE.md` | 技术选型、分层架构、目录结构、依赖方向 |
 | `docs/CODING_STANDARDS.md` | 编码硬指标、状态管理、错误处理、测试义务 |
 
