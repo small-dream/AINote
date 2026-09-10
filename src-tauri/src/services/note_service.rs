@@ -113,7 +113,17 @@ fn to_meta(root: &Path, file: &Path) -> Result<NoteMeta, AppError> {
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_default();
-    let content = std::fs::read_to_string(file).unwrap_or_default();
+    let content = match std::fs::read_to_string(file) {
+        Ok(content) => content,
+        Err(err) => {
+            log::warn!(
+                target: "ainote::note",
+                "读取笔记内容失败 path={} error={err}",
+                crate::config::logging::redact(&file.to_string_lossy())
+            );
+            String::new()
+        }
+    };
     let kind = NoteKind::of_path(file).unwrap_or(NoteKind::Markdown);
     let title = match kind {
         NoteKind::Markdown => extract_title(&content, &fallback),

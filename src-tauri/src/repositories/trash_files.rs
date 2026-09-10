@@ -19,14 +19,16 @@ pub fn read_manifest(root: &Path) -> Result<Vec<TrashItem>, AppError> {
     if !path.is_file() {
         return Ok(Vec::new());
     }
-    let raw = fs::read_to_string(path)?;
+    let raw = fs::read_to_string(&path).map_err(|err| AppError::io_context("读取回收站清单失败", &path, err))?;
     serde_json::from_str(&raw).map_err(|e| AppError::Io(e.to_string()))
 }
 
 fn write_manifest(root: &Path, items: &[TrashItem]) -> Result<(), AppError> {
-    fs::create_dir_all(root.join(TRASH_DIR))?;
+    let dir = root.join(TRASH_DIR);
+    fs::create_dir_all(&dir).map_err(|err| AppError::io_context("创建回收站目录失败", &dir, err))?;
     let raw = serde_json::to_string_pretty(items).map_err(|e| AppError::Io(e.to_string()))?;
-    Ok(fs::write(root.join(MANIFEST), raw)?)
+    let path = root.join(MANIFEST);
+    fs::write(&path, raw).map_err(|err| AppError::io_context("写入回收站清单失败", &path, err))
 }
 
 /// 按删除时间倒序返回全部回收站条目。
@@ -43,7 +45,7 @@ pub fn soft_delete_note(root: &Path, rel: &str) -> Result<TrashItem, AppError> {
     if !src.is_file() {
         return Err(AppError::NoteNotFound(rel.to_string_lossy().into_owned()));
     }
-    let content = fs::read_to_string(&src)?;
+    let content = fs::read_to_string(&src).map_err(|err| AppError::io_context("读取失败", &src, err))?;
     let fallback = src
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
@@ -60,11 +62,14 @@ pub fn soft_delete_note(root: &Path, rel: &str) -> Result<TrashItem, AppError> {
         title,
     };
     let mut items = read_manifest(root)?;
-    fs::create_dir_all(root.join(TRASH_DIR))?;
-    fs::write(root.join(TRASH_DIR).join(format!("{}.md", item.id)), content)?;
+    let trash_dir = root.join(TRASH_DIR);
+    fs::create_dir_all(&trash_dir)
+        .map_err(|err| AppError::io_context("创建回收站目录失败", &trash_dir, err))?;
+    let trashed = trash_dir.join(format!("{}.md", item.id));
+    fs::write(&trashed, content).map_err(|err| AppError::io_context("写入回收站失败", &trashed, err))?;
     items.push(item.clone());
     write_manifest(root, &items)?;
-    fs::remove_file(&src)?;
+    fs::remove_file(&src).map_err(|err| AppError::io_context("删除失败", &src, err))?;
     Ok(item)
 }
 
@@ -82,7 +87,7 @@ pub fn soft_delete_folder(root: &Path, rel: &str) -> Result<Vec<TrashItem>, AppE
     }
     let dir = root.join(validate_rel_path(rel)?);
     if dir.is_dir() {
-        fs::remove_dir_all(&dir)?;
+        fs::remove_dir_all(&dir).map_err(|err| AppError::io_context("删除目录失败", &dir, err))?;
     }
     Ok(items)
 }
@@ -99,17 +104,19 @@ pub fn restore(root: &Path, id: &str) -> Result<String, AppError> {
     if !src.is_file() {
         return Err(AppError::Repo(format!("trash file missing: {id}")));
     }
-    let content = fs::read_to_string(&src)?;
+    let content = fs::read_to_string(&src).map_err(|err| AppError::io_context("读取回收站失败", &src, err))?;
     let target = if root.join(&item.path).exists() {
         dedup_target(root, &item.path)
     } else {
         PathBuf::from(&item.path)
     };
     if let Some(parent) = target.parent() {
-        fs::create_dir_all(root.join(parent))?;
+        let dir = root.join(parent);
+        fs::create_dir_all(&dir).map_err(|err| AppError::io_context("创建目录失败", &dir, err))?;
     }
-    fs::write(root.join(&target), content)?;
-    fs::remove_file(&src)?;
+    let dest = root.join(&target);
+    fs::write(&dest, content).map_err(|err| AppError::io_context("写入失败", &dest, err))?;
+    fs::remove_file(&src).map_err(|err| AppError::io_context("删除失败", &src, err))?;
     write_manifest(root, &items)?;
     Ok(target.to_string_lossy().into_owned())
 }
@@ -121,7 +128,8 @@ pub fn permanent_delete(root: &Path, id: &str) -> Result<(), AppError> {
         return Err(AppError::Repo(format!("trash item not found: {id}")));
     }
     items.retain(|i| i.id != id);
-    fs::remove_file(root.join(TRASH_DIR).join(format!("{id}.md")))?;
+    let path = root.join(TRASH_DIR).join(format!("{id}.md"));
+    fs::remove_file(&path).map_err(|err| AppError::io_context("删除回收站文件失败", &path, err))?;
     write_manifest(root, &items)
 }
 
@@ -133,7 +141,8 @@ pub fn empty(root: &Path) -> Result<(), AppError> {
     }
     let manifest = root.join(MANIFEST);
     if manifest.is_file() {
-        fs::remove_file(manifest)?;
+        fs::remove_file(&manifest)
+            .map_err(|err| AppError::io_context("删除回收站清单失败", &manifest, err))?;
     }
     Ok(())
 }
@@ -151,8 +160,11 @@ fn collect_note_files(root: &Path, rel: &str) -> Result<Vec<PathBuf>, AppError> 
 }
 
 fn walk_notes(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AppError> {
-    for entry in fs::read_dir(dir)? {
-        let path = entry?.path();
+    let entries = fs::read_dir(dir).map_err(|err| AppError::io_context("列目录失败", dir, err))?;
+    for entry in entries {
+        let path = entry
+            .map_err(|err| AppError::io_context("列目录失败", dir, err))?
+            .path();
         if is_hidden(&path) {
             continue;
         }

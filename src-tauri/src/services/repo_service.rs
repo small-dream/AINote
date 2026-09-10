@@ -32,9 +32,24 @@ pub fn bind_repo<B: GitBackend>(
             dest.display()
         )));
     }
-    backend.ls_remote(url, token)?;
-    backend.clone_repo(url, dest, token)?;
+    let url = strip_userinfo(url);
+    backend.ls_remote(&url, token)?;
+    backend.clone_repo(&url, dest, token)?;
     Ok(dest.to_string_lossy().into_owned())
+}
+
+/// 纯函数：剥离 HTTP(S) URL 的内嵌凭证（userinfo），防止 token 明文写入 app config 与 `.git/config`。
+/// 无 scheme 的形式（如 SSH 的 `git@host:path`）原样返回。
+pub fn strip_userinfo(url: &str) -> String {
+    let Some(scheme_end) = url.find("://") else {
+        return url.to_string();
+    };
+    let rest = &url[scheme_end + 3..];
+    let host_end = rest.find('/').unwrap_or(rest.len());
+    match rest[..host_end].rfind('@') {
+        Some(at) => format!("{}{}", &url[..scheme_end + 3], &rest[at + 1..]),
+        None => url.to_string(),
+    }
 }
 
 /// 用例：在 GitHub 建仓后走绑定流程，返回 (本地路径, 远端 URL)。
@@ -130,6 +145,36 @@ mod tests {
         assert_eq!(
             mock.recorded(),
             vec!["ls_remote:https://x/y.git", "clone:https://x/y.git"]
+        );
+    }
+
+    #[test]
+    fn strip_userinfo_removes_embedded_credentials() {
+        assert_eq!(
+            strip_userinfo("https://user:pass@github.com/a/b.git"),
+            "https://github.com/a/b.git"
+        );
+        assert_eq!(
+            strip_userinfo("https://ghp_secret123@github.com/a/b.git"),
+            "https://github.com/a/b.git"
+        );
+        assert_eq!(
+            strip_userinfo("https://github.com/a/b.git"),
+            "https://github.com/a/b.git"
+        );
+        assert_eq!(strip_userinfo("git@github.com:u/r.git"), "git@github.com:u/r.git");
+    }
+
+    #[test]
+    fn bind_never_passes_userinfo_to_remote() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dest = tmp.path().join("notes");
+        let mock = MockGitBackend::default();
+        bind_repo(&mock, "https://token@github.com/u/r.git", &dest, "tok").unwrap();
+        assert_eq!(
+            mock.recorded(),
+            vec!["ls_remote:https://github.com/u/r.git", "clone:https://github.com/u/r.git"],
+            "凭证不得写进传给 git 的 URL"
         );
     }
 

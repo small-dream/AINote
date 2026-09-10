@@ -7,9 +7,8 @@ use crate::commands::blocking;
 use crate::config;
 use crate::domain::error::{AppError, AppErrorDto};
 use crate::domain::sync::ConflictExportDto;
-use crate::repositories::diagnostics_files;
 use crate::repositories::git2_backend::Git2Backend;
-use crate::services::{conflict_export_service, sync_service};
+use crate::services::conflict_export_service;
 
 /// Controller：把当前全部冲突文件的本地 / 远端两侧导出为 zip 兜底（E3-T5）。
 /// 用户取消保存时返回 `None`，不视为错误。
@@ -20,23 +19,9 @@ pub async fn export_conflicts(app: AppHandle) -> Result<Option<ConflictExportDto
         return Ok(None);
     };
 
-    let result = blocking::run(move || {
-        let backend = Git2Backend;
-        let conflicts = sync_service::list_conflicts(&backend, &root)?;
-        if conflicts.is_empty() {
-            return Err(AppError::Conflict("当前没有待处理的冲突文件".into()));
-        }
-        let entries = conflict_export_service::build_entries(&conflicts)?;
-        let files = entries.iter().map(|entry| entry.name.clone()).collect();
-        let bytes = diagnostics_files::write_zip(&dest, &entries)?;
-        Ok(ConflictExportDto {
-            path: dest.to_string_lossy().into_owned(),
-            bytes,
-            files,
-        })
-    })
-    .await
-    .map_err(AppErrorDto::from)?;
+    let result = blocking::run(move || conflict_export_service::export(&Git2Backend, &root, &dest))
+        .await
+        .map_err(AppErrorDto::from)?;
 
     Ok(Some(result))
 }

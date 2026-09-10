@@ -4,7 +4,7 @@ use thiserror::Error;
 use crate::domain::sync::SyncStage;
 
 /// 领域错误：Repository 边界在此统一转换，原始错误绝不泄漏到前端。
-/// 错误码规范见 docs/CODING_STANDARDS.md 第 3 节。
+/// 错误码规范见 docs/CODING_STANDARDS.md §4。
 #[derive(Debug, Error)]
 pub enum AppError {
     #[error("note not found: {0}")]
@@ -30,6 +30,9 @@ pub enum AppError {
     /// 同步被远端拒绝：权限不足、分支保护、非快进推送（不可自动重试）
     #[error("sync rejected: {0}")]
     SyncRejected(String),
+    /// 同一仓库已有同步进行中：防重入，用户稍后重试即可
+    #[error("sync busy: {0}")]
+    SyncBusy(String),
     #[error("io error: {0}")]
     Io(String),
     /// AI 配置缺失 / Provider 调用失败（不可自动重试）
@@ -90,10 +93,11 @@ impl From<AppError> for AppErrorDto {
             AppError::AuthNetwork(_) => ("AUTH_2002", ErrorKind::Auth, true),
             AppError::Repo(_) => ("REPO_3001", ErrorKind::Unknown, false),
             AppError::Conflict(_) => ("SYNC_4001", ErrorKind::Conflict, false),
-            AppError::Git(_) => ("GIT_4001", ErrorKind::Unknown, true),
+            AppError::Git(_) => ("GIT_4001", ErrorKind::Unknown, false),
             AppError::SyncNetwork(_) => ("SYNC_4002", ErrorKind::Network, true),
             AppError::SyncAuth(_) => ("SYNC_4003", ErrorKind::Auth, false),
             AppError::SyncRejected(_) => ("SYNC_4004", ErrorKind::Permission, false),
+            AppError::SyncBusy(_) => ("SYNC_4005", ErrorKind::Conflict, true),
             AppError::Io(_) => ("IO_5001", ErrorKind::Io, true),
             AppError::Ai(_) => ("AI_6001", ErrorKind::Unknown, false),
             AppError::AiNetwork(_) => ("AI_6002", ErrorKind::Unknown, true),
@@ -113,6 +117,13 @@ impl From<AppError> for AppErrorDto {
 impl From<std::io::Error> for AppError {
     fn from(err: std::io::Error) -> Self {
         AppError::Io(err.to_string())
+    }
+}
+
+impl AppError {
+    /// Repository 边界：`io::Error` 本身不含文件名，补上「操作 + 路径」上下文前端才能定位。
+    pub fn io_context(action: &str, path: &std::path::Path, err: std::io::Error) -> Self {
+        AppError::Io(format!("{action} {}: {err}", path.display()))
     }
 }
 
@@ -166,6 +177,7 @@ mod tests {
         assert_eq!(dto(AppError::SyncNetwork("net".into())).code, "SYNC_4002");
         assert_eq!(dto(AppError::SyncAuth("401".into())).code, "SYNC_4003");
         assert_eq!(dto(AppError::SyncRejected("403".into())).code, "SYNC_4004");
+        assert_eq!(dto(AppError::SyncBusy("进行中".into())).code, "SYNC_4005");
         assert_eq!(dto(AppError::Io("i".into())).code, "IO_5001");
         assert_eq!(dto(AppError::Ai("no key".into())).code, "AI_6001");
         assert_eq!(dto(AppError::AiNetwork("down".into())).code, "AI_6002");
@@ -202,5 +214,25 @@ mod tests {
         let rejected = dto(AppError::SyncRejected("protected branch".into()));
         assert_eq!(rejected.kind, ErrorKind::Permission);
         assert!(!rejected.retriable);
+
+        let busy = dto(AppError::SyncBusy("同步进行中".into()));
+        assert_eq!(busy.kind, ErrorKind::Conflict);
+        assert!(busy.retriable, "防重入错误稍后重试即可");
+    }
+
+    #[test]
+    fn local_git_errors_are_not_retriable() {
+        assert!(!dto(AppError::Git("index lock".into())).retriable);
+    }
+
+    #[test]
+    fn io_context_carries_action_and_path() {
+        let err = std::io::Error::new(std::io::ErrorKind::NotFound, "no such file");
+        let AppError::Io(message) =
+            AppError::io_context("写入失败", std::path::Path::new("daily/a.md"), err)
+        else {
+            panic!("应为 IO 错误");
+        };
+        assert_eq!(message, "写入失败 daily/a.md: no such file");
     }
 }

@@ -15,7 +15,7 @@ use super::git_backend::GitBackend;
 pub struct Git2Backend;
 
 pub(crate) fn to_git(err: git2::Error) -> AppError {
-    AppError::Git(err.message().to_string())
+    AppError::Git(crate::config::logging::redact(err.message()))
 }
 
 pub(crate) fn open(path: &str) -> Result<Repository, AppError> {

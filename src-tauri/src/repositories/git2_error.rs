@@ -74,8 +74,9 @@ pub(crate) fn classify(class: ErrorClass, message: &str) -> SyncErrorKind {
 }
 
 /// 把网络操作的 libgit2 错误转成带语义的 `AppError`；无法判定时退回通用 Git 错误。
+/// 消息统一过 `redact`：libgit2 原文可能含本机绝对路径或 URL 内嵌凭证，不透传到前端。
 pub(crate) fn to_sync(err: git2::Error) -> AppError {
-    let message = err.message().to_string();
+    let message = crate::config::logging::redact(err.message());
     match classify(err.class(), &message) {
         SyncErrorKind::Auth => AppError::SyncAuth(message),
         SyncErrorKind::Network => AppError::SyncNetwork(message),
@@ -129,5 +130,15 @@ mod tests {
     fn maps_network_message_to_sync_network_variant() {
         let err = git2::Error::from_str("Could not resolve host: github.com");
         assert!(matches!(to_sync(err), AppError::SyncNetwork(_)));
+    }
+
+    #[test]
+    fn to_sync_redacts_local_paths_in_message() {
+        let err = git2::Error::from_str("failed to lock /Users/jake/notes/.git/index.lock");
+        let AppError::Git(message) = to_sync(err) else {
+            panic!("本地错误应归为 Git 变体");
+        };
+        assert!(!message.contains("/Users/jake"), "不透传本机绝对路径");
+        assert!(message.contains("~/notes/.git/index.lock"));
     }
 }

@@ -85,3 +85,13 @@ fn changed_files_ignores_ignored_files() {
     let files = changed_files(dir.to_str().unwrap()).unwrap();
     assert_eq!(files, vec![ChangedFile { path: ".gitignore".into(), status: ChangedFileStatus::Added }]);
 }
+
+#[test]
+fn to_git_redacts_local_paths_in_message() {
+    let err = to_git(git2::Error::from_str("failed to open /Users/jake/notes/.git"));
+    let AppError::Git(message) = err else {
+        panic!("应为 Git 变体");
+    };
+    assert!(!message.contains("/Users/jake"), "不透传本机绝对路径");
+    assert!(message.contains("~/notes/.git"));
+}

@@ -17,7 +17,7 @@ pub fn file_history(repo_path: &str, file: &str, limit: usize) -> Result<Vec<Com
     let mut out = Vec::new();
     for oid in walk {
         let commit = repo.find_commit(oid.map_err(to_git)?).map_err(to_git)?;
-        if !commit_changed_file(&repo, &commit, file)? {
+        if !commit_changed_file(&commit, file)? {
             continue;
         }
         out.push(to_commit_info(&commit));
@@ -74,27 +74,18 @@ fn find_commit<'a>(repo: &'a Repository, commit_id: &str) -> Result<git2::Commit
         .map_err(to_git)
 }
 
-/// 提交是否修改过指定文件（比较其与首父提交的 blob）。
-fn commit_changed_file(
-    repo: &Repository,
-    commit: &git2::Commit,
-    file: &str,
-) -> Result<bool, AppError> {
+/// 提交是否修改过指定文件：只比较两个 tree 中该路径的 ObjectId，不读取 blob 内容。
+fn commit_changed_file(commit: &git2::Commit, file: &str) -> Result<bool, AppError> {
     let tree = commit.tree().map_err(to_git)?;
     let parent_tree = match commit.parent(0) {
         Ok(parent) => parent.tree().map_err(to_git)?,
         Err(_) => return Ok(tree.get_path(Path::new(file)).is_ok()),
     };
-    Ok(blob_in_tree(repo, &parent_tree, file)? != blob_in_tree(repo, &tree, file)?)
+    Ok(entry_id(&parent_tree, file) != entry_id(&tree, file))
 }
 
-fn blob_in_tree(repo: &Repository, tree: &git2::Tree, file: &str) -> Result<Option<Vec<u8>>, AppError> {
-    let entry = match tree.get_path(Path::new(file)) {
-        Ok(entry) => entry,
-        Err(_) => return Ok(None),
-    };
-    let blob = entry.to_object(repo).map_err(to_git)?.peel_to_blob().map_err(to_git)?;
-    Ok(Some(blob.content().to_vec()))
+fn entry_id(tree: &git2::Tree, file: &str) -> Option<git2::Oid> {
+    tree.get_path(Path::new(file)).ok().map(|entry| entry.id())
 }
 
 fn to_commit_info(commit: &git2::Commit) -> CommitInfo {

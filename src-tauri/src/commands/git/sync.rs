@@ -1,3 +1,4 @@
+use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 
@@ -13,23 +14,42 @@ use crate::services::retry::{RetryAttempt, RetryContext};
 use crate::services::sync_service::SyncFailure;
 use crate::services::{auth_service, sync_service};
 
-/// 进行中的同步自动重试取消标志。
-/// 只结束退避等待，不中断已经发出的网络请求；同一时刻只保留最后一个同步任务。
+/// 进行中的同步任务：以仓库路径为键的取消标志表，兼作防重入互斥（P2-2）。
+/// 取消只结束退避等待，不中断已经发出的网络请求。
 #[derive(Default)]
-pub struct SyncRetryState(Mutex<Option<Arc<AtomicBool>>>);
+pub struct SyncRetryState(Mutex<HashMap<String, Arc<AtomicBool>>>);
 
 impl SyncRetryState {
-    fn set(&self, flag: Option<Arc<AtomicBool>>) -> Result<(), AppError> {
+    /// 抢占指定仓库的同步槽位并返回其取消标志；已有进行中同步时报「同步进行中」。
+    fn acquire(&self, repo: &str) -> Result<Arc<AtomicBool>, AppError> {
         let mut guard = self
             .0
             .lock()
             .map_err(|_| AppError::Io("同步状态锁不可用".into()))?;
-        *guard = flag;
-        Ok(())
+        if guard.contains_key(repo) {
+            return Err(AppError::SyncBusy("同步进行中，请稍后再试".into()));
+        }
+        let flag = Arc::new(AtomicBool::new(false));
+        guard.insert(repo.to_string(), flag.clone());
+        Ok(flag)
     }
 
-    fn current(&self) -> Option<Arc<AtomicBool>> {
-        self.0.lock().ok().and_then(|guard| guard.clone())
+    /// 任务结束释放槽位：只有槽位里仍是自己的 flag 才清理，避免误清后来的同步。
+    fn release(&self, repo: &str, flag: &Arc<AtomicBool>) {
+        if let Ok(mut guard) = self.0.lock() {
+            if guard.get(repo).is_some_and(|current| Arc::ptr_eq(current, flag)) {
+                guard.remove(repo);
+            }
+        }
+    }
+
+    /// 取消全部进行中的同步（前端取消按钮不区分仓库）。
+    fn cancel_all(&self) {
+        if let Ok(guard) = self.0.lock() {
+            for flag in guard.values() {
+                flag.store(true, Ordering::SeqCst);
+            }
+        }
     }
 }
 
@@ -43,13 +63,15 @@ pub async fn sync_now(
     let root = config::require_repo_path(&app)?;
     let token = auth_service::read_token(&app)?;
     let backend = Git2Backend;
-    let cancel = Arc::new(AtomicBool::new(false));
-    app.state::<SyncRetryState>()
-        .set(Some(cancel.clone()))
+    let key = root.to_string_lossy().into_owned();
+    let cancel = app
+        .state::<SyncRetryState>()
+        .acquire(&key)
         .map_err(AppErrorDto::from)?;
+    let slot = cancel.clone();
 
     // 这里不用 blocking::run：同步失败要保留 stage / files，不能用 AppError 抹平
-    let result = tauri::async_runtime::spawn_blocking(move || {
+    let join = tauri::async_runtime::spawn_blocking(move || {
         let mut report = |attempt: RetryAttempt| {
             let _ = on_event.send(SyncProgressDto {
                 phase: "retrying".into(),
@@ -65,10 +87,10 @@ pub async fn sync_now(
         };
         sync_service::sync(&backend, &root, &token, &mut ctx)
     })
-    .await
-    .map_err(|err| AppErrorDto::from(AppError::Io(format!("后台任务失败: {err}"))))?;
-
-    let _ = app.state::<SyncRetryState>().set(None);
+    .await;
+    app.state::<SyncRetryState>().release(&key, &slot);
+    let result =
+        join.map_err(|err| AppErrorDto::from(AppError::Io(format!("后台任务失败: {err}"))))?;
     match result {
         Ok(status) => {
             crate::services::metrics_service::record_best_effort(&app, MetricEvent::SyncSucceeded);
@@ -90,8 +112,52 @@ fn sync_failure_dto(failure: SyncFailure) -> AppErrorDto {
 /// Controller：取消进行中的同步自动重试；无任务时静默成功。
 #[tauri::command]
 pub fn cancel_sync_retry(app: AppHandle) -> Result<(), AppErrorDto> {
-    if let Some(flag) = app.state::<SyncRetryState>().current() {
-        flag.store(true, Ordering::SeqCst);
-    }
+    app.state::<SyncRetryState>().cancel_all();
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn acquire_rejects_reentry_for_same_repo() {
+        let state = SyncRetryState::default();
+        let first = state.acquire("/repo").unwrap();
+        let err = state.acquire("/repo").unwrap_err();
+        assert!(matches!(err, AppError::SyncBusy(_)), "同仓库重入被拒");
+        assert!(state.acquire("/other").is_ok(), "不同仓库互不阻塞");
+        state.release("/repo", &first);
+        assert!(state.acquire("/repo").is_ok(), "释放后可再次进入");
+    }
+
+    #[test]
+    fn busy_error_maps_to_sync_4005() {
+        let state = SyncRetryState::default();
+        let _running = state.acquire("/repo").unwrap();
+        let dto = AppErrorDto::from(state.acquire("/repo").unwrap_err());
+        assert_eq!(dto.code, "SYNC_4005");
+        assert!(dto.retriable);
+    }
+
+    #[test]
+    fn release_only_clears_own_flag() {
+        let state = SyncRetryState::default();
+        let current = state.acquire("/repo").unwrap();
+        let stale = Arc::new(AtomicBool::new(false));
+        state.release("/repo", &stale);
+        assert!(state.acquire("/repo").is_err(), "别人的 flag 不得清理槽位");
+        state.release("/repo", &current);
+        assert!(state.acquire("/repo").is_ok());
+    }
+
+    #[test]
+    fn cancel_all_marks_every_running_flag() {
+        let state = SyncRetryState::default();
+        let a = state.acquire("/a").unwrap();
+        let b = state.acquire("/b").unwrap();
+        state.cancel_all();
+        assert!(a.load(Ordering::SeqCst));
+        assert!(b.load(Ordering::SeqCst));
+    }
 }

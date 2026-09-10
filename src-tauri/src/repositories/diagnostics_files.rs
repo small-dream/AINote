@@ -17,7 +17,7 @@ pub(crate) struct ZipEntry {
 
 /// 把条目写入 `dest`，返回压缩包字节数。写入失败时保留已写出的部分文件。
 pub(crate) fn write_zip(dest: &Path, entries: &[ZipEntry]) -> Result<u64, AppError> {
-    let file = File::create(dest)?;
+    let file = File::create(dest).map_err(|err| AppError::io_context("创建压缩包失败", dest, err))?;
     let mut writer = ZipWriter::new(file);
     let options = SimpleFileOptions::default().compression_method(CompressionMethod::Deflated);
     for entry in entries {
@@ -27,10 +27,14 @@ pub(crate) fn write_zip(dest: &Path, entries: &[ZipEntry]) -> Result<u64, AppErr
         writer
             .start_file(&entry.name, options)
             .map_err(|err| AppError::Io(err.to_string()))?;
-        writer.write_all(&entry.content)?;
+        writer
+            .write_all(&entry.content)
+            .map_err(|err| AppError::io_context("写入压缩包失败", dest, err))?;
     }
     writer.finish().map_err(|err| AppError::Io(err.to_string()))?;
-    Ok(std::fs::metadata(dest)?.len())
+    let size = std::fs::metadata(dest)
+        .map_err(|err| AppError::io_context("读取压缩包信息失败", dest, err))?;
+    Ok(size.len())
 }
 
 #[cfg(test)]

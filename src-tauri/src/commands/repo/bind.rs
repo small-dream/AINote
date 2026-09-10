@@ -10,9 +10,10 @@ use crate::domain::metrics::MetricEvent;
 use crate::repositories::git2_backend::Git2Backend;
 use crate::services::{auth_service, repo_service};
 
-/// Controller：绑定远端仓库（探测 → clone 到唯一目录 → 写入注册表并设为活动仓库）。
+/// Controller：绑定远端仓库（剥离内嵌凭证 → 探测 → clone 到唯一目录 → 写入注册表并设为活动仓库）。
 #[tauri::command]
 pub async fn bind_repo(app: AppHandle, repo_url: String) -> Result<RepoPathDto, AppErrorDto> {
+    let repo_url = repo_service::strip_userinfo(&repo_url);
     log::info!(
         target: "ainote::repo",
         "绑定仓库开始 url={}",

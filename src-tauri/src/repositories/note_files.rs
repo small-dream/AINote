@@ -24,16 +24,16 @@ pub fn read_note(root: &Path, rel: &str) -> Result<String, AppError> {
     if !path.is_file() {
         return Err(AppError::NoteNotFound(rel.to_string()));
     }
-    Ok(fs::read_to_string(path)?)
+    fs::read_to_string(&path).map_err(|err| AppError::io_context("读取失败", &path, err))
 }
 
 /// 写入笔记，自动创建父目录。
 pub fn write_note(root: &Path, rel: &str, content: &str) -> Result<(), AppError> {
     let path = root.join(validate_rel_path(rel)?);
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent)?;
+        fs::create_dir_all(parent).map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
     }
-    Ok(fs::write(path, content)?)
+    fs::write(&path, content).map_err(|err| AppError::io_context("写入失败", &path, err))
 }
 
 /// 导入外部 Markdown 笔记：在当前目录生成不冲突的 `<stem>.md` 目标路径（只计算不写入）。
@@ -66,9 +66,9 @@ pub fn move_note(root: &Path, from: &str, to: &str) -> Result<(), AppError> {
         return Err(AppError::NoteNotFound(from.to_string()));
     }
     if let Some(parent) = dst.parent() {
-        fs::create_dir_all(parent)?;
+        fs::create_dir_all(parent).map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
     }
-    Ok(fs::rename(src, dst)?)
+    fs::rename(&src, &dst).map_err(|err| AppError::io_context("移动失败", &src, err))
 }
 
 /// 转换笔记类型：把旧路径内容替换为新扩展名文件后删除旧文件（内容已由前端转换好）。
@@ -79,11 +79,10 @@ pub fn convert_note(root: &Path, from: &str, to: &str, content: &str) -> Result<
         return Err(AppError::NoteNotFound(from.to_string()));
     }
     if let Some(parent) = dst.parent() {
-        fs::create_dir_all(parent)?;
+        fs::create_dir_all(parent).map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
     }
-    fs::write(&dst, content)?;
-    fs::remove_file(&src)?;
-    Ok(())
+    fs::write(&dst, content).map_err(|err| AppError::io_context("写入失败", &dst, err))?;
+    fs::remove_file(&src).map_err(|err| AppError::io_context("删除失败", &src, err))
 }
 
 #[cfg(test)]
