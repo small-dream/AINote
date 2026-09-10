@@ -10,6 +10,14 @@ function baseState(notes: E2eState["notes"]): E2eState {
 }
 
 test.describe("AINote 桌面核心流程", () => {
+  test("导航轨：「笔记」是同步按钮之后的第一个入口", async ({ page }) => {
+    await openWorkspace(page, baseState([{ path: "first.md", content: "# 第一篇" }]));
+    const labels = await page
+      .locator(".workspace-nav-rail button")
+      .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")));
+    expect(labels.slice(0, 3)).toEqual(["立即同步", "笔记", "最近"]);
+  });
+
   test("切换笔记：点击目录树在笔记间切换并加载各自内容", async ({ page }) => {
     await openWorkspace(page, baseState([
       { path: "first.md", content: "# 第一篇\n\n这是第一份内容" },

@@ -35,9 +35,9 @@ export function WorkspaceNavRail({ repoPath, startupSyncing, sync }: WorkspaceNa
     <nav className="workspace-nav-rail flex w-[72px] shrink-0 flex-col items-center border-r border-border bg-bg-tertiary px-2 pb-3" aria-label={t("app.workspaceNavigation")}>
       <div data-tauri-drag-region className="h-11 w-full shrink-0" aria-hidden="true" />
       <SyncNavButton repoPath={repoPath} startupSyncing={startupSyncing} sync={sync} />
+      <NavigationItems />
       <CommitNavButton repoPath={repoPath} sync={sync} />
       <GraphNavButton repoPath={repoPath} />
-      <NavigationItems />
       <SettingsNavButton />
     </nav>
   );
@@ -48,7 +48,7 @@ function NavigationItems() {
   const sidebarTab = useUiStore((state) => state.sidebarTab);
   const setSidebarTab = useUiStore((state) => state.setSidebarTab);
   return (
-    <div className="flex w-full flex-col items-center gap-1.5">
+    <div className="mb-4 flex w-full flex-col items-center gap-1.5">
       {NAV_ITEMS.map(({ key, icon: Icon, sidebarTab: targetTab }) => {
         const label = t(key);
         const active = sidebarTab === targetTab;
