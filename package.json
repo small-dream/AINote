@@ -10,7 +10,7 @@
     "test": "vitest run",
     "lint": "eslint .",
     "test:e2e": "playwright test",
-    "perf:baseline": "cargo test perf_baseline --manifest-path src-tauri/Cargo.toml -- --ignored --nocapture",
+    "perf:baseline": "cargo test perf_baseline --manifest-path src-tauri/Cargo.toml -- --ignored --nocapture && vitest run --mode perf --reporter=verbose src/features/note/softRender/perf.test.ts",
     "tauri": "tauri",
     "icons:mobile": "node scripts/generate-mobile-icons.mjs",
     "android:dev": "node scripts/tauri-android.mjs dev",
