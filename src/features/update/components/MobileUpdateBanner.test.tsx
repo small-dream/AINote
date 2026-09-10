@@ -4,6 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const api = vi.hoisted(() => ({ openExternal: vi.fn(), fetchLatestRelease: vi.fn() }));
 
 vi.mock("@/platform/runtime", () => ({ isAndroidApp: () => true }));
+vi.mock("@/features/support/error-report", () => ({ reportFrontendError: vi.fn() }));
 vi.mock("@/api", () => ({
   openExternal: api.openExternal,
   recordMetric: vi.fn(),

@@ -9,6 +9,7 @@ const state = vi.hoisted(() => ({
 }));
 
 vi.mock("@/platform/runtime", () => ({ isAndroidApp: () => state.android }));
+vi.mock("@/features/support/error-report", () => ({ reportFrontendError: vi.fn() }));
 vi.mock("@/api", () => ({
   recordMetric: vi.fn(),
   releaseApi: {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from "react";
 import { recordMetric, releaseApi } from "@/api";
+import { reportFrontendError } from "@/features/support/error-report";
 import { isAndroidApp } from "@/platform/runtime";
 import { useMobileUpdateStore } from "../stores/mobile-update.store";
 import { isNewerVersion } from "../utils/version";
@@ -21,8 +22,9 @@ async function checkLatestRelease(): Promise<void> {
       currentVersion: release.currentVersion,
       release: available ? release : null,
     });
-  } catch {
-    // 无网络或接口异常一律静默降级，不打扰用户
+  } catch (error) {
+    // 无网络或接口异常一律静默降级，不打扰用户；原因写入本地日志便于诊断
+    reportFrontendError(error, "mobile-update-check");
     useMobileUpdateStore.getState().report({ phase: "failed", currentVersion: null, release: null });
   }
 }
