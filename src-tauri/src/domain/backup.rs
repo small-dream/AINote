@@ -25,6 +25,15 @@ pub struct BackupExportDto {
     pub total_bytes: u64,
 }
 
+/// 从备份恢复的结果。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RestoreResultDto {
+    pub repo_path: String,
+    pub name: String,
+    pub file_count: usize,
+}
+
 /// 备份阶段：扫描文件列表 / 写入压缩包。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "lowercase")]

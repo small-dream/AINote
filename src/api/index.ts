@@ -46,6 +46,7 @@ export type {
   NoteWikiDto,
   RepoInfo,
   RepoPathDto,
+  RestoreResultDto,
   SearchResult,
   SyncStatus,
   SupportInfoDto,

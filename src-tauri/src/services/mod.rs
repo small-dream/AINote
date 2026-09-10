@@ -11,6 +11,7 @@ pub mod maintenance_service;
 pub mod note_service;
 pub mod note_favorite_service;
 pub mod repo_service;
+pub(crate) mod restore_service;
 pub mod search_service;
 pub mod sync_service;
 pub mod wiki_service;

@@ -7,6 +7,7 @@ import type {
   RepoInfo,
   RepoPathDto,
   RepoSizeDto,
+  RestoreResultDto,
 } from "./types";
 
 /** 仓库管理相关 IPC（P0-1 / 设置-多仓库管理） */
@@ -32,6 +33,8 @@ export const repoApi = {
   },
   /** 请求取消进行中的备份 */
   cancelBackup: () => call<null>("cancel_repo_backup"),
+  /** 从备份包恢复仓库；用户取消选择文件时返回 null */
+  restoreBackup: () => call<RestoreResultDto | null>("restore_repo_backup"),
   /** 列出全部已绑定笔记仓库 */
   list: () => call<RepoInfo[]>("list_repos"),
   /** 重命名仓库展示名 */

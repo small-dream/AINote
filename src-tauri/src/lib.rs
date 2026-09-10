@@ -82,6 +82,7 @@ pub fn run() {
             commands::repo::create::create_repo,
             commands::repo::backup::export_repo_backup,
             commands::repo::backup::cancel_repo_backup,
+            commands::repo::restore::restore_repo_backup,
             commands::repo::integrity::check_repo_integrity,
             commands::repo::list::list_repos,
             commands::repo::rename::rename_repo,

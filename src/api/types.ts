@@ -258,3 +258,10 @@ export interface BackupExportDto {
   fileCount: number;
   totalBytes: number;
 }
+
+/** 从备份恢复的结果 */
+export interface RestoreResultDto {
+  repoPath: string;
+  name: string;
+  fileCount: number;
+}
