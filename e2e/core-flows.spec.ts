@@ -18,6 +18,31 @@ test.describe("AINote 桌面核心流程", () => {
     expect(labels.slice(0, 3)).toEqual(["立即同步", "笔记", "最近"]);
   });
 
+  test("最近面板：清空按钮与面板标题垂直居中对齐", async ({ page }) => {
+    await openWorkspace(page, baseState([
+      { path: "a.md", content: "# A" },
+      { path: "b.md", content: "# B" },
+    ]));
+    await page.getByRole("button", { name: "最近" }).first().click();
+    const header = page.locator("header", { has: page.getByRole("button", { name: "清空" }) });
+    await expect(header).toBeVisible();
+    const centers = await header.evaluate((node) => {
+      const textCenter = (el: Element | null) => {
+        const range = document.createRange();
+        range.selectNodeContents(el as Node);
+        const rect = range.getBoundingClientRect();
+        return (rect.top + rect.bottom) / 2;
+      };
+      return {
+        title: textCenter(node.querySelector("span")),
+        label: textCenter(node.querySelector("button span")),
+        labelFontSize: getComputedStyle(node.querySelector("button span") as Element).fontSize,
+      };
+    });
+    expect(centers.labelFontSize).toBe("11px");
+    expect(Math.abs(centers.title - centers.label)).toBeLessThan(1.5);
+  });
+
   test("切换笔记：点击目录树在笔记间切换并加载各自内容", async ({ page }) => {
     await openWorkspace(page, baseState([
       { path: "first.md", content: "# 第一篇\n\n这是第一份内容" },

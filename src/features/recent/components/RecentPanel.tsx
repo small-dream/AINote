@@ -34,8 +34,12 @@ export function RecentPanel({ repoPath, onSelect }: RecentPanelProps) {
           <div className="flex items-center gap-2">
             <span className="text-xs text-text-tertiary">{notes.length}</span>
             {notes.length > 0 && (
-              <Button variant="ghost" className="h-6 px-2 text-[11px]" onClick={() => clearRecentNotes(repoPath ?? "")}>
-                {t("recent.clear")}
+              <Button
+                variant="ghost"
+                className="inline-flex h-6 items-center px-2"
+                onClick={() => clearRecentNotes(repoPath ?? "")}
+              >
+                <span className="text-[11px] leading-none">{t("recent.clear")}</span>
               </Button>
             )}
           </div>
