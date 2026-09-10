@@ -1,5 +1,8 @@
 import { useEffect, useRef } from "react";
-import { isTauriRuntime, onAndroidBackButton } from "@/api/back-button.api";
+import { onAndroidBackButton } from "@/api/back-button.api";
+import { isAndroidApp } from "./runtime";
+
+export { isAndroidApp };
 
 type BackHandler = () => void;
 
@@ -7,11 +10,6 @@ type BackHandler = () => void;
 const handlers: BackHandler[] = [];
 let unsubscribe: (() => void) | null = null;
 let connecting: Promise<void> | null = null;
-
-/** 当前是否运行在 Android 原生壳内（浏览器与桌面壳均为 false）。 */
-export function isAndroidApp(): boolean {
-  return isTauriRuntime() && typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent);
-}
 
 function dispatchBack(): void {
   handlers[handlers.length - 1]?.();

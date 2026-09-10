@@ -1,10 +1,17 @@
 import { useUpdate } from "../hooks/useUpdate";
+import { isAndroidApp } from "@/platform/runtime";
+import { MobileUpdateSettings } from "./MobileUpdateSettings";
 import { UpdateProgressBar } from "./UpdateProgressBar";
 import { UpdateReleaseCard } from "./UpdateReleaseCard";
 import { UpdateStatusCard } from "./UpdateStatusCard";
 
-/** 设置页更新内容区：展示当前状态、发布说明、下载进度和失败恢复入口。 */
+/** 设置页更新内容区：按平台分流——Android 只做检查与跳转，桌面走签名更新通道。 */
 export function UpdateSettings() {
+  return isAndroidApp() ? <MobileUpdateSettings /> : <DesktopUpdateSettings />;
+}
+
+/** 桌面更新内容区：展示当前状态、发布说明、下载进度和失败恢复入口。 */
+function DesktopUpdateSettings() {
   const update = useUpdate();
 
   return (

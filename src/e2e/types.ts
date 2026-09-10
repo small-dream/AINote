@@ -21,6 +21,8 @@ export interface E2eConflictSeed {
 
 export interface E2eState {
   repoPath: string;
+  /** 当前安装版本（`plugin:app|version`，移动端更新检查用） */
+  appVersion?: string;
   notes: E2eNoteSeed[];
   /** 仓库相对路径 → data-uri，用于图片加载测试 */
   assets?: Record<string, string>;

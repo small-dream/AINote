@@ -43,7 +43,7 @@
 |---|---|---|---|---|
 | D1 | Windows 代码签名方案 | SignPath Foundation（开源免费）/ Azure Trusted Signing / OV 证书 / EV 证书 | **🧊 暂缓到 M1.5**：证书类签名当前阶段不启动。已调研结论备查：优先 SignPath Foundation（MIT + 公开仓库可申请，审批不保证），未通过转 Azure Trusted Signing（≈$10/月、CI 友好） | M1.5-E1-T2 |
 | D2 | 崩溃上报方案 | 本地日志 + 手动反馈 / Sentry 等第三方 / 自建上报 | **M1 先做本地日志 + 手动诊断包**，远程上报作为 M1b，需先出隐私说明 | M1-E2-T4 |
-| D3 | Android 分发方式 | Google Play / 仅 GitHub APK + 应用内更新提示 / 两者 | **M1 先做应用内更新提示**，Play 上架排入 M4 | M1-E1-T5 |
+| D3 | Android 分发方式 | Google Play / 仅 GitHub APK + 应用内更新提示 / 两者 | **✅ 已确认（2026-09-10）**：仅 GitHub APK + 应用内更新提示（只提示、不静默下载安装），Play 上架排入 M4 | M1-E1-T5 |
 | D4 | 度量采集边界 | 仅本地 / 本地 + opt-in 远程 | **本地计数默认开启（不含内容），远程默认关闭、显式同意** | M1-E5-T1/T2 |
 | D5 | iOS 发布节奏 | M1 只做 TestFlight / M1 直接上架 | **🧊 暂缓到 M1.5 / M4**：真机签名依赖 Apple 账号，当前阶段不启动 | M1.5-E1-T4 |
 
@@ -83,7 +83,7 @@
 | M1-E1-T2 | 🧊 M1.5 | Windows 代码签名 | desktop | D1 | M | 🧊 |
 | M1-E1-T3 | 签名与分发 | Linux 产物校验与签名（GPG，零成本） | desktop | GPG key | S | 📋 |
 | M1-E1-T4 | 🧊 M1.5 | iOS TestFlight 内测通道 | mobile | D5、Apple 账号 | L | 🧊 |
-| M1-E1-T5 | 签名与分发 | Android 应用内更新提示 | mobile | D3 | M | 📋 |
+| M1-E1-T5 | 签名与分发 | Android 应用内更新提示 | mobile | D3 | M | ✅ |
 | M1-E1-T6 | 分发支持 | 分发与排查文档 | shared | — | S | ✅ |
 | M1-E2-T1 | 可诊断性 | Rust 结构化本地日志 | shared | — | M | ✅ |
 | M1-E2-T2 | 可诊断性 | 前端错误边界与全局错误日志 | shared | M1-E2-T1 | M | ✅ |
@@ -182,6 +182,13 @@
 - **验收标准**：有新版本时提示准确；无网络/接口失败时静默降级不打扰；不误报当前版本。
 - **测试义务**：纯函数单测覆盖 `1.2.3 < 1.2.10`、预发布版本、当前版本。
 - **跨端影响**：`Desktop Impact`：无（桌面已有 updater）；`Mobile Impact`：有。
+- **实现备注（2026-09-10）**：
+  - 版本比较落在 `src/features/update/utils/version.ts`（纯函数）：`parseVersion`（容忍 `v` 前缀与 `+build` 元数据）、`compareVersions`（缺段补 0、正式版 > 同号预发布版、数字标识符 < 字母）、`isNewerVersion`（**严格大于**，任一无法解析返回 false——宁可漏报不误报）。
+  - 数据源走 GitHub Releases API（`src/api/release.api.ts` 的 `releaseApi.fetchLatestRelease`，与 `getVersion()` 并发取回；`tag_name` 归一化去掉 `v` 前缀，`html_url` 缺失时按 tag 兜底拼接）。**不接 updater 插件**：`capabilities/mobile.json` 只有 `core:default`，移动端也没有 `plugin-process` 依赖。
+  - 平台判定抽到 `src/platform/runtime.ts` 的 `isAndroidApp()`（`back-navigation.ts` 改为从该文件导入并继续对外导出，行为不变）：只有 Android 壳才自动检查，桌面壳不受影响。
+  - `useMobileUpdate` + `useMobileUpdateStore`（`zustand`）收敛检查状态，提示条与设置页共用一份结果并发去重；请求失败一律静默降级为 `failed`，不弹错、不打扰。「忽略此版本」按版本号持久化到 localStorage，出现更新的版本时会重新提示。
+  - UI 两处：移动壳顶部的 `MobileUpdateBanner`（新版本提示 + 「前往 Release 页面下载」+ 忽略）与设置页 `MobileUpdateSettings`；`UpdateSettings` 现在按平台分流，顺带修掉「Android 上渲染桌面 updater 面板必然检查失败」的问题。
+  - 验证：`version.test.ts` 14 项（含 `1.2.3 < 1.2.10`、预发布、同版本/降级不误报、非法输入）；`useMobileUpdate` 6 项 + `MobileUpdateBanner` 5 项；e2e 新增 `e2e/mobile-update.spec.ts` 5 条（430px + Android UA：有新版本提示并跳转、忽略后不再提示、已最新只在设置页说明、接口不可用静默降级、桌面壳不显示移动提示），IPC mock 补 `plugin:app|version` / `open_external` 并置位 `isTauri`。真机验证缺口：本机 `adb devices` 为空，移动端 UI 以窄屏 e2e + RTL 替代。
 
 #### M1-E1-T6 分发与排查文档（S）
 
@@ -471,7 +478,7 @@
 - [x] M1-E4-T4 同步失败定位。
 - [ ] M1-E5-T1 / T2 / T3 度量地基。
 - [ ] M1-E1-T3 Linux 产物校验与签名（GPG）。
-- [ ] M1-E1-T5 Android 应用内更新提示。
+- [x] M1-E1-T5 Android 应用内更新提示。
 
 ### Wave 4 — 收口与发布（第 5–6 周）
 
@@ -548,7 +555,7 @@
 | M1-E1-T2 Windows 代码签名 | 🧊 | | M1.5，等预算批准 |
 | M1-E1-T3 Linux 校验与签名 | 📋 | | 等 GPG key |
 | M1-E1-T4 iOS TestFlight | 🧊 | | M1.5，等 Apple 账号 |
-| M1-E1-T5 Android 更新提示 | 📋 | | 等 D3 |
+| M1-E1-T5 Android 更新提示 | ✅ | | GitHub Release 检查 + 版本比较纯函数（降级保护）；只提示不静默安装，可忽略该版本 |
 | M1-E1-T6 分发与排查文档 | ✅ | | TROUBLESHOOTING.md + README 入口；Windows/Linux 命令待实测 |
 | M1-E2-T1 Rust 本地日志 | ✅ | | tauri-plugin-log 2.9.1 + 全局脱敏；设置页清理归 E2-T5 |
 | M1-E2-T2 前端错误边界 | ✅ | | ErrorBoundary + window 级捕获，经 support.api.ts 上报 |
@@ -574,6 +581,7 @@
 
 | 日期 | 变更 | 作者 |
 |---|---|---|
+| 2026-09-10 | v1.12：D3 确认（仅 GitHub APK + 应用内更新提示）并交付 M1-E1-T5（移动端启动/设置页检查 GitHub Release，新版本提示 + 跳转下载页；无网络静默降级，不误报当前版本） | PM |
 | 2026-09-10 | v1.11：M1-E4-T4 交付（同步失败定位：`AppErrorDto` 携带 `stage` / `files` / `hint`，`sync_now` 保留原始错误上下文；前端失败横幅展示可定位的失败文件并优先采用后端阶段与建议） | PM |
 | 2026-09-10 | v1.10：M1-E4-T2 交付（幂等拉取自动重试 + 重试进度 / 取消；push 不自动重试，移除整条 sync_now 的前端重试） | PM |
 | 2026-09-10 | v1.9：M1-E3-T5 交付（可恢复 UI 收口：同步失败横幅 + 保存失败建议 + 删除恢复入口 + 冲突导出兜底；新增 `export_conflicts` 与 4 条真实前端 e2e） | PM |

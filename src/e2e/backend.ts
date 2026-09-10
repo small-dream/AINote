@@ -184,6 +184,9 @@ const commandHandlers: Record<string, CommandHandler> = {
     return null;
   },
   "plugin:event|listen": () => 1,
+  "plugin:app|version": (_args, ctx) => ctx.state.appVersion ?? "0.24.12",
+  open_external: () => null,
+  print_current_page: () => null,
   "plugin:event|register_listener": () => 1,
   "plugin:event|unlisten": () => null,
   "plugin:event|emit": () => null,

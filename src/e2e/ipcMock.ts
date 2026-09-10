@@ -16,6 +16,7 @@ interface MockWindow {
   __E2E_RECORD__?: Array<{ cmd: string; args: Record<string, unknown> }>;
   __TAURI_INTERNALS__?: unknown;
   __TAURI_EVENT_PLUGIN_INTERNALS__?: unknown;
+  isTauri?: boolean;
 }
 
 function record(cmd: string, args: Record<string, unknown>): void {
@@ -42,6 +43,9 @@ export function installE2eIpcMock(): void {
     metadata: { currentWindow: { label: "main" }, currentWebview: { label: "main" } },
   };
   window.__TAURI_INTERNALS__ = internals;
+  // `@tauri-apps/api` 的 isTauri() 读取 globalThis.isTauri：mock 必须一并置位，
+  // 否则平台判定（如 Android 更新提示）在 e2e 中永远为假。
+  window.isTauri = true;
   window.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
     unregisterListener: () => undefined,
     registerListener: () => undefined,
