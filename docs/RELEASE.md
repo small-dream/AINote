@@ -21,6 +21,17 @@
 5. 检查所有矩阵任务成功，确认 Release 包含 `latest.json` 及各平台 `.app.tar.gz`、`.AppImage`、`.deb`、`.msi`/`.exe`、`.apk`、`.aab` 资产；再由 `publish-release` 自动公开 Release。
 6. 在干净环境安装每个平台包，启动 AINote，进入「设置 → 软件更新」，验证能发现新版本、下载、安装并自动重启。
 
+## 发布前故障恢复演练清单
+
+发布 PR 合并前逐项执行并勾选，结果（日期 / 版本 / 结论）写入 PR 描述。手册见 `docs/INCIDENT_RECOVERY.md`。
+
+- [ ] `pnpm test:drills` 通过：保存失败保留原内容、误删可从回收站恢复、仓库损坏可从备份恢复。
+- [ ] 手动：真实仓库执行「导出整库备份」→ 覆盖安装上一发布版 → 「从备份恢复」→ 笔记内容与 Git 历史一致。
+- [ ] 手动：断网后编辑并保存，恢复网络后同步成功，本地内容无丢失。
+- [ ] 手动：设置 → 仓库 → 「检查完整性」在健康仓库返回无 error。
+- [ ] 手动：设置 → 诊断与反馈 → 导出诊断包，包内不含 Token / API Key / 笔记正文。
+- [ ] 确认 `docs/TROUBLESHOOTING.md` 的放行步骤与本版本安装包一致（未签名平台）。
+
 ## macOS 安装提示
 
 GitHub 提供的 macOS DMG 仅面向 Apple Silicon（Apple 芯片）Mac，且未使用 Apple Developer ID 签名与公证。首次打开时，macOS 可能提示“无法验证开发者”或“应用已损坏”，这是系统的 Gatekeeper 安全提示，不代表安装包下载不完整。

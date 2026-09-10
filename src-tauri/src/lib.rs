@@ -10,6 +10,9 @@ mod services;
 #[cfg(test)]
 mod perf_baseline;
 
+#[cfg(test)]
+mod recovery_drill;
+
 pub use services::auth_store::AuthStore;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
