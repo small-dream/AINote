@@ -65,6 +65,7 @@ export function useImportNoteMutation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["wiki"] });
       markActivity();
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
     },
@@ -107,6 +108,7 @@ export function useDeleteNoteMutation(onDeleted?: (path: string) => void) {
     onSuccess: (_data, path) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["wiki"] });
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       markActivity();
       void queryClient.removeQueries({ queryKey: ["note-content"] });
@@ -124,6 +126,7 @@ export function useMoveNoteMutation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["wiki"] });
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       markActivity();
     },
@@ -140,6 +143,7 @@ export function useConvertNoteMutation() {
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["wiki"] });
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       markActivity();
     },
