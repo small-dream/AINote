@@ -1,7 +1,8 @@
 use std::path::Path;
 
+use crate::domain::commit::build_commit_message;
 use crate::domain::error::AppError;
-use crate::domain::sync::{ConflictFile, SyncStage, SyncStatus};
+use crate::domain::sync::{ChangedFile, ConflictFile, SyncStage, SyncStatus};
 use crate::repositories::git_backend::GitBackend;
 
 use super::retry::{self, RetryContext, RetryPolicy};
@@ -61,6 +62,21 @@ pub fn commit_pending<B: GitBackend>(
     backend.commit_all(&repo_path.to_string_lossy(), message)
 }
 
+/// 用例：工作区待提交变更（增/改/删），供手动提交面板与同步前 message 生成。
+pub fn changed_files<B: GitBackend>(
+    backend: &B,
+    repo_path: &Path,
+) -> Result<Vec<ChangedFile>, AppError> {
+    backend.changed_files(&repo_path.to_string_lossy())
+}
+
+/// 本地时间 `YYYY-MM-DD HH:mm`；取本地时区失败时回退 UTC。
+pub fn format_now() -> String {
+    let now = time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
+    now.format(&time::macros::format_description!("[year]-[month]-[day] [hour]:[minute]"))
+        .unwrap_or_default()
+}
+
 /// 用例：拉取远端（冲突时返回 Conflict 错误，状态可查）
 pub fn pull<B: GitBackend>(
     backend: &B,
@@ -115,7 +131,11 @@ pub fn sync<B: GitBackend>(
         ));
     }
     log::info!(target: "ainote::sync", "同步开始 repo={}", crate::config::logging::redact(&path));
-    commit_pending(backend, repo_path, "note: auto commit")
+    let files = backend
+        .changed_files(&path)
+        .map_err(|error| stage_failure("changed_files", SyncStage::Commit, error, Vec::new()))?;
+    let message = build_commit_message(&files, &format_now());
+    commit_pending(backend, repo_path, &message)
         .map_err(|error| stage_failure("commit", SyncStage::Commit, error, Vec::new()))?;
     pull_stage(backend, repo_path, token, ctx).map_err(|error| {
         let files = if matches!(error, AppError::Conflict(_)) {
@@ -226,8 +246,33 @@ mod tests {
         sync(&mock, &root(), "tok", &mut background()).unwrap();
         assert_eq!(
             mock.recorded(),
-            vec!["commit:note: auto commit", "pull", "push"]
+            vec!["changed_files", "commit:", "pull", "push"]
         );
+    }
+
+    #[test]
+    fn sync_message_uses_timestamp_and_changed_files() {
+        let mock = MockGitBackend {
+            uncommitted: true,
+            changed: vec![
+                crate::domain::sync::ChangedFile {
+                    path: "daily/2026-09-10.md".into(),
+                    status: crate::domain::sync::ChangedFileStatus::Modified,
+                },
+                crate::domain::sync::ChangedFile {
+                    path: "new.md".into(),
+                    status: crate::domain::sync::ChangedFileStatus::Added,
+                },
+            ],
+            ..Default::default()
+        };
+        sync(&mock, &root(), "tok", &mut background()).unwrap();
+        let recorded = mock.recorded();
+        assert_eq!(recorded[0], "changed_files");
+        assert!(recorded[1].starts_with("commit:chore: "), "subject 含时间与文件数");
+        assert!(recorded[1].contains("· 更新 2 个文件"));
+        assert!(recorded[1].contains("M daily/2026-09-10.md"));
+        assert!(recorded[1].contains("A new.md"));
     }
 
     #[test]
@@ -253,7 +298,7 @@ mod tests {
         ));
         assert_eq!(
             mock.recorded(),
-            vec!["commit:note: auto commit", "pull", "conflicts"],
+            vec!["changed_files", "commit:", "pull", "conflicts"],
             "冲突后列出待解决文件供前端定位"
         );
     }
@@ -278,7 +323,7 @@ mod tests {
         };
 
         assert!(outcome.is_ok());
-        assert_eq!(mock.recorded(), vec!["commit:note: auto commit", "pull", "pull", "pull", "push"]);
+        assert_eq!(mock.recorded(), vec!["changed_files", "commit:", "pull", "pull", "pull", "push"]);
         assert_eq!(reports, vec![1, 2]);
         assert_eq!(delays.len(), 2);
     }

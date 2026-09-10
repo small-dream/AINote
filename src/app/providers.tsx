@@ -5,6 +5,7 @@ import { useTypographyStore } from "@/stores/typography.store";
 import { reportToastError } from "@/stores/toast.store";
 import { ToastViewport } from "@/components/molecules/ToastViewport";
 import { installGlobalErrorLogging } from "@/features/support";
+import { CloseConfirmDialog } from "@/features/close-guard/components/CloseConfirmDialog";
 
 const queryClient = new QueryClient({
   mutationCache: new MutationCache({
@@ -25,6 +26,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
       <ThemeApplier />
       <TypographyApplier />
       <ToastViewport />
+      <CloseConfirmDialog />
       {children}
     </QueryClientProvider>
   );

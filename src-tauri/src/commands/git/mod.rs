@@ -9,4 +9,5 @@ pub mod resolve;
 pub mod resolve_file;
 pub mod restore;
 pub mod status;
+pub mod status_files;
 pub mod sync;

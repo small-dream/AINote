@@ -1,11 +1,12 @@
 import { lazy, Suspense, useState } from "react";
-import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
+import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, GitCommitHorizontal, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
 import type { SyncController } from "@/features/sync/hooks/useSync";
 import { deriveSyncFailure, deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 
 const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
+const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
 
 interface WorkspaceNavRailProps {
   repoPath: string | null;
@@ -33,6 +34,7 @@ export function WorkspaceNavRail({ repoPath, startupSyncing, sync }: WorkspaceNa
     <nav className="workspace-nav-rail flex w-[72px] shrink-0 flex-col items-center border-r border-border bg-bg-tertiary px-2 pb-3" aria-label={t("app.workspaceNavigation")}>
       <div data-tauri-drag-region className="h-11 w-full shrink-0" aria-hidden="true" />
       <SyncNavButton repoPath={repoPath} startupSyncing={startupSyncing} sync={sync} />
+      <CommitNavButton repoPath={repoPath} sync={sync} />
       <NavigationItems />
       <SettingsNavButton />
     </nav>
@@ -84,12 +86,39 @@ function SyncNavButton({ repoPath, startupSyncing, sync }: WorkspaceNavRailProps
         title={tip}
         onClick={() => (hasConflict ? setConflictOpen(true) : syncNow.mutate())}
         disabled={display.busy || (!online && !hasConflict)}
-        className={`group relative mb-4 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${SYNC_COLOR[tone]}`}
+        className={`group relative mb-1.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${SYNC_COLOR[tone]}`}
       >
         <Icon size={19} className={display.busy ? "animate-spin" : ""} />
         <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{tip}</span>
       </button>
       {conflictOpen ? <Suspense fallback={null}><LazyConflictMergeDialog repoPath={repoPath} open onClose={() => setConflictOpen(false)} /></Suspense> : null}
+    </>
+  );
+}
+
+/** 手动提交入口：有待提交变更时显示徽标，点击打开提交面板。 */
+function CommitNavButton({ repoPath, sync }: { repoPath: string | null; sync: SyncController }) {
+  const { t } = useTranslation();
+  const [commitOpen, setCommitOpen] = useState(false);
+  const hasUncommitted = sync.status.hasUncommitted;
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={t("commit.title")}
+        title={t("commit.title")}
+        onClick={() => setCommitOpen(true)}
+        className={`${NAV_BUTTON_CLASS} relative mb-4`}
+      >
+        <GitCommitHorizontal size={18} />
+        {hasUncommitted ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-warning" aria-hidden="true" /> : null}
+        <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{t("commit.title")}</span>
+      </button>
+      {commitOpen ? (
+        <Suspense fallback={null}>
+          <LazyCommitDialog repoPath={repoPath} onClose={() => setCommitOpen(false)} />
+        </Suspense>
+      ) : null}
     </>
   );
 }

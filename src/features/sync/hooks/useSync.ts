@@ -6,8 +6,6 @@ import { useResolveConflictMutation, useSyncNowMutation, useSyncStatusQuery } fr
 import { useCommitPendingMutation } from "@/queries/sync.queries";
 import type { SyncStatus } from "@/api/types";
 import { deriveSyncLabel } from "../utils/status";
-import { useIdleCommit } from "./useIdleCommit";
-import { useWorkspaceActivityStore } from "@/stores/workspace-activity.store";
 import { useTranslation } from "@/i18n";
 
 const DEFAULT_STATUS: SyncStatus = {
@@ -26,7 +24,6 @@ export function useSync(repoPath: string | null) {
   const syncNow = useSyncNowMutation();
   const resolve = useResolveConflictMutation();
   const checkpoint = useCommitPendingMutation();
-  const activityVersion = useWorkspaceActivityStore((state) => state.version);
 
   const status = statusQuery.data ?? DEFAULT_STATUS;
   const label = deriveSyncLabel(status, online, locale);
@@ -35,12 +32,6 @@ export function useSync(repoPath: string | null) {
   const cancelRetry = useCallback(() => {
     void syncApi.cancelSyncRetry().catch(() => undefined);
   }, []);
-  const { committing } = useIdleCommit(
-    repoPath,
-    status.hasUncommitted,
-    activityVersion,
-    syncNow.isPending || checkpoint.isPending,
-  );
 
   return {
     online,
@@ -53,7 +44,6 @@ export function useSync(repoPath: string | null) {
     retry,
     cancelRetry,
     resolving: resolve.isPending,
-    committing,
   };
 }
 

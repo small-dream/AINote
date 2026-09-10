@@ -38,6 +38,15 @@ export interface SyncStatus {
   conflicted: boolean;
 }
 
+/** 工作区待提交变更的状态（git_status_files 返回，与 Rust domain/sync.rs 一致） */
+export type ChangedFileStatus = "added" | "modified" | "deleted";
+
+/** 工作区待提交变更文件（增/改/删，相对仓库根目录） */
+export interface ChangedFile {
+  path: string;
+  status: ChangedFileStatus;
+}
+
 /** list_conflicts 返回：单个冲突文件的三栏合并素材（与 Rust domain/sync.rs 一致） */
 export interface ConflictFile {
   /** 相对仓库根目录的路径，如 "daily/a.md" */

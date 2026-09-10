@@ -18,6 +18,15 @@ export function useSyncStatusQuery(repoPath: string | null, enabled = true) {
   });
 }
 
+/** 工作区待提交变更（增/改/删），仅在提交面板打开时查询 */
+export function useChangedFilesQuery(repoPath: string | null, enabled = true) {
+  return useQuery({
+    queryKey: ["changed-files", repoPath],
+    queryFn: () => syncApi.statusFiles(),
+    enabled: repoPath !== null && enabled,
+  });
+}
+
 function invalidateSync(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: ["sync"] });
 }

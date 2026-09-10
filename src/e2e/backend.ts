@@ -13,6 +13,9 @@ interface MockStore {
   /** 近 7 天活跃天数与同步成功率（模拟窗口指标） */
   activeDays: number;
   syncSuccessRate: number | null;
+  /** 待提交变更（手动提交入口与面板用） */
+  uncommitted: boolean;
+  changedFiles: Array<{ path: string; status: "added" | "modified" | "deleted" }>;
 }
 
 export interface E2eCommandContext {
@@ -47,6 +50,8 @@ function createStore(state: E2eState): MockStore {
     metricsCounts: { ...(state.metricsCounts ?? {}) },
     activeDays: state.metricsActiveDays ?? 0,
     syncSuccessRate: state.metricsSyncSuccessRate ?? null,
+    uncommitted: state.uncommitted === true,
+    changedFiles: state.changedFiles ?? [],
   };
 }
 
@@ -78,7 +83,7 @@ function displayName(path: string): string {
 }
 
 function syncStatus(store: MockStore) {
-  return { ahead: 0, behind: 0, hasUncommitted: false, conflicted: store.conflicted };
+  return { ahead: 0, behind: 0, hasUncommitted: store.uncommitted, conflicted: store.conflicted };
 }
 
 function metaOf(path: string, note: { content: string; kind: string }) {
@@ -135,9 +140,11 @@ const commandHandlers: Record<string, CommandHandler> = {
     pending?.(syncStatus(ctx.store));
     return null;
   },
+  confirm_close: () => null,
   git_pull: (_args, ctx) => syncStatus(ctx.store),
   git_push: (_args, ctx) => syncStatus(ctx.store),
   git_commit: () => "e2e-commit",
+  git_status_files: (_args, ctx) => ctx.store.changedFiles,
   list_notes: (_args, ctx) => [...ctx.store.notes.entries()].map(([path, note]) => metaOf(path, note)),
   read_note: (args, ctx) => {
     const path = String(args.path ?? "");

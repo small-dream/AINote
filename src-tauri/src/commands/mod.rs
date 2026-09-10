@@ -3,6 +3,7 @@ pub mod app;
 pub mod asset;
 pub mod auth;
 pub mod blocking;
+pub mod close_guard;
 pub mod git;
 pub mod metrics;
 pub mod note;

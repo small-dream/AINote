@@ -113,8 +113,9 @@ AppError { code: "SYNC_4013", kind: Conflict, message: "...", retriable: true }
 
 ## 6. Git 提交规范
 
-- Commit message：`type(scope): summary`，type ∈ `feat | fix | refactor | test | docs | chore`。
-- 应用内自动生成的笔记提交：`note: <action> <path>`。
+- 代码提交：`type(scope): summary`，type ∈ `feat | fix | refactor | test | docs | chore`。
+- 应用内手动 / 同步前兜底提交：subject = `chore: <YYYY-MM-DD HH:mm> · 更新 N 个文件`，body 逐行列出 `A/M/D + 路径`；message 默认自动生成、用户可编辑（纯函数 `domain/commit.rs` / `features/commit/utils/message.ts` 保持一致）。
+- 冲突解决提交：`note: resolve conflict`（流程必需，不算自动噪音）。
 - 禁止提交：密钥/Token、构建产物、`node_modules/`、本地仓库数据目录。
 
 ## 7. 文档同步义务

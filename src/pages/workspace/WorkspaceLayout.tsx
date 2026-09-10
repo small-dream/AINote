@@ -18,6 +18,7 @@ import { getDirectoryPath } from "@/features/file-tree/utils/path";
 import { useSessionStore } from "@/stores/session.store";
 
 const LazySettingsView = lazy(() => import("@/features/settings/components/SettingsView").then(({ SettingsView }) => ({ default: SettingsView })));
+const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
 
 interface WorkspaceLayoutProps {
   repoPath: string | null;
@@ -102,8 +103,14 @@ function LayoutDialogs({ repoPath, actions, onMoved }: { repoPath: string | null
 
 function WorkspaceOverlays({ repoPath, actions, editorRef, onOpenNote }: { repoPath: string | null; actions: WorkspaceActions; editorRef: RefObject<NoteEditorHandle | null>; onOpenNote: (path: string) => void }) {
   const settingsOpen = useUiStore((state) => state.settingsOpen);
+  const [commitOpen, setCommitOpen] = useState(false);
   return <>
-    <CommandPalette repoPath={repoPath} actions={{ onOpenNote, onNewNote: () => { void actions.requestNew(""); }, onNewFolder: () => actions.requestNewFolder(""), onChangeMode: (mode) => editorRef.current?.setMode(mode), onInsertCallout: () => editorRef.current?.insertCallout() }} />
+    <CommandPalette repoPath={repoPath} actions={{ onOpenNote, onNewNote: () => { void actions.requestNew(""); }, onNewFolder: () => actions.requestNewFolder(""), onChangeMode: (mode) => editorRef.current?.setMode(mode), onInsertCallout: () => editorRef.current?.insertCallout(), onRequestCommit: () => setCommitOpen(true) }} />
     <Suspense fallback={null}>{settingsOpen ? <LazySettingsView /> : null}</Suspense>
+    {commitOpen ? (
+      <Suspense fallback={null}>
+        <LazyCommitDialog repoPath={repoPath} onClose={() => setCommitOpen(false)} />
+      </Suspense>
+    ) : null}
   </>;
 }

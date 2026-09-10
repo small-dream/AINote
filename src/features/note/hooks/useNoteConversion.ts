@@ -1,6 +1,4 @@
 import { useConvertNoteMutation } from "@/queries/note.queries";
-import { syncApi } from "@/api";
-import { reportToastError } from "@/stores/toast.store";
 import { swapNoteExtension } from "../utils/noteKind";
 
 interface UseNoteConversionOptions {
@@ -10,7 +8,7 @@ interface UseNoteConversionOptions {
   onOpenNote: (path: string) => void;
 }
 
-/** 笔记类型互转编排：生成目标路径与内容、调 mutation、成功后提交 Git 并打开新路径 */
+/** 笔记类型互转编排：生成目标路径与内容、调 mutation、成功后打开新路径 */
 export function useNoteConversion({ notePath, draft, flush, onOpenNote }: UseNoteConversionOptions) {
   const convertMutation = useConvertNoteMutation();
 
@@ -20,7 +18,7 @@ export function useNoteConversion({ notePath, draft, flush, onOpenNote }: UseNot
       { from: notePath, to, content },
       {
         onSuccess: () => {
-          void syncApi.commit(`note: convert ${to}`).catch(reportToastError).finally(() => onOpenNote(to));
+          onOpenNote(to);
         },
       }
     );

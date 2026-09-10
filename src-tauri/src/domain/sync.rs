@@ -53,6 +53,23 @@ pub struct SyncStatus {
     pub conflicted: bool,
 }
 
+/// 工作区待提交变更的状态（git_status_files 返回）
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum ChangedFileStatus {
+    Added,
+    Modified,
+    Deleted,
+}
+
+/// 工作区待提交变更文件（增/改/删，相对仓库根目录）
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ChangedFile {
+    pub path: String,
+    pub status: ChangedFileStatus,
+}
+
 /// 文件树节点类型，序列化为 "file" | "dir"
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Serialize)]
 #[serde(rename_all = "lowercase")]

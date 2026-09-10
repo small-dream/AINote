@@ -2,7 +2,7 @@ use std::path::Path;
 
 use crate::domain::error::AppError;
 use crate::domain::history::{CommitInfo, FileDiff};
-use crate::domain::sync::ConflictFile;
+use crate::domain::sync::{ChangedFile, ConflictFile};
 
 /// Git 能力抽象（防腐化关键：Service 只依赖此 trait，不依赖 git2）。
 /// 实现：git2_backend.rs（本地）+ git2_remote.rs（网络）。测试注入 MockGitBackend。
@@ -24,6 +24,8 @@ pub trait GitBackend: Send + Sync {
     /// 相对 origin/<当前分支> 的 (ahead, behind)；无上游时 behind=0
     fn ahead_behind(&self, path: &str) -> Result<(u32, u32), AppError>;
     fn has_uncommitted(&self, path: &str) -> Result<bool, AppError>;
+    /// 工作区待提交变更（增/改/删 + 相对仓库根路径），供手动提交面板与同步前 message 生成
+    fn changed_files(&self, path: &str) -> Result<Vec<ChangedFile>, AppError>;
     fn is_merging(&self, path: &str) -> Result<bool, AppError>;
     /// 以本地侧解决全部冲突并完成 merge commit
     fn resolve_conflict_ours(&self, path: &str) -> Result<(), AppError>;
@@ -49,6 +51,7 @@ pub trait GitBackend: Send + Sync {
 pub struct MockGitBackend {
     pub is_repo: bool,
     pub uncommitted: bool,
+    pub changed: Vec<ChangedFile>,
     pub merging: bool,
     pub ahead: u32,
     pub behind: u32,
@@ -139,6 +142,11 @@ impl GitBackend for MockGitBackend {
 
     fn has_uncommitted(&self, _path: &str) -> Result<bool, AppError> {
         Ok(self.uncommitted)
+    }
+
+    fn changed_files(&self, _path: &str) -> Result<Vec<ChangedFile>, AppError> {
+        self.record("changed_files".into());
+        Ok(self.changed.clone())
     }
 
     fn is_merging(&self, _path: &str) -> Result<bool, AppError> {

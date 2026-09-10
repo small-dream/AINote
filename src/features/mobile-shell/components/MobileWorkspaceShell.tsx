@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, type ReactNode, type RefObject } from "react";
-import { ArrowLeft, Clock, FolderTree, Hash, List, RefreshCw, Search, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Clock, FolderTree, GitCommitHorizontal, Hash, List, RefreshCw, Search, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useSync } from "@/features/sync/hooks/useSync";
@@ -12,6 +12,7 @@ import { useMobileEditorView } from "../hooks/useMobileEditorView";
 import type { SidebarTab } from "@/stores/ui.store";
 
 const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
+const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
 
 interface MobileWorkspaceShellProps {
   repoPath: string | null;
@@ -32,6 +33,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
   const { online, status, label, syncNow, isSyncing } = sync;
   const failure = deriveSyncFailure(syncNow.error, locale);
   const [conflictOpen, setConflictOpen] = useState(false);
+  const [commitOpen, setCommitOpen] = useState(false);
   const title = currentNotePath?.split(/[\\/]/).pop() ?? t("app.notes");
   const { showEditor, backToList } = useMobileEditorView({
     currentNotePath,
@@ -52,10 +54,34 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
         conflicted={status.conflicted}
         onBack={backToList}
         onSync={() => syncNow.mutate()}
+        hasUncommitted={status.hasUncommitted}
+        onOpenCommit={() => setCommitOpen(true)}
         onOpenConflict={() => setConflictOpen(true)}
       />
       <SyncNotice sync={sync} />
       <MobileUpdateBanner />
+      <MobileContent
+        showEditor={showEditor}
+        sidebarTab={sidebarTab}
+        setSidebarTab={setSidebarTab}
+        editor={editor}
+        sidebar={sidebar}
+      />
+      <MobileWorkspaceDialogs
+        repoPath={repoPath}
+        conflictOpen={conflictOpen}
+        commitOpen={commitOpen}
+        onCloseConflict={() => setConflictOpen(false)}
+        onCloseCommit={() => setCommitOpen(false)}
+      />
+      <span className="sr-only" aria-live="polite">{failure ? `${failure.title} · ${failure.suggestion}` : status.conflicted ? t("sync.conflict") : status.hasUncommitted ? t("sync.unsaved") : null}</span>
+    </div>
+  );
+}
+
+function MobileContent({ showEditor, sidebarTab, setSidebarTab, editor, sidebar }: { showEditor: boolean; sidebarTab: SidebarTab; setSidebarTab: (tab: SidebarTab) => void; editor: ReactNode; sidebar: ReactNode }) {
+  return (
+    <>
       <main className="min-h-0 flex-1 overflow-hidden">
         {showEditor ? (
           <div className="mobile-editor-pane h-full min-h-0">{editor}</div>
@@ -75,17 +101,28 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
           onOpenSettings={() => useUiStore.getState().openSettings()}
         />
       )}
-      {conflictOpen ? (
-        <Suspense fallback={null}>
-          <LazyConflictMergeDialog repoPath={repoPath} open onClose={() => setConflictOpen(false)} />
-        </Suspense>
-      ) : null}
-      <span className="sr-only" aria-live="polite">{failure ? `${failure.title} · ${failure.suggestion}` : status.conflicted ? t("sync.conflict") : status.hasUncommitted ? t("sync.unsaved") : null}</span>
-    </div>
+    </>
   );
 }
 
-function MobileHeader({ showEditor, title, online, label, tone, isSyncing, conflicted, onBack, onSync, onOpenConflict }: { showEditor: boolean; title: string; online: boolean; label: string; tone: string; isSyncing: boolean; conflicted: boolean; onBack: () => void; onSync: () => void; onOpenConflict: () => void }) {
+function MobileWorkspaceDialogs({ repoPath, conflictOpen, commitOpen, onCloseConflict, onCloseCommit }: { repoPath: string | null; conflictOpen: boolean; commitOpen: boolean; onCloseConflict: () => void; onCloseCommit: () => void }) {
+  return (
+    <>
+      {conflictOpen ? (
+        <Suspense fallback={null}>
+          <LazyConflictMergeDialog repoPath={repoPath} open onClose={onCloseConflict} />
+        </Suspense>
+      ) : null}
+      {commitOpen ? (
+        <Suspense fallback={null}>
+          <LazyCommitDialog repoPath={repoPath} onClose={onCloseCommit} />
+        </Suspense>
+      ) : null}
+    </>
+  );
+}
+
+function MobileHeader({ showEditor, title, online, label, tone, isSyncing, conflicted, hasUncommitted, onBack, onSync, onOpenCommit, onOpenConflict }: { showEditor: boolean; title: string; online: boolean; label: string; tone: string; isSyncing: boolean; conflicted: boolean; hasUncommitted: boolean; onBack: () => void; onSync: () => void; onOpenCommit: () => void; onOpenConflict: () => void }) {
   const { t } = useTranslation();
   return (
     <header className="mobile-workspace-header flex min-h-14 shrink-0 items-center gap-2 border-b border-border bg-bg-primary px-3 pt-[env(safe-area-inset-top)]">
@@ -102,6 +139,7 @@ function MobileHeader({ showEditor, title, online, label, tone, isSyncing, confl
           {label}
         </span>
       )}
+      {hasUncommitted ? <MobileIconButton label={t("commit.title")} icon={GitCommitHorizontal} onClick={onOpenCommit} /> : null}
       <MobileIconButton label={t("sync.now")} icon={RefreshCw} onClick={onSync} disabled={!online || isSyncing} spinning={isSyncing} />
       {!showEditor ? <MobileSearchButton /> : null}
     </header>

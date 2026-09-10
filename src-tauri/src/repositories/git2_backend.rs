@@ -4,6 +4,7 @@ use git2::{Repository, Signature, StatusOptions};
 
 use crate::domain::error::AppError;
 use crate::domain::history::{CommitInfo, FileDiff};
+use crate::domain::sync::{ChangedFile, ChangedFileStatus};
 
 use super::git2_history;
 use super::git2_remote;
@@ -75,6 +76,38 @@ fn has_uncommitted(repo: &Repository) -> Result<bool, AppError> {
     Ok(!repo.statuses(Some(&mut opts)).map_err(to_git)?.is_empty())
 }
 
+/// 工作区待提交变更：增/改/删 + 相对仓库根路径，按路径排序保证确定性输出。
+fn changed_files(repo_path: &str) -> Result<Vec<ChangedFile>, AppError> {
+    let repo = open(repo_path)?;
+    let mut opts = StatusOptions::new();
+    opts.include_untracked(true)
+        .recurse_untracked_dirs(true)
+        .include_ignored(false);
+    let statuses = repo.statuses(Some(&mut opts)).map_err(to_git)?;
+    let mut files: Vec<ChangedFile> = statuses
+        .iter()
+        .filter_map(|entry| {
+            let path = entry.path()?.to_string();
+            Some(ChangedFile {
+                path,
+                status: status_of(entry.status()),
+            })
+        })
+        .collect();
+    files.sort_by(|a, b| a.path.cmp(&b.path));
+    Ok(files)
+}
+
+fn status_of(status: git2::Status) -> ChangedFileStatus {
+    if status.contains(git2::Status::INDEX_NEW) || status.contains(git2::Status::WT_NEW) {
+        return ChangedFileStatus::Added;
+    }
+    if status.contains(git2::Status::INDEX_DELETED) || status.contains(git2::Status::WT_DELETED) {
+        return ChangedFileStatus::Deleted;
+    }
+    ChangedFileStatus::Modified
+}
+
 fn ahead_behind(repo_path: &str) -> Result<(u32, u32), AppError> {
     let repo = open(repo_path)?;
     let local = match repo.head().and_then(|h| h.peel_to_commit()) {
@@ -134,6 +167,10 @@ impl GitBackend for Git2Backend {
         has_uncommitted(&open(path)?)
     }
 
+    fn changed_files(&self, path: &str) -> Result<Vec<ChangedFile>, AppError> {
+        changed_files(path)
+    }
+
     fn is_merging(&self, path: &str) -> Result<bool, AppError> {
         Ok(open(path)?.state() == git2::RepositoryState::Merge)
     }
@@ -170,3 +207,7 @@ impl GitBackend for Git2Backend {
         git2_history::restore_file(path, file, commit_id)
     }
 }
+
+#[cfg(test)]
+#[path = "git2_status_tests.rs"]
+mod git2_status_tests;

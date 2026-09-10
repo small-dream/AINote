@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { noteApi, syncApi } from "@/api";
+import { noteApi } from "@/api";
 import type { NoteContent, NoteKind, NoteMeta } from "@/api/types";
 import { useWorkspaceActivityStore } from "@/stores/workspace-activity.store";
-import { reportToastError } from "@/stores/toast.store";
 
 export const noteKeys = {
   list: (repoPath: string | null) => ["notes", repoPath] as const,
@@ -46,32 +45,28 @@ export function useCreateNoteMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: ({ path, kind, content }: CreateNoteInput) => noteApi.create(path, kind, content),
-    onSuccess: (_note, { path }) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
       void queryClient.invalidateQueries({ queryKey: ["wiki"] });
       void queryClient.removeQueries({ queryKey: ["note-content"] });
-      void syncApi.commit(`note: create ${path}`).catch(reportToastError).finally(() => {
-        void queryClient.invalidateQueries({ queryKey: ["sync"] });
-      });
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
     },
   });
 }
 
-/** 导入 Markdown 文件为笔记（写入当前目录，重名自动加序号）：成功即 commit 并刷新（P0-2） */
+/** 导入 Markdown 文件为笔记（写入当前目录，重名自动加序号）：成功后刷新（P0-2） */
 export function useImportNoteMutation() {
   const queryClient = useQueryClient();
   const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
   return useMutation({
     mutationFn: ({ dir, fileName, content }: ImportNoteInput) =>
       noteApi.importFromMarkdown(dir, fileName, content),
-    onSuccess: (note) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
       markActivity();
-      void syncApi.commit(`note: import ${note.path}`).catch(reportToastError).finally(() => {
-        void queryClient.invalidateQueries({ queryKey: ["sync"] });
-      });
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
     },
   });
 }

@@ -27,6 +27,38 @@ pub fn run() {
         )
         .manage(commands::repo::backup::BackupState::default())
         .manage(commands::git::sync::SyncRetryState::default())
+        .manage(commands::close_guard::CloseGuard::default())
+        .on_window_event(|window, event| {
+            if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                #[cfg(desktop)]
+                {
+                    use tauri::{Emitter, Manager};
+                    let app = window.app_handle();
+                    if app
+                        .state::<commands::close_guard::CloseGuard>()
+                        .take_allow()
+                    {
+                        return;
+                    }
+                    let pending = config::load_repo_path(app)
+                        .ok()
+                        .flatten()
+                        .and_then(|path| {
+                            use repositories::git_backend::GitBackend;
+                            repositories::git2_backend::Git2Backend
+                                .has_uncommitted(&path)
+                                .ok()
+                        })
+                        .unwrap_or(false);
+                    if commands::close_guard::should_intercept(false, pending) {
+                        api.prevent_close();
+                        let _ = window.emit("app:close-requested", ());
+                    }
+                }
+                #[cfg(not(desktop))]
+                let _ = (window, api);
+            }
+        })
         .setup(|_app| {
             apply_logging_preference(_app.handle());
             services::metrics_service::record_best_effort(
@@ -79,6 +111,7 @@ pub fn run() {
             commands::git::pull::git_pull,
             commands::git::push::git_push,
             commands::git::status::sync_status,
+            commands::git::status_files::git_status_files,
             commands::git::sync::sync_now,
             commands::git::sync::cancel_sync_retry,
             commands::git::resolve::resolve_conflict,
@@ -113,6 +146,7 @@ pub fn run() {
             commands::asset::import::import_asset,
             commands::asset::import_bytes::import_asset_bytes,
             commands::app::open_external,
+            commands::close_guard::confirm_close,
             commands::print::print_current_page,
             commands::support::log_frontend::log_frontend,
             commands::support::export::export_diagnostics,

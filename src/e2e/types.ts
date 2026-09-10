@@ -37,6 +37,10 @@ export interface E2eState {
   /** 仓库相对路径 → data-uri，用于图片加载测试 */
   assets?: Record<string, string>;
   versions?: Record<string, E2eVersionSeed[]>;
+  /** 模拟有待提交变更（手动提交入口与面板用） */
+  uncommitted?: boolean;
+  /** 工作区待提交变更（git_status_files 返回） */
+  changedFiles?: Array<{ path: string; status: "added" | "modified" | "deleted" }>;
   conflicted?: boolean;
   conflicts?: E2eConflictSeed[];
   /** 注入一次同步失败（用于验证失败态 UI 与恢复入口） */
