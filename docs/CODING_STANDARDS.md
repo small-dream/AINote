@@ -13,7 +13,8 @@
 | TypeScript | `strict: true`，禁 `any` | `tsconfig` + `@typescript-eslint/no-explicit-any` |
 | 分支结构 | > 3 分支的 if-else/switch 必须重构 | Review + `complexity` 规则 |
 
-> Rust 文件同样遵守 300 行上限；`commands/` 单文件预期 < 80 行。
+> 行数口径：按**非空、非注释行**计（与 ESLint `max-lines` 的 `skipBlankLines` / `skipComments` 一致）；Rust 同口径，目前由评审把关。
+> Rust 文件同样遵守 300 行上限；`commands/` 单文件预期 < 80 行，超出即拆成 `<域>/<动作>.rs` 子模块（`generate_handler!` 用完整路径注册，如 `commands::metrics::export::metrics_export`）。
 
 ## 1. 文件与函数拆分指南
 
@@ -74,6 +75,7 @@ AppError { code: "SYNC_4013", kind: Conflict, message: "...", retriable: true }
 - IPC 入参 Rust 侧 `serde` 反序列化 + 显式校验（路径合法性、长度上限）。
 - 前端用户输入在 Hook 层校验。
 - Markdown 渲染强制 sanitize（防 XSS），不信任编辑器产出的任何内容。
+- 壳内安全策略（`src-tauri/tauri.conf.json`）：`app.security.csp` 保持最小白名单（`script-src 'self'`，内联启动脚本由 Tauri 构建期注入 hash），`devCsp` 只用于放行 Vite 开发态（HMR 需要 inline/ws）。新增远程字体、图片域或 iframe 前必须先更新 CSP；**禁止**把它改回 `null`。
 
 ## 5. 测试友好性
 
