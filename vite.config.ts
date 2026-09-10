@@ -17,6 +17,14 @@ export default defineConfig({
   },
   build: {
     target: "es2022",
+    rollupOptions: {
+      output: {
+        // 预览（rehype-katex 静态链）与编辑器软渲染（math.ts 动态 import）共用单一 katex chunk，避免重复打包。
+        manualChunks(id) {
+          if (id.includes("node_modules/katex/")) return "katex";
+        },
+      },
+    },
   },
   test: {
     environment: "jsdom",

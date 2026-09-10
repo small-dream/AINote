@@ -35,5 +35,45 @@ export default tseslint.config(
   {
     files: ["src/api/**/*.ts"],
     rules: { "no-restricted-imports": "off" },
+  },
+  {
+    files: ["src/components/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [
+          { group: ["@tauri-apps/api*"], message: "Tauri IPC only allowed inside src/api/" },
+          { group: ["@/features/**"], message: "components/ must not import features/ (dependency direction)" },
+        ],
+      }],
+    },
+  },
+  {
+    // React 组件 ≤ 220 行（docs/CODING_STANDARDS.md section 0）
+    files: ["**/components/**/*.tsx"],
+    rules: {
+      "max-lines": ["error", { max: 220, skipBlankLines: true, skipComments: true }],
+    },
+  },
+  {
+    files: ["src/pages/workspace/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [
+          { group: ["@tauri-apps/api*"], message: "Tauri IPC only allowed inside src/api/" },
+          { group: ["@/features/mobile-shell/**"], message: "desktop shell must not import the mobile shell (shell selection lives in src/app/)" },
+        ],
+      }],
+    },
+  },
+  {
+    files: ["src/features/mobile-shell/**/*.{ts,tsx}"],
+    rules: {
+      "no-restricted-imports": ["error", {
+        patterns: [
+          { group: ["@tauri-apps/api*"], message: "Tauri IPC only allowed inside src/api/" },
+          { group: ["@/pages/workspace/**"], message: "mobile shell must not import the desktop shell (shell selection lives in src/app/)" },
+        ],
+      }],
+    },
   }
 );

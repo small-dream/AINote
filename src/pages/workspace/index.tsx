@@ -5,11 +5,11 @@ import { useStartupSync } from "@/features/sync/hooks/useStartupSync";
 import { useAuthStatusQuery } from "@/queries/auth.queries";
 import { useSessionStore } from "@/stores/session.store";
 import { useUiStore } from "@/stores/ui.store";
-import { WorkspaceLayout } from "./WorkspaceLayout";
+import { WorkspaceShellSwitcher } from "@/app/ShellSwitcher";
 import { useWorkspaceActions } from "./useWorkspaceActions";
 import { useTranslation } from "@/i18n";
 
-/** 工作区：启动守卫 + 新建/移动编排，三栏渲染委托给 WorkspaceLayout */
+/** 工作区：启动守卫 + 新建/移动编排，桌面/移动壳选择委托给组装层 WorkspaceShellSwitcher */
 export function WorkspacePage() {
   const { ready, repoPath } = useWorkspaceGate();
   const startupSyncing = useStartupSync(repoPath);
@@ -28,7 +28,7 @@ export function WorkspacePage() {
   if (!ready) return <LoadingScreen />;
 
   return (
-    <WorkspaceLayout
+    <WorkspaceShellSwitcher
       repoPath={repoPath}
       startupSyncing={startupSyncing}
       currentNotePath={currentNotePath}

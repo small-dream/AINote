@@ -1,10 +1,9 @@
-import { lazy, Suspense, useEffect } from "react";
+import { lazy, Suspense, useEffect, useState } from "react";
 import type { Dispatch, RefObject, SetStateAction } from "react";
 import { EditorView } from "@codemirror/view";
 import { EditorToolbar, type ViewMode } from "./EditorToolbar";
 import { MarkdownEditorSurface, type MarkdownEditorSurfaceProps } from "./MarkdownEditorSurface";
 import { AiWriteControls } from "@/features/ai/components/AiWriteControls";
-import { AskAiPanel } from "@/features/ai/components/AskAiPanel";
 import { WikiPanel } from "@/features/wiki/components/WikiPanel";
 import { useUiStore } from "@/stores/ui.store";
 import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
@@ -22,6 +21,7 @@ import { useTranslation } from "@/i18n";
 const LazyRichTextEditor = lazy(() => import("@/features/richtext/components/RichTextEditor").then(({ RichTextEditor }) => ({ default: RichTextEditor })));
 const LazyHistoryPanel = lazy(() => import("@/features/history/components/HistoryPanel").then(({ HistoryPanel }) => ({ default: HistoryPanel })));
 const LazyPdfExportOverlay = lazy(() => import("@/features/export/components/PdfExportOverlay").then(({ PdfExportOverlay }) => ({ default: PdfExportOverlay })));
+const LazyAskAiPanel = lazy(() => import("@/features/ai/components/AskAiPanel").then(({ AskAiPanel }) => ({ default: AskAiPanel })));
 
 export interface NoteEditorContentProps {
   notePath: string;
@@ -57,11 +57,14 @@ export interface NoteEditorContentProps {
 
 export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, handleConvertToRichText, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf }: NoteEditorContentProps) {
   const richText = kind === "richText";
+  // 首次打开后才挂载（触发懒加载分块），之后保持挂载以保留问答历史。
+  const [askAiMounted, setAskAiMounted] = useState(askAiOpen);
+  if (askAiOpen && !askAiMounted) setAskAiMounted(true);
   return <div className="flex h-full min-h-0 flex-col bg-bg-primary">
     <EditorToolbar path={notePath} mode={mode} compact={compact} richText={richText} saving={saving} dirty={dirty} saveError={saveError} saveErrorCode={saveErrorCode} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={handleConvertToRichText} onExportPdf={() => void pdf.request()} onExportMarkdown={onExportMarkdown} {...(richText ? {} : { onAi: ai.openMenu })} isNewNote={notePath === createdPath} draft={draft} onTitleChange={onChange} onFlush={flush} onRenamed={onOpenNote} />
     <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
     <AiWriteControls ai={ai} canSummarize={!richText} canSuggest={!richText} suggest={suggest} />
-    <AskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} />
+    {askAiMounted ? <Suspense fallback={null}><LazyAskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} /></Suspense> : null}
     {history.open ? <Suspense fallback={null}><LazyHistoryPanel repoPath={repoPath} path={notePath} open onClose={history.closeHistory} onRestored={history.onRestored} /></Suspense> : null}
     <WikiPanel
       repoPath={repoPath}
