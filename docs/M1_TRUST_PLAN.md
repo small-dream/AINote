@@ -84,7 +84,7 @@
 | M1-E1-T3 | 签名与分发 | Linux 产物校验与签名（GPG，零成本） | desktop | GPG key | S | 📋 |
 | M1-E1-T4 | 🧊 M1.5 | iOS TestFlight 内测通道 | mobile | D5、Apple 账号 | L | 🧊 |
 | M1-E1-T5 | 签名与分发 | Android 应用内更新提示 | mobile | D3 | M | 📋 |
-| M1-E1-T6 | 分发支持 | 分发与排查文档 | shared | — | S | 📋 |
+| M1-E1-T6 | 分发支持 | 分发与排查文档 | shared | — | S | ✅ |
 | M1-E2-T1 | 可诊断性 | Rust 结构化本地日志 | shared | — | M | 📋 |
 | M1-E2-T2 | 可诊断性 | 前端错误边界与全局错误日志 | shared | M1-E2-T1 | M | 📋 |
 | M1-E2-T3 | 可诊断性 | 诊断包导出命令 | shared | M1-E2-T1 | M | 📋 |
@@ -192,6 +192,7 @@
 - **验收标准**：每个故障场景有「现象 → 原因 → 操作步骤」；命令可直接复制执行。
 - **测试义务**：文档命令在干净环境验证（至少 macOS + Windows），未签名放行步骤需实测。
 - **跨端影响**：`shared`。
+- **实现备注（2026-09-10）**：新增 `docs/TROUBLESHOOTING.md`（安装拦截 / 更新失败 / 同步失败 / 凭证失效 / 磁盘不足 + SHA256·GPG 校验 + 诊断包收集），README 安装章节指向该文档；明确声明当前未做证书签名、正式签名在 M1.5。macOS 命令（`xattr` / `spctl` / `shasum`）已在本机验证可用；Windows SmartScreen 与 Linux FUSE 命令待干净环境实测，并入 Wave 4 发布门禁。
 
 ---
 
@@ -423,7 +424,7 @@
 - [ ] 生成发布签名 GPG key，公钥发布方式定稿。
 - [ ] 评审日志与脱敏方案（M1-E2-T1），确定日志库与轮转策略。
 - [x] 启动性能基准扩展（M1-E4-T3，无外部依赖，可先跑）。
-- [ ] 建立 `docs/TROUBLESHOOTING.md` 骨架（M1-E1-T6）。
+- [x] 建立 `docs/TROUBLESHOOTING.md` 骨架（M1-E1-T6）。
 
 ### Wave 1 — 可诊断性地基（第 1–2 周）
 
@@ -525,7 +526,7 @@
 | M1-E1-T3 Linux 校验与签名 | 📋 | | 等 GPG key |
 | M1-E1-T4 iOS TestFlight | 🧊 | | M1.5，等 Apple 账号 |
 | M1-E1-T5 Android 更新提示 | 📋 | | 等 D3 |
-| M1-E1-T6 分发与排查文档 | 📋 | | |
+| M1-E1-T6 分发与排查文档 | ✅ | | TROUBLESHOOTING.md + README 入口；Windows/Linux 命令待实测 |
 | M1-E2-T1 Rust 本地日志 | ✅ | | tauri-plugin-log 2.9.1 + 全局脱敏；设置页清理归 E2-T5 |
 | M1-E2-T2 前端错误边界 | ✅ | | ErrorBoundary + window 级捕获，经 support.api.ts 上报 |
 | M1-E2-T3 诊断包导出 | ✅ | | zip + 保存对话框；包内白名单 + 脱敏扫描 |
@@ -550,6 +551,7 @@
 
 | 日期 | 变更 | 作者 |
 |---|---|---|
+| 2026-09-10 | v1.5：M1-E1-T6 交付（docs/TROUBLESHOOTING.md + README 安装章节入口） | PM |
 | 2026-09-10 | v1.4：M1-E3-T1 交付（仓库完整性检查：RepoMaintenanceBackend + git2 只读实现 + 设置页卡片） | PM |
 | 2026-09-10 | v1.3：M1-E4-T3 交付（附件 / 目录树 / 同步状态 / 软渲染基准 + docs/PERF_BASELINE.md） | PM |
 | 2026-09-10 | v1.2：M1-E2-T5 交付（设置页诊断与反馈：日志开关 / 目录 / 清理 + 诊断包导出 + 隐私说明）；README 增补「隐私与诊断数据」 | PM |

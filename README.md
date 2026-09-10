@@ -38,12 +38,12 @@ AINote 是一款面向开发者与知识工作者的跨平台 Markdown 笔记应
 | Windows | `.msi` 或 `.exe` |
 | Linux | `.AppImage`、`.deb` 或 `.rpm` |
 
-当前安装包尚未进行 Apple 公证和 Windows 代码签名：
+当前安装包尚未进行 Apple 公证和 Windows 代码签名，首次打开可能需要手动放行；完整步骤见 [安装与故障排查](docs/TROUBLESHOOTING.md)：
 
 - **macOS**：若提示“应用已损坏”，把 `AINote.app` 移到 `/Applications` 后执行 `xattr -cr /Applications/AINote.app`。
 - **Windows**：首次运行可能出现 SmartScreen 提示；请确认安装包来自本项目官方 Release 页面。
 
-应用内置签名校验的自动更新器，也可以在 **设置 → 软件更新** 中手动检查。
+应用内置签名校验的自动更新器，也可以在 **设置 → 软件更新** 中手动检查。安装包校验（SHA256 / GPG）、同步失败、凭证失效、磁盘不足等排查步骤同样见上述文档。
 
 > AINote 仍处于快速迭代阶段。虽然笔记保存在标准 Git 仓库中，升级前仍建议推送远端或完成一次本地备份。
 
