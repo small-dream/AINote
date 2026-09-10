@@ -146,7 +146,7 @@ git remote -v
 
 1. 打开 GitHub → Settings → Developer settings → Personal access tokens，新建一个具备 `repo` 权限的 Token。
 2. 在 AINote 中退出登录并重新连接 GitHub。
-3. Token 只保存在系统钥匙串，AINote 前端与日志都不会记录明文。
+3. Token 在桌面端以 AES-256-GCM 加密文件保存在应用配置目录（0600 权限），移动端保存在系统钥匙串；AINote 前端与日志都不会记录明文。
 
 ## 5. 磁盘不足
 

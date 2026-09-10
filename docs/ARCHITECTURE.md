@@ -30,7 +30,7 @@
 | 软件更新 | **Tauri updater + GitHub Releases** | `latest.json` 与安装包使用签名密钥；客户端通过内置公钥校验，安装后自动重启 |
 | AI | **可插拔 Provider + 模型目录：OpenAI 兼容 API + Ollama（本地）** | 尊重本地优先与数据主权；Provider 与模型分层管理，支持多连接、多模型、启停和默认模型；统一 OpenAI 兼容 `chat/completions` 协议，HTTP 复用 `ureq`；API Key 按 Provider 经 `SecureStore` 存储，前端拿不到明文 |
 | 前端状态 | **Zustand（全局 UI 态）+ TanStack Query（服务端/Git 态）** | 轻量、无样板、职责边界清晰 |
-| 凭证 | **SecureStore 抽象 + 平台系统安全存储** | iOS Keychain / Android Keystore / 桌面系统凭证库；登录态布尔标记可落盘到 app config；旧 AES-GCM 文件仅用于迁移 |
+| 凭证 | **SecureStore 抽象 + 平台分流存储** | iOS Keychain / Android Keystore（`keyring` 插件）；桌面端为 AES-256-GCM 加密文件（密钥与密文同存 app_config_dir，0600 权限）；登录态布尔标记可落盘到 app config |
 | 测试 | **Vitest + React Testing Library + `cargo test`** | 前后端同构的快测试 |
 
 **核心架构决策**：所有 Git / 文件 IO 放在 Rust 层，前端只做「纯 UI + 状态编排」。
@@ -110,7 +110,9 @@ AINote/
 ├── src/                          # 前端 (React)
 │   ├── main.tsx
 │   ├── app/
-│   │   ├── router.tsx            # 路由表 (唯一集中声明处)
+│   │   ├── router.tsx            # 路由表 (唯一集中声明处，路由级 React.lazy 代码分割)
+│   │   ├── ShellSwitcher.tsx     # 壳切换：按视口组装桌面/移动壳（双壳唯一交汇点）
+│   │   ├── MobileWorkspaceContent.tsx  # 移动壳组装（侧栏/编辑器插槽注入）
 │   │   └── providers.tsx         # QueryClient/Theme 等 Provider 组装
 │   ├── i18n/                     # 翻译字典与 useTranslation（纯前端显示语言）
 │   ├── pages/                    # 页面级组件, 只做组装
@@ -182,7 +184,7 @@ AINote/
 - **同步失败定位**：`sync()` 返回 `Result<SyncStatus, SyncFailure>`（`services/sync_service.rs`），在 commit / pull / push 三段各自归因，把 `SyncStage`、可定位文件（拉取冲突路径、未完成合并的冲突文件）与建议码 `hint` 一并交给命令层；`sync_now` 因此不走会抹平错误上下文的 `commands::blocking`，改用 `spawn_blocking` 后经 `sync_failure_dto(...)` 映射为 `AppErrorDto`（`stage` / `files` / `hint` 均为可选，非同步错误不序列化）。前端 `deriveSyncFailure` 优先采用后端 `stage` / `hint`，缺失时才按错误码推断，保证旧数据与本地错误仍有可读阶段；失败文件为仓库相对路径，桌面与移动共用同一 `shared` 横幅（>5 条折叠为计数）。
 - **移动端更新检查（平台专属）**：Android 走 GitHub APK 分发，因此不接 updater 插件（`capabilities/mobile.json` 只有 `core:default`，`plugin-process` 也只在非移动 target 依赖中）。`releaseApi.fetchLatestRelease`（`src/api/release.api.ts`）经 GitHub Releases API 取最新正式版并与 `getVersion()` 比对，版本比较是 `features/update/utils/version.ts` 的纯函数（`isNewerVersion` 严格大于、无法解析即 false）；平台判定统一走 `src/platform/runtime.ts` 的 `isAndroidApp()`（`back-navigation.ts` 也从此处导入）。检查状态收敛在 `useMobileUpdateStore`，提示条与设置页共用；请求失败静默降级，不弹错。「忽略此版本」按版本号持久化到本机 localStorage，不是笔记库数据。
 - **本地度量（`services/metrics_service.rs`）**：事件白名单与聚合是 `domain/metrics.rs` 的纯逻辑（零 IO），快照只有 `platform` / `appVersion` / `updatedAt` / `totals` / `daily` / `firstSeen` 六个字段——**结构上不存在**笔记内容、路径、Token 或远端 URL 的落点；新增事件必须进 `METRIC_EVENTS` 白名单，未登记事件名在命令层被忽略并记 warn。存储是本机 app config dir 下的 `metrics.json`（明文、体量极小、读改写），每日明细滚动保留 56 天，聚合窗口默认 7 天（`sync_success_rate` 无样本返回 `null`，不制造 0% 假象）。写入统一走 `record_best_effort` → `record_if_enabled`：开关来自 `ainote.json` 的 `metricsEnabled`（缺省开启），关闭时**直接返回、连文件都不创建**；失败只记 debug 日志，永不阻断同步 / 保存等主流程。记录点：`lib.rs` setup（`app_launched`）、`bind_repo`（`repo_bound`）、`create_note`（`note_created`）、`sync_now` 成功 / 失败（`sync_succeeded` / `sync_failed`）、前端 `useUpdate` / `useMobileUpdate`（`update_checked`）、`useAiWrite.confirm`（`ai_action_confirmed`）。设置页开关与清空见 `settings/components/MetricsCard.tsx`，采集范围与删除方式的用户说明见 `docs/PRIVACY.md`。指标只在本机，远程上报不在此模块（见 M1b）。
-- **凭证流**：Token/API Key 通过 `SecureStore` 写入平台系统安全存储；Rust 层按需读取，前端永远拿不到明文。旧版 AES-GCM 文件仅用于一次性迁移，成功后删除。
+- **凭证流**：Token/API Key 通过 `SecureStore` 按平台分流写入——移动端走系统钥匙串（iOS Keychain / Android Keystore，`keyring` 插件），桌面端为 AES-256-GCM 加密文件落盘到 app_config_dir（密钥 `auth.key` 与密文 `auth.token` 同目录，文件权限 0600）；Rust 层按需读取，前端永远拿不到明文。威胁模型：桌面端任何能读取用户配置目录的本地进程即可同时拿到密钥与密文完成解密，机密性完全依赖 OS 级目录权限（0600）缓解；对凭证保护有更高要求的场景应使用移动端钥匙串路径。
 - **多仓库注册表**：config 维护 `repos` 列表与 `active_repo_id`；活动仓库即各 note/git Command 通过 `config::require_repo_path` 解析的当前仓库，切换活动仓库后工作区以 `workspaceEpoch` 触发整页重挂载加载新仓库。移除活动仓库后自动切换剩余仓库；旧版单仓库 `repoPath` 配置在加载时自动迁移。
 - **登录态**：`has_token` 这类非敏感状态存于 app config，路由守卫不直接解密 token。
 - **版本历史 / Diff / 回滚**：`features/history` 提供历史面板；编辑器工具栏入口。`git_file_history` 遍历提交过滤出修改过该文件的提交（时间倒序），`git_file_diff` 计算选中提交相对其父提交的单文件 diff（行级 +/-），`git_restore_file` 把文件恢复到指定提交并写回工作区，随后前端刷新列表/树/同步状态并让编辑器重载（不生成提交，版本化交给用户手动提交或同步前兜底）。实现位于 `repositories/git2_history.rs`（libgit2），Service 仅依赖 `GitBackend` trait。
@@ -211,7 +213,7 @@ AINote/
 - **Markdown 诊断（`features/diagnostics`）**：纯函数诊断（`utils/diagnostics.ts`，覆盖未闭合围栏、表格结构、frontmatter、图片引用）+ `useMarkdownDiagnostics` 合并异步断链结果（新命令 `asset_exists` 批量校验仓库相对文件存在性，非法路径视为不存在）；格式工具栏右侧入口展示计数与下拉列表，点击问题项按行号定位到编辑器。诊断只读、不写库，供编辑时即时提示。
 - **端到端测试**：`e2e/`（Playwright）+ `src/e2e/`（浏览器内 IPC mock：`backend.ts` 命令策略表 + `ipcMock.ts` 安装器）。运行方式：`pnpm test:e2e`（自动启动 Vite dev，浏览器走 `?e2e` 启用 mock，仅 `import.meta.env.DEV` 生效，生产构建不包含）；完整 Tauri WebDriver 运行需 `cargo install tauri-driver` 并在真实 `tauri dev`/打包应用上执行同一批 spec（IPC 边界一致，断言无需改动）。
 - **首屏体积**：KaTeX 从静态导入改为 `math.ts` 内懒加载（`import("katex")` + 样式并行，渲染前先显示源码占位、异步替换）；入口不静态依赖 katex/mermaid/lowlight/TipTap，重依赖均按动态分块加载。Rust/其余依赖与工具链无新增。
-- **wiki 反链与出链增强**：`WikiLinkContext` 增加行号并改为逐行多条（单目标 ≤ 20 防 DTO 膨胀），`wiki_service::extract_link_contexts` 用逐行目标提取 + HashMap 计数；前端 `backlinkContextsOf` 过滤解析到当前笔记的上下文，反链按笔记分组展示多条带行号摘要。出链对未创建目标提供一键创建：`wikiCreatePath`（纯函数，清理保留字与非法段）→ `create_note`（内容 `# 目标名`，标题即目标，创建后 wiki 索引失效重取即变为可跳转）。笔记创建/更新 mutation 增加 `["wiki"]` 索引失效，保证双链即时解析。
+- **wiki 反链与出链增强**：`WikiLinkContext` 增加行号并改为逐行多条（单目标 ≤ 20 防 DTO 膨胀），`wiki_service::extract_link_contexts` 用逐行目标提取 + HashMap 计数；前端 `backlinkContextsOf` 过滤解析到当前笔记的上下文，反链按笔记分组展示多条带行号摘要。出链对未创建目标提供一键创建：`wikiCreatePath`（纯函数，清理保留字与非法段）→ `create_note`（内容 `# 目标名`，标题即目标，创建后 wiki 索引失效重取即变为可跳转）。笔记创建/更新/删除/移动/转换/导入 mutation 均失效 `["wiki"]` 索引，保证双链即时解析。
 
 ## 6. Android HTTPS 信任链（平台专属）
 

@@ -8,7 +8,7 @@
 AINote 是「Git 即数据库」的跨平台 Markdown 笔记软件：笔记 = Git 仓库内的 `.md` 文件，同步走 Git 协议，远端托管在 GitHub。
 
 - 前端：React 19 + TypeScript (strict) + Vite 8 + Tailwind CSS 4
-- 后端/原生层：Rust + Tauri 2（Git 操作走 `git2`，凭证存系统钥匙串）
+- 后端/原生层：Rust + Tauri 2（Git 操作走 `git2`，凭证存储见「安全红线」）
 - 包管理器：**pnpm**（禁止混用 npm/yarn），依赖一律使用最新稳定版
 
 ## 必读的活文档（先读文档再动手）
@@ -85,7 +85,7 @@ View → Hooks/Queries → api/ → IPC → commands → services → repositori
 
 ## 安全红线
 
-- GitHub Token 只存系统钥匙串（`keyring`），前端永远拿不到明文，绝不落盘、绝不提交。
+- GitHub Token / AI API Key：桌面端为 AES-256-GCM 加密文件落盘（密钥 `auth.key` 与密文 `auth.token` 同存 app_config_dir，0600 权限），移动端走系统钥匙串（iOS Keychain / Android Keystore，`keyring` 插件）；前端永远拿不到明文，绝不提交。
 - Markdown 渲染必须 sanitize（防 XSS）。
 - 禁止提交：密钥、构建产物、`node_modules/`、本地笔记仓库数据目录（`local-repos/`）。
 

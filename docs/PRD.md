@@ -122,11 +122,11 @@ flowchart TD
 - **文件夹即目录**：文件夹 = 仓库内目录；空目录不被 Git 跟踪，首次放入笔记或附件后才会被版本化。
 - **冲突策略（MVP）**：Pull 冲突时暂停自动同步，提示用户；图形化解决在 P1-3，MVP 提供「保留本地 / 使用远端」二选一。
 - **多仓库管理**：可绑定多个笔记仓库并任选其一作为「活动仓库」，工作区始终作用于活动仓库。添加仓库后自动切换为活动仓库；移除仓库仅解除绑定（从注册表移除），不删除本地克隆数据；移除活动仓库后自动切换到剩余仓库，无仓库则回到首次绑定引导。
-- **凭证存储**：GitHub Token 与 AI API Key 存平台系统安全存储（iOS Keychain / Android Keystore / 桌面系统凭证库），绝不向前端暴露明文；旧版本地加密文件仅用于一次性迁移，登出时删除凭证。
+- **凭证存储**：GitHub Token 与 AI API Key 桌面端存 AES-256-GCM 加密文件（密钥与密文同存 app_config_dir，0600 权限），移动端存系统钥匙串（iOS Keychain / Android Keystore），绝不向前端暴露明文；登出时删除凭证。
 - **软删除**：删除笔记/目录不再硬删除，改为移入仓库 `.trash/`（隐藏目录，被搜索/wiki/文件树自动忽略，随仓库 Git 版本化并同步）；侧边栏「回收站」可恢复（原路径被占用时自动追加 `-1`/`-2`…）、彻底删除或清空。
 - **软件更新**：桌面端通过 Tauri updater 从 `small-dream/AINote` 的 GitHub Releases 获取 `latest.json`；仅接受内置公钥验证通过的签名资产。Android/iOS 暂不支持自动更新。
 - **移动端运行边界**：iOS/Android 仓库统一 clone 到应用沙盒 `app_data_dir/notes/<repo-id>/`，不支持绑定手机上的任意本地路径；同步在启动、回到前台或用户手动触发时执行，首版不承诺系统终止进程后的后台 Push/Pull。移动端使用单栏栈式工作区、Bottom Sheet 和系统安全存储，桌面三栏布局与 updater/打印链路不直接复用。
-- **移动端凭证**：GitHub Token 与 AI API Key 必须进入平台系统安全存储（iOS Keychain / Android Keystore / 桌面系统凭证库），前端永远拿不到明文；旧版 AES-GCM 文件凭证仅用于一次性迁移。
+- **移动端凭证**：GitHub Token 与 AI API Key 必须进入平台系统安全存储（iOS Keychain / Android Keystore），前端永远拿不到明文。
 
 ## 5. 成功指标（MVP）
 
