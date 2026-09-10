@@ -18,18 +18,21 @@ test.describe("AINote 桌面核心流程", () => {
     expect(labels.slice(0, 3)).toEqual(["立即同步", "笔记", "最近"]);
   });
 
-  test("导航轨：相邻入口间距一致", async ({ page }) => {
+  test("导航轨：组内间距 6px、分组间距 12px", async ({ page }) => {
     await openWorkspace(page, baseState([{ path: "first.md", content: "# 第一篇" }]));
     const gaps = await page.locator(".workspace-nav-rail button").evaluateAll((nodes) => {
       const rects = nodes.map((node) => node.getBoundingClientRect());
-      // 末位「设置」由 mt-auto 顶到底部，间距不参与一致性比较
-      return rects.slice(0, -2).flatMap((rect, index) => {
+      const out: number[] = [];
+      // 末位「设置」由 mt-auto 顶到底部，间距不参与比较
+      for (let index = 0; index < rects.length - 2; index++) {
+        const current = rects[index];
         const next = rects[index + 1];
-        return next ? [Math.round(next.top - rect.bottom)] : [];
-      });
+        if (current && next) out.push(Math.round(next.top - current.bottom));
+      }
+      return out;
     });
-    expect(gaps.length).toBeGreaterThan(0);
-    expect(new Set(gaps).size).toBe(1);
+    // 同步 | 笔记/最近/收藏/标签/回收站 | 提交版本/Git 历史
+    expect(gaps).toEqual([12, 6, 6, 6, 6, 12, 6]);
   });
 
   test("最近面板：清空按钮与面板标题垂直居中对齐", async ({ page }) => {

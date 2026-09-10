@@ -27,6 +27,8 @@ const SYNC_ICON = { synced: CloudCheck, pending: CloudSync, conflict: TriangleAl
 const SYNC_COLOR = { synced: "bg-success", pending: "bg-warning", conflict: "bg-danger", offline: "bg-text-secondary" } as const;
 const NAV_BUTTON_CLASS = "group relative grid h-10 w-10 shrink-0 place-items-center rounded-lg text-text-tertiary transition-colors hover:bg-bg-primary/70 hover:text-text-secondary focus-visible:text-text-secondary";
 const NAV_TOOLTIP_CLASS = "pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-bg-primary px-2 py-1 text-xs text-text-primary opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100";
+/** 两级间距：同一分组内 6px（轨道 gap），分组之间再加 6px 共 12px。 */
+const NAV_SECTION_GAP_CLASS = "mt-1.5";
 
 /** 独立于 App Shell 主体的功能导航轨道。 */
 export function WorkspaceNavRail({ repoPath, startupSyncing, sync }: WorkspaceNavRailProps) {
@@ -49,10 +51,10 @@ function NavigationItems() {
   const setSidebarTab = useUiStore((state) => state.setSidebarTab);
   return (
     <>
-      {NAV_ITEMS.map(({ key, icon: Icon, sidebarTab: targetTab }) => {
+      {NAV_ITEMS.map(({ key, icon: Icon, sidebarTab: targetTab }, index) => {
         const label = t(key);
         const active = sidebarTab === targetTab;
-        return <button key={key} type="button" aria-label={label} aria-current={active ? "page" : undefined} title={label} onClick={() => setSidebarTab(targetTab)} className={`${NAV_BUTTON_CLASS} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /><span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{label}</span></button>;
+        return <button key={key} type="button" aria-label={label} aria-current={active ? "page" : undefined} title={label} onClick={() => setSidebarTab(targetTab)} className={`${NAV_BUTTON_CLASS} ${index === 0 ? NAV_SECTION_GAP_CLASS : ""} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /><span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{label}</span></button>;
       })}
     </>
   );
@@ -110,7 +112,7 @@ function CommitNavButton({ repoPath, sync }: { repoPath: string | null; sync: Sy
         aria-label={t("commit.title")}
         title={t("commit.title")}
         onClick={() => setCommitOpen(true)}
-        className={`${NAV_BUTTON_CLASS} relative`}
+        className={`${NAV_BUTTON_CLASS} ${NAV_SECTION_GAP_CLASS} relative`}
       >
         <GitCommitHorizontal size={18} />
         {hasUncommitted ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-warning" aria-hidden="true" /> : null}
