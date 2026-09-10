@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import type { AppError } from "@/api/error";
 import type { SyncStatus } from "@/api/types";
 import { deriveSyncFailure, deriveSyncLabel, syncStageOf } from "./status";
 
@@ -40,6 +41,12 @@ const appError = (code: string, message: string, retriable = true) => ({
   retriable,
 });
 
+/** 带后端同步上下文的错误（E4-T4）：stage / files / hint 由 Rust 侧下发，前端不得推翻。 */
+const syncError = (code: string, overrides: Partial<AppError> = {}): AppError => ({
+  ...appError(code, "boom"),
+  ...overrides,
+});
+
 describe("syncStageOf", () => {
   it("远端拒绝只可能发生在推送阶段", () => {
     expect(syncStageOf("SYNC_4004")).toBe("push");
@@ -75,6 +82,7 @@ describe("deriveSyncFailure", () => {
       stage: "拉取 / 推送",
       reason: "连接超时",
       suggestion: "网络连接异常，请检查网络后重试",
+      files: [],
       action: "retry",
       retriable: true,
     });
@@ -103,5 +111,39 @@ describe("deriveSyncFailure", () => {
     const failure = deriveSyncFailure(new Error("boom"));
     expect(failure?.reason).toBe("boom");
     expect(failure?.action).toBe("retry");
+  });
+});
+
+describe("deriveSyncFailure / 后端同步上下文（E4-T4）", () => {
+  it("后端 stage 优先于错误码推断", () => {
+    const failure = deriveSyncFailure(syncError("SYNC_4002", { stage: "commit" }));
+    expect(failure?.stage).toBe("本地提交");
+  });
+
+  it("后端 hint 优先于错误码推断", () => {
+    const failure = deriveSyncFailure(syncError("SYNC_4002", { hint: "relogin" }));
+    expect(failure?.suggestion).toBe("登录凭证已失效，请重新登录 GitHub");
+  });
+
+  it("hint 为 retry 时保留错误码给出的具体建议", () => {
+    const failure = deriveSyncFailure(syncError("SYNC_4004", { hint: "retry" }));
+    expect(failure?.suggestion).toBe("远端拒绝本次操作，请检查仓库权限或先拉取远端更新");
+  });
+
+  it("冲突建议码给出解决冲突文案", () => {
+    const failure = deriveSyncFailure(syncError("SYNC_4001", { hint: "resolveConflicts" }));
+    expect(failure?.suggestion).toBe("存在未解决的合并冲突，请先解决冲突再同步");
+  });
+
+  it("失败文件透传给 UI", () => {
+    const failure = deriveSyncFailure(
+      syncError("SYNC_4001", { stage: "pull", files: ["daily/a.md", "daily/b.md"] }),
+    );
+    expect(failure?.stage).toBe("拉取");
+    expect(failure?.files).toEqual(["daily/a.md", "daily/b.md"]);
+  });
+
+  it("无上下文时失败文件为空数组", () => {
+    expect(deriveSyncFailure(appError("SYNC_4002", "连接超时"))?.files).toEqual([]);
   });
 });

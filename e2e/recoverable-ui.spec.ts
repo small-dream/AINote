@@ -76,8 +76,53 @@ test.describe("同步自动重试（E4-T2）", () => {
   });
 });
 
+test.describe("同步失败定位（E4-T4）", () => {
+  test("后端定位到拉取阶段并列出可处理文件", async ({ page }) => {
+    const state = baseState();
+    state.syncFailure = {
+      code: "SYNC_4001",
+      kind: "conflict",
+      message: "存在未完成的合并",
+      retriable: false,
+      stage: "pull",
+      hint: "resolveConflicts",
+      files: ["daily/a.md", "daily/b.md"],
+    };
+    await openWorkspace(page, state);
+
+    await page.getByRole("button", { name: "立即同步" }).click();
+
+    const banner = page.getByRole("alert").filter({ hasText: "同步失败 · 拉取阶段" });
+    await expect(banner).toContainText("存在未完成的合并");
+    await expect(banner).toContainText("存在未解决的合并冲突，请先解决冲突再同步");
+    await expect(banner).toContainText("失败文件（2）");
+    await expect(banner).toContainText("daily/a.md");
+    await expect(banner).toContainText("daily/b.md");
+  });
+});
+
 test.describe("可恢复 UI 收口（E3-T5）/ 移动单栏壳", () => {
   test.use({ viewport: { width: 430, height: 900 } });
+
+  test("窄屏同样可定位失败阶段与文件", async ({ page }) => {
+    const state = baseState();
+    state.syncFailure = {
+      code: "GIT_4001",
+      kind: "io",
+      message: "commit failed",
+      retriable: true,
+      stage: "commit",
+      files: ["daily/a.md"],
+    };
+    await openWorkspace(page, state);
+
+    await page.getByRole("button", { name: "立即同步" }).click();
+
+    const banner = page.getByRole("alert").filter({ hasText: "同步失败 · 本地提交阶段" });
+    await expect(banner).toContainText("commit failed");
+    await expect(banner).toContainText("失败文件（1）");
+    await expect(banner).toContainText("daily/a.md");
+  });
 
   test("窄屏移动壳同样展示失败阶段与重试入口", async ({ page }) => {
     const state = baseState();

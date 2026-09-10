@@ -13,7 +13,19 @@ export interface AppError {
   kind: ErrorKind;
   message: string;
   retriable: boolean;
+  /** 同步类错误才有：后端定位到的失败阶段（E4-T4） */
+  stage?: SyncStage;
+  /** 同步类错误才有：可定位到的失败文件（如拉取冲突的文件） */
+  files?: string[];
+  /** 同步类错误才有：后端给出的建议码，优先于按错误码推断 */
+  hint?: SyncHint;
 }
+
+/** 后端定位到的同步阶段（与 Rust domain/sync.rs 的 SyncStage 一致） */
+export type SyncStage = "commit" | "pull" | "push";
+
+/** 后端给出的可操作建议码 */
+export type SyncHint = "retry" | "relogin" | "checkPermission" | "resolveConflicts";
 
 export function isAppError(value: unknown): value is AppError {
   return (

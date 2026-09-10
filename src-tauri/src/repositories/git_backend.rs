@@ -53,6 +53,10 @@ pub struct MockGitBackend {
     pub ahead: u32,
     pub behind: u32,
     pub conflict_on_pull: bool,
+    /// 本地提交失败（模拟磁盘 / 权限类问题）
+    pub commit_fails: bool,
+    /// 推送被远端拒绝
+    pub push_rejected: bool,
     /// 前 N 次 pull 返回网络错误（模拟可重试失败），0 表示直接成功
     pub pull_network_failures: std::sync::Mutex<u32>,
     pub conflicts: Vec<ConflictFile>,
@@ -99,6 +103,9 @@ impl GitBackend for MockGitBackend {
 
     fn commit_all(&self, _path: &str, message: &str) -> Result<Option<String>, AppError> {
         self.record(format!("commit:{message}"));
+        if self.commit_fails {
+            return Err(AppError::Io("mock 磁盘写入失败".into()));
+        }
         Ok(self.uncommitted.then(|| "mock-commit-id".to_string()))
     }
 
@@ -120,6 +127,9 @@ impl GitBackend for MockGitBackend {
 
     fn push(&self, _path: &str, _token: &str) -> Result<(), AppError> {
         self.record("push".into());
+        if self.push_rejected {
+            return Err(AppError::SyncRejected("mock non-fast-forward".into()));
+        }
         Ok(())
     }
 

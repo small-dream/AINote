@@ -104,3 +104,46 @@ describe("SyncNotice", () => {
     expect(screen.getByRole("button", { name: "取消重试" })).toBeTruthy();
   });
 });
+
+describe("SyncNotice / 失败定位（E4-T4）", () => {
+  it("后端定位到阶段与失败文件时展示可定位列表", () => {
+    render(
+      <SyncNotice
+        sync={controller({
+          code: "SYNC_4001",
+          kind: "conflict",
+          message: "存在未完成的合并",
+          retriable: false,
+          stage: "pull",
+          hint: "resolveConflicts",
+          files: ["daily/a.md", "daily/b.md"],
+        })}
+      />,
+    );
+    expect(screen.getByRole("alert").textContent).toContain("同步失败 · 拉取阶段");
+    expect(screen.getByText("失败文件（2）")).toBeTruthy();
+    expect(screen.getByText("daily/a.md")).toBeTruthy();
+    expect(screen.getByText("daily/b.md")).toBeTruthy();
+    expect(screen.getByText("存在未解决的合并冲突，请先解决冲突再同步")).toBeTruthy();
+  });
+
+  it("失败文件过多时折叠为计数", () => {
+    render(
+      <SyncNotice
+        sync={controller({
+          ...NETWORK_ERROR,
+          stage: "pull",
+          files: ["a.md", "b.md", "c.md", "d.md", "e.md", "f.md", "g.md"],
+        })}
+      />,
+    );
+    expect(screen.getByText("失败文件（7）")).toBeTruthy();
+    expect(screen.getByText("另有 2 个未显示")).toBeTruthy();
+    expect(screen.queryByText("f.md")).toBeNull();
+  });
+
+  it("无失败文件时不渲染空列表", () => {
+    render(<SyncNotice sync={controller(NETWORK_ERROR)} />);
+    expect(screen.queryByText(/失败文件/)).toBeNull();
+  });
+});

@@ -178,6 +178,7 @@ AINote/
 - **批量提交与推送**：编辑器变更 → 前端 3s 防抖落盘；`useSync` 观察到工作区有未提交变更后启动默认 15 分钟空闲计时器，到期调用 `git_commit`，把所有笔记/删除/移动汇总成单条 `note: auto commit`。一键同步仍执行“汇总提交 → Pull → Push”；手动「保存版本」调用同一提交接口生成 `note: checkpoint`，不自动 Push。新建笔记保留即时 `note: create <path>` 提交。工具栏不提供常驻保存按钮，Cmd/Ctrl+S 可立即 flush，保存失败保留 dirty 并提供重试。策略细节由 Service 层实现，Controller 不感知。
 - **离线优先**：所有读写只操作本地仓库；Push/Pull 失败进入待同步状态，网络恢复事件触发重试（前端 `online` 事件 + Query 重取）。
 - **同步自动重试边界**：只有幂等操作自动重试。退避策略在 `services/retry.rs`（指数 + 抖动 + 上限，纯函数，等待/进度/取消可注入），当前只包在拉取阶段 `sync_service::pull_stage` 上，且仅对 `AppError::SyncNetwork` 生效；`push` 非幂等，任何情况下都不自动重试，拉取未成功也不会推送。重试进度经 Tauri Channel 下发，前端收敛在 `useSyncRetryStore`（手动 / 启动 / 命令面板共用），`cancel_sync_retry` 只结束退避等待、不中断已发出的请求。前端不得对 `sync_now` 整体做重试（会重放 push）。
+- **同步失败定位**：`sync()` 返回 `Result<SyncStatus, SyncFailure>`（`services/sync_service.rs`），在 commit / pull / push 三段各自归因，把 `SyncStage`、可定位文件（拉取冲突路径、未完成合并的冲突文件）与建议码 `hint` 一并交给命令层；`sync_now` 因此不走会抹平错误上下文的 `commands::blocking`，改用 `spawn_blocking` 后经 `sync_failure_dto(...)` 映射为 `AppErrorDto`（`stage` / `files` / `hint` 均为可选，非同步错误不序列化）。前端 `deriveSyncFailure` 优先采用后端 `stage` / `hint`，缺失时才按错误码推断，保证旧数据与本地错误仍有可读阶段；失败文件为仓库相对路径，桌面与移动共用同一 `shared` 横幅（>5 条折叠为计数）。
 - **凭证流**：Token/API Key 通过 `SecureStore` 写入平台系统安全存储；Rust 层按需读取，前端永远拿不到明文。旧版 AES-GCM 文件仅用于一次性迁移，成功后删除。
 - **多仓库注册表**：config 维护 `repos` 列表与 `active_repo_id`；活动仓库即各 note/git Command 通过 `config::require_repo_path` 解析的当前仓库，切换活动仓库后工作区以 `workspaceEpoch` 触发整页重挂载加载新仓库。移除活动仓库后自动切换剩余仓库；旧版单仓库 `repoPath` 配置在加载时自动迁移。
 - **登录态**：`has_token` 这类非敏感状态存于 app config，路由守卫不直接解密 token。

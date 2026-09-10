@@ -1,5 +1,13 @@
 import type { SyncStatus } from "@/api/types";
-import { errorActionOf, isAppError, messageOf, type ErrorAction } from "@/api/error";
+import {
+  errorActionOf,
+  isAppError,
+  messageOf,
+  type AppError,
+  type ErrorAction,
+  type SyncHint,
+  type SyncStage,
+} from "@/api/error";
 import { translate } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 import type { Locale } from "@/stores/ui.store";
@@ -27,9 +35,25 @@ export interface SyncFailureState {
   stage: string;
   reason: string;
   suggestion: string;
+  /** 可定位到的失败文件；为空表示无法定位 */
+  files: string[];
   action: ErrorAction | null;
   retriable: boolean;
 }
+
+/** 后端定位到阶段时直接采用，避免前端再猜（E4-T4） */
+const BACKEND_STAGE_KEY: Record<SyncStage, TranslationKey> = {
+  commit: "sync.stageCommit",
+  pull: "sync.stagePull",
+  push: "sync.stagePush",
+};
+
+/** 后端建议码 → 文案；`retry` 交给错误码表兜底，避免网络错误被泛化 */
+const HINT_KEY: Partial<Record<SyncHint, TranslationKey>> = {
+  relogin: "error.sync.auth",
+  checkPermission: "error.sync.permission",
+  resolveConflicts: "sync.failedConflict",
+};
 
 const STAGE_KEY: Record<SyncFailureStage, TranslationKey> = {
   commit: "sync.stageCommit",
@@ -49,8 +73,10 @@ export function syncStageOf(code: string): SyncFailureStage {
   return "sync";
 }
 
-function suggestionKeyOf(code: string): TranslationKey {
-  switch (code) {
+function suggestionKeyOf(error: AppError | null): TranslationKey {
+  const hinted = error?.hint ? HINT_KEY[error.hint] : undefined;
+  if (hinted) return hinted;
+  switch (error?.code) {
     case "SYNC_4001":
       return "sync.failedConflict";
     case "SYNC_4002":
@@ -69,11 +95,13 @@ export function deriveSyncFailure(error: unknown, locale: Locale = "zh-CN"): Syn
   if (!error) return null;
   const appError = isAppError(error) ? error : null;
   const code = appError?.code ?? "";
+  const stageKey = appError?.stage ? BACKEND_STAGE_KEY[appError.stage] : STAGE_KEY[syncStageOf(code)];
   return {
     title: translate(locale, "sync.failedTitle"),
-    stage: translate(locale, STAGE_KEY[syncStageOf(code)]),
+    stage: translate(locale, stageKey),
     reason: messageOf(error),
-    suggestion: translate(locale, suggestionKeyOf(code)),
+    suggestion: translate(locale, suggestionKeyOf(appError)),
+    files: appError?.files ?? [],
     action: appError ? errorActionOf(appError) : "retry",
     retriable: appError ? appError.retriable : true,
   };

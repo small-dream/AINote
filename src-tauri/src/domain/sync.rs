@@ -1,5 +1,14 @@
 use serde::Serialize;
 
+/// 同步阶段：失败时用于定位是「本地提交 / 拉取 / 推送」哪一步出的问题（E4-T4）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "lowercase")]
+pub enum SyncStage {
+    Commit,
+    Pull,
+    Push,
+}
+
 /// 单个冲突文件的三栏合并素材（list_conflicts 返回）
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

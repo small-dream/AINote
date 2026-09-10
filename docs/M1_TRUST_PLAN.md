@@ -95,10 +95,10 @@
 | M1-E3-T3 | 数据安全 | 从备份恢复 | shared | T2 | M | ✅ |
 | M1-E3-T4 | 数据安全 | 故障恢复演练与自动化 | shared | T1–T3 | M | ✅ |
 | M1-E3-T5 | 数据安全 | 可恢复 UI 收口 | shared | T1–T3 | M | ✅ |
-| M1-E4-T1 | 同步可靠性 | 同步错误分类与可读提示 | shared | — | M | 📋 |
+| M1-E4-T1 | 同步可靠性 | 同步错误分类与可读提示 | shared | — | M | ✅ |
 | M1-E4-T2 | 同步可靠性 | 幂等操作重试策略 | shared | T1 | M | ✅ |
 | M1-E4-T3 | 同步可靠性 | 大仓库性能基准 | shared | — | M | ✅ |
-| M1-E4-T4 | 同步可靠性 | 同步失败定位到阶段/文件 | shared | T1 | M | 📋 |
+| M1-E4-T4 | 同步可靠性 | 同步失败定位到阶段/文件 | shared | T1 | M | ✅ |
 | M1-E5-T1 | 度量地基 | 本地事件计数 | shared | D4 | M | 📋 |
 | M1-E5-T2 | 度量地基 | 同意页与开关 | shared | D4 | M | 📋 |
 | M1-E5-T3 | 度量地基 | 指标导出与漏斗视图 | shared | T1、T2 | S | 📋 |
@@ -393,6 +393,12 @@
 - **验收标准**：能区分「本地提交失败 / 拉取失败 / 推送失败」；失败文件可定位。
 - **测试义务**：DTO 序列化测试；前端失败态测试。
 - **跨端影响**：`shared`。
+- **实现备注（2026-09-10）**：
+  - DTO 侧在 `domain/sync.rs` 新增 `SyncStage`（`commit` / `pull` / `push`），`AppErrorDto` 增加三个**可选**字段：`stage`、`files`（`Vec<String>`，空则不序列化）、`hint`（可操作建议码）；新增 builder `AppErrorDto::with_sync_context(...)`，非同步错误不受影响（`From<AppError>` 保持三字段为空）。`hint` 取值 `relogin` / `checkPermission` / `resolveConflicts` / `retry`。
+  - `services/sync_service.rs` 的 `sync()` 改为返回 `Result<SyncStatus, SyncFailure>`：commit / pull / push 三段各自 `map_err` 归因，统一经 `stage_failure(...)` 打日志并携带阶段与文件（拉取冲突时用 `conflict_paths()` 列出具体文件，未完成合并同样归因到 `Pull` 并带文件）。
+  - `commands/git/sync.rs` 的 `sync_now` 不再走 `commands::blocking::run`（该封装会把 `SyncFailure` 压平成普通错误），改为 `tauri::async_runtime::spawn_blocking` 后经 `sync_failure_dto(...)` 转成带上下文的 `AppErrorDto`，前端因此能拿到阶段与文件。
+  - 前端 `deriveSyncFailure` 优先采用后端 `stage`/`hint`，缺失时回落到原有的错误码推断（兼容旧数据）；失败横幅新增「失败文件（n）」列表，超过 5 条折叠为「另有 n 个未显示」，路径为仓库相对路径，桌面与移动共用同一 `shared` 组件。
+  - 验证：Rust 新增 `SyncStage` 序列化 / 未知 stage 容错 2 项 + `sync_service` 阶段归因 5 项（提交失败、拉取冲突带文件、未完成合并带文件、网络失败、推送拒绝带 hint），全量 200 项通过；前端 `status` / `SyncNotice` 新增 8 项（stage/hint 优先级、文件透传与折叠）；e2e 新增 2 条真实前端用例（桌面 1440px「拉取阶段 + 冲突文件」、窄屏 430px「本地提交阶段 + 文件」）。
 
 ---
 
@@ -462,7 +468,7 @@
 ### Wave 3 — 同步可靠性、度量与分发（第 4–5 周）
 
 - [x] M1-E4-T2 幂等重试策略。
-- [ ] M1-E4-T4 同步失败定位。
+- [x] M1-E4-T4 同步失败定位。
 - [ ] M1-E5-T1 / T2 / T3 度量地基。
 - [ ] M1-E1-T3 Linux 产物校验与签名（GPG）。
 - [ ] M1-E1-T5 Android 应用内更新提示。
@@ -557,7 +563,7 @@
 | M1-E4-T1 同步错误分类 | ✅ | | SYNC_4002/4003/4004 + 前端 i18n 可操作提示 |
 | M1-E4-T2 幂等重试 | ✅ | | 幂等拉取退避重试（3 次 / 0.5s 起 / 8s 封顶 / ±25% 抖动）+ Channel 进度 + 可取消；push 不重试 |
 | M1-E4-T3 性能基准 | ✅ | | 7 项 Rust + 5000 行软渲染；docs/PERF_BASELINE.md |
-| M1-E4-T4 同步失败定位 | 📋 | | |
+| M1-E4-T4 同步失败定位 | ✅ | | `SyncStage` + `AppErrorDto.stage/files/hint` 由后端归因下发；前端展示失败文件（>5 折叠）并优先采用后端 stage/hint |
 | M1-E5-T1 本地事件计数 | 📋 | | 等 D4 |
 | M1-E5-T2 同意页与开关 | 📋 | | 等 D4 |
 | M1-E5-T3 指标导出与漏斗 | 📋 | | |
@@ -568,6 +574,7 @@
 
 | 日期 | 变更 | 作者 |
 |---|---|---|
+| 2026-09-10 | v1.11：M1-E4-T4 交付（同步失败定位：`AppErrorDto` 携带 `stage` / `files` / `hint`，`sync_now` 保留原始错误上下文；前端失败横幅展示可定位的失败文件并优先采用后端阶段与建议） | PM |
 | 2026-09-10 | v1.10：M1-E4-T2 交付（幂等拉取自动重试 + 重试进度 / 取消；push 不自动重试，移除整条 sync_now 的前端重试） | PM |
 | 2026-09-10 | v1.9：M1-E3-T5 交付（可恢复 UI 收口：同步失败横幅 + 保存失败建议 + 删除恢复入口 + 冲突导出兜底；新增 `export_conflicts` 与 4 条真实前端 e2e） | PM |
 | 2026-09-10 | v1.8：M1-E3-T4 交付（故障恢复手册 + 3 条自动化演练 + 发布前演练清单） | PM |

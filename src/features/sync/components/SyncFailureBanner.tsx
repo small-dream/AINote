@@ -11,8 +11,11 @@ interface SyncFailureBannerProps {
   onRetry: () => void;
 }
 
+/** 失败文件列表最多展示的条数，超出部分折叠为计数（避免长列表淹没横幅） */
+const MAX_VISIBLE_FILES = 5;
+
 /**
- * 同步失败横幅（E3-T5）：阶段 + 原始原因 + 下一步动作，永不只显示错误码。
+ * 同步失败横幅（E3-T5 / E4-T4）：阶段 + 原始原因 + 下一步动作 + 可定位的失败文件，永不只显示错误码。
  * 凭证失效时主按钮换成「重新登录」，其余情况一律是「重试同步」。
  */
 export function SyncFailureBanner({ failure, retrying = false, onRetry }: SyncFailureBannerProps) {
@@ -26,8 +29,38 @@ export function SyncFailureBanner({ failure, retrying = false, onRetry }: SyncFa
         </p>
         <p className="mt-0.5 break-words text-xs text-text-secondary">{failure.reason}</p>
         <p className="mt-0.5 break-words text-xs text-text-tertiary">{failure.suggestion}</p>
+        <SyncFailureFiles files={failure.files} />
       </div>
       <SyncFailureActions failure={failure} retrying={retrying} onRetry={onRetry} />
+    </div>
+  );
+}
+
+/** 失败文件（E4-T4）：给出可定位的仓库相对路径，便于用户直接去处理冲突或权限。 */
+function SyncFailureFiles({ files }: { files: string[] }) {
+  const { t } = useTranslation();
+  if (files.length === 0) return null;
+  const visible = files.slice(0, MAX_VISIBLE_FILES);
+  const hidden = files.length - visible.length;
+  return (
+    <div className="mt-1">
+      <p className="text-[11px] text-text-tertiary">{t("sync.failedFiles", { count: files.length })}</p>
+      <ul className="mt-0.5 flex flex-wrap gap-1">
+        {visible.map((file) => (
+          <li
+            key={file}
+            title={file}
+            className="max-w-full truncate rounded border border-border/70 bg-bg-secondary/60 px-1.5 py-0.5 font-mono text-[11px] text-text-secondary"
+          >
+            {file}
+          </li>
+        ))}
+        {hidden > 0 && (
+          <li className="px-1.5 py-0.5 text-[11px] text-text-tertiary">
+            {t("sync.failedFilesMore", { count: hidden })}
+          </li>
+        )}
+      </ul>
     </div>
   );
 }

@@ -1,11 +1,44 @@
 use std::path::Path;
 
 use crate::domain::error::AppError;
-use crate::domain::sync::ConflictFile;
-use crate::domain::sync::SyncStatus;
+use crate::domain::sync::{ConflictFile, SyncStage, SyncStatus};
 use crate::repositories::git_backend::GitBackend;
 
 use super::retry::{self, RetryContext, RetryPolicy};
+
+/// 带定位信息的同步失败：Command 层据此补齐 `stage` / `files` / `hint`（E4-T4）。
+#[derive(Debug)]
+pub struct SyncFailure {
+    pub error: AppError,
+    /// `None` 表示无法归因到 commit / pull / push 某个阶段
+    pub stage: Option<SyncStage>,
+    /// 可定位到的失败文件（如拉取冲突的文件）；无法定位时为空
+    pub files: Vec<String>,
+}
+
+impl SyncFailure {
+    fn new(stage: Option<SyncStage>, error: AppError, files: Vec<String>) -> Self {
+        Self { error, stage, files }
+    }
+
+    /// 可操作建议码：凭证 / 权限 / 冲突各自明确，其余交给用户重试（纯函数）。
+    pub fn hint(&self) -> &'static str {
+        match &self.error {
+            AppError::SyncAuth(_) => "relogin",
+            AppError::SyncRejected(_) => "checkPermission",
+            AppError::Conflict(_) => "resolveConflicts",
+            _ => "retry",
+        }
+    }
+}
+
+/// 拉取冲突时列出待解决文件，供前端定位（失败本身已由 error 表达）。
+fn conflict_paths<B: GitBackend>(backend: &B, path: &str) -> Vec<String> {
+    backend
+        .conflict_files(path)
+        .map(|files| files.into_iter().map(|file| file.path).collect())
+        .unwrap_or_default()
+}
 
 /// 用例：组装仓库同步状态
 pub fn status<B: GitBackend>(backend: &B, repo_path: &Path) -> Result<SyncStatus, AppError> {
@@ -68,16 +101,34 @@ pub fn sync<B: GitBackend>(
     repo_path: &Path,
     token: &str,
     ctx: &mut RetryContext<'_>,
-) -> Result<SyncStatus, AppError> {
+) -> Result<SyncStatus, SyncFailure> {
     let path = repo_path.to_string_lossy();
-    if backend.is_merging(&path)? {
-        return Err(AppError::Conflict("存在未解决的合并冲突".into()));
+    let merging = backend
+        .is_merging(&path)
+        .map_err(|error| SyncFailure::new(None, error, Vec::new()))?;
+    if merging {
+        let files = conflict_paths(backend, &path);
+        return Err(SyncFailure::new(
+            Some(SyncStage::Pull),
+            AppError::Conflict("存在未解决的合并冲突".into()),
+            files,
+        ));
     }
     log::info!(target: "ainote::sync", "同步开始 repo={}", crate::config::logging::redact(&path));
-    run_stage("commit", commit_pending(backend, repo_path, "note: auto commit"))?;
-    run_stage("pull", pull_stage(backend, repo_path, token, ctx))?;
-    run_stage("push", backend.push(&path, token))?;
-    let result = status(backend, repo_path)?;
+    commit_pending(backend, repo_path, "note: auto commit")
+        .map_err(|error| stage_failure("commit", SyncStage::Commit, error, Vec::new()))?;
+    pull_stage(backend, repo_path, token, ctx).map_err(|error| {
+        let files = if matches!(error, AppError::Conflict(_)) {
+            conflict_paths(backend, &path)
+        } else {
+            Vec::new()
+        };
+        stage_failure("pull", SyncStage::Pull, error, files)
+    })?;
+    backend
+        .push(&path, token)
+        .map_err(|error| stage_failure("push", SyncStage::Push, error, Vec::new()))?;
+    let result = status(backend, repo_path).map_err(|error| SyncFailure::new(None, error, Vec::new()))?;
     log::info!(
         target: "ainote::sync",
         "同步完成 ahead={} behind={}",
@@ -87,11 +138,9 @@ pub fn sync<B: GitBackend>(
     Ok(result)
 }
 
-fn run_stage<T>(stage: &str, result: Result<T, AppError>) -> Result<T, AppError> {
-    result.map_err(|err| {
-        log::error!(target: "ainote::sync", "同步失败 stage={stage} error={err}");
-        err
-    })
+fn stage_failure(stage: &str, named: SyncStage, error: AppError, files: Vec<String>) -> SyncFailure {
+    log::error!(target: "ainote::sync", "同步失败 stage={stage} error={error}");
+    SyncFailure::new(Some(named), error, files)
 }
 
 /// 用例：解决冲突 —— use_local 保留本地侧，完成后 push。
@@ -188,8 +237,8 @@ mod tests {
             ..Default::default()
         };
         let err = sync(&mock, &root(), "tok", &mut background()).unwrap_err();
-        assert!(matches!(err, AppError::Conflict(_)));
-        assert!(mock.recorded().is_empty());
+        assert!(matches!(err.error, AppError::Conflict(_)));
+        assert_eq!(mock.recorded(), vec!["conflicts"], "只读取冲突清单，不做任何写操作");
     }
 
     #[test]
@@ -200,9 +249,13 @@ mod tests {
         };
         assert!(matches!(
             sync(&mock, &root(), "tok", &mut background()),
-            Err(AppError::Conflict(_))
+            Err(SyncFailure { error: AppError::Conflict(_), .. })
         ));
-        assert_eq!(mock.recorded(), vec!["commit:note: auto commit", "pull"]);
+        assert_eq!(
+            mock.recorded(),
+            vec!["commit:note: auto commit", "pull", "conflicts"],
+            "冲突后列出待解决文件供前端定位"
+        );
     }
 
     #[test]
@@ -245,10 +298,91 @@ mod tests {
             sync(&mock, &root(), "tok", &mut ctx)
         };
 
-        assert!(matches!(outcome, Err(AppError::SyncNetwork(_))));
+        assert!(matches!(outcome, Err(SyncFailure { error: AppError::SyncNetwork(_), .. })));
         let calls = mock.recorded();
         assert_eq!(calls.iter().filter(|call| call.as_str() == "pull").count(), 4, "首次 + 3 次重试");
         assert!(!calls.iter().any(|call| call == "push"), "拉取未成功时不推送");
+    }
+
+    fn conflict(path: &str) -> ConflictFile {
+        ConflictFile {
+            path: path.into(),
+            local: "本地".into(),
+            remote: "远端".into(),
+        }
+    }
+
+    #[test]
+    fn commit_failure_is_attributed_to_commit_stage() {
+        let mock = MockGitBackend {
+            commit_fails: true,
+            ..Default::default()
+        };
+        let failure = sync(&mock, &root(), "tok", &mut background()).unwrap_err();
+
+        assert_eq!(failure.stage, Some(SyncStage::Commit));
+        assert!(failure.files.is_empty());
+        assert_eq!(failure.hint(), "retry");
+        assert!(matches!(failure.error, AppError::Io(_)));
+        assert!(!mock.recorded().iter().any(|call| call == "pull"));
+    }
+
+    #[test]
+    fn pull_conflict_lists_files_for_locating() {
+        let mock = MockGitBackend {
+            conflict_on_pull: true,
+            conflicts: vec![conflict("daily/a.md"), conflict("daily/b.md")],
+            ..Default::default()
+        };
+        let failure = sync(&mock, &root(), "tok", &mut background()).unwrap_err();
+
+        assert_eq!(failure.stage, Some(SyncStage::Pull));
+        assert_eq!(failure.files, vec!["daily/a.md", "daily/b.md"]);
+        assert_eq!(failure.hint(), "resolveConflicts");
+    }
+
+    #[test]
+    fn unresolved_merge_is_attributed_to_pull_with_files() {
+        let mock = MockGitBackend {
+            merging: true,
+            conflicts: vec![conflict("daily/a.md")],
+            ..Default::default()
+        };
+        let failure = sync(&mock, &root(), "tok", &mut background()).unwrap_err();
+
+        assert_eq!(failure.stage, Some(SyncStage::Pull));
+        assert_eq!(failure.files, vec!["daily/a.md"]);
+    }
+
+    #[test]
+    fn network_failure_is_attributed_to_pull_stage() {
+        let mock = MockGitBackend {
+            pull_network_failures: std::sync::Mutex::new(10),
+            ..Default::default()
+        };
+        let mut ctx = RetryContext {
+            cancel: &NEVER_CANCELLED_FOR_TEST,
+            sleep: Some(&mut |_ms: u64| {}),
+            report: None,
+        };
+        let failure = sync(&mock, &root(), "tok", &mut ctx).unwrap_err();
+
+        assert_eq!(failure.stage, Some(SyncStage::Pull));
+        assert!(failure.files.is_empty(), "网络错误无法定位到文件");
+        assert_eq!(failure.hint(), "retry");
+    }
+
+    #[test]
+    fn push_rejection_is_attributed_to_push_stage() {
+        let mock = MockGitBackend {
+            push_rejected: true,
+            ..Default::default()
+        };
+        let failure = sync(&mock, &root(), "tok", &mut background()).unwrap_err();
+
+        assert_eq!(failure.stage, Some(SyncStage::Push));
+        assert_eq!(failure.hint(), "checkPermission");
+        assert!(matches!(failure.error, AppError::SyncRejected(_)));
     }
 
     #[test]

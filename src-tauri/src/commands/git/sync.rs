@@ -4,12 +4,12 @@ use std::sync::{Arc, Mutex};
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager};
 
-use crate::commands::blocking;
 use crate::config;
 use crate::domain::error::{AppError, AppErrorDto};
 use crate::domain::sync::{SyncProgressDto, SyncStatus};
 use crate::repositories::git2_backend::Git2Backend;
 use crate::services::retry::{RetryAttempt, RetryContext};
+use crate::services::sync_service::SyncFailure;
 use crate::services::{auth_service, sync_service};
 
 /// 进行中的同步自动重试取消标志。
@@ -47,7 +47,8 @@ pub async fn sync_now(
         .set(Some(cancel.clone()))
         .map_err(AppErrorDto::from)?;
 
-    let result = blocking::run(move || {
+    // 这里不用 blocking::run：同步失败要保留 stage / files，不能用 AppError 抹平
+    let result = tauri::async_runtime::spawn_blocking(move || {
         let mut report = |attempt: RetryAttempt| {
             let _ = on_event.send(SyncProgressDto {
                 phase: "retrying".into(),
@@ -63,10 +64,17 @@ pub async fn sync_now(
         };
         sync_service::sync(&backend, &root, &token, &mut ctx)
     })
-    .await;
+    .await
+    .map_err(|err| AppErrorDto::from(AppError::Io(format!("后台任务失败: {err}"))))?;
 
     let _ = app.state::<SyncRetryState>().set(None);
-    result.map_err(AppErrorDto::from)
+    result.map_err(sync_failure_dto)
+}
+
+/// 同步失败 → 结构化错误：附带阶段 / 失败文件 / 建议码，前端据此定位（E4-T4）。
+fn sync_failure_dto(failure: SyncFailure) -> AppErrorDto {
+    let hint = failure.hint();
+    AppErrorDto::from(failure.error).with_sync_context(failure.stage, failure.files, hint)
 }
 
 /// Controller：取消进行中的同步自动重试；无任务时静默成功。

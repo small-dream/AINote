@@ -1,6 +1,8 @@
 use serde::Serialize;
 use thiserror::Error;
 
+use crate::domain::sync::SyncStage;
+
 /// 领域错误：Repository 边界在此统一转换，原始错误绝不泄漏到前端。
 /// 错误码规范见 docs/CODING_STANDARDS.md 第 3 节。
 #[derive(Debug, Error)]
@@ -58,6 +60,25 @@ pub struct AppErrorDto {
     pub kind: ErrorKind,
     pub message: String,
     pub retriable: bool,
+    /// 同步类错误才有：失败阶段（commit / pull / push），无法归因时为空
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub stage: Option<SyncStage>,
+    /// 同步类错误才有：可定位到的失败文件（如拉取冲突的文件）
+    #[serde(skip_serializing_if = "Vec::is_empty")]
+    pub files: Vec<String>,
+    /// 同步类错误才有：可操作建议的稳定提示码，由前端本地化
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub hint: Option<String>,
+}
+
+impl AppErrorDto {
+    /// 附加同步定位信息（E4-T4）：`stage` 为空表示无法归因，`files` 为空表示无法定位到文件。
+    pub fn with_sync_context(mut self, stage: Option<SyncStage>, files: Vec<String>, hint: &str) -> Self {
+        self.stage = stage;
+        self.files = files;
+        self.hint = Some(hint.to_string());
+        self
+    }
 }
 
 impl From<AppError> for AppErrorDto {
@@ -82,6 +103,9 @@ impl From<AppError> for AppErrorDto {
             kind,
             message: err.to_string(),
             retriable,
+            stage: None,
+            files: Vec::new(),
+            hint: None,
         }
     }
 }
@@ -98,6 +122,36 @@ mod tests {
 
     fn dto(err: AppError) -> AppErrorDto {
         err.into()
+    }
+
+    #[test]
+    fn sync_context_is_opt_in_and_serialized_camel_case() {
+        let plain = serde_json::to_value(dto(AppError::SyncNetwork("timeout".into()))).unwrap();
+        assert!(plain.get("stage").is_none(), "普通错误不带阶段字段");
+        assert!(plain.get("files").is_none(), "无文件时不序列化 files");
+        assert!(plain.get("hint").is_none());
+
+        let detailed = dto(AppError::Conflict("merge".into())).with_sync_context(
+            Some(SyncStage::Pull),
+            vec!["daily/a.md".into()],
+            "resolveConflicts",
+        );
+        let json = serde_json::to_value(detailed).unwrap();
+        assert_eq!(json["stage"], "pull");
+        assert_eq!(json["hint"], "resolveConflicts");
+        assert_eq!(json["files"][0], "daily/a.md");
+        assert_eq!(json["code"], "SYNC_4001");
+    }
+
+    #[test]
+    fn sync_context_accepts_unknown_stage() {
+        let json = serde_json::to_value(
+            dto(AppError::Git("boom".into())).with_sync_context(None, Vec::new(), "retry"),
+        )
+        .unwrap();
+        assert!(json.get("stage").is_none(), "无法归因时不写 stage");
+        assert!(json.get("files").is_none());
+        assert_eq!(json["hint"], "retry");
     }
 
     #[test]

@@ -28,7 +28,18 @@ export interface E2eState {
   conflicted?: boolean;
   conflicts?: E2eConflictSeed[];
   /** 注入一次同步失败（用于验证失败态 UI 与恢复入口） */
-  syncFailure?: { code: string; kind: string; message: string; retriable: boolean };
+  syncFailure?: {
+    code: string;
+    kind: string;
+    message: string;
+    retriable: boolean;
+    /** 后端定位到的失败阶段（E4-T4） */
+    stage?: "commit" | "pull" | "push";
+    /** 后端定位到的失败文件（E4-T4） */
+    files?: string[];
+    /** 后端建议码（E4-T4） */
+    hint?: "retry" | "relogin" | "checkPermission" | "resolveConflicts";
+  };
   /** 注入一次「拉取自动重试中」：进度下发后保持挂起，直到用户取消 */
   syncRetry?: { retry: number; maxRetries: number; delayMs: number };
 }
