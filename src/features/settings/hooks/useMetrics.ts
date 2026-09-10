@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { metricsApi } from "@/api";
+import { metricsApi, type MetricsExportFormat } from "@/api";
 
 /** 本机指标快照的查询键（服务端状态唯一权威来源）。 */
 export const metricsKey = ["metrics", "snapshot"] as const;
@@ -31,6 +31,13 @@ export function useClearMetrics() {
   return useMutation({
     mutationFn: () => metricsApi.clear(),
     onSuccess: () => void queryClient.invalidateQueries({ queryKey: metricsKey }),
+  });
+}
+
+/** 导出本机指标；用户取消保存时返回 null（不视为错误，也不需要提示）。 */
+export function useExportMetrics() {
+  return useMutation({
+    mutationFn: (format: MetricsExportFormat) => metricsApi.export(format),
   });
 }
 

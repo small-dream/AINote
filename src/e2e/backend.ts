@@ -10,6 +10,9 @@ interface MockStore {
   /** 本地指标开关与计数（模拟 metrics.json） */
   metricsEnabled: boolean;
   metricsCounts: Record<string, number>;
+  /** 近 7 天活跃天数与同步成功率（模拟窗口指标） */
+  activeDays: number;
+  syncSuccessRate: number | null;
 }
 
 export interface E2eCommandContext {
@@ -41,7 +44,9 @@ function createStore(state: E2eState): MockStore {
     conflicts: state.conflicts ?? [],
     pendingSync: null,
     metricsEnabled: state.metricsEnabled !== false,
-    metricsCounts: {},
+    metricsCounts: { ...(state.metricsCounts ?? {}) },
+    activeDays: state.metricsActiveDays ?? 0,
+    syncSuccessRate: state.metricsSyncSuccessRate ?? null,
   };
 }
 
@@ -220,9 +225,15 @@ const commandHandlers: Record<string, CommandHandler> = {
     appVersion: ctx.state.appVersion ?? "0.24.12",
     updatedAt: "",
     totals: METRIC_EVENT_NAMES.map((event) => ({ event, count: ctx.store.metricsCounts[event] ?? 0, firstSeen: null })),
-    activeDays: 0,
-    syncSuccessRate: null,
+    activeDays: ctx.store.activeDays,
+    syncSuccessRate: ctx.store.syncSuccessRate,
   }),
+  metrics_export: (args, ctx) => {
+    if (ctx.state.metricsExportCanceled) return null;
+    const format = String(args.format ?? "");
+    if (format !== "json" && format !== "csv") throw appError(`unsupported format: ${format}`);
+    return { path: `/tmp/ainote-metrics-0.24.12.${format}`, bytes: 1536 };
+  },
   open_external: () => null,
   print_current_page: () => null,
   "plugin:event|register_listener": () => 1,

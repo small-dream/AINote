@@ -123,6 +123,7 @@ pub fn run() {
             commands::metrics::metrics_record,
             commands::metrics::metrics_clear,
             commands::metrics::metrics_set_enabled,
+            commands::metrics::metrics_export,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AINote");

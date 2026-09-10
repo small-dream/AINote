@@ -190,6 +190,78 @@ fn count_of(day: &BTreeMap<String, u64>, event: &str) -> u64 {
     day.get(event).copied().unwrap_or(0)
 }
 
+/// 导出用的 JSON 载荷：只包含快照字段与两个窗口指标（结构上不可能带出敏感信息）。
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MetricsExport<'a> {
+    pub schema_version: u32,
+    pub enabled: bool,
+    pub platform: &'a str,
+    pub app_version: &'a str,
+    pub updated_at: &'a str,
+    pub totals: &'a BTreeMap<String, u64>,
+    pub daily: &'a BTreeMap<String, BTreeMap<String, u64>>,
+    pub first_seen: &'a BTreeMap<String, String>,
+    pub active_days: usize,
+    pub sync_success_rate: Option<f64>,
+}
+
+impl MetricsSnapshot {
+    fn export_payload(&self, enabled: bool) -> MetricsExport<'_> {
+        MetricsExport {
+            schema_version: self.schema_version,
+            enabled,
+            platform: &self.platform,
+            app_version: &self.app_version,
+            updated_at: &self.updated_at,
+            totals: &self.totals,
+            daily: &self.daily,
+            first_seen: &self.first_seen,
+            active_days: self.active_days(WEEK_WINDOW_DAYS),
+            sync_success_rate: self.sync_success_rate(WEEK_WINDOW_DAYS),
+        }
+    }
+
+    /// 导出为 JSON（用户主动操作，内容只有计数与时间）。
+    pub fn to_json(&self, enabled: bool) -> Result<String, serde_json::Error> {
+        serde_json::to_string_pretty(&self.export_payload(enabled))
+    }
+
+    /// 导出为 CSV：`events` 段逐事件计数，`summary` 段是窗口指标；两段都是固定列。
+    pub fn to_csv(&self, enabled: bool) -> String {
+        let mut lines = vec!["events".to_string(), "event,count,first_seen".to_string()];
+        for name in METRIC_EVENTS {
+            let event = MetricEvent::parse(name).expect("白名单事件");
+            let first_seen = self.first_seen.get(name).cloned().unwrap_or_default();
+            lines.push(format!("{name},{},{}", self.total(event), csv_cell(&first_seen)));
+        }
+        lines.push(String::new());
+        lines.push("summary".to_string());
+        lines.push("key,value".to_string());
+        lines.push(format!("platform,{}", csv_cell(&self.platform)));
+        lines.push(format!("app_version,{}", csv_cell(&self.app_version)));
+        lines.push(format!("enabled,{enabled}"));
+        lines.push(format!("active_days_7d,{}", self.active_days(WEEK_WINDOW_DAYS)));
+        lines.push(format!(
+            "sync_success_rate_7d,{}",
+            match self.sync_success_rate(WEEK_WINDOW_DAYS) {
+                Some(rate) => format!("{rate:.4}"),
+                None => String::new(),
+            }
+        ));
+        lines.join("\n")
+    }
+}
+
+/// CSV 单元格转义：字段内出现分隔符 / 引号 / 换行时用双引号包裹并转义引号。
+fn csv_cell(value: &str) -> String {
+    if value.contains([',', '"', '\n', '\r']) {
+        format!("\"{}\"", value.replace('"', "\"\""))
+    } else {
+        value.to_string()
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MetricsTotalDto {
@@ -211,6 +283,14 @@ pub struct MetricsDto {
     pub active_days: usize,
     /// 近 7 天同步成功率（0.0–1.0）；无样本为 null
     pub sync_success_rate: Option<f64>,
+}
+
+/// 导出结果（写入用户选择的位置）。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MetricsExportDto {
+    pub path: String,
+    pub bytes: u64,
 }
 
 #[cfg(test)]
@@ -341,5 +421,46 @@ mod tests {
         assert_eq!(snapshot.schema_version, SCHEMA_VERSION);
         assert_eq!(snapshot.total(MetricEvent::NoteCreated), 2);
         assert!(snapshot.daily.is_empty());
+    }
+
+    #[test]
+    fn csv_export_lists_events_and_summary() {
+        let snapshot = recorded(&[
+            ("2026-09-09", MetricEvent::AppLaunched),
+            ("2026-09-09", MetricEvent::SyncSucceeded),
+        ]);
+        let csv = snapshot.to_csv(true);
+        assert!(csv.starts_with("events\nevent,count,first_seen\n"));
+        assert!(csv.contains("app_launched,1,2026-09-09T10:00:00Z"));
+        assert!(csv.contains("note_created,0,"));
+        assert!(csv.contains("\nsummary\nkey,value\n"));
+        assert!(csv.contains("enabled,true"));
+        assert!(csv.contains("active_days_7d,1"));
+        assert!(csv.contains("sync_success_rate_7d,1.0000"));
+    }
+
+    #[test]
+    fn csv_export_reports_missing_success_rate_as_empty() {
+        let csv = MetricsSnapshot::new("macos", "0.25.0").to_csv(false);
+        assert!(csv.contains("sync_success_rate_7d,\n") || csv.ends_with("sync_success_rate_7d,"));
+        assert!(csv.contains("enabled,false"));
+    }
+
+    #[test]
+    fn csv_cell_escapes_separators_and_quotes() {
+        assert_eq!(csv_cell("plain"), "plain");
+        assert_eq!(csv_cell("a,b"), "\"a,b\"");
+        assert_eq!(csv_cell("say \"hi\""), "\"say \"\"hi\"\"\"");
+    }
+
+    #[test]
+    fn json_export_has_no_sensitive_fields() {
+        let snapshot = recorded(&[("2026-09-09", MetricEvent::NoteCreated)]);
+        let json = snapshot.to_json(true).expect("导出 JSON");
+        for sensitive in ["token", "apiKey", "repoUrl", "content", "title", ".md"] {
+            assert!(!json.contains(sensitive), "不应出现敏感字段: {sensitive}");
+        }
+        assert!(json.contains("\"activeDays\": 1"));
+        assert!(json.contains("\"enabled\": true"));
     }
 }

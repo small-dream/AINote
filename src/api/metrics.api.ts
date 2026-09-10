@@ -25,8 +25,16 @@ export interface MetricsSnapshotDto {
   totals: MetricTotalDto[];
   /** 近 7 天有过事件的天数 */
   activeDays: number;
-  /** 近 7 天同步成功率（0–1）；无样本为 null */
+/** 近 7 天同步成功率（0–1）；无样本为 null */
   syncSuccessRate: number | null;
+}
+
+/** 指标导出格式（与 Rust `MetricsFormat` 一一对应）。 */
+export type MetricsExportFormat = "json" | "csv";
+
+export interface MetricsExportDto {
+  path: string;
+  bytes: number;
 }
 
 /** 读取本机指标快照（只有事件计数与时间，不含笔记内容）。 */
@@ -48,9 +56,14 @@ async function setEnabled(enabled: boolean): Promise<void> {
   await call("metrics_set_enabled", { enabled });
 }
 
+/** 导出本机指标到用户选择的位置；用户取消保存时返回 null（不视为错误）。 */
+async function exportFile(format: MetricsExportFormat): Promise<MetricsExportDto | null> {
+  return call<MetricsExportDto | null>("metrics_export", { format });
+}
+
 /** 尽力而为地记录一次事件：埋点失败不得影响任何业务路径。 */
 export function recordMetric(event: MetricEventName): void {
   void record(event).catch(() => undefined);
 }
 
-export const metricsApi = { read, record, clear, setEnabled };
+export const metricsApi = { read, record, clear, setEnabled, export: exportFile };

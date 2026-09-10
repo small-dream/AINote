@@ -4,12 +4,13 @@
 //! 绝不影响同步、保存等主流程。
 
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use tauri::{AppHandle, Manager};
 
 use crate::domain::error::AppError;
 use crate::domain::metrics::{MetricEvent, MetricsDto, MetricsSnapshot, DAILY_WINDOW_DAYS};
+use crate::domain::metrics::MetricsExportDto;
 
 const METRICS_FILE: &str = "metrics.json";
 
@@ -103,6 +104,65 @@ pub fn record_best_effort(app: &AppHandle, event: MetricEvent) {
     if let Err(error) = result {
         log::debug!(target: "ainote::metrics", "记录指标失败 event={} error={error}", event.as_str());
     }
+}
+
+/// 导出格式（用户在前端选择）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MetricsFormat {
+    Json,
+    Csv,
+}
+
+impl MetricsFormat {
+    pub fn parse(value: &str) -> Option<Self> {
+        match value {
+            "json" => Some(Self::Json),
+            "csv" => Some(Self::Csv),
+            _ => None,
+        }
+    }
+
+    pub fn extension(self) -> &'static str {
+        match self {
+            Self::Json => "json",
+            Self::Csv => "csv",
+        }
+    }
+
+    pub fn filter_name(self) -> &'static str {
+        match self {
+            Self::Json => "JSON",
+            Self::Csv => "CSV",
+        }
+    }
+
+    pub fn extensions(self) -> &'static [&'static str] {
+        match self {
+            Self::Json => &["json"],
+            Self::Csv => &["csv"],
+        }
+    }
+}
+
+/// 把本机指标写入 `dest`：内容只来自快照（白名单计数 + 平台与版本），不会带出敏感信息。
+pub fn export(
+    store: &MetricsStore,
+    dest: &Path,
+    format: MetricsFormat,
+    enabled: bool,
+) -> Result<MetricsExportDto, AppError> {
+    let snapshot = store.snapshot()?;
+    let content = match format {
+        MetricsFormat::Json => snapshot
+            .to_json(enabled)
+            .map_err(|err| AppError::Io(err.to_string()))?,
+        MetricsFormat::Csv => snapshot.to_csv(enabled),
+    };
+    fs::write(dest, &content)?;
+    Ok(MetricsExportDto {
+        path: dest.to_string_lossy().into_owned(),
+        bytes: content.len() as u64,
+    })
 }
 
 fn now_local() -> time::OffsetDateTime {
@@ -210,5 +270,33 @@ mod tests {
         let (_dir, store) = store();
         assert!(!store.dto(false).expect("读取 DTO").enabled);
         assert!(store.dto(true).expect("读取 DTO").enabled);
+    }
+
+    #[test]
+    fn export_writes_json_and_csv_files() {
+        let (dir, store) = store();
+        store.record(MetricEvent::RepoBound).expect("记录绑定");
+
+        let json = export(&store, &dir.path().join("metrics.json"), MetricsFormat::Json, true)
+            .expect("导出 JSON");
+        assert!(json.bytes > 0);
+        let json_text = fs::read_to_string(&json.path).expect("读取 JSON");
+        assert!(json_text.contains("\"repo_bound\": 1"));
+
+        let csv = export(&store, &dir.path().join("metrics.csv"), MetricsFormat::Csv, true)
+            .expect("导出 CSV");
+        let csv_text = fs::read_to_string(&csv.path).expect("读取 CSV");
+        assert!(csv_text.contains("repo_bound,1,"));
+        assert!(csv_text.contains("platform,"));
+    }
+
+    #[test]
+    fn export_format_parsing_and_extensions() {
+        assert_eq!(MetricsFormat::parse("json"), Some(MetricsFormat::Json));
+        assert_eq!(MetricsFormat::parse("csv"), Some(MetricsFormat::Csv));
+        assert_eq!(MetricsFormat::parse("xlsx"), None);
+        assert_eq!(MetricsFormat::Json.extension(), "json");
+        assert_eq!(MetricsFormat::Csv.extensions(), &["csv"]);
+        assert_eq!(MetricsFormat::Json.filter_name(), "JSON");
     }
 }

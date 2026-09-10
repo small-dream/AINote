@@ -11,7 +11,12 @@ const supportApiMock = vi.hoisted(() => ({
   clearLogs: vi.fn(),
 }));
 const openExternalMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
-const metricsApiMock = vi.hoisted(() => ({ read: vi.fn(), setEnabled: vi.fn(), clear: vi.fn() }));
+const metricsApiMock = vi.hoisted(() => ({
+  read: vi.fn(),
+  setEnabled: vi.fn(),
+  clear: vi.fn(),
+  export: vi.fn(),
+}));
 
 vi.mock("@/api", () => ({
   supportApi: supportApiMock,

@@ -1,9 +1,9 @@
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 use tauri::{AppHandle, Manager};
-use tauri_plugin_dialog::DialogExt;
 
 use crate::commands::blocking;
+use crate::commands::save_file;
 use crate::config;
 use crate::domain::diagnostics::DiagnosticsExportDto;
 use crate::domain::error::{AppError, AppErrorDto};
@@ -24,7 +24,8 @@ pub async fn export_diagnostics(
         .app_log_dir()
         .map_err(|err| AppError::Io(err.to_string()))?;
 
-    let Some(dest) = choose_destination(app).await? else {
+    let file_name = format!("ainote-diagnostics-{}.zip", env!("CARGO_PKG_VERSION"));
+    let Some(dest) = save_file::choose_destination(app, file_name, "ZIP", &["zip"]).await? else {
         return Ok(None);
     };
 
@@ -48,20 +49,4 @@ pub async fn export_diagnostics(
     .map_err(AppErrorDto::from)?;
 
     Ok(Some(result))
-}
-
-async fn choose_destination(app: AppHandle) -> Result<Option<PathBuf>, AppErrorDto> {
-    blocking::run(move || {
-        let file_name = format!("ainote-diagnostics-{}.zip", env!("CARGO_PKG_VERSION"));
-        app.dialog()
-            .file()
-            .set_file_name(file_name)
-            .add_filter("ZIP", &["zip"])
-            .blocking_save_file()
-            .map(|file| file.into_path())
-            .transpose()
-            .map_err(|err| AppError::Io(err.to_string()))
-    })
-    .await
-    .map_err(AppErrorDto::from)
 }

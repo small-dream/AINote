@@ -25,6 +25,14 @@ export interface E2eState {
   appVersion?: string;
   /** 本地指标开关初始状态（默认开启） */
   metricsEnabled?: boolean;
+  /** 预置本地事件计数（漏斗断言用） */
+  metricsCounts?: Record<string, number>;
+  /** 近 7 天活跃天数（默认 0） */
+  metricsActiveDays?: number;
+  /** 近 7 天同步成功率（0–1，默认 null = 无样本） */
+  metricsSyncSuccessRate?: number | null;
+  /** 模拟用户在保存对话框中取消指标导出 */
+  metricsExportCanceled?: boolean;
   notes: E2eNoteSeed[];
   /** 仓库相对路径 → data-uri，用于图片加载测试 */
   assets?: Record<string, string>;

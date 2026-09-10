@@ -89,3 +89,87 @@ test.describe("隐私与度量（E5-T2）/ 移动单栏壳", () => {
     await expect(toggle).toHaveAttribute("aria-checked", "false");
   });
 });
+
+function funnelState(): E2eState {
+  const state = baseState();
+  state.metricsCounts = { app_launched: 10, repo_bound: 9, note_created: 12 };
+  state.metricsActiveDays = 4;
+  state.metricsSyncSuccessRate = 0.99;
+  return state;
+}
+
+function exportCalls(page: Page): Promise<Array<{ cmd: string; args: Record<string, unknown> }>> {
+  return calls(page).then((all) => all.filter((call) => call.cmd === "metrics_export"));
+}
+
+test.describe("隐私与度量（E5-T3）", () => {
+  test("设置页展示本机漏斗：计数、转化率与达标状态", async ({ page }) => {
+    await openWorkspace(page, funnelState());
+    await openMetricsCard(page);
+    await dismissNoticeIfVisible(page);
+
+    const bound = page.locator("li").filter({ hasText: "绑定仓库" });
+    await expect(bound).toContainText("90.0%");
+    await expect(bound).toContainText("目标 ≥ 85%");
+    await expect(bound).toContainText("达标");
+
+    await expect(page.locator("li").filter({ hasText: "安装（启动次数）" })).toContainText("10");
+    await expect(page.locator("li").filter({ hasText: "周活跃天数" })).toContainText("4 天");
+    await expect(page.locator("li").filter({ hasText: "同步成功率" })).toContainText("99.0%");
+    await expect(page.locator("li").filter({ hasText: "创建笔记" })).toContainText("无结论");
+  });
+
+  test("没有同步样本时显示破折号而不是 0%", async ({ page }) => {
+    await openWorkspace(page, baseState());
+    await openMetricsCard(page);
+    await dismissNoticeIfVisible(page);
+
+    const health = page.locator("li").filter({ hasText: "同步成功率" });
+    await expect(health).toContainText("—");
+    await expect(health).toContainText("无结论");
+    await expect(health).not.toContainText("0.0%");
+  });
+
+  test("导出 JSON 与 CSV 都由用户主动触发", async ({ page }) => {
+    await openWorkspace(page, funnelState());
+    await openMetricsCard(page);
+    await dismissNoticeIfVisible(page);
+
+    await page.getByRole("button", { name: "导出 JSON" }).click();
+    await expect(page.getByText("已导出本机指标（1.5 KB）")).toBeVisible();
+
+    await page.getByRole("button", { name: "导出 CSV" }).click();
+    await expect.poll(async () => (await exportCalls(page)).length).toBe(2);
+    expect((await exportCalls(page)).map((call) => call.args.format)).toEqual(["json", "csv"]);
+  });
+
+  test("取消保存对话框时既不提示成功也不报错", async ({ page }) => {
+    const state = funnelState();
+    state.metricsExportCanceled = true;
+    await openWorkspace(page, state);
+    await openMetricsCard(page);
+    await dismissNoticeIfVisible(page);
+
+    await page.getByRole("button", { name: "导出 CSV" }).click();
+    await expect.poll(async () => (await exportCalls(page)).length).toBe(1);
+    await expect(page.getByText(/已导出本机指标/)).toHaveCount(0);
+    await expect(page.getByText("导出失败，请重试")).toHaveCount(0);
+  });
+});
+
+test.describe("隐私与度量（E5-T3）/ 移动单栏壳", () => {
+  test.use({ viewport: { width: 430, height: 900 } });
+
+  test("窄屏可查看漏斗并导出 JSON", async ({ page }) => {
+    await openWorkspace(page, funnelState());
+    await page.getByRole("button", { name: "设置" }).click();
+    await page.getByRole("button", { name: "诊断与反馈" }).click();
+    await dismissNoticeIfVisible(page);
+
+    await expect(page.getByRole("heading", { name: "本机漏斗" })).toBeVisible();
+    await expect(page.locator("li").filter({ hasText: "同步成功率" })).toContainText("99.0%");
+
+    await page.getByRole("button", { name: "导出 JSON" }).click();
+    await expect.poll(async () => (await exportCalls(page)).length).toBe(1);
+  });
+});

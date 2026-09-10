@@ -6,6 +6,7 @@ const metricsApiMock = vi.hoisted(() => ({
   read: vi.fn(),
   clear: vi.fn(),
   setEnabled: vi.fn(),
+  export: vi.fn(),
 }));
 
 vi.mock("@/api", () => ({ metricsApi: metricsApiMock }));
@@ -39,6 +40,7 @@ beforeEach(() => {
   metricsApiMock.read.mockReset();
   metricsApiMock.clear.mockReset();
   metricsApiMock.setEnabled.mockReset();
+  metricsApiMock.export.mockReset();
   metricsApiMock.read.mockResolvedValue(snapshot);
   metricsApiMock.clear.mockResolvedValue(undefined);
   metricsApiMock.setEnabled.mockResolvedValue(undefined);
@@ -103,5 +105,90 @@ describe("MetricsCard", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "清空本机计数" }));
     expect(metricsApiMock.clear).not.toHaveBeenCalled();
+  });
+});
+
+const funnelSnapshot = {
+  ...snapshot,
+  totals: [
+    { event: "app_launched", count: 10, firstSeen: null },
+    { event: "repo_bound", count: 9, firstSeen: null },
+    { event: "note_created", count: 9, firstSeen: null },
+  ],
+  activeDays: 4,
+  syncSuccessRate: 0.99,
+};
+
+function rowOf(label: string): HTMLElement | null {
+  return screen.getByText(label).closest("li");
+}
+
+describe("MetricsCard 本机漏斗（E5-T3）", () => {
+  it("按事件计数展示转化率、目标与达标状态", async () => {
+    localStorage.setItem(NOTICE_KEY, "1");
+    metricsApiMock.read.mockResolvedValue(funnelSnapshot);
+    renderCard();
+    await screen.findByText("本机已记录 28 次事件");
+
+    const bound = rowOf("绑定仓库");
+    expect(bound?.textContent).toContain("90.0%");
+    expect(bound?.textContent).toContain("目标 ≥ 85%");
+    expect(bound?.textContent).toContain("达标");
+
+    expect(rowOf("周活跃天数")?.textContent).toContain("4 天");
+    expect(rowOf("同步成功率")?.textContent).toContain("99.0%");
+    expect(rowOf("创建笔记")?.textContent).toContain("目标 < 3 分钟");
+    expect(rowOf("创建笔记")?.textContent).toContain("无结论");
+  });
+
+  it("没有样本的环节显示破折号与「无结论」，不伪装成 0", async () => {
+    localStorage.setItem(NOTICE_KEY, "1");
+    metricsApiMock.read.mockResolvedValue({ ...snapshot, totals: [], activeDays: 0, syncSuccessRate: null });
+    renderCard();
+    await screen.findByText("本机已记录 0 次事件");
+
+    expect(rowOf("安装（启动次数）")?.textContent).toContain("—");
+    expect(rowOf("同步成功率")?.textContent).toContain("—");
+    expect(rowOf("同步成功率")?.textContent).toContain("无结论");
+  });
+});
+
+describe("MetricsCard 指标导出（E5-T3）", () => {
+  it("导出 JSON 调用 IPC 并提示结果", async () => {
+    localStorage.setItem(NOTICE_KEY, "1");
+    metricsApiMock.export.mockResolvedValue({ path: "/tmp/metrics.json", bytes: 1536 });
+    const { onStatus } = renderCard();
+
+    fireEvent.click(await screen.findByRole("button", { name: "导出 JSON" }));
+    await waitFor(() => expect(metricsApiMock.export).toHaveBeenCalledWith("json"));
+    await waitFor(() => expect(onStatus).toHaveBeenCalledWith("已导出本机指标（1.5 KB）"));
+  });
+
+  it("导出 CSV 走同一命令的 csv 格式", async () => {
+    localStorage.setItem(NOTICE_KEY, "1");
+    metricsApiMock.export.mockResolvedValue({ path: "/tmp/metrics.csv", bytes: 120 });
+    renderCard();
+
+    fireEvent.click(await screen.findByRole("button", { name: "导出 CSV" }));
+    await waitFor(() => expect(metricsApiMock.export).toHaveBeenCalledWith("csv"));
+  });
+
+  it("用户取消保存时既不提示成功也不报错", async () => {
+    localStorage.setItem(NOTICE_KEY, "1");
+    metricsApiMock.export.mockResolvedValue(null);
+    const { onStatus } = renderCard();
+
+    fireEvent.click(await screen.findByRole("button", { name: "导出 JSON" }));
+    await waitFor(() => expect(metricsApiMock.export).toHaveBeenCalledWith("json"));
+    expect(onStatus).not.toHaveBeenCalled();
+  });
+
+  it("导出失败时提示重试", async () => {
+    localStorage.setItem(NOTICE_KEY, "1");
+    metricsApiMock.export.mockRejectedValue(new Error("disk full"));
+    const { onStatus } = renderCard();
+
+    fireEvent.click(await screen.findByRole("button", { name: "导出 CSV" }));
+    await waitFor(() => expect(onStatus).toHaveBeenCalledWith("导出失败，请重试"));
   });
 });

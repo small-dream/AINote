@@ -1,34 +1,34 @@
-import { BarChart3, Trash2 } from "lucide-react";
+import { useMemo } from "react";
+import { BarChart3 } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
 import { useTranslation } from "@/i18n";
-import { useClearMetrics, useMetricsNotice, useMetricsSnapshot, useSetMetricsEnabled } from "../hooks/useMetrics";
+import {
+  useMetricsNotice,
+  useMetricsSnapshot,
+  useSetMetricsEnabled,
+} from "../hooks/useMetrics";
+import { buildMetricsFunnel } from "../utils/metricsFunnel";
+import { MetricsActions } from "./MetricsActions";
 import { AiToggle } from "./AiField";
+import { MetricsFunnel } from "./MetricsFunnel";
 
 /**
- * 设置页「隐私与度量」（E5-T2）：本机计数说明 + 开关 + 清空。
+ * 设置页「隐私与度量」（E5-T2/T3）：本机计数说明 + 开关 + 清空 + 本机漏斗 + 导出。
  * 文字必须与实现一致——只记事件计数与时间，不记内容、路径、凭证，也没有远程上报。
  */
 export function MetricsCard({ onStatus }: { onStatus: (message: string) => void }) {
   const { t } = useTranslation();
   const snapshot = useMetricsSnapshot();
   const setEnabled = useSetMetricsEnabled();
-  const clear = useClearMetrics();
   const notice = useMetricsNotice();
   const enabled = snapshot.data?.enabled ?? true;
   const recorded = snapshot.data?.totals.reduce((sum, item) => sum + item.count, 0) ?? 0;
+  const funnel = useMemo(() => buildMetricsFunnel(snapshot.data), [snapshot.data]);
 
   function toggle(next: boolean): void {
     setEnabled.mutate(next, {
       onSuccess: () => onStatus(next ? t("support.metricsEnabledOn") : t("support.metricsEnabledOff")),
       onError: () => onStatus(t("support.metricsToggleFailed")),
-    });
-  }
-
-  function runClear(): void {
-    if (!window.confirm(t("support.metricsClearConfirm"))) return;
-    clear.mutate(undefined, {
-      onSuccess: () => onStatus(t("support.metricsCleared")),
-      onError: () => onStatus(t("support.metricsClearFailed")),
     });
   }
 
@@ -43,20 +43,8 @@ export function MetricsCard({ onStatus }: { onStatus: (message: string) => void 
         <AiToggle checked={enabled} label={t("support.metricsToggle")} onChange={toggle} />
       </div>
       <p className="mt-2 text-xs text-text-tertiary">{t("support.metricsRemoteOff")}</p>
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <Button
-          variant="ghost"
-          className="inline-flex items-center gap-1.5 text-xs"
-          disabled={clear.isPending || setEnabled.isPending}
-          onClick={runClear}
-        >
-          <Trash2 size={14} />
-          {clear.isPending ? t("support.metricsClearing") : t("support.metricsClear")}
-        </Button>
-        <span className="text-xs text-text-tertiary">
-          {t("support.metricsRecorded", { count: recorded })}
-        </span>
-      </div>
+      <MetricsFunnel steps={funnel} />
+      <MetricsActions recorded={recorded} toggling={setEnabled.isPending} onStatus={onStatus} />
     </section>
   );
 }

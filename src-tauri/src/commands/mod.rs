@@ -8,5 +8,6 @@ pub mod metrics;
 pub mod note;
 pub mod print;
 pub mod repo;
+pub mod save_file;
 pub mod support;
 pub mod trash;
