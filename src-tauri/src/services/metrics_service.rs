@@ -71,8 +71,8 @@ impl MetricsStore {
         Ok(())
     }
 
-    pub fn dto(&self) -> Result<MetricsDto, AppError> {
-        Ok(self.snapshot()?.to_dto())
+    pub fn dto(&self, enabled: bool) -> Result<MetricsDto, AppError> {
+        Ok(self.snapshot()?.to_dto(enabled))
     }
 
     fn save(&self, snapshot: &MetricsSnapshot) -> Result<(), AppError> {
@@ -83,9 +83,23 @@ impl MetricsStore {
     }
 }
 
-/// 尽力而为地记录事件（command / 启动钩子用）：失败只写 debug 日志，不打断业务。
+/// 按开关写入：关闭时直接返回、不落盘——「关闭后停止写入」的唯一入口。
+pub fn record_if_enabled(
+    store: &MetricsStore,
+    enabled: bool,
+    event: MetricEvent,
+) -> Result<(), AppError> {
+    if !enabled {
+        return Ok(());
+    }
+    store.record(event)
+}
+
+/// 尽力而为地记录事件（command / 启动钩子用）：先查开关，失败只写 debug 日志，不打断业务。
 pub fn record_best_effort(app: &AppHandle, event: MetricEvent) {
-    let result = MetricsStore::from_app(app).and_then(|store| store.record(event));
+    let enabled = crate::config::metrics_enabled(app).unwrap_or(true);
+    let result =
+        MetricsStore::from_app(app).and_then(|store| record_if_enabled(&store, enabled, event));
     if let Err(error) = result {
         log::debug!(target: "ainote::metrics", "记录指标失败 event={} error={error}", event.as_str());
     }
@@ -143,7 +157,7 @@ mod tests {
         let (_dir, store) = store();
         store.record(MetricEvent::SyncSucceeded).expect("记录同步");
         store.clear().expect("清空");
-        assert_eq!(store.dto().expect("清空后读取").totals[3].count, 0);
+        assert_eq!(store.dto(true).expect("清空后读取").totals[3].count, 0);
     }
 
     #[test]
@@ -151,7 +165,7 @@ mod tests {
         let (_dir, store) = store();
         store.record(MetricEvent::SyncSucceeded).expect("成功");
         store.record(MetricEvent::SyncFailed).expect("失败");
-        let dto = store.dto().expect("读取 DTO");
+        let dto = store.dto(true).expect("读取 DTO");
         assert_eq!(dto.active_days, 1);
         assert_eq!(dto.sync_success_rate, Some(0.5));
         assert!(dto
@@ -169,5 +183,32 @@ mod tests {
             assert!(!raw.contains(sensitive), "不应出现敏感字段: {sensitive}");
         }
         assert!(raw.contains("repo_bound"));
+    }
+
+    #[test]
+    fn disabled_switch_writes_nothing() {
+        let (dir, store) = store();
+        record_if_enabled(&store, false, MetricEvent::AppLaunched).expect("关闭时静默成功");
+        assert!(
+            !dir.path().join(METRICS_FILE).exists(),
+            "关闭后不应创建任何文件"
+        );
+        assert_eq!(
+            store.snapshot().expect("读取").total(MetricEvent::AppLaunched),
+            0
+        );
+
+        record_if_enabled(&store, true, MetricEvent::AppLaunched).expect("开启后写入");
+        assert_eq!(
+            store.snapshot().expect("读取").total(MetricEvent::AppLaunched),
+            1
+        );
+    }
+
+    #[test]
+    fn dto_reports_switch_state() {
+        let (_dir, store) = store();
+        assert!(!store.dto(false).expect("读取 DTO").enabled);
+        assert!(store.dto(true).expect("读取 DTO").enabled);
     }
 }

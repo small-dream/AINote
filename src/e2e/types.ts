@@ -23,6 +23,8 @@ export interface E2eState {
   repoPath: string;
   /** 当前安装版本（`plugin:app|version`，移动端更新检查用） */
   appVersion?: string;
+  /** 本地指标开关初始状态（默认开启） */
+  metricsEnabled?: boolean;
   notes: E2eNoteSeed[];
   /** 仓库相对路径 → data-uri，用于图片加载测试 */
   assets?: Record<string, string>;

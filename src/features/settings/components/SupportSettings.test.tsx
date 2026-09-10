@@ -11,8 +11,13 @@ const supportApiMock = vi.hoisted(() => ({
   clearLogs: vi.fn(),
 }));
 const openExternalMock = vi.hoisted(() => vi.fn().mockResolvedValue(undefined));
+const metricsApiMock = vi.hoisted(() => ({ read: vi.fn(), setEnabled: vi.fn(), clear: vi.fn() }));
 
-vi.mock("@/api", () => ({ supportApi: supportApiMock, openExternal: openExternalMock }));
+vi.mock("@/api", () => ({
+  supportApi: supportApiMock,
+  openExternal: openExternalMock,
+  metricsApi: metricsApiMock,
+}));
 
 function renderSettings() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -38,6 +43,15 @@ describe("SupportSettings 信息与开关", () => {
     mockInfo();
     supportApiMock.setLoggingEnabled.mockResolvedValue(undefined);
     supportApiMock.clearLogs.mockResolvedValue(1536);
+    metricsApiMock.read.mockResolvedValue({
+      enabled: true,
+      platform: "macos",
+      appVersion: "0.24.12",
+      updatedAt: "",
+      totals: [],
+      activeDays: 0,
+      syncSuccessRate: null,
+    });
   });
 
   it("加载日志目录与占用", async () => {
@@ -50,7 +64,7 @@ describe("SupportSettings 信息与开关", () => {
     renderSettings();
     await screen.findByText("1.5 KB");
 
-    const toggle = screen.getByRole("switch");
+    const toggle = screen.getByRole("switch", { name: "记录本地日志" });
     expect(toggle.tagName).toBe("BUTTON");
     expect(toggle.tabIndex).toBe(0);
     expect(toggle.getAttribute("aria-checked")).toBe("true");

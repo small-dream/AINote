@@ -27,6 +27,9 @@ pub(crate) struct AppConfig {
     /// 本地日志开关；None 视为开启。
     #[serde(default)]
     pub(crate) logging_enabled: Option<bool>,
+    /// 本地指标开关；None 视为开启（D4：本地计数默认开启、不含笔记内容）。
+    #[serde(default)]
+    pub(crate) metrics_enabled: Option<bool>,
     /// 旧版单仓库字段（repoPath），加载时迁移进 repos。
     #[serde(default, rename = "repoPath")]
     legacy_repo_path: Option<String>,
@@ -102,6 +105,18 @@ pub fn logging_enabled(app: &AppHandle) -> Result<bool, AppError> {
 pub fn set_logging_enabled(app: &AppHandle, enabled: bool) -> Result<(), AppError> {
     let mut cfg = load_config(app)?;
     cfg.logging_enabled = Some(enabled);
+    save_config(app, &cfg)
+}
+
+/// 本地指标开关：默认开启；关闭后不再写入任何计数（含 `metrics_record`）。
+pub fn metrics_enabled(app: &AppHandle) -> Result<bool, AppError> {
+    Ok(load_config(app)?.metrics_enabled.unwrap_or(true))
+}
+
+/// 持久化本地指标开关。
+pub fn set_metrics_enabled(app: &AppHandle, enabled: bool) -> Result<(), AppError> {
+    let mut cfg = load_config(app)?;
+    cfg.metrics_enabled = Some(enabled);
     save_config(app, &cfg)
 }
 

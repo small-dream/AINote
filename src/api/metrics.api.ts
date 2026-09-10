@@ -17,6 +17,8 @@ export interface MetricTotalDto {
 }
 
 export interface MetricsSnapshotDto {
+  /** 本地计数开关状态（关闭后不再写入） */
+  enabled: boolean;
   platform: string;
   appVersion: string;
   updatedAt: string;
@@ -41,9 +43,14 @@ async function clear(): Promise<void> {
   await call("metrics_clear");
 }
 
+/** 切换本地计数开关；关闭后立即停止写入（不删除已有计数）。 */
+async function setEnabled(enabled: boolean): Promise<void> {
+  await call("metrics_set_enabled", { enabled });
+}
+
 /** 尽力而为地记录一次事件：埋点失败不得影响任何业务路径。 */
 export function recordMetric(event: MetricEventName): void {
   void record(event).catch(() => undefined);
 }
 
-export const metricsApi = { read, record, clear };
+export const metricsApi = { read, record, clear, setEnabled };

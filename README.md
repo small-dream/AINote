@@ -120,6 +120,9 @@ View → Hooks/Queries → api/ → IPC → commands → services → repositori
 - 本地日志只写入本机应用日志目录，写入前统一脱敏，不记录 Token、API Key 或笔记正文；可在「设置 → 诊断与反馈」随时关闭或清理。
 - 导出诊断包只含应用版本、平台、脱敏日志与计数摘要，不含笔记内容、仓库路径或凭证；仅在用户主动点击时生成，不会自动上传。
 - M1 阶段不做远程崩溃上报；如需反馈问题，请手动把诊断包附到 GitHub Issue。
+- 应用默认在本机记录少量使用事件（启动、绑定仓库、创建笔记、同步成功 / 失败、AI 落笔、检查更新），只有事件名与时间，不含笔记内容、路径与凭证；可在「设置 → 诊断与反馈」一键关闭或清空，且没有任何远程上报。
+
+完整的采集范围、存储位置、关闭与删除方式见 [`docs/PRIVACY.md`](docs/PRIVACY.md)。
 
 如需报告安全漏洞，请优先使用 GitHub 的 [私下安全报告](https://github.com/small-dream/AINote/security/advisories/new)，不要直接创建公开 Issue。
 

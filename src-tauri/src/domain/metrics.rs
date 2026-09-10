@@ -161,8 +161,9 @@ impl MetricsSnapshot {
     }
 
     /// 交给前端的视图：白名单事件全部列出（缺省为 0），便于漏斗稳定渲染。
-    pub fn to_dto(&self) -> MetricsDto {
+    pub fn to_dto(&self, enabled: bool) -> MetricsDto {
         MetricsDto {
+            enabled,
             platform: self.platform.clone(),
             app_version: self.app_version.clone(),
             updated_at: self.updated_at.clone(),
@@ -170,7 +171,7 @@ impl MetricsSnapshot {
                 .iter()
                 .map(|name| MetricsTotalDto {
                     event: (*name).to_string(),
-                    count: self.totals.get(*name).copied().unwrap_or(0),
+                    count: self.total(MetricEvent::parse(name).expect("白名单事件")),
                     first_seen: self.first_seen.get(*name).cloned(),
                 })
                 .collect(),
@@ -200,6 +201,8 @@ pub struct MetricsTotalDto {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MetricsDto {
+    /// 本地计数开关当前状态（关闭后不再写入）
+    pub enabled: bool,
     pub platform: String,
     pub app_version: String,
     pub updated_at: String,
@@ -319,7 +322,8 @@ mod tests {
     #[test]
     fn dto_lists_whitelist_events_in_order() {
         let snapshot = recorded(&[("2026-09-09", MetricEvent::RepoBound)]);
-        let dto = snapshot.to_dto();
+        let dto = snapshot.to_dto(true);
+        assert!(dto.enabled);
         assert_eq!(
             dto.totals.iter().map(|item| item.event.clone()).collect::<Vec<_>>(),
             METRIC_EVENTS.to_vec()

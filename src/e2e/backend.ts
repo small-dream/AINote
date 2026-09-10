@@ -7,6 +7,9 @@ interface MockStore {
   conflicts: E2eConflictSeed[];
   /** 挂起中的同步（模拟退避等待）：取消时用最后一次状态收尾 */
   pendingSync: ((status: unknown) => void) | null;
+  /** 本地指标开关与计数（模拟 metrics.json） */
+  metricsEnabled: boolean;
+  metricsCounts: Record<string, number>;
 }
 
 export interface E2eCommandContext {
@@ -15,6 +18,17 @@ export interface E2eCommandContext {
 }
 
 type CommandHandler = (args: Record<string, unknown>, ctx: E2eCommandContext) => unknown;
+
+/** 与 Rust `domain/metrics.rs` 的 METRIC_EVENTS 一致的事件白名单。 */
+const METRIC_EVENT_NAMES = [
+  "app_launched",
+  "repo_bound",
+  "note_created",
+  "sync_succeeded",
+  "sync_failed",
+  "ai_action_confirmed",
+  "update_checked",
+];
 
 function appError(message: string): { code: string; kind: string; message: string; retriable: boolean } {
   return { code: "UNKNOWN_9001", kind: "Unknown", message, retriable: false };
@@ -26,6 +40,8 @@ function createStore(state: E2eState): MockStore {
     conflicted: state.conflicted === true,
     conflicts: state.conflicts ?? [],
     pendingSync: null,
+    metricsEnabled: state.metricsEnabled !== false,
+    metricsCounts: {},
   };
 }
 
@@ -185,13 +201,25 @@ const commandHandlers: Record<string, CommandHandler> = {
   },
   "plugin:event|listen": () => 1,
   "plugin:app|version": (_args, ctx) => ctx.state.appVersion ?? "0.24.12",
-  metrics_record: () => null,
-  metrics_clear: () => null,
-  metrics_read: () => ({
+  metrics_record: (args, ctx) => {
+    const event = String(args.event ?? "");
+    if (ctx.store.metricsEnabled) ctx.store.metricsCounts[event] = (ctx.store.metricsCounts[event] ?? 0) + 1;
+    return null;
+  },
+  metrics_clear: (_args, ctx) => {
+    ctx.store.metricsCounts = {};
+    return null;
+  },
+  metrics_set_enabled: (args, ctx) => {
+    ctx.store.metricsEnabled = args.enabled !== false;
+    return null;
+  },
+  metrics_read: (_args, ctx) => ({
+    enabled: ctx.store.metricsEnabled,
     platform: "android",
-    appVersion: "0.24.12",
+    appVersion: ctx.state.appVersion ?? "0.24.12",
     updatedAt: "",
-    totals: [],
+    totals: METRIC_EVENT_NAMES.map((event) => ({ event, count: ctx.store.metricsCounts[event] ?? 0, firstSeen: null })),
     activeDays: 0,
     syncSuccessRate: null,
   }),

@@ -8,8 +8,9 @@ import { ExportDiagnosticsButton } from "@/features/support/components/ExportDia
 import { useClearLogs, useSetLoggingEnabled, useSupportInfo } from "../hooks/useSupportInfo";
 import { formatRepoSize } from "../utils/repoSize";
 import { AiToggle } from "./AiField";
+import { MetricsCard } from "./MetricsCard";
 
-const PRIVACY_URL = "https://github.com/small-dream/AINote/blob/main/README.md#隐私与诊断数据";
+const PRIVACY_URL = "https://github.com/small-dream/AINote/blob/main/docs/PRIVACY.md";
 
 /** 设置页「诊断与反馈」：日志开关、日志目录、清理、导出诊断包与隐私说明。 */
 export function SupportSettings() {
@@ -48,6 +49,7 @@ export function SupportSettings() {
         onStatus={setStatus}
       />
       <PrivacyCard />
+      <MetricsCard onStatus={setStatus} />
     </div>
   );
 }
