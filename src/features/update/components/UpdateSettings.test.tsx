@@ -10,7 +10,7 @@ const updateApiMock = vi.hoisted(() => ({
   installUpdate: vi.fn(),
 }));
 
-vi.mock("@/api", () => ({ updateApi: updateApiMock }));
+vi.mock("@/api", () => ({ updateApi: updateApiMock, recordMetric: vi.fn() }));
 
 const updateInfo = {
   version: "0.15.0",

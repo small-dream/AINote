@@ -3,6 +3,7 @@ use tauri::AppHandle;
 use crate::commands::blocking;
 use crate::config;
 use crate::domain::error::AppErrorDto;
+use crate::domain::metrics::MetricEvent;
 use crate::domain::note::{NoteKind, NoteMeta};
 use crate::services::note_service;
 
@@ -15,7 +16,9 @@ pub async fn create_note(
     content: Option<String>,
 ) -> Result<NoteMeta, AppErrorDto> {
     let root = config::require_repo_path(&app)?;
-    blocking::run(move || note_service::create_note(&root, &path, kind, content.as_deref()))
+    let meta = blocking::run(move || note_service::create_note(&root, &path, kind, content.as_deref()))
         .await
-        .map_err(AppErrorDto::from)
+        .map_err(AppErrorDto::from)?;
+    crate::services::metrics_service::record_best_effort(&app, MetricEvent::NoteCreated);
+    Ok(meta)
 }

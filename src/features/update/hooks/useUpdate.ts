@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import type { Dispatch, SetStateAction } from "react";
-import { updateApi } from "@/api";
+import { recordMetric, updateApi } from "@/api";
 import type { UpdateInfo, UpdateInstallEvent, UpdateProgress } from "@/api/update.api";
 import { useTranslation } from "@/i18n";
 
@@ -53,6 +53,7 @@ export function useUpdate() {
 
   const checkForUpdate = useCallback(async () => {
     setState((current) => ({ ...current, phase: "checking", error: null }));
+    recordMetric("update_checked");
 
     try {
       const info = await updateApi.checkForUpdate();

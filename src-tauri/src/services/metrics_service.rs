@@ -1,0 +1,173 @@
+//! 本地度量存储：app config dir 下的 `metrics.json`（明文，仅事件计数与时间）。
+//!
+//! 写入内容只有事件名 / 日期 / 时间戳 / 平台 / 版本；埋点失败一律降级为 debug 日志，
+//! 绝不影响同步、保存等主流程。
+
+use std::fs;
+use std::path::PathBuf;
+
+use tauri::{AppHandle, Manager};
+
+use crate::domain::error::AppError;
+use crate::domain::metrics::{MetricEvent, MetricsDto, MetricsSnapshot, DAILY_WINDOW_DAYS};
+
+const METRICS_FILE: &str = "metrics.json";
+
+const DATE_FORMAT: &[time::format_description::FormatItem<'_>] =
+    time::macros::format_description!("[year]-[month]-[day]");
+
+pub struct MetricsStore {
+    path: PathBuf,
+    platform: String,
+    app_version: String,
+}
+
+impl MetricsStore {
+    pub fn from_app(app: &AppHandle) -> Result<Self, AppError> {
+        let dir = app
+            .path()
+            .app_config_dir()
+            .map_err(|err| AppError::Io(err.to_string()))?;
+        fs::create_dir_all(&dir)?;
+        Ok(Self::at(dir.join(METRICS_FILE)))
+    }
+
+    /// 指定文件路径构造（测试用）；平台与版本取自编译期常量。
+    pub fn at(path: PathBuf) -> Self {
+        Self {
+            path,
+            platform: std::env::consts::OS.to_string(),
+            app_version: env!("CARGO_PKG_VERSION").to_string(),
+        }
+    }
+
+    /// 读取快照；文件不存在或字段缺失时返回空快照（不报错，保证埋点永不阻断启动）。
+    pub fn snapshot(&self) -> Result<MetricsSnapshot, AppError> {
+        if !self.path.is_file() {
+            return Ok(MetricsSnapshot::new(&self.platform, &self.app_version));
+        }
+        let raw = fs::read_to_string(&self.path)?;
+        let mut snapshot: MetricsSnapshot =
+            serde_json::from_str(&raw).map_err(|err| AppError::Io(err.to_string()))?;
+        snapshot.platform = self.platform.clone();
+        snapshot.app_version = self.app_version.clone();
+        Ok(snapshot)
+    }
+
+    /// 累加一次事件并立即落盘（读 → 改 → 写；文件极小，无需增量方案）。
+    pub fn record(&self, event: MetricEvent) -> Result<(), AppError> {
+        let mut snapshot = self.snapshot()?;
+        let now = now_local();
+        snapshot.record(event, &format_date(now), &format_timestamp(now));
+        snapshot.prune_daily(DAILY_WINDOW_DAYS);
+        self.save(&snapshot)
+    }
+
+    /// 清空本机指标：删除文件，下次读取回到空快照。
+    pub fn clear(&self) -> Result<(), AppError> {
+        if self.path.is_file() {
+            fs::remove_file(&self.path)?;
+        }
+        Ok(())
+    }
+
+    pub fn dto(&self) -> Result<MetricsDto, AppError> {
+        Ok(self.snapshot()?.to_dto())
+    }
+
+    fn save(&self, snapshot: &MetricsSnapshot) -> Result<(), AppError> {
+        let raw =
+            serde_json::to_string_pretty(snapshot).map_err(|err| AppError::Io(err.to_string()))?;
+        fs::write(&self.path, raw)?;
+        Ok(())
+    }
+}
+
+/// 尽力而为地记录事件（command / 启动钩子用）：失败只写 debug 日志，不打断业务。
+pub fn record_best_effort(app: &AppHandle, event: MetricEvent) {
+    let result = MetricsStore::from_app(app).and_then(|store| store.record(event));
+    if let Err(error) = result {
+        log::debug!(target: "ainote::metrics", "记录指标失败 event={} error={error}", event.as_str());
+    }
+}
+
+fn now_local() -> time::OffsetDateTime {
+    time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc())
+}
+
+fn format_date(now: time::OffsetDateTime) -> String {
+    now.format(DATE_FORMAT)
+        .unwrap_or_else(|_| "unknown-date".to_string())
+}
+
+fn format_timestamp(now: time::OffsetDateTime) -> String {
+    now.to_offset(time::UtcOffset::UTC)
+        .format(&time::format_description::well_known::Rfc3339)
+        .unwrap_or_else(|_| "unknown-time".to_string())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn store() -> (tempfile::TempDir, MetricsStore) {
+        let dir = tempfile::tempdir().expect("临时目录");
+        let store = MetricsStore::at(dir.path().join(METRICS_FILE));
+        (dir, store)
+    }
+
+    #[test]
+    fn records_and_persists_across_reopen() {
+        let (dir, store) = store();
+        store.record(MetricEvent::AppLaunched).expect("记录启动");
+        store.record(MetricEvent::NoteCreated).expect("记录创建");
+        store.record(MetricEvent::NoteCreated).expect("记录创建");
+
+        let reopened = MetricsStore::at(dir.path().join(METRICS_FILE));
+        let snapshot = reopened.snapshot().expect("重开读取");
+        assert_eq!(snapshot.total(MetricEvent::NoteCreated), 2);
+        assert_eq!(snapshot.total(MetricEvent::AppLaunched), 1);
+    }
+
+    #[test]
+    fn snapshot_is_empty_without_file() {
+        let (_dir, store) = store();
+        let snapshot = store.snapshot().expect("空快照");
+        assert_eq!(snapshot.total(MetricEvent::AppLaunched), 0);
+        assert_eq!(snapshot.platform, std::env::consts::OS);
+        assert_eq!(snapshot.app_version, env!("CARGO_PKG_VERSION"));
+    }
+
+    #[test]
+    fn clear_removes_previous_counts() {
+        let (_dir, store) = store();
+        store.record(MetricEvent::SyncSucceeded).expect("记录同步");
+        store.clear().expect("清空");
+        assert_eq!(store.dto().expect("清空后读取").totals[3].count, 0);
+    }
+
+    #[test]
+    fn dto_reports_window_metrics() {
+        let (_dir, store) = store();
+        store.record(MetricEvent::SyncSucceeded).expect("成功");
+        store.record(MetricEvent::SyncFailed).expect("失败");
+        let dto = store.dto().expect("读取 DTO");
+        assert_eq!(dto.active_days, 1);
+        assert_eq!(dto.sync_success_rate, Some(0.5));
+        assert!(dto
+            .totals
+            .iter()
+            .any(|item| item.event == "note_created" && item.count == 0));
+    }
+
+    #[test]
+    fn persisted_file_contains_no_sensitive_keys() {
+        let (dir, store) = store();
+        store.record(MetricEvent::RepoBound).expect("记录绑定");
+        let raw = fs::read_to_string(dir.path().join(METRICS_FILE)).expect("读取文件");
+        for sensitive in ["token", "apiKey", "repoUrl", "path", "content", "title"] {
+            assert!(!raw.contains(sensitive), "不应出现敏感字段: {sensitive}");
+        }
+        assert!(raw.contains("repo_bound"));
+    }
+}

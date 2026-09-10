@@ -4,6 +4,7 @@ pub mod asset;
 pub mod auth;
 pub mod blocking;
 pub mod git;
+pub mod metrics;
 pub mod note;
 pub mod print;
 pub mod repo;

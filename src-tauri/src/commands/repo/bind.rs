@@ -6,6 +6,7 @@ use crate::commands::blocking;
 use crate::config;
 use crate::domain::dto::RepoPathDto;
 use crate::domain::error::{AppError, AppErrorDto};
+use crate::domain::metrics::MetricEvent;
 use crate::repositories::git2_backend::Git2Backend;
 use crate::services::{auth_service, repo_service};
 
@@ -38,5 +39,6 @@ pub async fn bind_repo(app: AppHandle, repo_url: String) -> Result<RepoPathDto, 
         "绑定仓库完成 path={}",
         config::logging::redact(&repo_path)
     );
+    crate::services::metrics_service::record_best_effort(&app, MetricEvent::RepoBound);
     Ok(RepoPathDto { repo_path })
 }

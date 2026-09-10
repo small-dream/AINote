@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import { aiApi, messageOf } from "@/api";
+import { aiApi, messageOf, recordMetric } from "@/api";
 import { useAiModelStore } from "@/stores/aiModel.store";
 import { actionSystem, buildWritePrompt, AI_SUMMARIZE, AI_DOCUMENT_ACTIONS, type AiWriteAction } from "../utils/prompts";
 
@@ -58,6 +58,7 @@ export function useAiWrite({ getSelection, onApply, onApplyFull, onApplySummary 
     if (lastActionRef.current === AI_SUMMARIZE) onApplySummary?.(preview);
     else if (applyDocument) onApplyFull?.(preview);
     else onApply(preview);
+    recordMetric("ai_action_confirmed");
     setPreview(null);
   }, [preview, applyDocument, onApply, onApplyFull, onApplySummary]);
   const cancel = useCallback(() => setPreview(null), []);

@@ -6,6 +6,7 @@ use tauri::{AppHandle, Manager};
 
 use crate::config;
 use crate::domain::error::{AppError, AppErrorDto};
+use crate::domain::metrics::MetricEvent;
 use crate::domain::sync::{SyncProgressDto, SyncStatus};
 use crate::repositories::git2_backend::Git2Backend;
 use crate::services::retry::{RetryAttempt, RetryContext};
@@ -68,7 +69,16 @@ pub async fn sync_now(
     .map_err(|err| AppErrorDto::from(AppError::Io(format!("后台任务失败: {err}"))))?;
 
     let _ = app.state::<SyncRetryState>().set(None);
-    result.map_err(sync_failure_dto)
+    match result {
+        Ok(status) => {
+            crate::services::metrics_service::record_best_effort(&app, MetricEvent::SyncSucceeded);
+            Ok(status)
+        }
+        Err(failure) => {
+            crate::services::metrics_service::record_best_effort(&app, MetricEvent::SyncFailed);
+            Err(sync_failure_dto(failure))
+        }
+    }
 }
 
 /// 同步失败 → 结构化错误：附带阶段 / 失败文件 / 建议码，前端据此定位（E4-T4）。

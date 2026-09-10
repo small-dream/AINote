@@ -9,6 +9,7 @@ pub(crate) mod diagnostics_service;
 pub mod github_api;
 pub mod history_service;
 pub mod maintenance_service;
+pub mod metrics_service;
 pub mod note_service;
 pub mod note_favorite_service;
 pub mod repo_service;

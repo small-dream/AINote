@@ -1,5 +1,5 @@
 import { useCallback, useEffect } from "react";
-import { releaseApi } from "@/api";
+import { recordMetric, releaseApi } from "@/api";
 import { isAndroidApp } from "@/platform/runtime";
 import { useMobileUpdateStore } from "../stores/mobile-update.store";
 import { isNewerVersion } from "../utils/version";
@@ -11,6 +11,7 @@ async function checkLatestRelease(): Promise<void> {
   const store = useMobileUpdateStore.getState();
   if (store.phase === "checking") return;
   store.report({ phase: "checking", currentVersion: store.currentVersion, release: null });
+  recordMetric("update_checked");
 
   try {
     const release = await releaseApi.fetchLatestRelease();

@@ -9,6 +9,7 @@ const aiApiMock = vi.hoisted(() => ({
 
 vi.mock("@/api", () => ({
   aiApi: aiApiMock,
+  recordMetric: vi.fn(),
   messageOf: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 

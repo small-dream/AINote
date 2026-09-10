@@ -12,6 +12,8 @@ export { searchApi } from "./search.api";
 export { updateApi } from "./update.api";
 export { releaseApi } from "./release.api";
 export type { ReleaseInfo } from "./release.api";
+export { metricsApi, recordMetric } from "./metrics.api";
+export type { MetricEventName, MetricsSnapshotDto, MetricTotalDto } from "./metrics.api";
 export { trashApi } from "./trash.api";
 export { openExternal, printPage } from "./app.api";
 export { supportApi } from "./support.api";

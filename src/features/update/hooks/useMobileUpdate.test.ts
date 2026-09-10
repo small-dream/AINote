@@ -10,6 +10,7 @@ const state = vi.hoisted(() => ({
 
 vi.mock("@/platform/runtime", () => ({ isAndroidApp: () => state.android }));
 vi.mock("@/api", () => ({
+  recordMetric: vi.fn(),
   releaseApi: {
     fetchLatestRelease: () =>
       state.offline

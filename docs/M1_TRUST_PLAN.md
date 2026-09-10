@@ -44,7 +44,7 @@
 | D1 | Windows 代码签名方案 | SignPath Foundation（开源免费）/ Azure Trusted Signing / OV 证书 / EV 证书 | **🧊 暂缓到 M1.5**：证书类签名当前阶段不启动。已调研结论备查：优先 SignPath Foundation（MIT + 公开仓库可申请，审批不保证），未通过转 Azure Trusted Signing（≈$10/月、CI 友好） | M1.5-E1-T2 |
 | D2 | 崩溃上报方案 | 本地日志 + 手动反馈 / Sentry 等第三方 / 自建上报 | **M1 先做本地日志 + 手动诊断包**，远程上报作为 M1b，需先出隐私说明 | M1-E2-T4 |
 | D3 | Android 分发方式 | Google Play / 仅 GitHub APK + 应用内更新提示 / 两者 | **✅ 已确认（2026-09-10）**：仅 GitHub APK + 应用内更新提示（只提示、不静默下载安装），Play 上架排入 M4 | M1-E1-T5 |
-| D4 | 度量采集边界 | 仅本地 / 本地 + opt-in 远程 | **本地计数默认开启（不含内容），远程默认关闭、显式同意** | M1-E5-T1/T2 |
+| D4 | 度量采集边界 | 仅本地 / 本地 + opt-in 远程 | **✅ 已确认（2026-09-10）**：本地事件计数默认开启、不含任何笔记内容；远程上报默认关闭、需显式同意（远程上报本身属 M1b/E2-T4） | M1-E5-T1/T2 |
 | D5 | iOS 发布节奏 | M1 只做 TestFlight / M1 直接上架 | **🧊 暂缓到 M1.5 / M4**：真机签名依赖 Apple 账号，当前阶段不启动 | M1.5-E1-T4 |
 
 **M1 内需要（零成本，Day 0 启动）**
@@ -99,7 +99,7 @@
 | M1-E4-T2 | 同步可靠性 | 幂等操作重试策略 | shared | T1 | M | ✅ |
 | M1-E4-T3 | 同步可靠性 | 大仓库性能基准 | shared | — | M | ✅ |
 | M1-E4-T4 | 同步可靠性 | 同步失败定位到阶段/文件 | shared | T1 | M | ✅ |
-| M1-E5-T1 | 度量地基 | 本地事件计数 | shared | D4 | M | 📋 |
+| M1-E5-T1 | 度量地基 | 本地事件计数 | shared | D4 | M | ✅ |
 | M1-E5-T2 | 度量地基 | 同意页与开关 | shared | D4 | M | 📋 |
 | M1-E5-T3 | 度量地基 | 指标导出与漏斗视图 | shared | T1、T2 | S | 📋 |
 
@@ -421,6 +421,11 @@
 - **验收标准**：计数可持久化、可清空；进程重启后保留；不含敏感字段。
 - **测试义务**：累加/滚动窗口纯函数 ≥ 90%；持久化往返测试。
 - **跨端影响**：`shared`。
+- **实现备注（2026-09-10）**：
+  - 领域层 `domain/metrics.rs`（纯逻辑、零 IO）：`METRIC_EVENTS` 白名单（`app_launched` / `repo_bound` / `note_created` / `sync_succeeded` / `sync_failed` / `ai_action_confirmed` / `update_checked`）+ 事件枚举解析；`MetricsSnapshot` 只有 `platform` / `appVersion` / `updatedAt` / `totals` / `daily` / `firstSeen` 六个字段，**结构上就没有**笔记内容、路径、Token、远端 URL 的落点。聚合纯函数：`record`（累计 + 按天 + 首次时间）、`prune_daily`（按 ISO 日期字典序滚动裁剪，默认 56 天）、`active_days`、`sync_success_rate`（近 7 天，无样本返回 `null` 而非 0）。
+  - 存储层 `services/metrics_service.rs`：读写 app config dir 下的 `metrics.json`（明文、文件极小、读改写即可）；`record_best_effort` 失败只写 debug 日志，埋点永不阻断业务。文件缺失 / 字段缺失一律按空快照处理。
+  - 命令层 `commands/metrics.rs`：`metrics_read` / `metrics_record` / `metrics_clear`，未登记的事件名忽略并记 warn（防止埋点范围蔓延）。`lib.rs` 注册并在 setup 记录 `app_launched`；`bind_repo` → `repo_bound`、`create_note` → `note_created`、`sync_now` 成功/失败 → `sync_succeeded` / `sync_failed`（与 E4-T4 的阶段归因同一处，失败也计数）；前端 `useUpdate` / `useMobileUpdate` 记录 `update_checked`，`useAiWrite.confirm` 记录 `ai_action_confirmed`。
+  - 验证：Rust 新增 15 项（事件名往返与未知事件拒绝、累计/按天/首次时间、滚动窗口裁剪、活跃天数、成功率窗口与无样本、DTO 白名单顺序、缺字段反序列化、持久化往返、清空、落盘内容不含敏感键）；前端新增 `metrics.api` 3 项（读取/记录/清空走 IPC、`recordMetric` 失败静默）。全量：`cargo test` 215、`pnpm test` 674、`npx playwright test` 20。
 
 #### M1-E5-T2 同意页与开关（M）
 
@@ -476,7 +481,9 @@
 
 - [x] M1-E4-T2 幂等重试策略。
 - [x] M1-E4-T4 同步失败定位。
-- [ ] M1-E5-T1 / T2 / T3 度量地基。
+- [x] M1-E5-T1 本地事件计数。
+- [ ] M1-E5-T2 同意页与开关。
+- [ ] M1-E5-T3 指标导出与漏斗视图。
 - [ ] M1-E1-T3 Linux 产物校验与签名（GPG）。
 - [x] M1-E1-T5 Android 应用内更新提示。
 
@@ -571,7 +578,7 @@
 | M1-E4-T2 幂等重试 | ✅ | | 幂等拉取退避重试（3 次 / 0.5s 起 / 8s 封顶 / ±25% 抖动）+ Channel 进度 + 可取消；push 不重试 |
 | M1-E4-T3 性能基准 | ✅ | | 7 项 Rust + 5000 行软渲染；docs/PERF_BASELINE.md |
 | M1-E4-T4 同步失败定位 | ✅ | | `SyncStage` + `AppErrorDto.stage/files/hint` 由后端归因下发；前端展示失败文件（>5 折叠）并优先采用后端 stage/hint |
-| M1-E5-T1 本地事件计数 | 📋 | | 等 D4 |
+| M1-E5-T1 本地事件计数 | ✅ | | 白名单事件 + metrics.json（app config dir）；滚动窗口 56 天；读取/清空命令；埋点失败不阻断业务 |
 | M1-E5-T2 同意页与开关 | 📋 | | 等 D4 |
 | M1-E5-T3 指标导出与漏斗 | 📋 | | |
 
@@ -581,6 +588,7 @@
 
 | 日期 | 变更 | 作者 |
 |---|---|---|
+| 2026-09-10 | v1.13：D4 确认（本地计数默认开启、不含内容；远程默认关闭）并交付 M1-E5-T1（本地事件计数：白名单事件 + 滚动窗口 + 读取/清空命令，埋点失败不阻断业务） | PM |
 | 2026-09-10 | v1.12：D3 确认（仅 GitHub APK + 应用内更新提示）并交付 M1-E1-T5（移动端启动/设置页检查 GitHub Release，新版本提示 + 跳转下载页；无网络静默降级，不误报当前版本） | PM |
 | 2026-09-10 | v1.11：M1-E4-T4 交付（同步失败定位：`AppErrorDto` 携带 `stage` / `files` / `hint`，`sync_now` 保留原始错误上下文；前端失败横幅展示可定位的失败文件并优先采用后端阶段与建议） | PM |
 | 2026-09-10 | v1.10：M1-E4-T2 交付（幂等拉取自动重试 + 重试进度 / 取消；push 不自动重试，移除整条 sync_now 的前端重试） | PM |

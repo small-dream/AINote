@@ -29,6 +29,10 @@ pub fn run() {
         .manage(commands::git::sync::SyncRetryState::default())
         .setup(|_app| {
             apply_logging_preference(_app.handle());
+            services::metrics_service::record_best_effort(
+                _app.handle(),
+                domain::metrics::MetricEvent::AppLaunched,
+            );
             log::info!(target: "ainote::startup", "AINote {} 启动", env!("CARGO_PKG_VERSION"));
             #[cfg(desktop)]
             {
@@ -115,6 +119,9 @@ pub fn run() {
             commands::support::settings::support_info,
             commands::support::settings::set_logging_enabled,
             commands::support::settings::clear_logs,
+            commands::metrics::metrics_read,
+            commands::metrics::metrics_record,
+            commands::metrics::metrics_clear,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AINote");

@@ -6,6 +6,7 @@ const api = vi.hoisted(() => ({ openExternal: vi.fn(), fetchLatestRelease: vi.fn
 vi.mock("@/platform/runtime", () => ({ isAndroidApp: () => true }));
 vi.mock("@/api", () => ({
   openExternal: api.openExternal,
+  recordMetric: vi.fn(),
   releaseApi: { fetchLatestRelease: api.fetchLatestRelease },
 }));
 
