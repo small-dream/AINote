@@ -19,7 +19,7 @@ export async function call<T>(command: string, args?: Record<string, unknown>): 
 function toUnknownError(err: unknown): AppError {
   return {
     code: "UNKNOWN_9001",
-    kind: "Unknown",
+    kind: "unknown",
     message: err instanceof Error ? err.message : String(err),
     retriable: false,
   };

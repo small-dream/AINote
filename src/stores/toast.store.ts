@@ -1,5 +1,8 @@
 import { create } from "zustand";
-import { messageOf } from "@/api/error";
+import { errorActionOf, isAppError, messageOf, type ErrorAction } from "@/api/error";
+import { translate } from "@/i18n";
+import type { TranslationKey } from "@/i18n/messages";
+import { useUiStore } from "@/stores/ui.store";
 
 export type ToastTone = "error" | "success" | "info";
 
@@ -31,7 +34,22 @@ export const useToastStore = create<ToastState>((set) => ({
   clear: () => set({ items: [] }),
 }));
 
+const ERROR_ACTION_KEY: Record<ErrorAction, TranslationKey> = {
+  retry: "error.sync.network",
+  relogin: "error.sync.auth",
+  checkPermission: "error.sync.permission",
+};
+
+/** 技术细节 + 本地化可操作建议；无建议时只保留原始信息。 */
+export function toastMessageOf(error: unknown): string {
+  const message = messageOf(error);
+  if (!isAppError(error)) return message;
+  const action = errorActionOf(error);
+  if (!action) return message;
+  return `${message} · ${translate(useUiStore.getState().locale, ERROR_ACTION_KEY[action])}`;
+}
+
 /** 将非 React Query 的后台操作失败送入统一错误中心。 */
 export function reportToastError(error: unknown): void {
-  useToastStore.getState().push(messageOf(error), "error");
+  useToastStore.getState().push(toastMessageOf(error), "error");
 }

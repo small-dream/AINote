@@ -11,6 +11,7 @@ use crate::repositories::note_files::validate_rel_path;
 
 use super::ca_bundle;
 use super::git2_backend::{current_branch, open, signature, to_git};
+use super::git2_error::to_sync;
 
 fn callbacks(token: &str) -> RemoteCallbacks<'static> {
     let token = token.to_owned();
@@ -30,7 +31,7 @@ pub fn clone_repo(url: &str, dest: &Path, token: &str) -> Result<(), AppError> {
     RepoBuilder::new()
         .fetch_options(fetch_options(token))
         .clone(url, dest)
-        .map_err(to_git)?;
+        .map_err(to_sync)?;
     Ok(())
 }
 
@@ -40,9 +41,9 @@ pub fn ls_remote(url: &str, token: &str) -> Result<(), AppError> {
     let mut remote = git2::Remote::create_detached(url).map_err(to_git)?;
     remote
         .connect_auth(git2::Direction::Fetch, Some(callbacks(token)), None)
-        .map_err(to_git)?;
-    remote.list().map_err(to_git)?;
-    remote.disconnect().map_err(to_git)?;
+        .map_err(to_sync)?;
+    remote.list().map_err(to_sync)?;
+    remote.disconnect().map_err(to_sync)?;
     Ok(())
 }
 
@@ -52,7 +53,7 @@ pub fn fetch(path: &str, token: &str) -> Result<(), AppError> {
     let mut remote = repo.find_remote("origin").map_err(to_git)?;
     remote
         .fetch(&[] as &[&str], Some(&mut fetch_options(token)), None)
-        .map_err(to_git)
+        .map_err(to_sync)
 }
 
 pub fn push(path: &str, token: &str) -> Result<(), AppError> {
@@ -63,7 +64,7 @@ pub fn push(path: &str, token: &str) -> Result<(), AppError> {
     let mut po = PushOptions::new();
     po.remote_callbacks(callbacks(token));
     let mut remote = repo.find_remote("origin").map_err(to_git)?;
-    remote.push(&[refspec], Some(&mut po)).map_err(to_git)
+    remote.push(&[refspec], Some(&mut po)).map_err(to_sync)
 }
 
 pub fn pull(path: &str, token: &str) -> Result<(), AppError> {

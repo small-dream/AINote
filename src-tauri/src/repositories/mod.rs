@@ -4,6 +4,7 @@ pub mod favorite_files;
 pub mod file_storage;
 pub mod file_tree;
 pub mod git2_backend;
+pub(crate) mod git2_error;
 pub mod git2_history;
 pub mod git2_remote;
 pub mod git_backend;

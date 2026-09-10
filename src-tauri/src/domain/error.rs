@@ -19,6 +19,15 @@ pub enum AppError {
     Conflict(String),
     #[error("git error: {0}")]
     Git(String),
+    /// 同步网络错误：连接失败 / 超时 / TLS 握手失败（可重试）
+    #[error("sync network error: {0}")]
+    SyncNetwork(String),
+    /// 同步凭证失效：Token 过期、被撤销或认证被拒（需重新登录）
+    #[error("sync auth error: {0}")]
+    SyncAuth(String),
+    /// 同步被远端拒绝：权限不足、分支保护、非快进推送（不可自动重试）
+    #[error("sync rejected: {0}")]
+    SyncRejected(String),
     #[error("io error: {0}")]
     Io(String),
     /// AI 配置缺失 / Provider 调用失败（不可自动重试）
@@ -35,6 +44,8 @@ pub enum ErrorKind {
     NotFound,
     Conflict,
     Auth,
+    Network,
+    Permission,
     Io,
     Unknown,
 }
@@ -59,6 +70,9 @@ impl From<AppError> for AppErrorDto {
             AppError::Repo(_) => ("REPO_3001", ErrorKind::Unknown, false),
             AppError::Conflict(_) => ("SYNC_4001", ErrorKind::Conflict, false),
             AppError::Git(_) => ("GIT_4001", ErrorKind::Unknown, true),
+            AppError::SyncNetwork(_) => ("SYNC_4002", ErrorKind::Network, true),
+            AppError::SyncAuth(_) => ("SYNC_4003", ErrorKind::Auth, false),
+            AppError::SyncRejected(_) => ("SYNC_4004", ErrorKind::Permission, false),
             AppError::Io(_) => ("IO_5001", ErrorKind::Io, true),
             AppError::Ai(_) => ("AI_6001", ErrorKind::Unknown, false),
             AppError::AiNetwork(_) => ("AI_6002", ErrorKind::Unknown, true),
@@ -95,6 +109,9 @@ mod tests {
         assert_eq!(dto(AppError::Repo("x".into())).code, "REPO_3001");
         assert_eq!(dto(AppError::Conflict("c".into())).code, "SYNC_4001");
         assert_eq!(dto(AppError::Git("g".into())).code, "GIT_4001");
+        assert_eq!(dto(AppError::SyncNetwork("net".into())).code, "SYNC_4002");
+        assert_eq!(dto(AppError::SyncAuth("401".into())).code, "SYNC_4003");
+        assert_eq!(dto(AppError::SyncRejected("403".into())).code, "SYNC_4004");
         assert_eq!(dto(AppError::Io("i".into())).code, "IO_5001");
         assert_eq!(dto(AppError::Ai("no key".into())).code, "AI_6001");
         assert_eq!(dto(AppError::AiNetwork("down".into())).code, "AI_6002");
@@ -116,5 +133,20 @@ mod tests {
         assert!(!ai.retriable);
         let net = dto(AppError::AiNetwork("down".into()));
         assert!(net.retriable);
+    }
+
+    #[test]
+    fn maps_sync_error_kinds_and_retriable() {
+        let network = dto(AppError::SyncNetwork("timeout".into()));
+        assert_eq!(network.kind, ErrorKind::Network);
+        assert!(network.retriable);
+
+        let auth = dto(AppError::SyncAuth("bad token".into()));
+        assert_eq!(auth.kind, ErrorKind::Auth);
+        assert!(!auth.retriable);
+
+        let rejected = dto(AppError::SyncRejected("protected branch".into()));
+        assert_eq!(rejected.kind, ErrorKind::Permission);
+        assert!(!rejected.retriable);
     }
 }
