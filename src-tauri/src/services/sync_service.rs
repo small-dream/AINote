@@ -5,6 +5,8 @@ use crate::domain::sync::ConflictFile;
 use crate::domain::sync::SyncStatus;
 use crate::repositories::git_backend::GitBackend;
 
+use super::retry::{self, RetryContext, RetryPolicy};
+
 /// 用例：组装仓库同步状态
 pub fn status<B: GitBackend>(backend: &B, repo_path: &Path) -> Result<SyncStatus, AppError> {
     let path = repo_path.to_string_lossy();
@@ -32,8 +34,21 @@ pub fn pull<B: GitBackend>(
     repo_path: &Path,
     token: &str,
 ) -> Result<SyncStatus, AppError> {
-    backend.pull(&repo_path.to_string_lossy(), token)?;
+    let mut ctx = RetryContext::background();
+    pull_stage(backend, repo_path, token, &mut ctx)?;
     status(backend, repo_path)
+}
+
+/// 用例：同步的拉取阶段 —— 仅网络错误按退避自动重试（pull 幂等）。
+/// `push` 非幂等，任何情况下都不进入此函数。
+pub fn pull_stage<B: GitBackend>(
+    backend: &B,
+    repo_path: &Path,
+    token: &str,
+    ctx: &mut RetryContext<'_>,
+) -> Result<(), AppError> {
+    let path = repo_path.to_string_lossy();
+    retry::with_retry(RetryPolicy::network(), ctx, || backend.pull(&path, token))
 }
 
 /// 用例：推送本地提交
@@ -52,6 +67,7 @@ pub fn sync<B: GitBackend>(
     backend: &B,
     repo_path: &Path,
     token: &str,
+    ctx: &mut RetryContext<'_>,
 ) -> Result<SyncStatus, AppError> {
     let path = repo_path.to_string_lossy();
     if backend.is_merging(&path)? {
@@ -59,7 +75,7 @@ pub fn sync<B: GitBackend>(
     }
     log::info!(target: "ainote::sync", "同步开始 repo={}", crate::config::logging::redact(&path));
     run_stage("commit", commit_pending(backend, repo_path, "note: auto commit"))?;
-    run_stage("pull", backend.pull(&path, token))?;
+    run_stage("pull", pull_stage(backend, repo_path, token, ctx))?;
     run_stage("push", backend.push(&path, token))?;
     let result = status(backend, repo_path)?;
     log::info!(
@@ -129,6 +145,14 @@ mod tests {
         PathBuf::from("/repo")
     }
 
+    /// 测试用取消标志：始终为未取消状态。
+    static NEVER_CANCELLED_FOR_TEST: std::sync::atomic::AtomicBool =
+        std::sync::atomic::AtomicBool::new(false);
+
+    fn background() -> RetryContext<'static> {
+        RetryContext::background()
+    }
+
     #[test]
     fn status_assembles_from_backend() {
         let mock = MockGitBackend {
@@ -150,7 +174,7 @@ mod tests {
             uncommitted: true,
             ..Default::default()
         };
-        sync(&mock, &root(), "tok").unwrap();
+        sync(&mock, &root(), "tok", &mut background()).unwrap();
         assert_eq!(
             mock.recorded(),
             vec!["commit:note: auto commit", "pull", "push"]
@@ -163,7 +187,7 @@ mod tests {
             merging: true,
             ..Default::default()
         };
-        let err = sync(&mock, &root(), "tok").unwrap_err();
+        let err = sync(&mock, &root(), "tok", &mut background()).unwrap_err();
         assert!(matches!(err, AppError::Conflict(_)));
         assert!(mock.recorded().is_empty());
     }
@@ -175,10 +199,56 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(
-            sync(&mock, &root(), "tok"),
+            sync(&mock, &root(), "tok", &mut background()),
             Err(AppError::Conflict(_))
         ));
         assert_eq!(mock.recorded(), vec!["commit:note: auto commit", "pull"]);
+    }
+
+    #[test]
+    fn pull_retries_network_failures_then_succeeds() {
+        let mock = MockGitBackend {
+            pull_network_failures: std::sync::Mutex::new(2),
+            ..Default::default()
+        };
+        let mut delays: Vec<u64> = Vec::new();
+        let mut reports: Vec<u32> = Vec::new();
+        let outcome = {
+            let mut sleep = |ms: u64| delays.push(ms);
+            let mut report = |attempt: retry::RetryAttempt| reports.push(attempt.retry);
+            let mut ctx = RetryContext {
+                cancel: &NEVER_CANCELLED_FOR_TEST,
+                sleep: Some(&mut sleep),
+                report: Some(&mut report),
+            };
+            sync(&mock, &root(), "tok", &mut ctx)
+        };
+
+        assert!(outcome.is_ok());
+        assert_eq!(mock.recorded(), vec!["commit:note: auto commit", "pull", "pull", "pull", "push"]);
+        assert_eq!(reports, vec![1, 2]);
+        assert_eq!(delays.len(), 2);
+    }
+
+    #[test]
+    fn sync_stops_before_push_when_pull_keeps_failing() {
+        let mock = MockGitBackend {
+            pull_network_failures: std::sync::Mutex::new(10),
+            ..Default::default()
+        };
+        let outcome = {
+            let mut ctx = RetryContext {
+                cancel: &NEVER_CANCELLED_FOR_TEST,
+                sleep: Some(&mut |_ms: u64| {}),
+                report: None,
+            };
+            sync(&mock, &root(), "tok", &mut ctx)
+        };
+
+        assert!(matches!(outcome, Err(AppError::SyncNetwork(_))));
+        let calls = mock.recorded();
+        assert_eq!(calls.iter().filter(|call| call.as_str() == "pull").count(), 4, "首次 + 3 次重试");
+        assert!(!calls.iter().any(|call| call == "push"), "拉取未成功时不推送");
     }
 
     #[test]

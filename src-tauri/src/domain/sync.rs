@@ -21,6 +21,19 @@ pub struct ConflictExportDto {
     pub files: Vec<String>,
 }
 
+/// 同步过程进度（sync_now 经 Tauri Channel 下发）：目前只有自动重试。
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SyncProgressDto {
+    /// 阶段标识，当前固定为 `retrying`
+    pub phase: String,
+    /// 第几次重试（从 1 开始）
+    pub retry: u32,
+    pub max_retries: u32,
+    /// 本次等待毫秒数
+    pub delay_ms: u64,
+}
+
 /// 仓库同步状态（sync_status / sync_now / git_pull / git_push 返回）
 #[derive(Debug, Clone, Serialize, Default)]
 #[serde(rename_all = "camelCase")]

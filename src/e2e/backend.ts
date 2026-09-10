@@ -5,6 +5,8 @@ interface MockStore {
   notes: Map<string, { content: string; kind: string }>;
   conflicted: boolean;
   conflicts: E2eConflictSeed[];
+  /** 挂起中的同步（模拟退避等待）：取消时用最后一次状态收尾 */
+  pendingSync: ((status: unknown) => void) | null;
 }
 
 export interface E2eCommandContext {
@@ -23,7 +25,14 @@ function createStore(state: E2eState): MockStore {
     notes: new Map(state.notes.map((note) => [note.path, { content: note.content, kind: note.kind ?? "markdown" }])),
     conflicted: state.conflicted === true,
     conflicts: state.conflicts ?? [],
+    pendingSync: null,
   };
+}
+
+/** 模拟 Rust 侧经 Tauri Channel 下发重试进度（前端把 Channel 作为参数传入）。 */
+function emitSyncProgress(channel: unknown, progress: { retry: number; maxRetries: number; delayMs: number }): void {
+  const onmessage = (channel as { onmessage?: (message: unknown) => void } | undefined)?.onmessage;
+  onmessage?.({ phase: "retrying", ...progress });
 }
 
 function titleOf(content: string, fallback: string): string {
@@ -90,7 +99,21 @@ function needNote(map: MockStore["notes"], path: string) {
 const commandHandlers: Record<string, CommandHandler> = {
   auth_status: (_args, ctx) => ({ hasToken: true, repoPath: ctx.state.repoPath }),
   sync_status: (_args, ctx) => syncStatus(ctx.store),
-  sync_now: (_args, ctx) => (ctx.state.syncFailure ? Promise.reject(ctx.state.syncFailure) : syncStatus(ctx.store)),
+  sync_now: (args, ctx) => {
+    if (ctx.state.syncFailure) return Promise.reject(ctx.state.syncFailure);
+    const retry = ctx.state.syncRetry;
+    if (!retry) return syncStatus(ctx.store);
+    emitSyncProgress(args.onEvent, retry);
+    return new Promise((resolve) => {
+      ctx.store.pendingSync = resolve;
+    });
+  },
+  cancel_sync_retry: (_args, ctx) => {
+    const pending = ctx.store.pendingSync;
+    ctx.store.pendingSync = null;
+    pending?.(syncStatus(ctx.store));
+    return null;
+  },
   git_pull: (_args, ctx) => syncStatus(ctx.store),
   git_push: (_args, ctx) => syncStatus(ctx.store),
   git_commit: () => "e2e-commit",

@@ -7,7 +7,7 @@ import { WorkspaceNavRail } from "./WorkspaceNavRail";
 import type { WorkspaceActions } from "./useWorkspaceActions";
 import { WorkspaceColumns } from "./WorkspaceColumns";
 import { useSync } from "@/features/sync/hooks/useSync";
-import { SyncFailureNotice } from "@/features/sync/components/SyncFailureNotice";
+import { SyncNotice } from "@/features/sync/components/SyncNotice";
 import { CommandPalette } from "@/features/search/components/CommandPalette";
 import { useUiStore } from "@/stores/ui.store";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
@@ -60,7 +60,7 @@ function DesktopContent({ repoPath, startupSyncing, currentNotePath, editorRef, 
   return <>
     <WorkspaceNavRail repoPath={repoPath} startupSyncing={startupSyncing} sync={sync} />
     <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-bg-primary">
-      <SyncFailureNotice sync={sync} />
+      <SyncNotice sync={sync} />
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         <WorkspaceColumns
           repoPath={repoPath}

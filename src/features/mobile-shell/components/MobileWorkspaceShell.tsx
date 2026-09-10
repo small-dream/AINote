@@ -3,7 +3,7 @@ import { ArrowLeft, Clock, FolderTree, Hash, List, RefreshCw, Search, Settings, 
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useSync } from "@/features/sync/hooks/useSync";
-import { SyncFailureNotice } from "@/features/sync/components/SyncFailureNotice";
+import { SyncNotice } from "@/features/sync/components/SyncNotice";
 import { deriveSyncFailure } from "@/features/sync/utils/status";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
@@ -53,7 +53,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
         onSync={() => syncNow.mutate()}
         onOpenConflict={() => setConflictOpen(true)}
       />
-      <SyncFailureNotice sync={sync} />
+      <SyncNotice sync={sync} />
       <main className="min-h-0 flex-1 overflow-hidden">
         {showEditor ? (
           <div className="mobile-editor-pane h-full min-h-0">{editor}</div>

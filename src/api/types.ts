@@ -224,6 +224,14 @@ export interface ConflictExportDto {
   files: string[];
 }
 
+/** sync_now 进度（Tauri Channel 下发）：拉取阶段的自动重试 */
+export interface SyncProgress {
+  phase: "retrying";
+  retry: number;
+  maxRetries: number;
+  delayMs: number;
+}
+
 /** support_info 返回：设置页诊断信息 */
 export interface SupportInfoDto {
   logDir: string;

@@ -26,6 +26,7 @@ pub fn run() {
                 .build(),
         )
         .manage(commands::repo::backup::BackupState::default())
+        .manage(commands::git::sync::SyncRetryState::default())
         .setup(|_app| {
             apply_logging_preference(_app.handle());
             log::info!(target: "ainote::startup", "AINote {} 启动", env!("CARGO_PKG_VERSION"));
@@ -75,6 +76,7 @@ pub fn run() {
             commands::git::push::git_push,
             commands::git::status::sync_status,
             commands::git::sync::sync_now,
+            commands::git::sync::cancel_sync_retry,
             commands::git::resolve::resolve_conflict,
             commands::git::conflicts::list_conflicts,
             commands::git::conflicts_export::export_conflicts,

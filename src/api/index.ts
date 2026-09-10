@@ -51,6 +51,7 @@ export type {
   SearchResult,
   SyncStatus,
   SupportInfoDto,
+  SyncProgress,
   TrashItem,
   TreeNode,
 } from "./types";

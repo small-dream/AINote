@@ -1,6 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { syncApi } from "@/api";
 import type { SyncStatus } from "@/api/types";
+import type { SyncProgress } from "@/api/types";
+import { reportSyncProgress, useSyncRetryStore } from "@/stores/sync-retry.store";
 
 /** 同步状态（纯本地查询，启动/切换/操作后自动重取） */
 export function useSyncStatusQuery(repoPath: string | null, enabled = true) {
@@ -29,11 +31,15 @@ export function useCommitPendingMutation() {
   });
 }
 
-/** 一键同步：commit → pull → push（P0-4） */
-export function useSyncNowMutation() {
+/**
+ * 一键同步：commit → pull → push（P0-4）。
+ * 默认把拉取阶段的重试进度写入全局同步态（`useSyncRetryStore`），结算时清空。
+ */
+export function useSyncNowMutation(options: { onProgress?: (progress: SyncProgress) => void } = {}) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => syncApi.syncNow(),
+    mutationFn: () => syncApi.syncNow(options.onProgress ?? reportSyncProgress),
+    onSettled: () => useSyncRetryStore.getState().clear(),
     onSuccess: () => {
       invalidateSync(queryClient);
       void queryClient.invalidateQueries({ queryKey: ["notes"] });

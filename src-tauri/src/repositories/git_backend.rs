@@ -53,6 +53,8 @@ pub struct MockGitBackend {
     pub ahead: u32,
     pub behind: u32,
     pub conflict_on_pull: bool,
+    /// 前 N 次 pull 返回网络错误（模拟可重试失败），0 表示直接成功
+    pub pull_network_failures: std::sync::Mutex<u32>,
     pub conflicts: Vec<ConflictFile>,
     pub all_resolved_after_file: bool,
     pub calls: std::sync::Mutex<Vec<String>>,
@@ -66,6 +68,16 @@ impl MockGitBackend {
 
     pub fn recorded(&self) -> Vec<String> {
         self.calls.lock().unwrap().clone()
+    }
+
+    /// 消耗一次编排好的 pull 网络失败；返回本次是否应失败。
+    fn take_pull_failure(&self) -> bool {
+        let mut remaining = self.pull_network_failures.lock().unwrap();
+        if *remaining == 0 {
+            return false;
+        }
+        *remaining -= 1;
+        true
     }
 }
 
@@ -97,6 +109,9 @@ impl GitBackend for MockGitBackend {
 
     fn pull(&self, _path: &str, _token: &str) -> Result<(), AppError> {
         self.record("pull".into());
+        if self.take_pull_failure() {
+            return Err(AppError::SyncNetwork("mock network".into()));
+        }
         if self.conflict_on_pull {
             return Err(AppError::Conflict("mock conflict".into()));
         }

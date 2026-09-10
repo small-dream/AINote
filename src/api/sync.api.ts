@@ -1,12 +1,19 @@
+import { Channel } from "@tauri-apps/api/core";
 import { call } from "./client";
-import type { ConflictExportDto, ConflictFile, SyncStatus } from "./types";
+import type { ConflictExportDto, ConflictFile, SyncProgress, SyncStatus } from "./types";
 
 /** 同步相关 IPC（P0-4 / P0-5 / P0-6） */
 export const syncApi = {
   /** 查询同步状态（纯本地，无网络） */
   status: () => call<SyncStatus>("sync_status"),
-  /** 一键同步：commit 未提交变更 → pull → push */
-  syncNow: () => call<SyncStatus>("sync_now"),
+  /** 一键同步：commit 未提交变更 → pull → push；onProgress 接收拉取阶段的重试进度 */
+  syncNow: (onProgress?: (progress: SyncProgress) => void) => {
+    const channel = new Channel<SyncProgress>();
+    if (onProgress) channel.onmessage = onProgress;
+    return call<SyncStatus>("sync_now", { onEvent: channel });
+  },
+  /** 取消进行中的同步自动重试（只结束退避等待，不中断已发出的请求） */
+  cancelSyncRetry: () => call<null>("cancel_sync_retry"),
   /** 提交全部未提交变更，返回 commit hash（无可提交时 null） */
   commit: (message: string) => call<string | null>("git_commit", { message }),
   pull: () => call<SyncStatus>("git_pull"),

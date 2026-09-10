@@ -60,6 +60,22 @@ test.describe("可恢复 UI 收口（E3-T5）", () => {
   });
 });
 
+test.describe("同步自动重试（E4-T2）", () => {
+  test("拉取自动重试：显示重试中（n/m）并可取消", async ({ page }) => {
+    const state = baseState();
+    state.syncRetry = { retry: 1, maxRetries: 3, delayMs: 1500 };
+    await openWorkspace(page, state);
+
+    const retrying = page.getByRole("status").filter({ hasText: "重试中（1/3）" });
+    await expect(retrying).toBeVisible();
+    await expect(retrying).toContainText("2 秒后自动重试");
+
+    await page.getByRole("button", { name: "取消重试" }).click();
+    await expect.poll(async () => (await calls(page)).some((call) => call.cmd === "cancel_sync_retry")).toBe(true);
+    await expect(page.getByRole("button", { name: "取消重试" })).toBeHidden();
+  });
+});
+
 test.describe("可恢复 UI 收口（E3-T5）/ 移动单栏壳", () => {
   test.use({ viewport: { width: 430, height: 900 } });
 

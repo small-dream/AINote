@@ -1,4 +1,7 @@
+import { useCallback } from "react";
+import { syncApi } from "@/api";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
+import { useSyncRetryStore } from "@/stores/sync-retry.store";
 import { useResolveConflictMutation, useSyncNowMutation, useSyncStatusQuery } from "@/queries/sync.queries";
 import { useCommitPendingMutation } from "@/queries/sync.queries";
 import type { SyncStatus } from "@/api/types";
@@ -19,6 +22,7 @@ export function useSync(repoPath: string | null) {
   const { locale } = useTranslation();
   const online = useNetworkStatus();
   const statusQuery = useSyncStatusQuery(repoPath);
+  const retry = useSyncRetryStore((state) => state.progress);
   const syncNow = useSyncNowMutation();
   const resolve = useResolveConflictMutation();
   const checkpoint = useCommitPendingMutation();
@@ -26,6 +30,11 @@ export function useSync(repoPath: string | null) {
 
   const status = statusQuery.data ?? DEFAULT_STATUS;
   const label = deriveSyncLabel(status, online, locale);
+  const isSyncing = syncNow.isPending;
+
+  const cancelRetry = useCallback(() => {
+    void syncApi.cancelSyncRetry().catch(() => undefined);
+  }, []);
   const { committing } = useIdleCommit(
     repoPath,
     status.hasUncommitted,
@@ -40,7 +49,9 @@ export function useSync(repoPath: string | null) {
     syncNow,
     resolve,
     checkpoint,
-    isSyncing: syncNow.isPending,
+    isSyncing,
+    retry,
+    cancelRetry,
     resolving: resolve.isPending,
     committing,
   };
