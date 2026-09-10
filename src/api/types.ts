@@ -209,3 +209,10 @@ export interface TrashItem {
   /** 删除时解析的笔记标题 */
   title: string;
 }
+
+/** export_diagnostics 返回：诊断包保存位置与内容清单 */
+export interface DiagnosticsExportDto {
+  path: string;
+  bytes: number;
+  files: string[];
+}

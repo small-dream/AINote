@@ -3,6 +3,7 @@ import { ArrowLeft, Copy, RotateCcw } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
 import { useTranslation } from "@/i18n";
 import { formatErrorReport } from "../error-report";
+import { ExportDiagnosticsButton } from "./ExportDiagnosticsButton";
 
 interface ErrorFallbackProps {
   error: Error;
@@ -52,6 +53,7 @@ export function ErrorFallback({ error, onRetry }: ErrorFallbackProps) {
             <ArrowLeft size={14} />
             {t("support.backToWorkspace")}
           </Button>
+          <ExportDiagnosticsButton />
         </div>
       </div>
     </div>

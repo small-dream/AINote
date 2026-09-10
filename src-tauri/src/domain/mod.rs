@@ -2,6 +2,7 @@ pub mod ai;
 pub mod ai_settings;
 pub mod asset;
 pub mod dto;
+pub mod diagnostics;
 pub mod error;
 pub mod favorite;
 pub mod history;

@@ -16,6 +16,7 @@ pub use services::auth_store::AuthStore;
 pub fn run() {
     tauri::Builder::default()
         .plugin(config::logging::plugin())
+        .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_keyring_store::Builder::new()
                 .service("dev.ainote.app.credentials")
@@ -98,6 +99,7 @@ pub fn run() {
             commands::app::open_external,
             commands::print::print_current_page,
             commands::support::log_frontend::log_frontend,
+            commands::support::export::export_diagnostics,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AINote");

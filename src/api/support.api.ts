@@ -1,4 +1,5 @@
 import { call } from "./client";
+import type { DiagnosticsExportDto } from "./types";
 
 export type FrontendLogLevel = "error" | "warn" | "info";
 
@@ -6,4 +7,6 @@ export type FrontendLogLevel = "error" | "warn" | "info";
 export const supportApi = {
   log: (level: FrontendLogLevel, message: string, context?: string) =>
     call("log_frontend", { level, message, context }),
+  /** 导出诊断包；用户取消保存时返回 null */
+  exportDiagnostics: () => call<DiagnosticsExportDto | null>("export_diagnostics"),
 };

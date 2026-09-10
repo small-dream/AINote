@@ -160,10 +160,11 @@ AINote/
 │   │   │   ├── repo/             # bind.rs / create.rs / list.rs / rename.rs / remove.rs / switch.rs / validate.rs / path.rs
 │   │   │   ├── auth/             # save_token.rs / validate.rs / status.rs / logout.rs
 │   │   │   ├── ai/               # config.rs（get/save）/ generate.rs / chat.rs
-│   │   │   └── trash/            # list.rs / restore.rs / delete.rs / empty.rs
-│   │   ├── services/             # 一用例一模块（含 search_service / history_service / asset_service / wiki_service / trash_service / ai_service / ai_store / secure_store）
-│   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / file_storage / note_files / file_tree / asset_files / trash_files / llm）
-│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs / wiki.rs / trash.rs / rich_text.rs / ai.rs）
+│   │   │   ├── trash/            # list.rs / restore.rs / delete.rs / empty.rs
+│   │   │   └── support/          # log_frontend.rs / export.rs（诊断包）
+│   │   ├── services/             # 一用例一模块（含 search_service / history_service / asset_service / wiki_service / trash_service / ai_service / ai_store / secure_store / diagnostics_service）
+│   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / file_storage / note_files / file_tree / asset_files / trash_files / diagnostics_files / llm）
+│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs / wiki.rs / trash.rs / rich_text.rs / ai.rs / diagnostics.rs）
 │   │   └── config/            # mod.rs（持久化）+ repos.rs（仓库注册表纯逻辑）+ logging.rs（结构化日志与脱敏）
 │   └── Cargo.toml
 ├── package.json / tsconfig.json (strict: true)

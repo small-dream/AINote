@@ -29,6 +29,7 @@ export type {
   AssetInfo,
   AuthStatusDto,
   CommitInfo,
+  DiagnosticsExportDto,
   DiffLine,
   DiffLineKind,
   FileDiff,

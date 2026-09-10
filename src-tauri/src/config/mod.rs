@@ -10,6 +10,7 @@ use std::path::PathBuf;
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Manager};
 
+use crate::domain::diagnostics::DiagnosticsConfigSummary;
 use crate::domain::error::AppError;
 
 const CONFIG_FILE: &str = "ainote.json";
@@ -77,6 +78,16 @@ pub fn load_repo_path(app: &AppHandle) -> Result<Option<String>, AppError> {
 pub fn load_auth_status(app: &AppHandle) -> Result<(bool, Option<String>), AppError> {
     let cfg = load_config(app)?;
     Ok((cfg.has_token.unwrap_or(false), repos::active_path_cfg(&cfg)))
+}
+
+/// 诊断用配置摘要：只返回计数与布尔值，不暴露仓库路径或远端 URL。
+pub fn summary(app: &AppHandle) -> Result<DiagnosticsConfigSummary, AppError> {
+    let cfg = load_config(app)?;
+    Ok(DiagnosticsConfigSummary {
+        repo_count: cfg.repos.len(),
+        has_active_repo: repos::active_path_cfg(&cfg).is_some(),
+        has_token: cfg.has_token.unwrap_or(false),
+    })
 }
 
 /// 读取活动仓库路径，未绑定时报 REPO_3001（供各 Command 统一前置校验）。
