@@ -72,6 +72,54 @@ export function findBacklinks(notes: NoteWikiDto[], targetPath: string): NoteWik
   );
 }
 
+/** 双链名称索引：title / 文件名（不含 .md）小写 → 路径，先出现者优先（与 find 语义一致）。 */
+export interface WikiNameIndex {
+  byTitle: ReadonlyMap<string, string>;
+  byFileName: ReadonlyMap<string, string>;
+}
+
+/** 预建名称索引（O(n)），供面板等高频解析场景复用，避免逐链接线性扫描。 */
+export function buildWikiNameIndex(notes: NoteWikiDto[]): WikiNameIndex {
+  const byTitle = new Map<string, string>();
+  const byFileName = new Map<string, string>();
+  for (const note of notes) {
+    const titleKey = note.title.toLowerCase();
+    if (!byTitle.has(titleKey)) byTitle.set(titleKey, note.path);
+    const nameKey = wikiNameOf(note.path).toLowerCase();
+    if (!byFileName.has(nameKey)) byFileName.set(nameKey, note.path);
+  }
+  return { byTitle, byFileName };
+}
+
+/** resolveWikiTarget 的索引版本：先标题、再文件名，行为一致但 O(1)。 */
+export function resolveWikiTargetByIndex(index: WikiNameIndex, name: string): string | null {
+  const needle = name.trim().toLowerCase();
+  if (!needle) return null;
+  return index.byTitle.get(needle) ?? index.byFileName.get(needle) ?? null;
+}
+
+/** findBacklinks 的索引版本：O(链接总数) 而非逐链接线性扫描。 */
+export function findBacklinksByIndex(notes: NoteWikiDto[], index: WikiNameIndex, targetPath: string): NoteWikiDto[] {
+  return notes.filter(
+    (note) => note.path !== targetPath &&
+      note.links.some((link) => resolveWikiTargetByIndex(index, link) === targetPath)
+  );
+}
+
+/** backlinkContextsOf 的索引版本。 */
+export function backlinkContextsByIndex(note: NoteWikiDto, index: WikiNameIndex, targetPath: string): BacklinkContext[] {
+  return (note.linkContexts ?? [])
+    .filter((context) => resolveWikiTargetByIndex(index, context.target) === targetPath)
+    .map(({ line, snippet }) => ({ line, snippet }));
+}
+
+/** 标签输入建议：全仓库已有标签去掉当前笔记已有的，按名称升序。 */
+export function buildTagSuggestions(notes: NoteWikiDto[], currentTags: string[]): string[] {
+  return [...new Set(notes.flatMap((note) => note.tags))]
+    .filter((tag) => !currentTags.includes(tag))
+    .sort((a, b) => a.localeCompare(b));
+}
+
 /** 取笔记标题（找不到回退文件名） */
 export function noteTitle(notes: NoteWikiDto[], path: string): string {
   return notes.find((n) => n.path === path)?.title ?? wikiNameOf(path);

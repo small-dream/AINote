@@ -2,11 +2,10 @@ import { Hash, Link2, Plus, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
 import { useTranslation } from "@/i18n";
 import { useBackHandler } from "@/platform/back-navigation";
-import { useWikiIndexQuery } from "@/queries/wiki.queries";
-import { useCreateNoteMutation } from "@/queries/note.queries";
 import type { NoteWikiDto } from "@/api/types";
-import { backlinkContextsOf, findBacklinks, resolveWikiTarget, wikiCreatePath } from "../utils/wiki";
-import { appendTagToContent, extractTagsFromContent, removeTagFromContent } from "../utils/tagContent";
+import { backlinkContextsByIndex, type WikiNameIndex } from "../utils/wiki";
+import { appendTagToContent, removeTagFromContent } from "../utils/tagContent";
+import { useWikiPanel, type OutgoingLink } from "../hooks/useWikiPanel";
 
 interface WikiPanelProps {
   repoPath: string | null;
@@ -19,32 +18,12 @@ interface WikiPanelProps {
   onChange: (value: string) => void;
 }
 
-interface OutgoingLink {
-  name: string;
-  target: string | null;
-}
-
 /** 双链与标签面板（P1-5）：标签 / 引用（出链，未创建可快速建笔记）/ 反向链接（多上下文）。 */
 export function WikiPanel({ repoPath, path, open, onClose, onOpenNote, draft, kind, onChange }: WikiPanelProps) {
   const { t } = useTranslation();
-  const { data: notes = [] } = useWikiIndexQuery(repoPath);
-  const createNote = useCreateNoteMutation();
+  const { nameIndex, tags, suggestions, outgoing, backlinks, creating, handleCreate } = useWikiPanel(repoPath, path, draft, kind);
   useBackHandler(open, onClose);
   if (!open || !path) return null;
-
-  const note = notes.find((n) => n.path === path);
-  const tags = extractTagsFromContent(draft, kind);
-  const suggestions = buildTagSuggestions(notes, tags);
-  const outgoing: OutgoingLink[] = (note?.links ?? []).map((name) => ({
-    name,
-    target: resolveWikiTarget(notes, name),
-  }));
-  const backlinks = findBacklinks(notes, path);
-
-  const handleCreate = async (name: string) => {
-    const targetPath = wikiCreatePath(name);
-    await createNote.mutateAsync({ path: targetPath, kind: "markdown", content: `# ${name}\n` });
-  };
 
   return (
     <div data-mobile-overlay="wiki" className="fixed inset-0 z-50 bg-black/40" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
@@ -57,8 +36,8 @@ export function WikiPanel({ repoPath, path, open, onClose, onOpenNote, draft, ki
             onAdd={(tag) => onChange(appendTagToContent(draft, tag, kind))}
             onRemove={(tag) => onChange(removeTagFromContent(draft, tag, kind))}
           />
-          <OutgoingSection links={outgoing} creating={createNote.isPending} onOpenNote={onOpenNote} onCreate={handleCreate} />
-          <BacklinksSection backlinks={backlinks} notes={notes} targetPath={path} onOpenNote={onOpenNote} />
+          <OutgoingSection links={outgoing} creating={creating} onOpenNote={onOpenNote} onCreate={handleCreate} />
+          <BacklinksSection backlinks={backlinks} nameIndex={nameIndex} targetPath={path} onOpenNote={onOpenNote} />
         </div>
       </div>
     </div>
@@ -78,12 +57,6 @@ function PanelHeader({ path, onClose }: { path: string; onClose: () => void }) {
       </button>
     </div>
   );
-}
-
-function buildTagSuggestions(notes: NoteWikiDto[], currentTags: string[]): string[] {
-  return [...new Set(notes.flatMap((note) => note.tags))]
-    .filter((tag) => !currentTags.includes(tag))
-    .sort((a, b) => a.localeCompare(b));
 }
 
 function TagsSection({ tags, suggestions, onAdd, onRemove }: { tags: string[]; suggestions: string[]; onAdd: (tag: string) => void; onRemove: (tag: string) => void }) {
@@ -182,14 +155,14 @@ function OutgoingSection({ links, creating, onOpenNote, onCreate }: { links: Out
   );
 }
 
-function BacklinksSection({ backlinks, notes, targetPath, onOpenNote }: { backlinks: NoteWikiDto[]; notes: NoteWikiDto[]; targetPath: string; onOpenNote: (path: string) => void }) {
+function BacklinksSection({ backlinks, nameIndex, targetPath, onOpenNote }: { backlinks: NoteWikiDto[]; nameIndex: WikiNameIndex; targetPath: string; onOpenNote: (path: string) => void }) {
   const { t } = useTranslation();
   if (backlinks.length === 0) return <SectionBlock title={t("wiki.backlinks")} empty={t("wiki.noBacklinks")} />;
   return (
     <SectionBlock title={t("wiki.backlinks")}>
       <ul className="space-y-2">
         {backlinks.map((note) => {
-          const contexts = backlinkContextsOf(note, notes, targetPath);
+          const contexts = backlinkContextsByIndex(note, nameIndex, targetPath);
           return (
             <li key={note.path} className="rounded-lg border border-border/70 bg-bg-secondary/60 p-2">
               <button type="button" onClick={() => onOpenNote(note.path)} className="text-sm font-medium text-accent hover:underline">

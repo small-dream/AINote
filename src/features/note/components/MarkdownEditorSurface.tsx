@@ -10,6 +10,10 @@ import { FormatToolbar } from "./FormatToolbar";
 import type { ViewMode } from "./EditorToolbar";
 import type { OutlineItem } from "../utils/outline";
 import type { NoteTheme } from "@/stores/ui.store";
+import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+
+/** 预览渲染防抖窗口：击键后延迟重跑 Markdown 管线（与 3s 落盘防抖 AUTOSAVE_DEBOUNCE_MS 解耦）。 */
+export const PREVIEW_DEBOUNCE_MS = 250;
 
 const LazyMarkdownPreview = lazy(() => import("./MarkdownPreview").then(({ MarkdownPreview }) => ({ default: MarkdownPreview })));
 
@@ -114,7 +118,8 @@ interface PreviewPaneProps {
 }
 
 function PreviewPane({ previewRef, content, repoPath, onOpenWiki, wikiNotes, onChange }: PreviewPaneProps) {
-  return <div ref={previewRef} className="note-preview-pane h-full min-h-0 flex-1 overflow-y-auto p-6"><Suspense fallback={<PreviewLoading />}><LazyMarkdownPreview content={content} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} /></Suspense></div>;
+  const debouncedContent = useDebouncedValue(content, PREVIEW_DEBOUNCE_MS);
+  return <div ref={previewRef} className="note-preview-pane h-full min-h-0 flex-1 overflow-y-auto p-6"><Suspense fallback={<PreviewLoading />}><LazyMarkdownPreview content={debouncedContent} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} /></Suspense></div>;
 }
 
 function PreviewLoading() {

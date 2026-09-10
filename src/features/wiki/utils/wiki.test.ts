@@ -1,13 +1,18 @@
 import { describe, expect, it } from "vitest";
 import type { NoteWikiDto } from "@/api/types";
 import {
+  backlinkContextsByIndex,
   backlinkContextsOf,
   buildTagCloud,
   buildTagNotes,
+  buildTagSuggestions,
+  buildWikiNameIndex,
   filterTagCloud,
   findBacklinks,
+  findBacklinksByIndex,
   noteTitle,
   resolveWikiTarget,
+  resolveWikiTargetByIndex,
   tagsOf,
   wikiCreatePath,
   wikiNameOf,
@@ -120,5 +125,53 @@ describe("wikiCreatePath", () => {
   it("清理非法字符与空段", () => {
     expect(wikiCreatePath("a:b?c*d")).toBe("a-b-c-d.md");
     expect(wikiCreatePath("/  /")).toBe("untitled.md");
+  });
+});
+
+describe("名称索引（buildWikiNameIndex）与线性扫描等价", () => {
+  it("resolveWikiTargetByIndex 与 resolveWikiTarget 结果一致", () => {
+    const index = buildWikiNameIndex(NOTES);
+    for (const name of ["b 笔记", "A", "B", "a 笔记", "missing", "", "  "]) {
+      expect(resolveWikiTargetByIndex(index, name)).toBe(resolveWikiTarget(NOTES, name));
+    }
+  });
+
+  it("findBacklinksByIndex 与 findBacklinks 结果一致", () => {
+    const index = buildWikiNameIndex(NOTES);
+    for (const target of NOTES.map((n) => n.path).concat("missing.md")) {
+      expect(findBacklinksByIndex(NOTES, index, target).map((n) => n.path))
+        .toEqual(findBacklinks(NOTES, target).map((n) => n.path));
+    }
+  });
+
+  it("backlinkContextsByIndex 与 backlinkContextsOf 结果一致", () => {
+    const notes = [
+      { path: "a.md", title: "A", tags: [], links: ["B"], linkContexts: [
+        { target: "B", line: 2, snippet: "见 [[B]]" },
+        { target: "missing", line: 5, snippet: "[[missing]]" },
+      ] },
+      { path: "b.md", title: "B", tags: [], links: [], linkContexts: [] },
+    ] as NoteWikiDto[];
+    const index = buildWikiNameIndex(notes);
+    expect(backlinkContextsByIndex(notes[0] as NoteWikiDto, index, "b.md"))
+      .toEqual(backlinkContextsOf(notes[0] as NoteWikiDto, notes, "b.md"));
+    expect(backlinkContextsByIndex(notes[0] as NoteWikiDto, index, "c.md"))
+      .toEqual(backlinkContextsOf(notes[0] as NoteWikiDto, notes, "c.md"));
+  });
+
+  it("标题重名时保留首个匹配（与 find 语义一致）", () => {
+    const dup = [
+      { path: "x.md", title: "同名", tags: [], links: [] },
+      { path: "y.md", title: "同名", tags: [], links: [] },
+    ] as NoteWikiDto[];
+    expect(resolveWikiTargetByIndex(buildWikiNameIndex(dup), "同名")).toBe("x.md");
+    expect(resolveWikiTarget(dup, "同名")).toBe("x.md");
+  });
+});
+
+describe("buildTagSuggestions", () => {
+  it("全仓库标签去重升序并排除当前已有", () => {
+    expect(buildTagSuggestions(NOTES, ["x"])).toEqual(["y"]);
+    expect(buildTagSuggestions(NOTES, [])).toEqual(["x", "y"]);
   });
 });
