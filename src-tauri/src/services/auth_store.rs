@@ -58,7 +58,7 @@ impl AuthStore {
         getrandom::getrandom(&mut nonce).map_err(|e| AppError::Io(e.to_string()))?;
         let cipher = cipher_from_key(&key)?;
         let ciphertext = cipher
-            .encrypt(Nonce::from_slice(&nonce), token.as_bytes())
+            .encrypt(&Nonce::from(nonce), token.as_bytes())
             .map_err(|e| AppError::Auth(e.to_string()))?;
         self.write_secure(self.token_path(), encode_token_record(&nonce, &ciphertext))?;
         Ok(())
@@ -71,7 +71,7 @@ impl AuthStore {
         let (nonce, ciphertext) = decode_token_record(&record)?;
         let cipher = cipher_from_key(&key)?;
         let bytes = cipher
-            .decrypt(Nonce::from_slice(&nonce), ciphertext)
+            .decrypt(&Nonce::from(nonce), ciphertext)
             .map_err(|_| AppError::Auth("未登录或本地凭证已失效".into()))?;
         String::from_utf8(bytes).map_err(|e| AppError::Auth(e.to_string()))
     }

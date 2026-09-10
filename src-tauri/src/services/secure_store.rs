@@ -33,7 +33,7 @@ pub fn save_secret(root: &Path, name: &str, secret: &str) -> Result<(), AppError
     getrandom::getrandom(&mut nonce).map_err(|e| AppError::Io(e.to_string()))?;
     let cipher = cipher_from_key(&key)?;
     let ciphertext = cipher
-        .encrypt(Nonce::from_slice(&nonce), secret.as_bytes())
+        .encrypt(&Nonce::from(nonce), secret.as_bytes())
         .map_err(|e| AppError::Io(e.to_string()))?;
     write_secure(&cred_path(root, name), encode_cred_record(&nonce, &ciphertext))?;
     Ok(())
@@ -54,7 +54,7 @@ pub fn read_secret(root: &Path, name: &str) -> Result<Option<String>, AppError> 
     let (nonce, ciphertext) = decode_cred_record(&record)?;
     let cipher = cipher_from_key(&key)?;
     let bytes = cipher
-        .decrypt(Nonce::from_slice(&nonce), ciphertext)
+        .decrypt(&Nonce::from(nonce), ciphertext)
         .map_err(|_| AppError::Io("本地加密凭证失效".into()))?;
     String::from_utf8(bytes)
         .map(Some)
