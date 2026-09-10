@@ -119,6 +119,7 @@ pub fn run() {
             commands::git::conflicts_export::export_conflicts,
             commands::git::resolve_file::resolve_file_conflict,
             commands::git::history::git_file_history,
+            commands::git::graph::git_repo_history,
             commands::git::diff::git_file_diff,
             commands::git::restore::git_restore_file,
             commands::repo::bind::bind_repo,

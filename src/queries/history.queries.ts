@@ -1,11 +1,11 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { historyApi, syncApi } from "@/api";
+import { historyApi } from "@/api";
 import type { CommitInfo, FileDiff } from "@/api/types";
-import { reportToastError } from "@/stores/toast.store";
 
 /** 历史查询键：repo + 文件路径 */
 export const historyKeys = {
   all: (repoPath: string | null, path: string | null) => ["history", repoPath, path] as const,
+  repo: (repoPath: string | null) => ["repo-history", repoPath] as const,
   diff: (repoPath: string | null, path: string | null, commitId: string | null) =>
     ["history-diff", repoPath, path, commitId] as const,
 };
@@ -16,6 +16,15 @@ export function useFileHistoryQuery(repoPath: string | null, path: string | null
     queryKey: historyKeys.all(repoPath, path),
     queryFn: () => historyApi.history(path as string),
     enabled: repoPath !== null && path !== null && enabled,
+  });
+}
+
+/** 全仓提交历史（Repo Git Graph），含每 commit 直接改动的文件 */
+export function useRepoHistoryQuery(repoPath: string | null, enabled = true) {
+  return useQuery({
+    queryKey: historyKeys.repo(repoPath),
+    queryFn: () => historyApi.repoHistory(200),
+    enabled: repoPath !== null && enabled,
   });
 }
 
@@ -38,13 +47,11 @@ export function useRestoreFileMutation() {
   return useMutation({
     mutationFn: ({ file, commitId }: { file: string; commitId: string }) =>
       historyApi.restore(file, commitId),
-    onSuccess: (_data, { file }) => {
+    onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["note-content"] });
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
-      void syncApi.commit(`note: restore ${file}`).catch(reportToastError).finally(() => {
-        void queryClient.invalidateQueries({ queryKey: ["sync"] });
-      });
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
     },
   });
 }

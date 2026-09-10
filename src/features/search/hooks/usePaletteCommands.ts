@@ -22,6 +22,7 @@ export function usePaletteCommands(actions: CommandPaletteActions) {
       { id: "new-folder", label: t("palette.newFolder"), keywords: ["folder", "mkdir", "新建文件夹"], run: () => { actions.onNewFolder(); closePalette(); } },
       { id: "sync-now", label: t("palette.syncNow"), keywords: ["sync", "push", "pull", "同步"], run: () => { syncNow.mutate(); closePalette(); } },
       { id: "checkpoint", label: t("palette.checkpoint"), keywords: ["version", "commit", "保存版本"], run: () => { actions.onRequestCommit?.(); closePalette(); } },
+      { id: "git-graph", label: t("graph.title"), keywords: ["git", "graph", "history", "提交历史", "Git 历史"], run: () => { actions.onRequestGraph?.(); closePalette(); } },
       ...(actions.onChangeMode ? [
         { id: "mode-edit", label: t("palette.modeEdit"), keywords: ["edit", "source", "编辑"], run: () => { actions.onChangeMode?.("edit"); closePalette(); } },
         { id: "mode-split", label: t("palette.modeSplit"), keywords: ["split", "编辑预览", "分栏"], run: () => { actions.onChangeMode?.("split"); closePalette(); } },

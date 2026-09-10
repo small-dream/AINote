@@ -116,6 +116,39 @@ function treeOf(notes: Map<string, { content: string; kind: string }>): E2eTreeN
   return root;
 }
 
+/** 全仓提交历史：优先种子，缺省时由各文件版本聚合（每个版本视为一条提交）。 */
+function repoHistoryOf(ctx: E2eCommandContext) {
+  const seeded = ctx.state.repoHistory ?? [];
+  if (seeded.length > 0) {
+    return seeded.map((commit) => ({
+      id: commit.id,
+      shortId: commit.id.slice(0, 7),
+      message: commit.message,
+      author: "e2e",
+      timestamp: Math.floor(Date.now() / 1000) - Number(commit.id),
+      parents: [],
+      files: commit.files,
+    }));
+  }
+  const byId = new Map<string, { message: string; files: Array<{ path: string; status: "added" | "modified" | "deleted" }> }>();
+  for (const [path, versions] of Object.entries(ctx.state.versions ?? {})) {
+    for (const version of versions) {
+      const entry = byId.get(version.id) ?? { message: version.message, files: [] };
+      entry.files.push({ path, status: "modified" });
+      byId.set(version.id, entry);
+    }
+  }
+  return [...byId.entries()].map(([id, entry]) => ({
+    id,
+    shortId: id.slice(0, 7),
+    message: entry.message,
+    author: "e2e",
+    timestamp: Math.floor(Date.now() / 1000) - Number(id),
+    parents: [],
+    files: entry.files,
+  }));
+}
+
 function needNote(map: MockStore["notes"], path: string) {
   const note = map.get(path);
   if (!note) throw appError(`note not found: ${path}`);
@@ -145,6 +178,7 @@ const commandHandlers: Record<string, CommandHandler> = {
   git_push: (_args, ctx) => syncStatus(ctx.store),
   git_commit: () => "e2e-commit",
   git_status_files: (_args, ctx) => ctx.store.changedFiles,
+  git_repo_history: (_args, ctx) => repoHistoryOf(ctx),
   list_notes: (_args, ctx) => [...ctx.store.notes.entries()].map(([path, note]) => metaOf(path, note)),
   read_note: (args, ctx) => {
     const path = String(args.path ?? "");
@@ -202,7 +236,15 @@ const commandHandlers: Record<string, CommandHandler> = {
       timestamp: Math.floor(Date.now() / 1000) - Number(version.id),
     }));
   },
-  git_file_diff: (args) => ({ path: String(args.file ?? ""), commitId: String(args.commitId ?? ""), lines: [] }),
+  git_file_diff: (args, ctx) => {
+    const file = String(args.file ?? "");
+    const commitId = String(args.commitId ?? "");
+    const version = (ctx.state.versions?.[file] ?? []).find((item) => item.id === commitId);
+    if (!version) return { path: file, commitId, lines: [] };
+    const lines = version.content.split("\n").map((text) => ({ kind: "context", text }));
+    lines.unshift({ kind: "added", text: `${file} @ ${commitId}` });
+    return { path: file, commitId, lines };
+  },
   git_restore_file: (args, ctx) => {
     const file = String(args.file ?? "");
     const commitId = String(args.commitId ?? "");

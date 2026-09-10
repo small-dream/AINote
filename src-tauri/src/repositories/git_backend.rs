@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::domain::error::AppError;
-use crate::domain::history::{CommitInfo, FileDiff};
+use crate::domain::history::{CommitInfo, FileDiff, RepoCommit};
 use crate::domain::sync::{ChangedFile, ConflictFile};
 
 /// Git 能力抽象（防腐化关键：Service 只依赖此 trait，不依赖 git2）。
@@ -39,6 +39,8 @@ pub trait GitBackend: Send + Sync {
     fn complete_merge(&self, path: &str, message: &str) -> Result<(), AppError>;
     /// 指定文件（相对仓库根）的提交历史，仅含修改过该文件的提交，按时间倒序
     fn file_history(&self, path: &str, file: &str, limit: usize) -> Result<Vec<CommitInfo>, AppError>;
+    /// 全仓提交历史（含每 commit 直接改动的文件），覆盖所有分支，按时间倒序
+    fn repo_history(&self, path: &str, limit: usize) -> Result<Vec<RepoCommit>, AppError>;
     /// 选中提交相对其父提交的单文件 diff
     fn file_diff(&self, path: &str, file: &str, commit_id: &str) -> Result<FileDiff, AppError>;
     /// 把文件恢复到指定提交的版本（写入工作区，不提交）
@@ -186,6 +188,22 @@ impl GitBackend for MockGitBackend {
             message: "mock commit".into(),
             author: "mock".into(),
             timestamp: 1,
+        }])
+    }
+
+    fn repo_history(&self, _path: &str, _limit: usize) -> Result<Vec<RepoCommit>, AppError> {
+        self.record("repo_history".into());
+        Ok(vec![RepoCommit {
+            id: "e1e2e3e4e5e6e7e8e9e0f1f2f3f4f5f6f7f8f9f0".into(),
+            short_id: "e1e2e3e".into(),
+            message: "mock repo commit".into(),
+            author: "mock".into(),
+            timestamp: 2,
+            parents: vec![],
+            files: vec![ChangedFile {
+                path: "daily/a.md".into(),
+                status: crate::domain::sync::ChangedFileStatus::Modified,
+            }],
         }])
     }
 

@@ -3,10 +3,11 @@ use std::path::Path;
 use git2::{Repository, Signature, StatusOptions};
 
 use crate::domain::error::AppError;
-use crate::domain::history::{CommitInfo, FileDiff};
+use crate::domain::history::{CommitInfo, FileDiff, RepoCommit};
 use crate::domain::sync::{ChangedFile, ChangedFileStatus};
 
 use super::git2_history;
+use super::git2_graph;
 use super::git2_remote;
 use super::git_backend::GitBackend;
 
@@ -197,6 +198,10 @@ impl GitBackend for Git2Backend {
 
     fn file_history(&self, path: &str, file: &str, limit: usize) -> Result<Vec<CommitInfo>, AppError> {
         git2_history::file_history(path, file, limit)
+    }
+
+    fn repo_history(&self, path: &str, limit: usize) -> Result<Vec<RepoCommit>, AppError> {
+        git2_graph::repo_history(path, limit)
     }
 
     fn file_diff(&self, path: &str, file: &str, commit_id: &str) -> Result<FileDiff, AppError> {

@@ -2,6 +2,7 @@ pub mod commit;
 pub mod conflicts;
 pub mod conflicts_export;
 pub mod diff;
+pub mod graph;
 pub mod history;
 pub mod pull;
 pub mod push;

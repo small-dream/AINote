@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, type ReactNode, type RefObject } from "react";
-import { ArrowLeft, Clock, FolderTree, GitCommitHorizontal, Hash, List, RefreshCw, Search, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Clock, FolderTree, GitCommitHorizontal, GitGraph, Hash, List, RefreshCw, Search, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useSync } from "@/features/sync/hooks/useSync";
@@ -13,6 +13,7 @@ import type { SidebarTab } from "@/stores/ui.store";
 
 const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
 const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
+const LazyGitGraphPanel = lazy(() => import("@/features/git-graph/components/GitGraphPanel").then(({ GitGraphPanel }) => ({ default: GitGraphPanel })));
 
 interface MobileWorkspaceShellProps {
   repoPath: string | null;
@@ -34,6 +35,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
   const failure = deriveSyncFailure(syncNow.error, locale);
   const [conflictOpen, setConflictOpen] = useState(false);
   const [commitOpen, setCommitOpen] = useState(false);
+  const [graphOpen, setGraphOpen] = useState(false);
   const title = currentNotePath?.split(/[\\/]/).pop() ?? t("app.notes");
   const { showEditor, backToList } = useMobileEditorView({
     currentNotePath,
@@ -64,6 +66,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
         showEditor={showEditor}
         sidebarTab={sidebarTab}
         setSidebarTab={setSidebarTab}
+        onOpenGraph={() => setGraphOpen(true)}
         editor={editor}
         sidebar={sidebar}
       />
@@ -71,15 +74,17 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
         repoPath={repoPath}
         conflictOpen={conflictOpen}
         commitOpen={commitOpen}
+        graphOpen={graphOpen}
         onCloseConflict={() => setConflictOpen(false)}
         onCloseCommit={() => setCommitOpen(false)}
+        onCloseGraph={() => setGraphOpen(false)}
       />
       <span className="sr-only" aria-live="polite">{failure ? `${failure.title} · ${failure.suggestion}` : status.conflicted ? t("sync.conflict") : status.hasUncommitted ? t("sync.unsaved") : null}</span>
     </div>
   );
 }
 
-function MobileContent({ showEditor, sidebarTab, setSidebarTab, editor, sidebar }: { showEditor: boolean; sidebarTab: SidebarTab; setSidebarTab: (tab: SidebarTab) => void; editor: ReactNode; sidebar: ReactNode }) {
+function MobileContent({ showEditor, sidebarTab, setSidebarTab, onOpenGraph, editor, sidebar }: { showEditor: boolean; sidebarTab: SidebarTab; setSidebarTab: (tab: SidebarTab) => void; onOpenGraph: () => void; editor: ReactNode; sidebar: ReactNode }) {
   return (
     <>
       <main className="min-h-0 flex-1 overflow-hidden">
@@ -87,7 +92,7 @@ function MobileContent({ showEditor, sidebarTab, setSidebarTab, editor, sidebar 
           <div className="mobile-editor-pane h-full min-h-0">{editor}</div>
         ) : (
           <div className="flex h-full min-h-0 flex-col overflow-hidden">
-            <MobileListTabs active={sidebarTab} onChange={setSidebarTab} />
+            <MobileListTabs active={sidebarTab} onChange={setSidebarTab} onOpenGraph={onOpenGraph} />
             <div className="mobile-list-content min-h-0 flex-1 overflow-hidden">{sidebar}</div>
           </div>
         )}
@@ -105,7 +110,7 @@ function MobileContent({ showEditor, sidebarTab, setSidebarTab, editor, sidebar 
   );
 }
 
-function MobileWorkspaceDialogs({ repoPath, conflictOpen, commitOpen, onCloseConflict, onCloseCommit }: { repoPath: string | null; conflictOpen: boolean; commitOpen: boolean; onCloseConflict: () => void; onCloseCommit: () => void }) {
+function MobileWorkspaceDialogs({ repoPath, conflictOpen, commitOpen, graphOpen, onCloseConflict, onCloseCommit, onCloseGraph }: { repoPath: string | null; conflictOpen: boolean; commitOpen: boolean; graphOpen: boolean; onCloseConflict: () => void; onCloseCommit: () => void; onCloseGraph: () => void }) {
   return (
     <>
       {conflictOpen ? (
@@ -116,6 +121,11 @@ function MobileWorkspaceDialogs({ repoPath, conflictOpen, commitOpen, onCloseCon
       {commitOpen ? (
         <Suspense fallback={null}>
           <LazyCommitDialog repoPath={repoPath} onClose={onCloseCommit} />
+        </Suspense>
+      ) : null}
+      {graphOpen ? (
+        <Suspense fallback={null}>
+          <LazyGitGraphPanel repoPath={repoPath} open onClose={onCloseGraph} />
         </Suspense>
       ) : null}
     </>
@@ -151,19 +161,20 @@ function MobileSearchButton() {
   return <MobileIconButton label={t("palette.searchNotes")} icon={Search} onClick={useCommandPaletteStore.getState().openPalette} />;
 }
 
-function MobileListTabs({ active, onChange }: { active: SidebarTab; onChange: (tab: SidebarTab) => void }) {
+function MobileListTabs({ active, onChange, onOpenGraph }: { active: SidebarTab; onChange: (tab: SidebarTab) => void; onOpenGraph: () => void }) {
   const { t } = useTranslation();
-  const tabs: { id: SidebarTab; label: string; icon: LucideIcon }[] = [
+  const tabs: { id: SidebarTab | "graph"; label: string; icon: LucideIcon }[] = [
     { id: "tree", label: t("tree.label"), icon: FolderTree },
     { id: "recent", label: t("app.recent"), icon: Clock },
     { id: "favorites", label: t("app.favorites"), icon: Star },
     { id: "tags", label: t("wiki.tags"), icon: Hash },
     { id: "trash", label: t("trash.title"), icon: Trash2 },
+    { id: "graph", label: t("graph.title"), icon: GitGraph },
   ];
   return (
     <div className="mobile-list-tabs flex shrink-0 items-center gap-1 overflow-x-auto border-b border-border bg-bg-primary px-2 py-1.5" role="tablist" aria-label={t("app.workspaceNavigation")}>
       {tabs.map(({ id, label, icon: Icon }) => (
-        <button key={id} type="button" role="tab" aria-selected={active === id} className={`mobile-list-tab ${active === id ? "is-active" : ""}`} onClick={() => onChange(id)}>
+        <button key={id} type="button" role="tab" aria-selected={active === id} className={`mobile-list-tab ${active === id ? "is-active" : ""}`} onClick={() => (id === "graph" ? onOpenGraph() : onChange(id))}>
           <Icon size={14} aria-hidden="true" />
           {label}
         </button>

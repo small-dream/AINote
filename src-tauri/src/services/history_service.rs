@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use crate::domain::error::AppError;
-use crate::domain::history::{CommitInfo, FileDiff};
+use crate::domain::history::{CommitInfo, FileDiff, RepoCommit};
 use crate::repositories::git_backend::GitBackend;
 use crate::repositories::note_files;
 
@@ -27,6 +27,15 @@ pub fn file_diff<B: GitBackend>(
     let file = validate_file(file)?;
     validate_commit(commit_id)?;
     backend.file_diff(&repo_path.to_string_lossy(), &file, commit_id)
+}
+
+/// 用例：全仓提交历史（含每 commit 直接改动的文件），供 Repo Git Graph 面板。
+pub fn repo_history<B: GitBackend>(
+    backend: &B,
+    repo_path: &Path,
+    limit: usize,
+) -> Result<Vec<RepoCommit>, AppError> {
+    backend.repo_history(&repo_path.to_string_lossy(), limit)
 }
 
 /// 用例：把文件恢复到指定提交版本（写入工作区，不自动提交）。

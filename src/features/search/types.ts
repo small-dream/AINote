@@ -11,4 +11,6 @@ export interface CommandPaletteActions {
   onInsertCallout?: () => void;
   /** 打开手动提交面板（阶段 A） */
   onRequestCommit?: () => void;
+  /** 打开 Repo Git Graph 面板（阶段 B） */
+  onRequestGraph?: () => void;
 }

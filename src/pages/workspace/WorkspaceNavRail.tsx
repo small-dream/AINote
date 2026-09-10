@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from "react";
-import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, GitCommitHorizontal, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
+import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, GitCommitHorizontal, GitGraph, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
 import type { SyncController } from "@/features/sync/hooks/useSync";
 import { deriveSyncFailure, deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
 import { useUiStore } from "@/stores/ui.store";
@@ -7,6 +7,7 @@ import { useTranslation } from "@/i18n";
 
 const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
 const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
+const LazyGitGraphPanel = lazy(() => import("@/features/git-graph/components/GitGraphPanel").then(({ GitGraphPanel }) => ({ default: GitGraphPanel })));
 
 interface WorkspaceNavRailProps {
   repoPath: string | null;
@@ -35,6 +36,7 @@ export function WorkspaceNavRail({ repoPath, startupSyncing, sync }: WorkspaceNa
       <div data-tauri-drag-region className="h-11 w-full shrink-0" aria-hidden="true" />
       <SyncNavButton repoPath={repoPath} startupSyncing={startupSyncing} sync={sync} />
       <CommitNavButton repoPath={repoPath} sync={sync} />
+      <GraphNavButton repoPath={repoPath} />
       <NavigationItems />
       <SettingsNavButton />
     </nav>
@@ -117,6 +119,31 @@ function CommitNavButton({ repoPath, sync }: { repoPath: string | null; sync: Sy
       {commitOpen ? (
         <Suspense fallback={null}>
           <LazyCommitDialog repoPath={repoPath} onClose={() => setCommitOpen(false)} />
+        </Suspense>
+      ) : null}
+    </>
+  );
+}
+
+/** Repo Git Graph 入口：全仓提交历史与每 commit 改动文件（阶段 B）。 */
+function GraphNavButton({ repoPath }: { repoPath: string | null }) {
+  const { t } = useTranslation();
+  const [graphOpen, setGraphOpen] = useState(false);
+  return (
+    <>
+      <button
+        type="button"
+        aria-label={t("graph.title")}
+        title={t("graph.title")}
+        onClick={() => setGraphOpen(true)}
+        className={`${NAV_BUTTON_CLASS} mb-4`}
+      >
+        <GitGraph size={18} />
+        <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{t("graph.title")}</span>
+      </button>
+      {graphOpen ? (
+        <Suspense fallback={null}>
+          <LazyGitGraphPanel repoPath={repoPath} open onClose={() => setGraphOpen(false)} />
         </Suspense>
       ) : null}
     </>

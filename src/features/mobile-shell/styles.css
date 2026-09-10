@@ -109,6 +109,10 @@
   .history-panel-body { flex-direction: column; }
   .history-panel-body > ul { width: 100% !important; max-height: 34dvh; border-right: 0; border-bottom: 1px solid var(--border); }
   .history-panel-body > section { border-left: 0; }
+  .graph-panel-body { flex-direction: column; }
+  .graph-panel-body > section { width: 100% !important; max-height: 30dvh; border-right: 0; border-left: 0; border-bottom: 1px solid var(--border); }
+  .graph-panel-body > section:last-child { max-height: none; border-bottom: 0; }
+
   .conflict-panel-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr); overflow-y: auto; }
   .conflict-panel-body > section { border-right: 0; }
 }

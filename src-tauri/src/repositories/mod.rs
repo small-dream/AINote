@@ -8,6 +8,7 @@ pub mod file_tree;
 pub mod git2_backend;
 pub(crate) mod git2_error;
 pub mod git2_history;
+pub mod git2_graph;
 pub mod git2_maintenance;
 pub mod git2_remote;
 pub mod git_backend;

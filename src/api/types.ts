@@ -166,6 +166,20 @@ export interface FileDiff {
   lines: DiffLine[];
 }
 
+/** git_repo_history 返回：Repo Git Graph 的一条提交（含其直接改动的文件） */
+export interface RepoCommit {
+  id: string;
+  shortId: string;
+  message: string;
+  author: string;
+  /** 提交时间（Unix 秒） */
+  timestamp: number;
+  /** 全部父提交 id（merge commit 有多个） */
+  parents: string[];
+  /** 相对首父提交直接改动的文件（A/M/D） */
+  files: ChangedFile[];
+}
+
 /** import_asset / import_asset_bytes 返回：资产在仓库中的相对路径 */
 export interface AssetInfo {
   path: string;

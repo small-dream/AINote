@@ -1,5 +1,5 @@
 import { call } from "./client";
-import type { CommitInfo, FileDiff } from "./types";
+import type { CommitInfo, FileDiff, RepoCommit } from "./types";
 
 /** Git 版本历史 / Diff / 回滚 IPC（P1-1） */
 export const historyApi = {
@@ -11,4 +11,6 @@ export const historyApi = {
   /** 把文件恢复到指定提交版本（写入工作区） */
   restore: (file: string, commitId: string) =>
     call<null>("git_restore_file", { file, commitId }),
+  /** 全仓提交历史（含每 commit 直接改动的文件），按时间倒序 */
+  repoHistory: (limit: number) => call<RepoCommit[]>("git_repo_history", { limit }),
 };

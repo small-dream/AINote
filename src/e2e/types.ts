@@ -13,6 +13,14 @@ export interface E2eVersionSeed {
   content: string;
 }
 
+/** Repo Git Graph 种子：每条提交含直接改动的文件（git_repo_history 返回） */
+export interface E2eRepoHistorySeed {
+  id: string;
+  message: string;
+  /** 相对仓库根目录的路径 */
+  files: Array<{ path: string; status: "added" | "modified" | "deleted" }>;
+}
+
 export interface E2eConflictSeed {
   path: string;
   local: string;
@@ -37,6 +45,8 @@ export interface E2eState {
   /** 仓库相对路径 → data-uri，用于图片加载测试 */
   assets?: Record<string, string>;
   versions?: Record<string, E2eVersionSeed[]>;
+  /** 全仓提交历史（Git Graph 用）；缺省时由 versions 聚合 */
+  repoHistory?: E2eRepoHistorySeed[];
   /** 模拟有待提交变更（手动提交入口与面板用） */
   uncommitted?: boolean;
   /** 工作区待提交变更（git_status_files 返回） */
