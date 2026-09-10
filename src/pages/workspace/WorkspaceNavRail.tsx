@@ -32,7 +32,7 @@ const NAV_TOOLTIP_CLASS = "pointer-events-none absolute left-full top-1/2 z-50 m
 export function WorkspaceNavRail({ repoPath, startupSyncing, sync }: WorkspaceNavRailProps) {
   const { t } = useTranslation();
   return (
-    <nav className="workspace-nav-rail flex w-[72px] shrink-0 flex-col items-center border-r border-border bg-bg-tertiary px-2 pb-3" aria-label={t("app.workspaceNavigation")}>
+    <nav className="workspace-nav-rail flex w-[72px] shrink-0 flex-col items-center gap-1.5 border-r border-border bg-bg-tertiary px-2 pb-3" aria-label={t("app.workspaceNavigation")}>
       <div data-tauri-drag-region className="h-11 w-full shrink-0" aria-hidden="true" />
       <SyncNavButton repoPath={repoPath} startupSyncing={startupSyncing} sync={sync} />
       <NavigationItems />
@@ -48,13 +48,13 @@ function NavigationItems() {
   const sidebarTab = useUiStore((state) => state.sidebarTab);
   const setSidebarTab = useUiStore((state) => state.setSidebarTab);
   return (
-    <div className="mb-4 flex w-full flex-col items-center gap-1.5">
+    <>
       {NAV_ITEMS.map(({ key, icon: Icon, sidebarTab: targetTab }) => {
         const label = t(key);
         const active = sidebarTab === targetTab;
         return <button key={key} type="button" aria-label={label} aria-current={active ? "page" : undefined} title={label} onClick={() => setSidebarTab(targetTab)} className={`${NAV_BUTTON_CLASS} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /><span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{label}</span></button>;
       })}
-    </div>
+    </>
   );
 }
 
@@ -88,7 +88,7 @@ function SyncNavButton({ repoPath, startupSyncing, sync }: WorkspaceNavRailProps
         title={tip}
         onClick={() => (hasConflict ? setConflictOpen(true) : syncNow.mutate())}
         disabled={display.busy || (!online && !hasConflict)}
-        className={`group relative mb-1.5 grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${SYNC_COLOR[tone]}`}
+        className={`group relative grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${SYNC_COLOR[tone]}`}
       >
         <Icon size={19} className={display.busy ? "animate-spin" : ""} />
         <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{tip}</span>
@@ -110,7 +110,7 @@ function CommitNavButton({ repoPath, sync }: { repoPath: string | null; sync: Sy
         aria-label={t("commit.title")}
         title={t("commit.title")}
         onClick={() => setCommitOpen(true)}
-        className={`${NAV_BUTTON_CLASS} relative mb-4`}
+        className={`${NAV_BUTTON_CLASS} relative`}
       >
         <GitCommitHorizontal size={18} />
         {hasUncommitted ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-warning" aria-hidden="true" /> : null}
@@ -136,7 +136,7 @@ function GraphNavButton({ repoPath }: { repoPath: string | null }) {
         aria-label={t("graph.title")}
         title={t("graph.title")}
         onClick={() => setGraphOpen(true)}
-        className={`${NAV_BUTTON_CLASS} mb-4`}
+        className={NAV_BUTTON_CLASS}
       >
         <GitGraph size={18} />
         <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{t("graph.title")}</span>

@@ -18,6 +18,20 @@ test.describe("AINote 桌面核心流程", () => {
     expect(labels.slice(0, 3)).toEqual(["立即同步", "笔记", "最近"]);
   });
 
+  test("导航轨：相邻入口间距一致", async ({ page }) => {
+    await openWorkspace(page, baseState([{ path: "first.md", content: "# 第一篇" }]));
+    const gaps = await page.locator(".workspace-nav-rail button").evaluateAll((nodes) => {
+      const rects = nodes.map((node) => node.getBoundingClientRect());
+      // 末位「设置」由 mt-auto 顶到底部，间距不参与一致性比较
+      return rects.slice(0, -2).flatMap((rect, index) => {
+        const next = rects[index + 1];
+        return next ? [Math.round(next.top - rect.bottom)] : [];
+      });
+    });
+    expect(gaps.length).toBeGreaterThan(0);
+    expect(new Set(gaps).size).toBe(1);
+  });
+
   test("最近面板：清空按钮与面板标题垂直居中对齐", async ({ page }) => {
     await openWorkspace(page, baseState([
       { path: "a.md", content: "# A" },
