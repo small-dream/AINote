@@ -224,6 +224,13 @@ mod tests {
                 let path = inner.path();
                 if path.is_file() {
                     let mut perms = fs::metadata(&path).unwrap().permissions();
+                    // 测试辅助：把只读的 loose object 改为可写，便于写入损坏内容。
+                    #[cfg(unix)]
+                    {
+                        use std::os::unix::fs::PermissionsExt;
+                        perms.set_mode(0o600);
+                    }
+                    #[cfg(not(unix))]
                     perms.set_readonly(false);
                     fs::set_permissions(&path, perms).unwrap();
                     let mut file = fs::File::create(&path).unwrap();

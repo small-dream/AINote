@@ -16,6 +16,14 @@ export default tseslint.config(
       "max-lines-per-function": ["error", { max: 60, skipBlankLines: true, skipComments: true }],
       complexity: ["error", 12],
       "@typescript-eslint/no-explicit-any": "error",
+      // 渲染库会把整个 props 透传给自定义组件（如 react-markdown 的 `node`），
+      // 解构后丢弃个别字段是惯用写法：允许用 `_` 前缀显式标记「有意忽略」。
+      "@typescript-eslint/no-unused-vars": ["error", {
+        argsIgnorePattern: "^_",
+        varsIgnorePattern: "^_",
+        caughtErrorsIgnorePattern: "^_",
+        ignoreRestSiblings: true,
+      }],
       // dependency boundary: Tauri IPC only inside src/api/
       "no-restricted-imports": ["error", {
         patterns: [

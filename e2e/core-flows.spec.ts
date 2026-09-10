@@ -70,7 +70,7 @@ test.describe("AINote 桌面核心流程", () => {
     await expect(page.locator(".cm-content").first()).not.toContainText("这是第一份内容");
   });
 
-  test("自动保存：停止输入后 3s 自动写盘并回到已保存状态", async ({ page }) => {
+  test("自动保存：变更后 3s 内自动写盘并回到已保存状态", async ({ page }) => {
     await openWorkspace(page, baseState([{ path: "auto.md", content: "# 自动保存\n" }]));
     await openNote(page, "auto", "自动保存");
     const editor = page.locator(".cm-content").first();

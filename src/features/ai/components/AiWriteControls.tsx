@@ -22,7 +22,7 @@ export function AiWriteControls({ ai, canSummarize = false, canSuggest = false, 
     <>
       <AiWriteMenu open={ai.menuOpen} hasSelection={ai.hasSelection} canSummarize={canSummarize} canSuggest={canSuggest} onPick={ai.run} {...(suggest ? { onTitleSuggest: suggest.startTitle, onOutlineSuggest: suggest.startOutline } : {})} onAsk={() => useUiStore.getState().openAskAi()} onClose={ai.closeMenu} />
       <AiPreviewDialog
-        open={ai.preview !== null || ai.loading}
+        open={ai.open}
         text={ai.preview ?? ""}
         error={ai.error}
         loading={ai.loading}

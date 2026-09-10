@@ -3,12 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MarkdownPreview } from "./MarkdownPreview";
 
 const assetUrlMock = vi.hoisted(() => vi.fn((path: string) => `asset://${path}`));
+const openLinkMock = vi.hoisted(() => vi.fn(() => Promise.resolve()));
 
 beforeEach(() => {
   assetUrlMock.mockClear();
+  openLinkMock.mockClear();
 });
 
 vi.mock("@/api", () => ({ assetUrl: assetUrlMock }));
+vi.mock("@/platform/open-link", () => ({
+  isExternalHttpUrl: (url?: string | null) => typeof url === "string" && /^https?:\/\//i.test(url),
+  openExternalLink: openLinkMock,
+}));
 
 describe("MarkdownPreview data-line", () => {
   it("为块级元素注入 data-line（Markdown 起始行号）", () => {
@@ -46,6 +52,29 @@ describe("MarkdownPreview 本地资产图片渲染（P1-4）", () => {
     const img = container.querySelector("img");
     expect(img?.getAttribute("src")).toBe("https://example.com/a.png");
     expect(assetUrlMock).not.toHaveBeenCalled();
+  });
+});
+
+describe("MarkdownPreview 外链打开（与编辑区一致）", () => {
+  it("http 外链点击交给系统浏览器并阻止默认导航", () => {
+    const { container } = render(<MarkdownPreview content={"[站点](https://example.com/a)"} />);
+    const link = container.querySelector("a");
+    expect(link?.getAttribute("target")).toBeNull();
+
+    const notPrevented = fireEvent.click(link as Element);
+
+    expect(notPrevented).toBe(false);
+    expect(openLinkMock).toHaveBeenCalledWith("https://example.com/a");
+  });
+
+  it("非 http 链接保持原生链接行为，不触发系统浏览器", () => {
+    const { container } = render(<MarkdownPreview content={"[邮件](mailto:a@example.com)"} />);
+    const link = container.querySelector("a");
+    expect(link?.getAttribute("target")).toBe("_blank");
+
+    fireEvent.click(link as Element);
+
+    expect(openLinkMock).not.toHaveBeenCalled();
   });
 });
 
@@ -138,10 +167,11 @@ describe("MarkdownPreview P1 预览增强", () => {
     expect(container.querySelector(".markdown-code-toolbar button")).toBeTruthy();
   });
 
-  it("外部链接使用新窗口安全属性", () => {
+  it("外部链接保留 href 与安全属性，交由系统浏览器打开", () => {
     const { container } = render(<MarkdownPreview content={"[文档](https://example.com)"} />);
     const link = container.querySelector("a:not(.wiki-link)");
-    expect(link?.getAttribute("target")).toBe("_blank");
+    expect(link?.getAttribute("href")).toBe("https://example.com");
+    expect(link?.getAttribute("target")).toBeNull();
     expect(link?.getAttribute("rel")).toBe("noreferrer");
   });
 

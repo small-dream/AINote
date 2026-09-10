@@ -174,6 +174,7 @@ const commandHandlers: Record<string, CommandHandler> = {
     return null;
   },
   confirm_close: () => null,
+  set_draft_dirty: () => null,
   git_pull: (_args, ctx) => syncStatus(ctx.store),
   git_push: (_args, ctx) => syncStatus(ctx.store),
   git_commit: () => "e2e-commit",

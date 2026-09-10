@@ -2,6 +2,7 @@ import { useState } from "react";
 import { messageOf, repoApi } from "@/api";
 import { Button } from "@/components/atoms/Button";
 import { useTranslation } from "@/i18n";
+import { flushPendingDrafts } from "@/features/note/utils/draftRegistry";
 
 interface CreateRepoFormProps {
   onBound: (repoPath: string) => void;
@@ -21,6 +22,8 @@ export function CreateRepoForm({ onBound }: CreateRepoFormProps) {
     setBusy(true);
     setError(null);
     try {
+      // 建仓成功后端会切换活动仓库，必须先落盘当前仓库的草稿。
+      await flushPendingDrafts();
       onBound((await repoApi.create(trimmed, isPrivate)).repoPath);
     } catch (err) {
       setError(messageOf(err));

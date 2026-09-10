@@ -32,7 +32,7 @@ fn write_manifest(root: &Path, items: &[TrashItem]) -> Result<(), AppError> {
 /// 按删除时间倒序返回全部回收站条目。
 pub fn list(root: &Path) -> Result<Vec<TrashItem>, AppError> {
     let mut items = read_manifest(root)?;
-    items.sort_by(|a, b| b.deleted_at.cmp(&a.deleted_at));
+    items.sort_by_key(|item| std::cmp::Reverse(item.deleted_at));
     Ok(items)
 }
 

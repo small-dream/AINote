@@ -28,6 +28,7 @@ pub fn run() {
         .manage(commands::repo::backup::BackupState::default())
         .manage(commands::git::sync::SyncRetryState::default())
         .manage(commands::close_guard::CloseGuard::default())
+        .manage(commands::close_guard::DraftState::default())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 #[cfg(desktop)]
@@ -40,7 +41,7 @@ pub fn run() {
                     {
                         return;
                     }
-                    let pending = config::load_repo_path(app)
+                    let has_uncommitted = config::load_repo_path(app)
                         .ok()
                         .flatten()
                         .and_then(|path| {
@@ -50,6 +51,9 @@ pub fn run() {
                                 .ok()
                         })
                         .unwrap_or(false);
+                    // 未落盘草稿尚未写进工作区，git status 看不到，需由前端上报（见 set_draft_dirty）。
+                    let draft_dirty = app.state::<commands::close_guard::DraftState>().get();
+                    let pending = has_uncommitted || draft_dirty;
                     if commands::close_guard::should_intercept(false, pending) {
                         api.prevent_close();
                         let _ = window.emit("app:close-requested", ());
@@ -148,6 +152,7 @@ pub fn run() {
             commands::asset::import_bytes::import_asset_bytes,
             commands::app::open_external,
             commands::close_guard::confirm_close,
+            commands::close_guard::set_draft_dirty,
             commands::print::print_current_page,
             commands::support::log_frontend::log_frontend,
             commands::support::export::export_diagnostics,
@@ -158,7 +163,7 @@ pub fn run() {
             commands::metrics::metrics_record,
             commands::metrics::metrics_clear,
             commands::metrics::metrics_set_enabled,
-            commands::metrics::metrics_export,
+            commands::metrics::export::metrics_export,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AINote");

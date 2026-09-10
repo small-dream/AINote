@@ -74,8 +74,8 @@ function RepoDialogs(props: RepoDialogsProps) {
   return (
     <>
       <AddRepoDialog open={props.addOpen} onClose={props.onCloseAdd} onAdded={props.onAdded} />
-      <RenameRepoDialog key={props.renaming?.id ?? "none"} repo={props.renaming} onClose={props.onCloseRename} onSubmit={props.onRename} />
-      <RemoveRepoDialog key={props.removing?.id ?? "none"} repo={props.removing} onClose={props.onCloseRemove} onConfirm={props.onRemove} />
+      <RenameRepoDialog key={`rename:${props.renaming?.id ?? "none"}`} repo={props.renaming} onClose={props.onCloseRename} onSubmit={props.onRename} />
+      <RemoveRepoDialog key={`remove:${props.removing?.id ?? "none"}`} repo={props.removing} onClose={props.onCloseRemove} onConfirm={props.onRemove} />
     </>
   );
 }

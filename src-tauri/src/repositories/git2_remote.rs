@@ -88,12 +88,16 @@ pub fn pull(path: &str, token: &str) -> Result<(), AppError> {
 }
 
 fn fast_forward(repo: &Repository, branch: &str, target: git2::Oid) -> Result<(), AppError> {
+    // 先检出再移动分支引用：检出失败（如工作区仍有本地改动）时分支保持原状，不留下半完成状态。
+    // 不用 force：理论上 sync 已先提交，万一仍撞上本地改动，宁可报错也不静默覆盖。
+    let object = repo.find_object(target, None).map_err(to_git)?;
+    repo.checkout_tree(&object, Some(CheckoutBuilder::new().safe()))
+        .map_err(to_git)?;
     repo.find_reference(&format!("refs/heads/{branch}"))
         .map_err(to_git)?
         .set_target(target, "fast-forward")
-        .map_err(to_git)?;
-    repo.checkout_head(Some(CheckoutBuilder::new().force()))
         .map_err(to_git)
+        .map(|_| ())
 }
 
 fn merge_or_conflict(repo: &Repository, their: &AnnotatedCommit) -> Result<(), AppError> {

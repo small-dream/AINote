@@ -1,11 +1,12 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppError } from "@/api";
 import { useNoteContentQuery } from "@/queries/note.queries";
 import { useNoteReload } from "./useNoteReload";
 import { useNoteSaveQueue } from "./useNoteSaveQueue";
 import { noteKindOfPath } from "../utils/noteKind";
+import { publishDraftState, registerDraft } from "../utils/draftRegistry";
 
-/** 自动保存防抖时长：停止输入 3 秒后写入本地文件。 */
+/** 自动保存窗口：首次变更后最长 3 秒写入本地文件（连续输入期间同样会落盘，不会无限推迟）。 */
 export const AUTOSAVE_DEBOUNCE_MS = 3_000;
 
 export interface NoteEditorHandle {
@@ -30,6 +31,14 @@ export function useNoteEditor(repoPath: string | null, notePath: string | null, 
   const kind = contentQuery.data?.kind ?? (notePath ? noteKindOfPath(notePath) : "markdown");
 
   const { flush, reset, saving, saveError } = useNoteSaveQueue({ repoPath, notePath, draft, dirty, setDirty, isLoaded, debounceMs: AUTOSAVE_DEBOUNCE_MS });
+
+  // 登记未落盘草稿：关闭窗口 / 切换仓库前由 draftRegistry 统一 flush 并上报 Rust。
+  const dirtyRef = useRef(dirty);
+  useEffect(() => {
+    dirtyRef.current = dirty;
+    publishDraftState();
+  }, [dirty]);
+  useEffect(() => registerDraft({ flush, isDirty: () => dirtyRef.current }), [flush]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {

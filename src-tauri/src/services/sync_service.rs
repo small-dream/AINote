@@ -78,11 +78,19 @@ pub fn format_now() -> String {
 }
 
 /// 用例：拉取远端（冲突时返回 Conflict 错误，状态可查）
+///
+/// 独立拉取不做「提交兜底」（只有 `sync` 才有），因此工作区存在本地修改时直接拒绝：
+/// fast-forward 会覆盖这些改动，静默丢数据比返回一个可读错误更糟。
 pub fn pull<B: GitBackend>(
     backend: &B,
     repo_path: &Path,
     token: &str,
 ) -> Result<SyncStatus, AppError> {
+    if backend.has_uncommitted(&repo_path.to_string_lossy())? {
+        return Err(AppError::Repo(
+            "存在未提交的本地修改，请先提交或撤销后再拉取".into(),
+        ));
+    }
     let mut ctx = RetryContext::background();
     pull_stage(backend, repo_path, token, &mut ctx)?;
     status(backend, repo_path)
@@ -355,6 +363,31 @@ mod tests {
             local: "本地".into(),
             remote: "远端".into(),
         }
+    }
+
+    #[test]
+    fn pull_rejects_dirty_worktree_without_touching_remote() {
+        let mock = MockGitBackend {
+            uncommitted: true,
+            ..Default::default()
+        };
+
+        let error = pull(&mock, &root(), "tok").unwrap_err();
+
+        assert!(matches!(error, AppError::Repo(_)), "给出可读的拒绝原因");
+        assert!(
+            mock.recorded().is_empty(),
+            "工作区不干净时不发起任何拉取操作，避免 fast-forward 覆盖本地改动"
+        );
+    }
+
+    #[test]
+    fn pull_runs_when_worktree_clean() {
+        let mock = MockGitBackend::default();
+
+        pull(&mock, &root(), "tok").unwrap();
+
+        assert_eq!(mock.recorded(), vec!["pull"]);
     }
 
     #[test]

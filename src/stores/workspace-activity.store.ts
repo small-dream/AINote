@@ -5,7 +5,7 @@ interface WorkspaceActivityState {
   markActivity: () => void;
 }
 
-/** 工作区文件变更版本；用于让空闲提交计时器在每次落盘操作后重新计时。 */
+/** 工作区文件变更版本；每次落盘（保存/导入/移动等）后自增，供依赖「最近是否有写入」的 UI 复用。 */
 export const useWorkspaceActivityStore = create<WorkspaceActivityState>((set) => ({
   version: 0,
   markActivity: () => set((state) => ({ version: state.version + 1 })),

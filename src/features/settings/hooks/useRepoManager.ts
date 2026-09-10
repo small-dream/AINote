@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { repoApi } from "@/api";
 import type { RepoInfo } from "@/api/types";
 import { useSessionStore } from "@/stores/session.store";
+import { flushPendingDrafts } from "@/features/note/utils/draftRegistry";
 
 export const repoKeys = {
   list: ["repos"] as const,
@@ -36,7 +37,11 @@ export function useRepoManager() {
   });
 
   const remove = useMutation({
-    mutationFn: (id: string) => repoApi.remove(id),
+    // 先落盘再切换：Rust 侧命令会改活动仓库，切换后才保存会把草稿写进新仓库。
+    mutationFn: async (id: string) => {
+      await flushPendingDrafts();
+      return repoApi.remove(id);
+    },
     onSuccess: (newActive) => {
       void queryClient.invalidateQueries({ queryKey: repoKeys.list });
       const current = useSessionStore.getState().repoPath;
@@ -50,7 +55,10 @@ export function useRepoManager() {
   });
 
   const activate = useMutation({
-    mutationFn: (id: string) => repoApi.switchRepo(id),
+    mutationFn: async (id: string) => {
+      await flushPendingDrafts();
+      return repoApi.switchRepo(id);
+    },
     onSuccess: (path) => {
       void queryClient.invalidateQueries({ queryKey: repoKeys.list });
       switchRepo(path);

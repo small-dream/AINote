@@ -72,4 +72,30 @@ describe("useAiSuggest 大纲建议", () => {
     expect(insertOutline).toHaveBeenCalledWith("- 第一节\n  - 小节");
     expect(result.current.kind).toBeNull();
   });
+
+  it("生成过程中关闭：丢弃后续增量与最终结果", async () => {
+    let emit: (delta: string) => void = () => undefined;
+    let resolveStream: (text: string) => void = () => undefined;
+    aiApiMock.generateStream.mockImplementation((_system: string, _prompt: string, onChunk: (delta: string) => void) =>
+      new Promise<string>((resolve) => {
+        emit = onChunk;
+        resolveStream = resolve;
+      }),
+    );
+    const { result } = setup();
+    act(() => result.current.startTitle());
+    act(() => emit("1. 标题甲"));
+    expect(result.current.text).toBe("1. 标题甲");
+
+    act(() => result.current.close());
+    expect(result.current.kind).toBeNull();
+
+    act(() => {
+      emit("\n2. 标题乙");
+      resolveStream("最终候选");
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.text).toBe("");
+    expect(result.current.kind).toBeNull();
+  });
 });

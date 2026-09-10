@@ -1,7 +1,7 @@
-use serde_json::Value;
+//! 富文本（TipTap JSON）的纯文本/标题提取与默认模板。
+//! 零业务依赖，供 note/search/wiki 各层复用。
 
-/// 富文本（TipTap JSON）的纯文本/标题提取与默认模板。
-/// 零业务依赖，供 note/search/wiki 各层复用。
+use serde_json::Value;
 
 /// 新建富文本笔记的默认模板：一级标题「未命名」+ 空段落。
 pub fn default_template() -> String {

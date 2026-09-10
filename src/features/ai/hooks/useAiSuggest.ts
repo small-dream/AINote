@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { aiApi, messageOf } from "@/api";
 import { useAiModelStore } from "@/stores/aiModel.store";
 import { buildSuggestPrompt, suggestSystem, type AiSuggestKind } from "../utils/prompts";
@@ -20,8 +20,11 @@ export function useAiSuggest({ noteText, onApplyTitle, onInsertOutline }: UseAiS
   const [text, setText] = useState("");
   const [error, setError] = useState<string | null>(null);
   const titles = useMemo(() => (kind === "title" ? parseTitleSuggestions(text) : []), [kind, text]);
+  /** 请求序号：关闭或重新生成时自增，旧请求的增量与结果据此丢弃。 */
+  const requestRef = useRef(0);
   const start = useCallback(
     (next: AiSuggestKind) => {
+      const requestId = ++requestRef.current;
       setKind(next);
       setLoading(true);
       setText("");
@@ -29,16 +32,17 @@ export function useAiSuggest({ noteText, onApplyTitle, onInsertOutline }: UseAiS
       aiApi.generateStream(
         suggestSystem(next),
         buildSuggestPrompt(next, noteText),
-        (delta) => setText((prev) => prev + delta),
+        (delta) => { if (requestRef.current === requestId) setText((prev) => prev + delta); },
         useAiModelStore.getState().selectedModelId,
       )
-        .then((full) => setText(full))
-        .catch((err: unknown) => setError(messageOf(err)))
-        .finally(() => setLoading(false));
+        .then((full) => { if (requestRef.current === requestId) setText(full); })
+        .catch((err: unknown) => { if (requestRef.current === requestId) setError(messageOf(err)); })
+        .finally(() => { if (requestRef.current === requestId) setLoading(false); });
     },
     [noteText],
   );
-  const close = useCallback(() => { setKind(null); setText(""); setError(null); }, []);
+  /** 关闭建议面板：在途结果失效，避免关闭后文本被回填。 */
+  const close = useCallback(() => { requestRef.current += 1; setKind(null); setText(""); setError(null); setLoading(false); }, []);
   const pickTitle = useCallback((title: string) => { onApplyTitle(title); close(); }, [onApplyTitle, close]);
   const insertOutline = useCallback(() => { onInsertOutline(text); close(); }, [text, onInsertOutline, close]);
   return { kind, loading, text, error, titles, startTitle: () => start("title"), startOutline: () => start("outline"), pickTitle, insertOutline, close };

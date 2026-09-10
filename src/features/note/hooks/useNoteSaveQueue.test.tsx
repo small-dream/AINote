@@ -5,6 +5,9 @@ import { useNoteSaveQueue } from "./useNoteSaveQueue";
 const mutateAsync = vi.fn();
 const reset = vi.fn();
 
+/** 真实调用方的 isLoaded 来自 useNoteReload 的 useCallback（稳定引用），测试保持同样形状。 */
+const stableLoaded = () => true;
+
 vi.mock("@/queries/note.queries", () => ({
   useUpdateNoteMutation: () => ({ mutateAsync, reset, error: null }),
 }));
@@ -73,5 +76,39 @@ describe("useNoteSaveQueue", () => {
     const { rerender } = setup();
     rerender();
     await waitFor(() => expect(reset).toHaveBeenCalled());
+  });
+});
+
+describe("useNoteSaveQueue 落盘时机", () => {
+  it("连续输入不重置计时器：按首次变更起算 3 秒落盘（最长 3 秒延迟）", async () => {
+    vi.useFakeTimers();
+    try {
+      // 真实调用方（useNoteEditor → useNoteReload）的 isLoaded 是稳定引用；这里同样保持稳定，
+      // 否则 effect 依赖变化会掩盖「连续输入不重置计时器」这一行为。
+      const setDirty = vi.fn();
+      const { rerender } = renderHook(
+        ({ draft }: { draft: string }) =>
+          useNoteSaveQueue({
+            repoPath: "/repo",
+            notePath: "note.md",
+            draft,
+            dirty: true,
+            setDirty,
+            isLoaded: stableLoaded,
+            debounceMs: 3_000,
+          }),
+        { initialProps: { draft: "# 第一段" } },
+      );
+
+      await act(async () => { vi.advanceTimersByTime(2_000); });
+      rerender({ draft: "# 第一段第二段" });
+      await act(async () => { vi.advanceTimersByTime(999); });
+      expect(mutateAsync).not.toHaveBeenCalled();
+
+      await act(async () => { vi.advanceTimersByTime(1); });
+      expect(mutateAsync).toHaveBeenCalledWith({ path: "note.md", content: "# 第一段第二段" });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

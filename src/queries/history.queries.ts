@@ -41,7 +41,7 @@ export function useFileDiffQuery(
   });
 }
 
-/** 恢复文件到指定版本：写工作区 → 立即提交 → 刷新列表/树/同步，并让编辑器重载 */
+/** 恢复文件到指定版本：写工作区 → 刷新列表/树/同步，并让编辑器重载（不生成提交） */
 export function useRestoreFileMutation() {
   const queryClient = useQueryClient();
   return useMutation({

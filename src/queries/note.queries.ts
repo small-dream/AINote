@@ -40,7 +40,7 @@ interface ImportNoteInput {
   content: string;
 }
 
-/** 新建笔记：成功即本地 commit 版本化，并刷新列表/树/同步状态（P0-2） */
+/** 新建笔记：成功后刷新列表/树/wiki/同步状态（版本化由用户手动提交或同步前兜底，不再即时提交） */
 export function useCreateNoteMutation() {
   const queryClient = useQueryClient();
   return useMutation({
@@ -80,8 +80,10 @@ export function useUpdateNoteMutation(repoPath: string | null = null) {
     mutationFn: ({ path, content }: { path: string; content: string }) =>
       noteApi.update(path, content),
     onSuccess: (_data, { path, content }) => {
-      void queryClient.invalidateQueries({ queryKey: ["notes"] });
-      void queryClient.invalidateQueries({ queryKey: ["wiki"] });
+      // 自动保存每几秒触发一次：[notes]/[wiki] 都是全仓扫描，只标记过期、不立即重取，
+      // 面板下次挂载/聚焦时自然刷新；待提交徽标依赖的 [sync] 仍即时刷新。
+      void queryClient.invalidateQueries({ queryKey: ["notes"], refetchType: "none" });
+      void queryClient.invalidateQueries({ queryKey: ["wiki"], refetchType: "none" });
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       markActivity();
       void queryClient.setQueryData(noteKeys.content(repoPath, path), (old: NoteContent | undefined) =>
@@ -128,7 +130,7 @@ export function useMoveNoteMutation() {
   });
 }
 
-/** 转换笔记类型（.md ↔ .ainote），成功后提交 Git 并让调用方刷新当前笔记 */
+/** 转换笔记类型（.md ↔ .ainote），成功后刷新列表/树并让调用方打开新路径（不生成提交） */
 export function useConvertNoteMutation() {
   const queryClient = useQueryClient();
   const markActivity = useWorkspaceActivityStore((state) => state.markActivity);

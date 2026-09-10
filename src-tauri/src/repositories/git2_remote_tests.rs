@@ -3,6 +3,7 @@
 use std::path::Path;
 
 use super::{clone_repo, pull, push};
+use crate::domain::error::AppError;
 
 fn sig() -> git2::Signature<'static> {
     git2::Signature::now("t", "t@t").unwrap()
@@ -105,4 +106,38 @@ fn clone_commit_pull_push_roundtrip() {
     let remote_repo = git2::Repository::open(&bare).unwrap();
     let head = remote_repo.head().unwrap().peel_to_commit().unwrap();
     assert_eq!(head.message().unwrap(), "c2");
+}
+
+#[test]
+fn fast_forward_keeps_local_modification_instead_of_overwriting_it() {
+    let remote_dir = tempfile::tempdir().unwrap();
+    let bare = remote_dir.path().join("remote.git");
+    seed_bare(&bare);
+
+    let work = tempfile::tempdir().unwrap();
+    let local = work.path().join("repo");
+    clone_repo(&bare.to_string_lossy(), &local, "").unwrap();
+
+    // 远端前进：修改 seed.md 的新提交
+    {
+        let remote_repo = git2::Repository::open(&bare).unwrap();
+        commit_file(&remote_repo, "seed.md", "remote-change", "remote");
+    }
+    // 本地同一文件存在未提交修改
+    std::fs::write(local.join("seed.md"), "local-change").unwrap();
+
+    let error = pull(&local.to_string_lossy(), "").unwrap_err();
+
+    assert!(matches!(error, AppError::Git(_)), "检出冲突报错而不是静默覆盖");
+    assert_eq!(
+        std::fs::read_to_string(local.join("seed.md")).unwrap(),
+        "local-change",
+        "本地未提交内容必须保留"
+    );
+    let repo = git2::Repository::open(&local).unwrap();
+    assert_eq!(
+        repo.head().unwrap().peel_to_commit().unwrap().message().unwrap(),
+        "seed",
+        "检出失败时分支引用保持原状，不留下半完成状态"
+    );
 }

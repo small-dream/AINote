@@ -137,6 +137,39 @@ describe("useAiWrite 生成与落笔", () => {
     act(() => result.current.cancel());
     expect(apply).not.toHaveBeenCalled();
   });
+
+  it("生成过程中取消：关闭预览并丢弃后续增量与最终结果", async () => {
+    let emit: (delta: string) => void = () => undefined;
+    let resolveStream: (text: string) => void = () => undefined;
+    aiApiMock.generateStream.mockImplementation((_system: string, _prompt: string, onChunk: (delta: string) => void) =>
+      new Promise<string>((resolve) => {
+        emit = onChunk;
+        resolveStream = resolve;
+      }),
+    );
+    const { result, apply } = setup();
+    act(() => result.current.openMenu());
+    act(() => {
+      void result.current.run("polish");
+    });
+    expect(result.current.open).toBe(true);
+
+    act(() => emit("第一段"));
+    expect(result.current.preview).toBe("第一段");
+
+    act(() => result.current.cancel());
+    expect(result.current.open).toBe(false);
+    expect(result.current.preview).toBeNull();
+
+    act(() => {
+      emit("取消后的增量");
+      resolveStream("最终文本");
+    });
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.preview).toBeNull();
+    expect(result.current.open).toBe(false);
+    expect(apply).not.toHaveBeenCalled();
+  });
 });
 
 describe("useAiWrite 摘要与错误", () => {

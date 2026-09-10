@@ -2,17 +2,12 @@ use serde::{Deserialize, Serialize};
 
 /// AI Provider：统一走 OpenAI 兼容 chat/completions 协议。
 /// Ollama 通过其 /v1 兼容端点接入（无需 API Key）。
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum AiProvider {
+    #[default]
     OpenAiCompatible,
     Ollama,
-}
-
-impl Default for AiProvider {
-    fn default() -> Self {
-        AiProvider::OpenAiCompatible
-    }
 }
 
 impl AiProvider {

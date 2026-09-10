@@ -2,6 +2,7 @@ import { useState } from "react";
 import { messageOf, repoApi } from "@/api";
 import { Button } from "@/components/atoms/Button";
 import { useTranslation } from "@/i18n";
+import { flushPendingDrafts } from "@/features/note/utils/draftRegistry";
 
 interface BindRepoFormProps {
   onBound: (repoPath: string) => void;
@@ -20,6 +21,8 @@ export function BindRepoForm({ onBound }: BindRepoFormProps) {
     setBusy(true);
     setError(null);
     try {
+      // 绑定成功后端会切换活动仓库，必须先落盘当前仓库的草稿。
+      await flushPendingDrafts();
       onBound((await repoApi.bind(trimmed)).repoPath);
     } catch (err) {
       setError(messageOf(err));

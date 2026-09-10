@@ -53,7 +53,7 @@ fn repo_dir(tmp: &tempfile::TempDir) -> PathBuf {
     tmp.path().join("repo")
 }
 
-fn file_status<'a>(files: &'a [ChangedFile], path: &str) -> ChangedFileStatus {
+fn file_status(files: &[ChangedFile], path: &str) -> ChangedFileStatus {
     files
         .iter()
         .find(|f| f.path == path)

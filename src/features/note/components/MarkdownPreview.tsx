@@ -25,6 +25,8 @@ import { MarkdownProperties } from "./MarkdownProperties";
 import { MermaidBlock } from "./MermaidBlock";
 import { toggleTaskAtLine } from "../utils/task";
 import { PreviewImage } from "./PreviewImage";
+import { isExternalHttpUrl, openExternalLink } from "@/platform/open-link";
+import { reportToastError } from "@/stores/toast.store";
 
 interface MarkdownPreviewProps {
   content: string;
@@ -153,7 +155,7 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onCh
   const components = useMemo<Components>(() => ({
     ...blockComponents,
     ...createHeadingComponents(),
-    input: ({ checked, ...props }) => <TaskCheckbox {...props} checked={checked} content={content} onContentChange={onChange} />,
+    input: ({ node: _node, checked, ...props }) => <TaskCheckbox {...props} checked={checked} content={content} onContentChange={onChange} />,
     em: ({ node, children, ...props }) => {
       const tag = (node as { properties?: Record<string, unknown> }).properties?.["data-tag"];
       if (typeof tag !== "string") return <em {...props}>{children}</em>;
@@ -165,10 +167,26 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onCh
       return <PreviewImage key={imageSrc} src={imageSrc} alt={alt ?? ""} line={node?.position?.start.line} {...props} />;
     },
     table: ({ node, children, ...props }) => <div className="markdown-table-wrap"><table data-line={node?.position?.start.line} {...props}>{children}</table></div>,
-      a: ({ href, children, ...props }) => {
+    a: ({ node: _node, href, children, ...props }) => {
       if (href?.startsWith(WIKI_PROTOCOL)) {
         const resolved = wikiNotes ? resolveWikiTarget(wikiNotes, decodeWikiHref(href)) !== null : undefined;
         return <WikiLink href={href} onOpenWiki={onOpenWiki} resolved={resolved}>{children}</WikiLink>;
+      }
+      // 外链统一交给系统浏览器（与编辑区一致）：壳内 target=_blank 不会打开任何窗口。
+      if (isExternalHttpUrl(href)) {
+        return (
+          <a
+            href={href}
+            rel="noreferrer"
+            onClick={(event) => {
+              event.preventDefault();
+              void openExternalLink(href).catch(reportToastError);
+            }}
+            {...props}
+          >
+            {children}
+          </a>
+        );
       }
       return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>;
     },
