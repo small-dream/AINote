@@ -85,9 +85,9 @@
 | M1-E1-T4 | 🧊 M1.5 | iOS TestFlight 内测通道 | mobile | D5、Apple 账号 | L | 🧊 |
 | M1-E1-T5 | 签名与分发 | Android 应用内更新提示 | mobile | D3 | M | 📋 |
 | M1-E1-T6 | 分发支持 | 分发与排查文档 | shared | — | S | ✅ |
-| M1-E2-T1 | 可诊断性 | Rust 结构化本地日志 | shared | — | M | 📋 |
-| M1-E2-T2 | 可诊断性 | 前端错误边界与全局错误日志 | shared | M1-E2-T1 | M | 📋 |
-| M1-E2-T3 | 可诊断性 | 诊断包导出命令 | shared | M1-E2-T1 | M | 📋 |
+| M1-E2-T1 | 可诊断性 | Rust 结构化本地日志 | shared | — | M | ✅ |
+| M1-E2-T2 | 可诊断性 | 前端错误边界与全局错误日志 | shared | M1-E2-T1 | M | ✅ |
+| M1-E2-T3 | 可诊断性 | 诊断包导出命令 | shared | M1-E2-T1 | M | ✅ |
 | M1-E2-T4 | 可诊断性 | opt-in 崩溃/同步失败上报 | shared | D2 | L | 🧊 |
 | M1-E2-T5 | 可诊断性 | 设置页「诊断与反馈」 | shared | T2、T3 | M | ✅ |
 | M1-E3-T1 | 数据安全 | 仓库完整性检查 | shared | — | M | ✅ |
