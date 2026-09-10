@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { RouterProvider } from "react-router";
 import { AppProviders } from "@/app/providers";
 import { router } from "@/app/router";
+import { ErrorBoundary } from "@/features/support";
 import { readStoredLocale, readStoredTheme, resolveTheme } from "@/stores/ui.store";
 import "@/styles/index.css";
 import "@/features/mobile-shell/styles.css";
@@ -22,7 +23,9 @@ async function bootstrap(): Promise<void> {
   ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
     <React.StrictMode>
       <AppProviders>
-        <RouterProvider router={router} />
+        <ErrorBoundary>
+          <RouterProvider router={router} />
+        </ErrorBoundary>
       </AppProviders>
     </React.StrictMode>
   );

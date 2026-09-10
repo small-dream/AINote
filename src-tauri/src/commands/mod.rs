@@ -7,4 +7,5 @@ pub mod git;
 pub mod note;
 pub mod print;
 pub mod repo;
+pub mod support;
 pub mod trash;

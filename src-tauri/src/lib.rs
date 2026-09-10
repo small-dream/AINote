@@ -97,6 +97,7 @@ pub fn run() {
             commands::asset::import_bytes::import_asset_bytes,
             commands::app::open_external,
             commands::print::print_current_page,
+            commands::support::log_frontend::log_frontend,
         ])
         .run(tauri::generate_context!())
         .expect("error while running AINote");

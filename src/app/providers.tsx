@@ -4,6 +4,7 @@ import { resolveTheme, useUiStore } from "@/stores/ui.store";
 import { useTypographyStore } from "@/stores/typography.store";
 import { reportToastError } from "@/stores/toast.store";
 import { ToastViewport } from "@/components/molecules/ToastViewport";
+import { installGlobalErrorLogging } from "@/features/support";
 
 const queryClient = new QueryClient({
   mutationCache: new MutationCache({
@@ -18,6 +19,7 @@ const queryClient = new QueryClient({
 });
 
 export function AppProviders({ children }: { children: ReactNode }) {
+  useEffect(() => installGlobalErrorLogging(), []);
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeApplier />

@@ -134,14 +134,15 @@ AINote/
 │   │   ├── auth/                 # 登录（Token 校验/保存）
 │   │   ├── repo/                 # 绑定/创建仓库
 │   │   ├── settings/             # 设置页（左分类导航 + 右内容区，取代设置弹窗）
-│   │   └── mobile-shell/          # 移动端壳：单栏导航、编辑器路由栈、触控样式
+│   │   ├── mobile-shell/          # 移动端壳：单栏导航、编辑器路由栈、触控样式
+│   │   └── support/               # 错误边界 + 全局错误日志（渲染崩溃可恢复）
 │   ├── components/               # 业务无关组件
 │   │   ├── atoms/
 │   │   └── molecules/
 │   ├── api/                      # IPC Client, 一领域一文件
 │   │   ├── client.ts             # invoke 薄封装 + 错误统一转换
 │   │   ├── types.ts              # 与 Rust DTO 结构一致的镜像类型
-│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts / asset.api.ts / wiki.api.ts / search.api.ts / history.api.ts / ai.api.ts
+│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts / asset.api.ts / wiki.api.ts / search.api.ts / history.api.ts / ai.api.ts / support.api.ts
 │   ├── stores/                   # Zustand, 按领域切片（session / ui / command-palette …）
 │   ├── queries/                  # TanStack Query hooks (服务端/Git 状态)
 │   ├── hooks/                    # 跨领域通用 hooks（useNetworkStatus 等）
