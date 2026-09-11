@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { LinkButton } from "./LinkButton";
 
 interface RichTextBubbleMenuProps {
   editor: Editor | null;
@@ -69,6 +70,7 @@ export function RichTextBubbleMenu({ editor }: RichTextBubbleMenuProps) {
             <Icon size={15} />
           </button>
         ))}
+        <LinkButton editor={editor} variant="bubble" />
       </div>
     </BubbleMenu>
   );

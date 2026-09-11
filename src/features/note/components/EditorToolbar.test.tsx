@@ -64,6 +64,16 @@ describe("EditorToolbar", () => {
     fireEvent.click(screen.getByText("源码"));
     expect(onModeChange).toHaveBeenCalledWith("source");
   });
+
+  it("宽屏提供「源码」单栏标签", () => {
+    const onModeChange = vi.fn();
+    const { unmount } = renderToolbar({ onModeChange });
+    fireEvent.click(screen.getByText("源码"));
+    expect(onModeChange).toHaveBeenCalledWith("source");
+    unmount();
+    renderToolbar({ mode: "source" });
+    expect(screen.getByRole("tab", { name: "源码" }).getAttribute("aria-selected")).toBe("true");
+  });
 });
 
 describe("EditorToolbar / 保存失败", () => {

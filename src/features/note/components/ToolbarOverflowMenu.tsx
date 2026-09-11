@@ -11,6 +11,8 @@ interface ToolbarOverflowMenuProps {
   onExportPdf?: (() => void) | undefined;
   onExportMarkdown?: (() => void) | undefined;
   onConvert?: (() => void) | undefined;
+  /** 富文本 → Markdown（可逆转换，无需确认对话框） */
+  onConvertToMarkdown?: (() => void) | undefined;
   onMove: () => void;
 }
 
@@ -25,7 +27,7 @@ interface MenuItem {
 const MENU_VIEWPORT_MARGIN = 8;
 
 /** 低频文件操作溢出菜单：把不常用的导出 / 转换 / 移动收进「⋯」，避免常驻顶栏造成噪音。 */
-export function ToolbarOverflowMenu({ richText, hasConvert, isPdfAvailable, onExportPdf, onExportMarkdown, onConvert, onMove }: ToolbarOverflowMenuProps) {
+export function ToolbarOverflowMenu({ richText, hasConvert, isPdfAvailable, onExportPdf, onExportMarkdown, onConvert, onConvertToMarkdown, onMove }: ToolbarOverflowMenuProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -41,6 +43,9 @@ export function ToolbarOverflowMenu({ richText, hasConvert, isPdfAvailable, onEx
       : []),
     ...(!richText && hasConvert && onConvert
       ? [{ key: "convert", icon: ArrowLeftRight, label: t("note.convertToRichText"), run: onConvert }]
+      : []),
+    ...(richText && onConvertToMarkdown
+      ? [{ key: "convertToMarkdown", icon: ArrowLeftRight, label: t("richtext.convertToMarkdown"), run: onConvertToMarkdown }]
       : []),
     { key: "move", icon: FolderInput, label: t("note.moving"), run: onMove },
   ];

@@ -43,4 +43,17 @@ describe("richTextJsonToMarkdown", () => {
   it("非法 JSON 兜底为空文档", () => {
     expect(richTextJsonToMarkdown("not-json").trim()).toBe("");
   });
+
+  it("双链与标签 md → JSON → md 完整往返，无 span 噪音", () => {
+    const source = "见 [[项目计划]] 与 [[A|别名]]，以及 #bug 和 #项目/子页";
+    const roundTripped = richTextJsonToMarkdown(markdownToRichTextJson(source));
+
+    expect(roundTripped).toContain("[[项目计划]]");
+    expect(roundTripped).toContain("[[A|别名]]");
+    expect(roundTripped).toContain("#bug");
+    expect(roundTripped).toContain("#项目/子页");
+    expect(roundTripped).not.toContain("data-wiki-target");
+    expect(roundTripped).not.toContain("data-tag");
+    expect(roundTripped).not.toContain("<span");
+  });
 });

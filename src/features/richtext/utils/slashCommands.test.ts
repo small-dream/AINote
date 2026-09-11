@@ -22,6 +22,12 @@ describe("filterSlashCommands", () => {
     expect(filterSlashCommands("Table").map((c) => c.key)).toEqual(["table"]);
   });
 
+  it("包含链接命令，支持中英文关键字", () => {
+    expect(filterSlashCommands("link").map((c) => c.key)).toContain("link");
+    expect(filterSlashCommands("链接").map((c) => c.key)).toContain("link");
+    expect(filterSlashCommands("url").map((c) => c.key)).toContain("link");
+  });
+
   it("无匹配时返回空数组", () => {
     expect(filterSlashCommands("不存在的命令xyz")).toEqual([]);
   });

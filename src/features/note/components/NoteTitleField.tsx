@@ -25,18 +25,26 @@ export function NoteTitleField({ notePath, isNewNote, draft, onChange, flush, on
   }
 
   return (
-    <input
-      aria-label={t("note.title")}
-      aria-invalid={error ? true : undefined}
-      autoFocus={isNewNote}
-      className={`note-title-input field-sizing-content min-w-16 max-w-56 truncate border-b bg-transparent text-[15px] font-semibold tracking-[-0.01em] text-text-primary outline-none placeholder:text-text-tertiary ${error ? "border-danger" : "border-transparent"}`}
-      placeholder={t("note.untitled")}
-      title={t("note.title")}
-      value={value}
-      disabled={pending}
-      onChange={(event) => setValue(event.target.value)}
-      onBlur={() => void commit()}
-      onKeyDown={handleKeyDown}
-    />
+    <div className="flex min-w-0 flex-col">
+      <input
+        aria-label={t("note.title")}
+        aria-invalid={error ? true : undefined}
+        aria-describedby={error ? "note-title-error" : undefined}
+        autoFocus={isNewNote}
+        className={`note-title-input field-sizing-content min-w-16 max-w-56 truncate border-b bg-transparent text-[15px] font-semibold tracking-[-0.01em] text-text-primary outline-none placeholder:text-text-tertiary ${error ? "border-danger" : "border-transparent"}`}
+        placeholder={t("note.untitled")}
+        title={t("note.title")}
+        value={value}
+        disabled={pending}
+        onChange={(event) => setValue(event.target.value)}
+        onBlur={() => void commit()}
+        onKeyDown={handleKeyDown}
+      />
+      {error ? (
+        <p id="note-title-error" role="alert" className="max-w-56 truncate text-xs text-danger">
+          {error}
+        </p>
+      ) : null}
+    </div>
   );
 }

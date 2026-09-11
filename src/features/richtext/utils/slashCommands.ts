@@ -6,6 +6,7 @@ import {
   Heading2,
   Heading3,
   Italic,
+  Link,
   List,
   ListChecks,
   ListOrdered,
@@ -17,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n/messages";
+import { requestLinkInput } from "./linkUrl";
 
 export interface SlashCommandDef {
   key: string;
@@ -42,6 +44,7 @@ export const SLASH_COMMANDS: SlashCommandDef[] = [
   { key: "italic", labelKey: "richtext.italic", icon: Italic, keywords: ["italic", "斜体", "i"], run: (e) => void e.chain().focus().toggleItalic().run() },
   { key: "strike", labelKey: "richtext.strike", icon: Strikethrough, keywords: ["strike", "删除线"], run: (e) => void e.chain().focus().toggleStrike().run() },
   { key: "inlineCode", labelKey: "richtext.inlineCode", icon: Code, keywords: ["code", "行内代码"], run: (e) => void e.chain().focus().toggleCode().run() },
+  { key: "link", labelKey: "note.link", icon: Link, keywords: ["link", "链接", "url", "href"], run: (e) => requestLinkInput(e.view.dom) },
 ];
 
 /** 按查询过滤斜杠命令；空查询返回全部 */

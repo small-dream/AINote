@@ -52,10 +52,15 @@ export function useNoteTitle({ notePath, isNewNote, draft, onChange, flush, onRe
     }
   }
 
+  function updateValue(next: string) {
+    setValue(next);
+    setError(null);
+  }
+
   function reset() {
     setValue(isNewNote ? "" : noteDisplayName(notePath.split("/").at(-1) ?? notePath));
     setError(null);
   }
 
-  return { value, error, pending: rename.isPending, setValue, reset, commit };
+  return { value, error, pending: rename.isPending, setValue: updateValue, reset, commit };
 }

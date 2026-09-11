@@ -45,4 +45,56 @@ describe("RichTextToolbar", () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  it("链接按钮弹出 URL 输入，Enter 确认后规范化并写入链接", () => {
+    const { editor, run, setLink } = createLinkEditor(false);
+    render(<RichTextToolbar editor={editor} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "链接" }));
+    const input = screen.getByPlaceholderText("输入链接 URL，Enter 确认");
+    fireEvent.change(input, { target: { value: "example.com" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(setLink).toHaveBeenCalledWith({ href: "https://example.com" });
+    expect(run).toHaveBeenCalled();
+  });
+
+  it("链接格式无效时提示错误且不写入", () => {
+    const { editor, run, setLink } = createLinkEditor(false);
+    render(<RichTextToolbar editor={editor} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "链接" }));
+    const input = screen.getByPlaceholderText("输入链接 URL，Enter 确认");
+    fireEvent.change(input, { target: { value: "not a url" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(setLink).not.toHaveBeenCalled();
+    expect(run).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain("链接格式无效");
+  });
+
+  it("对已带链接的选区点击链接按钮直接解除链接", () => {
+    const { editor, run, unsetLink } = createLinkEditor(true);
+    render(<RichTextToolbar editor={editor} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "移除链接" }));
+
+    expect(unsetLink).toHaveBeenCalled();
+    expect(run).toHaveBeenCalled();
+  });
+
 });
+
+function createLinkEditor(activeLink: boolean) {
+  const run = vi.fn();
+  const setLink = vi.fn(() => ({ run }));
+  const unsetLink = vi.fn(() => ({ run }));
+  const extendMarkRange = vi.fn(() => ({ setLink, unsetLink }));
+  const editor = {
+    isActive: vi.fn((type: string) => (activeLink ? type === "link" : false)),
+    getAttributes: vi.fn(() => ({})),
+    can: vi.fn(() => ({ undo: () => true, redo: () => false })),
+    chain: vi.fn(() => ({ focus: () => ({ extendMarkRange }) })),
+    view: { dom: document.createElement("div") },
+  } as unknown as Editor;
+  return { editor, run, setLink, unsetLink };
+}

@@ -9,6 +9,7 @@ import { WikiLink } from "../extensions/wikiLink";
 import { TagMark } from "../extensions/tag";
 import { SlashCommand } from "../extensions/slashCommand";
 import { CodeBlock } from "../extensions/codeBlock";
+import { AinoteLink } from "../extensions/link";
 
 /** 富文本编辑器扩展集合：useRichTextEditor 与 markdown→JSON 互转共用 */
 export function createRichTextExtensions(repoPath: string | null): Extensions {
@@ -25,6 +26,7 @@ export function createRichTextExtensions(repoPath: string | null): Extensions {
     Markdown.configure({ transformPastedText: true, transformCopiedText: true, breaks: false, tightLists: true }),
     WikiLink,
     TagMark,
+    AinoteLink,
     SlashCommand,
   ];
 }

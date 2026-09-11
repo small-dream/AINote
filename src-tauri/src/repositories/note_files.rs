@@ -3,6 +3,7 @@ use std::path::{Component, Path, PathBuf};
 
 use crate::domain::error::AppError;
 use crate::repositories::asset_files;
+use crate::repositories::trash_files;
 
 /// 仓库相对路径校验：拒绝空、绝对路径、`..`、以 `.` 开头的路径段（路径穿越防御）。
 pub fn validate_rel_path(rel: &str) -> Result<PathBuf, AppError> {
@@ -71,7 +72,8 @@ pub fn move_note(root: &Path, from: &str, to: &str) -> Result<(), AppError> {
     fs::rename(&src, &dst).map_err(|err| AppError::io_context("移动失败", &src, err))
 }
 
-/// 转换笔记类型：把旧路径内容替换为新扩展名文件后删除旧文件（内容已由前端转换好）。
+/// 转换笔记类型：写入新扩展名文件后，原文件软删除移入回收站（可恢复，P0 数据安全），
+/// 不再直接 `remove_file`（内容已由前端转换好）。
 pub fn convert_note(root: &Path, from: &str, to: &str, content: &str) -> Result<(), AppError> {
     let src = root.join(validate_rel_path(from)?);
     let dst = root.join(validate_rel_path(to)?);
@@ -82,7 +84,12 @@ pub fn convert_note(root: &Path, from: &str, to: &str, content: &str) -> Result<
         fs::create_dir_all(parent).map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
     }
     fs::write(&dst, content).map_err(|err| AppError::io_context("写入失败", &dst, err))?;
-    fs::remove_file(&src).map_err(|err| AppError::io_context("删除失败", &src, err))
+    // 回收站失败时回滚新文件，避免新旧两份并存造成内容分叉
+    if let Err(err) = trash_files::soft_delete_note(root, from) {
+        let _ = fs::remove_file(&dst);
+        return Err(err);
+    }
+    Ok(())
 }
 
 #[cfg(test)]
@@ -136,12 +143,30 @@ mod tests {
     }
 
     #[test]
-    fn convert_replaces_content_and_removes_source() {
+    fn convert_replaces_content_and_moves_source_to_trash() {
         let (_t, root) = setup();
         write_note(&root, "a.md", "# 旧内容").unwrap();
         convert_note(&root, "a.md", "a.ainote", "{\"type\":\"doc\"}").unwrap();
         assert_eq!(read_note(&root, "a.ainote").unwrap(), "{\"type\":\"doc\"}");
         assert!(read_note(&root, "a.md").is_err());
+        // 原文件保留在回收站，可恢复
+        let items = trash_files::list(&root).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].path, "a.md");
+        let restored = trash_files::restore(&root, &items[0].id).unwrap();
+        assert_eq!(restored, "a.md");
+        assert_eq!(read_note(&root, "a.md").unwrap(), "# 旧内容");
+    }
+
+    #[test]
+    fn convert_reverse_direction_also_keeps_source_in_trash() {
+        let (_t, root) = setup();
+        write_note(&root, "a.ainote", "{\"type\":\"doc\"}").unwrap();
+        convert_note(&root, "a.ainote", "a.md", "# 标题").unwrap();
+        assert_eq!(read_note(&root, "a.md").unwrap(), "# 标题");
+        let items = trash_files::list(&root).unwrap();
+        assert_eq!(items.len(), 1);
+        assert_eq!(items[0].path, "a.ainote");
     }
 
     #[test]

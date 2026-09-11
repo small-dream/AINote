@@ -6,6 +6,7 @@ import {
   Heading2,
   Heading3,
   Italic,
+  Link,
   List,
   ListChecks,
   ListOrdered,
@@ -17,6 +18,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import type { TranslationKey } from "@/i18n/messages";
+import { requestLinkInput } from "./linkUrl";
 
 export interface EditorToolbarCommand {
   key: string;
@@ -53,6 +55,15 @@ export const BLOCK_COMMANDS: EditorToolbarCommand[] = [
   { key: "orderedList", icon: ListOrdered, labelKey: "richtext.orderedList", isActive: (editor) => editor.isActive("orderedList"), run: (editor) => void editor.chain().focus().toggleOrderedList().run() },
   { key: "taskList", icon: ListChecks, labelKey: "richtext.taskList", isActive: (editor) => editor.isActive("taskList"), run: (editor) => void editor.chain().focus().toggleTaskList().run() },
 ];
+
+/** 链接命令：不直接改文档，派发事件交给 LinkButton 弹出 URL 输入（按钮/Mod-k/斜杠命令共用） */
+export const LINK_COMMAND: EditorToolbarCommand = {
+  key: "link",
+  icon: Link,
+  labelKey: "note.link",
+  isActive: (editor) => editor.isActive("link"),
+  run: (editor) => requestLinkInput(editor.view.dom),
+};
 
 /** 插入类块级命令直接呈现在工具栏，减少常用结构的操作层级 */
 export const INSERT_COMMANDS: EditorToolbarCommand[] = [

@@ -3,6 +3,7 @@ import type { ChangeEvent, ReactNode } from "react";
 import type { Editor } from "@tiptap/core";
 import { Image as ImageIcon, Redo, Undo } from "lucide-react";
 import { ToolbarPopover, type ToolbarMenuItem } from "./ToolbarPopover";
+import { LinkButton } from "./LinkButton";
 import { BLOCK_COMMANDS, getActiveHeadingCommand, HEADING_COMMANDS, INLINE_COMMANDS, INSERT_COMMANDS, type EditorToolbarCommand } from "../utils/toolbarCommands";
 import { NoteThemePicker } from "@/features/note/components/NoteThemePicker";
 
@@ -22,6 +23,7 @@ export function RichTextToolbar({ editor, onImagePicked, status, trailing }: Ric
           <HeadingSelector editor={editor} />
           <ToolbarDivider />
           <ToolbarCommandGroup editor={editor} commands={INLINE_COMMANDS} />
+          <LinkButton editor={editor} variant="toolbar" />
           <ToolbarDivider />
           <ToolbarCommandGroup editor={editor} commands={BLOCK_COMMANDS} />
           <ToolbarDivider />

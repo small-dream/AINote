@@ -60,7 +60,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const outline = useMemo(() => extractOutline(draft), [draft]);
     const asset = useAssetImport(readyView);
     const previewRef = useRef<HTMLDivElement | null>(null);
-    const { handleConvertToRichText } = useNoteConversion({ notePath, draft, flush, onOpenNote });
+    const { richTextDialog, requestConvertToRichText, cancelConvertToRichText, confirmConvertToRichText, handleConvertToMarkdown } = useNoteConversion({ notePath, draft, flush, onOpenNote });
     const { ai, suggest, askAiOpen, closeAskAi, insertAnswer } = useEditorAi(viewRef, notePath, draft, onChange);
     useEditorScrollPersistence(readyView, previewRef, mode, { editorScrollTop, previewScrollTop, setEditorScrollTop, setPreviewScrollTop });
     useSyncScroll(readyView, previewRef, mode);
@@ -84,6 +84,6 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
     if (isEditorUnavailable(notePath, loadError)) return <EditorState notePath={notePath} error={loadError?.message ?? null} />;
     const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, softRender: softRenderEnabled };
-    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} handleConvertToRichText={handleConvertToRichText} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
+    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
   },
 );

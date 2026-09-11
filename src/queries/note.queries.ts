@@ -133,7 +133,7 @@ export function useMoveNoteMutation() {
   });
 }
 
-/** 转换笔记类型（.md ↔ .ainote），成功后刷新列表/树并让调用方打开新路径（不生成提交） */
+/** 转换笔记类型（.md ↔ .ainote），成功后刷新列表/树并让调用方打开新路径（原文件移入回收站，命令侧自动生成一次 `note: convert` 提交） */
 export function useConvertNoteMutation() {
   const queryClient = useQueryClient();
   const markActivity = useWorkspaceActivityStore((state) => state.markActivity);

@@ -9,8 +9,8 @@ describe("resolveViewMode", () => {
     expect(resolveViewMode("preview", true)).toBe("preview");
   });
 
-  it("宽屏用分栏替代源码", () => {
-    expect(resolveViewMode("source", false)).toBe("split");
+  it("宽屏保留全部模式，源码为纯源码单栏", () => {
+    expect(resolveViewMode("source", false)).toBe("source");
     expect(resolveViewMode("split", false)).toBe("split");
     expect(resolveViewMode("edit", false)).toBe("edit");
     expect(resolveViewMode("preview", false)).toBe("preview");
