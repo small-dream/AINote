@@ -26,6 +26,10 @@ function editorMock(dom: HTMLElement) {
     chain: vi.fn(() => ({ focus: () => chainMethods })),
     view: { dom },
     isEditable: true,
+    isInitialized: true,
+    isDestroyed: false,
+    on: vi.fn(),
+    off: vi.fn(),
   } as unknown as Editor;
   return { editor, chainMethods, run };
 }
@@ -103,6 +107,39 @@ describe("useRichTextAssets 导入管线", () => {
   });
 });
 
+/** view 未就绪的编辑器 mock：view 访问抛错，就绪事件处理器集中收集后由测试触发 */
+function pendingViewEditorMock(dom: HTMLElement) {
+  const readyHandlers: Array<() => void> = [];
+  const editor = {
+    chain: vi.fn(() => ({ focus: () => ({ setImage: vi.fn(() => ({ run: vi.fn() })) }) })),
+    get view() {
+      throw new Error("The editor view is not available");
+    },
+    isEditable: true,
+    isDestroyed: false,
+    on: vi.fn((_event: string, handler: () => void) => {
+      readyHandlers.push(handler);
+    }),
+    off: vi.fn(),
+  } as unknown as Editor;
+  const markReady = () => {
+    Object.defineProperty(editor, "view", { get: () => ({ dom }) });
+    readyHandlers.forEach((handler) => handler());
+  };
+  return { editor, markReady };
+}
+
+/** 悬停进入编辑器区域后 drop,断言进入导入管线 */
+async function expectDropImport(dom: HTMLElement, drop: () => ((paths: string[]) => void) | undefined, path: string) {
+  await act(async () => {
+    dom.dispatchEvent(new Event("dragenter"));
+    drop()?.([path]);
+  });
+  await vi.waitFor(() => {
+    expect(apiMock.assetApi.importFromPath).toHaveBeenCalledWith(path);
+  });
+}
+
 describe("useRichTextAssets 拖放监听", () => {
   beforeEach(resetMocks);
 
@@ -126,14 +163,34 @@ describe("useRichTextAssets 拖放监听", () => {
     expect(apiMock.assetApi.importFromPath).not.toHaveBeenCalled();
 
     // 悬停进入编辑器区域后再 drop：导入
-    await act(async () => {
-      dom.dispatchEvent(new Event("dragenter"));
-      drop()?.(["/Users/jake/photo.png"]);
-    });
-    await vi.waitFor(() => {
-      expect(apiMock.assetApi.importFromPath).toHaveBeenCalledWith("/Users/jake/photo.png");
-    });
+    await expectDropImport(dom, drop, "/Users/jake/photo.png");
     expect(chainMethods.setImage).toHaveBeenCalledWith({ src: "assets/photo.png", alt: "photo.png" });
+    dom.remove();
+  });
+
+  it("view 未就绪时延迟挂载，就绪事件后再注册监听（回归：view.dom 早访问崩溃）", async () => {
+    const dom = document.createElement("div");
+    document.body.appendChild(dom);
+    const { editor, markReady } = pendingViewEditorMock(dom);
+    const drop = captureDrop();
+    apiMock.assetApi.importFromPath.mockResolvedValue({ path: "assets/late.png" });
+    apiMock.syncApi.commit.mockResolvedValue("hash");
+
+    // 挂载时不崩溃、不注册
+    mountAssets(editor);
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(apiMock.onDropPaths).not.toHaveBeenCalled();
+
+    // view 就绪事件后注册
+    await act(async () => {
+      markReady();
+      await Promise.resolve();
+    });
+    expect(apiMock.onDropPaths).toHaveBeenCalled();
+
+    await expectDropImport(dom, drop, "/Users/jake/late.png");
     dom.remove();
   });
 

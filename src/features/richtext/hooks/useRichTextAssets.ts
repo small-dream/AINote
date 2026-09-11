@@ -8,7 +8,7 @@ import {
 import { useTranslation } from "@/i18n";
 import { basename } from "@/features/asset/utils/asset";
 import { splitImageFiles, watchDragInside, MAX_IMAGE_BYTES } from "@/features/asset/utils/importFiles";
-import { createRichTextDomListeners } from "../utils/domHandlers";
+import { createRichTextDomListeners, whenEditorViewReady } from "../utils/domHandlers";
 import { requestLinkInput } from "../utils/linkUrl";
 
 const STATUS_CLEAR_MS = 3000;
@@ -17,11 +17,13 @@ const STATUS_CLEAR_MS = 3000;
 function useRichTextDomListener(editor: Editor | null, handleFiles: (files: File[]) => void) {
   useEffect(() => {
     if (!editor) return;
-    const listeners = createRichTextDomListeners(editor.view.dom, {
-      onFiles: handleFiles,
-      onRequestLink: () => requestLinkInput(editor.view.dom),
+    return whenEditorViewReady(editor, (dom) => {
+      const listeners = createRichTextDomListeners(dom, {
+        onFiles: handleFiles,
+        onRequestLink: () => requestLinkInput(dom),
+      });
+      return () => listeners.dispose();
     });
-    return () => listeners.dispose();
   }, [editor, handleFiles]);
 }
 
@@ -35,28 +37,30 @@ function useRichTextDropListener(
 ) {
   useEffect(() => {
     if (!editor) return;
-    const gate = watchDragInside(editor.view.dom);
-    let unlisten: (() => void) | undefined;
-    void onDropPaths((paths) => {
-      if (!gate.isInside()) return;
-      paths.forEach((path) => {
-        importPath.mutate(path, {
-          onSuccess: (asset) => {
-            insertImage(asset.path, basename(path));
-            showStatus(t("note.assetImported", { name: basename(path) }));
-          },
-          onError: (error) => showStatus(t("note.assetFailed", { message: messageOf(error) })),
+    return whenEditorViewReady(editor, (dom) => {
+      const gate = watchDragInside(dom);
+      let unlisten: (() => void) | undefined;
+      void onDropPaths((paths) => {
+        if (!gate.isInside()) return;
+        paths.forEach((path) => {
+          importPath.mutate(path, {
+            onSuccess: (asset) => {
+              insertImage(asset.path, basename(path));
+              showStatus(t("note.assetImported", { name: basename(path) }));
+            },
+            onError: (error) => showStatus(t("note.assetFailed", { message: messageOf(error) })),
+          });
         });
+      }).then((off) => {
+        unlisten = off;
+      }).catch(() => {
+        // 非 Tauri 环境（纯浏览器 dev）无拖放事件源，静默降级
       });
-    }).then((off) => {
-      unlisten = off;
-    }).catch(() => {
-      // 非 Tauri 环境（纯浏览器 dev）无拖放事件源，静默降级
+      return () => {
+        unlisten?.();
+        gate.dispose();
+      };
     });
-    return () => {
-      unlisten?.();
-      gate.dispose();
-    };
   }, [editor, importPath, insertImage, showStatus, t]);
 }
 

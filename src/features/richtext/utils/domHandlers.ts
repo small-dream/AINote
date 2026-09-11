@@ -1,4 +1,34 @@
+import type { Editor } from "@tiptap/core";
 import { splitImageFiles } from "@/features/asset/utils/importFiles";
+
+/**
+ * 编辑器 view 就绪后执行挂载（view 未创建时访问 editor.view 会抛错）。
+ * 就绪时同步执行；未就绪订阅 mount/create 事件（create 触发时 isInitialized
+ * 尚未置位，不能用其判断，直接 try/catch 探活 view.dom）。返回统一的清理函数。
+ */
+export function whenEditorViewReady(editor: Editor, attach: (dom: HTMLElement) => () => void): () => void {
+  let dispose: (() => void) | null = null;
+  const tryAttach = () => {
+    if (dispose || editor.isDestroyed) return;
+    let dom: HTMLElement;
+    try {
+      dom = editor.view.dom;
+    } catch {
+      return;
+    }
+    dispose = attach(dom);
+  };
+  tryAttach();
+  if (!dispose) {
+    editor.on("mount", tryAttach);
+    editor.on("create", tryAttach);
+  }
+  return () => {
+    editor.off("mount", tryAttach);
+    editor.off("create", tryAttach);
+    dispose?.();
+  };
+}
 
 export interface RichTextDomHandlers {
   /** 图片文件（已过滤/分流）进入资产导入管线 */

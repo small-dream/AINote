@@ -2,7 +2,6 @@ import { useEditor } from "@tiptap/react";
 import { useEffect, useMemo } from "react";
 import { parseRichTextContent } from "../utils/richText";
 import { createRichTextExtensions } from "../utils/extensions";
-import { AinoteLink } from "../extensions/link";
 import { useRichTextAssets } from "./useRichTextAssets";
 
 interface UseRichTextEditorOptions {
@@ -17,7 +16,7 @@ interface UseRichTextEditorOptions {
 /** 富文本编辑器核心逻辑：TipTap 实例、资源插入与 Markdown 互转 */
 export function useRichTextEditor({ content, onChange, repoPath }: UseRichTextEditorOptions) {
   const editor = useEditor({
-    extensions: useMemo(() => [...createRichTextExtensions(repoPath), AinoteLink], [repoPath]),
+    extensions: useMemo(() => createRichTextExtensions(repoPath), [repoPath]),
     content: parseRichTextContent(content),
     onUpdate: ({ editor: e }) => onChange(JSON.stringify(e.getJSON())),
   });
