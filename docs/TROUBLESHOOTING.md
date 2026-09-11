@@ -1,6 +1,6 @@
 # 安装与故障排查
 
-> 覆盖：安装被拦截、自动更新失败、同步失败、凭证失效、磁盘不足。
+> 覆盖：安装被拦截、自动更新失败、同步失败、凭证失效、磁盘不足、iOS 模拟器运行（开发）。
 > 每个场景按「现象 → 原因 → 操作步骤」组织，命令可直接复制执行。
 
 ## 0. 当前签名状态（先读这一段）
@@ -215,7 +215,76 @@ shasum -a 256 -c SHA256SUMS --ignore-missing
 | Windows | `%LOCALAPPDATA%\dev.ainote.app\logs\` |
 | Linux | `~/.local/share/dev.ainote.app/logs/` |
 
-## 8. 仍未解决？
+## 8. 在 iOS 模拟器上运行（开发）
+
+> 面向本仓库开发者。iOS 发布包目前不随 GitHub Release 提供（见 §0）：出可直装的 IPA 需要 Apple 签名与分发账号。
+
+### 8.1 前置条件
+
+| 依赖 | 检查命令 | 说明 |
+|---|---|---|
+| Xcode | `xcode-select -p` | 需完整安装并至少打开过一次；`xcode-select --install` 只装命令行工具，不含模拟器 |
+| iOS 运行时 | `xcrun simctl list runtimes` | 缺失时在 Xcode → Settings → Components 下载 |
+| Rust iOS target | `rustup target list --installed` | `pnpm ios:dev` 会自动补装 `aarch64-apple-ios-sim`、`aarch64-apple-ios` |
+| xcodegen / CocoaPods | `which xcodegen pod` | 缺失时执行 `brew install xcodegen cocoapods` |
+
+### 8.2 运行步骤
+
+1. 一条命令启动。脚本会自动选一台模拟器：优先已启动的 iPhone，否则取最新 iOS 运行时的 iPhone。
+
+   ```bash
+   pnpm ios:dev
+   ```
+
+2. 指定设备时先查名字，再把设备名放在最前面；其余参数原样透传给 `tauri ios dev`。
+
+   ```bash
+   xcrun simctl list devices available
+   pnpm ios:dev "iPhone 17 Pro"
+   pnpm ios:dev "iPhone Air" --release
+   ```
+
+3. 首次构建会交叉编译 vendored OpenSSL 与 libgit2，需要几分钟；之后是增量编译。
+4. 前端（Vite，`http://localhost:1420`）改动即时生效；Rust 改动由 Tauri 自动重新编译并重装到模拟器。
+
+**模拟器与真机的差别**
+
+- 模拟器与 Mac 共享 `localhost`，`tauri.conf.json` 的 `devUrl` 直接可用；真机才需要 `TAURI_DEV_HOST` 与公网地址。
+- 模拟器不需要证书：日志里的 `No code signing certificates found ... developmentTeam` 是**警告**，不影响运行；真机调试与 Archive 才需要 Apple Development Team。
+
+### 8.3 常见问题
+
+**提示找不到设备或没有可用模拟器**
+
+在 Xcode → Settings → Components 安装 iOS 运行时；也可以手动启动模拟器后重试：
+
+```bash
+xcrun simctl boot "iPhone 17 Pro"
+open -a Simulator
+```
+
+**界面被整体放大，标题与搜索框两端被裁切**
+
+- 现象：进过编辑器再返回列表后，界面像是被放大，左右两侧同时被切掉。
+- 原因：iOS/WebKit 在聚焦字号小于 16px 的可编辑控件时会自动放大整个 WebView，失焦后不还原；移动壳仍按 402 CSS px 布局，可视区域却只剩约 352 px。
+- 操作：升级到含 `fix(mobile): 修复 iOS 聚焦输入框后移动壳被整体放大裁切` 的版本，移动端可编辑控件已设 16px 字号下限。旧版本可杀掉应用重启来临时恢复。
+
+**打开应用提示 `git error: failed to resolve path ... No such file or directory`**
+
+- 原因：模拟器重装后应用数据容器 ID 会变，而 `ainote.json` 保存的是绝对路径，旧路径随之失效。
+- 操作：在应用内重新选择或克隆仓库（首次进入的引导页）；也可以先定位数据目录再删掉配置重新登录：
+
+  ```bash
+  xcrun simctl get_app_container booted dev.ainote.app data
+  ```
+
+**想重置模拟器里的应用数据**
+
+```bash
+xcrun simctl uninstall booted dev.ainote.app
+```
+
+## 9. 仍未解决？
 
 - 搜索已有 Issue：`https://github.com/small-dream/AINote/issues`
 - 新建 Issue 时附上诊断包与系统信息（系统版本、AINote 版本、复现步骤）。

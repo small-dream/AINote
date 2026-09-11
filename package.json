@@ -16,6 +16,7 @@
     "icons:mobile": "node scripts/generate-mobile-icons.mjs",
     "android:dev": "node scripts/tauri-android.mjs dev",
     "android:build": "node scripts/tauri-android.mjs build",
+    "ios:dev": "node scripts/tauri-ios.mjs dev",
     "desktop:run": "tauri dev",
     "desktop:build": "tauri build --no-bundle",
     "desktop:bundle": "tauri build",
