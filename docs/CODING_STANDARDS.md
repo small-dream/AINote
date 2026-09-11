@@ -76,6 +76,7 @@ AppError { code: "SYNC_4013", kind: Conflict, message: "...", retriable: true }
 - 前端用户输入在 Hook 层校验。
 - Markdown 渲染强制 sanitize（防 XSS），不信任编辑器产出的任何内容。
 - 壳内安全策略（`src-tauri/tauri.conf.json`）：`app.security.csp` 保持最小白名单（`script-src 'self'`，内联启动脚本由 Tauri 构建期注入 hash），`devCsp` 只用于放行 Vite 开发态（HMR 需要 inline/ws）。新增远程字体、图片域或 iframe 前必须先更新 CSP；**禁止**把它改回 `null`。
+- 打包壳会在 `style-src` 里追加随机 nonce（内联启动样式由 Tauri 注入同名 nonce），此时 `'unsafe-inline'` 失效：**所有运行时注入 `<style>` 的库（CodeMirror/style-mod 等）必须把该 nonce 传给它**（`readCspNonce()` → `EditorView.cspNonce`），否则只在安装包里出现排版塌陷，dev 下无法复现。
 
 ## 5. 测试友好性
 

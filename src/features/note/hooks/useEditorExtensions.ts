@@ -18,6 +18,7 @@ import { getAinoteEditorTheme, getAinoteHighlightStyle } from "./editorTheme";
 import { buildCompletions, getCompletionContext } from "../utils/completion";
 import { softRender } from "../softRender/plugin";
 import { useTranslation } from "@/i18n";
+import { readCspNonce } from "@/platform/csp-nonce";
 
 export interface EditorExtensionsInput {
   notes?: NoteWikiDto[];
@@ -71,6 +72,8 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
   const { t } = useTranslation();
   const extensions = useMemo(() => [
     getAinoteEditorTheme(getNoteThemeMode(noteTheme) === "dark"),
+    // 打包壳的 style-src 带 nonce，CodeMirror 运行时注入的 <style> 必须携带同一 nonce。
+    ...cspNonceExtension(),
     markdown({ extensions: [GFM] }),
     history(),
     search({ top: true }),
@@ -93,6 +96,12 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     }),
   ], [noteTheme, notes, repoPath, onOpenWiki, softRenderEnabled, t]);
   return { extensions, activeFormats };
+}
+
+/** 生产壳（CSP 含 nonce）下放行 CodeMirror 注入的样式；无 nonce 环境返回空数组。 */
+function cspNonceExtension(): Extension[] {
+  const nonce = readCspNonce();
+  return nonce ? [EditorView.cspNonce.of(nonce)] : [];
 }
 
 function sameFormats(a: Set<string>, b: Set<string>): boolean {

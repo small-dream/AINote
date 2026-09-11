@@ -1,5 +1,11 @@
 # 更新日志
 
+## 未发布
+
+### 修复
+
+- 修复安装包（GitHub Release 产物）里编辑器排版塌陷的问题：Tauri 会在打包资源中把内联 `<style>` 打上随机 nonce，并把 `'nonce-…'` 追加进 CSP 的 `style-src`；按 CSP 规则，指令里出现 nonce 后 `'unsafe-inline'` 即被忽略，于是 CodeMirror 运行时注入的样式表（baseTheme / 编辑器主题 / 语法高亮）被整片拒绝。症状是「源码模式顶部大片空白（行号 gutter 与正文上下堆叠）」「软渲染每条列表项的圆点单独占一行、正文被挤到下一行」。现读取壳注入的 nonce 并传给 CodeMirror（`EditorView.cspNonce`）放行注入样式；本地 `pnpm desktop:run` 直连 Vite dev server、无 nonce 注入，行为不变。
+
 ## v0.28.1 — 2026-09-11（热修复：富文本笔记打不开 / 链接扩展冲突）
 
 > v0.28.0 的富文本编辑器存在严重回归，请直接升级到本版本。
