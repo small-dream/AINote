@@ -1,6 +1,14 @@
 # 更新日志
 
-## 未发布
+## v0.28.3 — 2026-09-11（文档：README 界面预览，移动端聚焦缩放修复）
+
+### 文档
+
+- README（中英文）在标语之后新增「界面预览 / Screenshots」章节，补上 7 张真实界面截图：桌面端写作模式、分栏预览、命令面板（⌘K）、Git 版本历史，以及 iOS 笔记列表、编辑器与预览模式。桌面截图裁到窗口并保留 2x 清晰度，iOS 截图为模拟器设备截图直出，统一存放于 `docs/screenshots/`。
+
+### 工程
+
+- 新增 `pnpm ios:dev`（`scripts/tauri-ios.mjs`）：自动检查 Xcode 命令行工具与 Rust iOS target、缺少 target 时补装、未指定设备时自动挑选已启动或最新的 iPhone 模拟器，对齐 `pnpm android:dev` 的使用体验。
 
 ### 修复
 
