@@ -8,6 +8,36 @@
 
 AINote is a cross-platform Markdown notes app for developers and knowledge workers. It uses a Git repository as its notes database: notes remain ordinary `.md` files, synchronization uses the Git protocol, history is preserved natively, and there is no proprietary format or server lock-in.
 
+## Screenshots
+
+### Desktop
+
+**Writing mode**: CodeMirror soft rendering typesets headings, task lists, tables, math, and code blocks in place.
+
+![Desktop writing mode](docs/screenshots/desktop-workspace.png)
+
+**Split view**: lossless Markdown source on the left, live preview on the right.
+
+![Desktop split view](docs/screenshots/desktop-split-preview.png)
+
+**Command palette (⌘K)**: jump to any note or run a command from one keystroke.
+
+![Desktop command palette](docs/screenshots/desktop-command-palette.png)
+
+**Version history**: every save leaves a Git commit; inspect the diff and restore any revision.
+
+![Desktop version history](docs/screenshots/desktop-git-history.png)
+
+### Mobile (iOS / Android)
+
+The same notes and the same file format, editable offline and synced when you return to the app.
+
+<p align="center">
+  <img src="docs/screenshots/ios-note-list.png" width="32%" alt="Mobile note list" />
+  <img src="docs/screenshots/ios-editor.png" width="32%" alt="Mobile editor" />
+  <img src="docs/screenshots/ios-preview.png" width="32%" alt="Mobile preview mode" />
+</p>
+
 ## Why AINote
 
 - **Data ownership**: Notes live in your own GitHub repository, so they are portable, auditable, backup-friendly, and versioned.

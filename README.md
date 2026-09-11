@@ -8,6 +8,36 @@
 
 AINote 是一款面向开发者与知识工作者的跨平台 Markdown 笔记应用。它把「Git 仓库」当作笔记数据库：你的笔记是普通 `.md` 文件，同步走 Git 协议，版本历史天然保留，没有私有格式和服务器锁定。
 
+## 界面预览
+
+### 桌面端
+
+**写作模式**：CodeMirror 软渲染随写随排版，标题、任务列表、表格、公式和代码块都在原地呈现。
+
+![桌面端写作模式](docs/screenshots/desktop-workspace.png)
+
+**分栏模式**：左边是 100% 保真的 Markdown 源码，右边是实时预览，改哪边都同步。
+
+![桌面端分栏模式](docs/screenshots/desktop-split-preview.png)
+
+**命令面板（⌘K）**：一次按键即可跳转笔记、执行命令。
+
+![桌面端命令面板](docs/screenshots/desktop-command-palette.png)
+
+**版本历史**：每次保存都留下一条 Git 提交，可查看 Diff 并一键恢复。
+
+![桌面端版本历史](docs/screenshots/desktop-git-history.png)
+
+### 移动端（iOS / Android）
+
+同一套笔记、同一套数据格式，离线可写，回到前台自动同步。
+
+<p align="center">
+  <img src="docs/screenshots/ios-note-list.png" width="32%" alt="移动端笔记列表" />
+  <img src="docs/screenshots/ios-editor.png" width="32%" alt="移动端编辑器" />
+  <img src="docs/screenshots/ios-preview.png" width="32%" alt="移动端预览模式" />
+</p>
+
 ## 为什么选择 AINote
 
 - **数据所有权**：笔记保存在你自己的 GitHub 仓库中，可以随时迁移、审计、备份和回滚。
