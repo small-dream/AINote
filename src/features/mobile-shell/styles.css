@@ -115,4 +115,19 @@
 
   .conflict-panel-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr); overflow-y: auto; }
   .conflict-panel-body > section { border-right: 0; }
+
+  /* iOS/WebKit 在聚焦字号小于 16px 的可编辑控件时会把整个 WebView 自动放大（并按失焦后
+     不还原的缩放状态保留），移动壳因此左右两侧被裁切。移动端统一抬高可编辑控件的字号下限，
+     从源头避免聚焦缩放；字号本身仍由各控件样式决定，只有低于 16px 时才会被抬到 16px。 */
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]),
+  textarea,
+  select {
+    font-size: 16px;
+  }
+  /* 正文编辑器保留用户的排版字号偏好，但移动端不低于 16px */
+  .cm-editor .cm-content[contenteditable="true"],
+  .rich-text-editor .ProseMirror[contenteditable="true"] {
+    font-size: max(16px, var(--note-font-size, 15px));
+  }
+  .note-title-input { font-size: 16px; }
 }
