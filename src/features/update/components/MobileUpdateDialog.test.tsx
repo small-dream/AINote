@@ -72,6 +72,12 @@ describe("MobileUpdateDialog", () => {
     expect(screen.getByRole("button", { name: "立即更新" })).toBeTruthy();
   });
 
+  it("弹窗在移动端保持居中，不使用底部弹层", async () => {
+    render(<MobileUpdateDialog />);
+    const dialog = await screen.findByRole("dialog", { name: /发现新版本 0\.25\.0/ });
+    expect(dialog.parentElement?.hasAttribute("data-modal-sheet")).toBe(false);
+  });
+
   it("Release 缺少 APK 资产时降级为跳转下载页", async () => {
     api.fetchLatestRelease.mockResolvedValue({ ...RELEASE, apkUrl: null, apkSha256Url: null });
     render(<MobileUpdateDialog />);
@@ -132,6 +138,17 @@ describe("MobileUpdateDialog 下载与安装", () => {
     expect((await screen.findByRole("alert")).textContent).toContain("下载更新失败");
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
     await waitFor(() => expect(api.installApk).toHaveBeenCalled());
+  });
+
+  it("安装器调起失败时提示安装失败，重试不再重新下载", async () => {
+    api.installApk.mockRejectedValueOnce(new Error("bridge"));
+    render(<MobileUpdateDialog />);
+    fireEvent.click(await screen.findByRole("button", { name: "立即更新" }));
+
+    expect((await screen.findByRole("alert")).textContent).toContain("安装更新失败");
+    fireEvent.click(screen.getByRole("button", { name: "重试" }));
+    await waitFor(() => expect(api.installApk).toHaveBeenCalledTimes(2));
+    expect(api.downloadUpdate).toHaveBeenCalledTimes(1);
   });
 
   it("缺安装权限时展示授权引导", async () => {

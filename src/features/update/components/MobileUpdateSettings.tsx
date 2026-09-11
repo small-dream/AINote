@@ -15,6 +15,7 @@ const STATUS_COPY: Record<MobileUpdatePhase, { key: TranslationKey; icon: Lucide
   available: { key: "update.found", icon: Download },
   downloading: { key: "update.downloading", icon: LoaderCircle },
   installing: { key: "update.mobileInstalling", icon: Download },
+  installFailed: { key: "update.installFailed", icon: TriangleAlert },
   downloadFailed: { key: "update.mobileDownloadFailed", icon: TriangleAlert },
   failed: { key: "update.mobileCheckFailed", icon: TriangleAlert },
 };
@@ -90,6 +91,13 @@ function UpdateAction({ phase, apkUrl, htmlUrl, onDownload, onCancel, onReopen }
     return (
       <Button variant="primary" className="px-3 text-xs" onClick={onReopen}>
         {t("update.mobileReopenInstaller")}
+      </Button>
+    );
+  }
+  if (phase === "installFailed") {
+    return (
+      <Button variant="primary" className="px-3 text-xs" onClick={onReopen}>
+        {t("common.retry")}
       </Button>
     );
   }

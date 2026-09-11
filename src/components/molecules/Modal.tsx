@@ -9,10 +9,12 @@ interface ModalProps {
   children: ReactNode;
   className?: string;
   noteTheme?: string;
+  /** 移动端是否以底部弹层呈现（默认 true）；传 false 时保持居中对话框 */
+  mobileSheet?: boolean;
 }
 
 /** 通用模态框：ESC / 系统返回键 / 遮罩点击关闭 + dialog 语义（P2 可访问性） */
-export function Modal({ open, title, onClose, children, className = "", noteTheme }: ModalProps) {
+export function Modal({ open, title, onClose, children, className = "", noteTheme, mobileSheet = true }: ModalProps) {
   useBackHandler(open, onClose);
 
   useEffect(() => {
@@ -28,7 +30,7 @@ export function Modal({ open, title, onClose, children, className = "", noteThem
 
   return createPortal(
     <div
-      data-modal-sheet="true"
+      data-modal-sheet={mobileSheet ? "true" : undefined}
       className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40"
       role="presentation"
       onMouseDown={(event) => {

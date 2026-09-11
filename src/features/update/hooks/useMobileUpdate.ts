@@ -39,7 +39,7 @@ function requestCheck(): Promise<void> {
 /** 调起系统安装器；缺安装权限时由系统设置页引导用户授权。 */
 async function installApk(path: string): Promise<void> {
   const { needsPermission } = await mobileUpdateApi.installApk(path);
-  useMobileUpdateStore.getState().setInstallNeedsPermission(needsPermission);
+  useMobileUpdateStore.getState().reportInstallInvoked(needsPermission);
 }
 
 /** 应用内下载 APK 并校验，成功后自动调起系统安装器；取消时回到「有新版本」。 */
@@ -49,20 +49,28 @@ async function downloadAndInstall(): Promise<void> {
   if (!release?.apkUrl || !release.apkSha256Url || store.phase === "downloading") return;
 
   store.beginDownload();
+  let result: Awaited<ReturnType<typeof mobileUpdateApi.downloadUpdate>>;
   try {
-    const result = await mobileUpdateApi.downloadUpdate(
+    result = await mobileUpdateApi.downloadUpdate(
       { url: release.apkUrl, sha256Url: release.apkSha256Url, version: release.version },
       (progress) => useMobileUpdateStore.getState().reportProgress(progress),
     );
-    if (!result) {
-      useMobileUpdateStore.getState().resetDownload();
-      return;
-    }
-    useMobileUpdateStore.getState().reportDownloaded(result.path);
-    await installApk(result.path);
   } catch (error) {
     reportFrontendError(error, "mobile-update-download");
     useMobileUpdateStore.getState().reportDownloadFailed();
+    return;
+  }
+  if (!result) {
+    useMobileUpdateStore.getState().resetDownload();
+    return;
+  }
+  useMobileUpdateStore.getState().reportDownloaded(result.path);
+  // 安装调起失败与下载失败分开：安装失败保留已下载的 APK，用户可直接重试
+  try {
+    await installApk(result.path);
+  } catch (error) {
+    reportFrontendError(error, "mobile-update-install");
+    useMobileUpdateStore.getState().reportInstallFailed();
   }
 }
 
@@ -81,7 +89,7 @@ export function useMobileUpdate() {
       await installApk(apkPath);
     } catch (error) {
       reportFrontendError(error, "mobile-update-install");
-      useMobileUpdateStore.getState().reportDownloadFailed();
+      useMobileUpdateStore.getState().reportInstallFailed();
     }
   }, []);
 

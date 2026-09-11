@@ -9,6 +9,7 @@ export type MobileUpdatePhase =
   | "available"
   | "downloading"
   | "installing"
+  | "installFailed"
   | "downloadFailed"
   | "failed";
 
@@ -33,7 +34,10 @@ interface MobileUpdateState extends MobileUpdateSnapshot {
   reportProgress: (progress: ApkDownloadProgress) => void;
   reportDownloaded: (apkPath: string) => void;
   reportDownloadFailed: () => void;
-  setInstallNeedsPermission: (needed: boolean) => void;
+  /** 安装器调起成功：回到 installing 并记录是否需要授权 */
+  reportInstallInvoked: (needsPermission: boolean) => void;
+  /** 安装器调起失败：保留 apkPath，用户可直接重试而无需重新下载 */
+  reportInstallFailed: () => void;
   /** 取消下载或重试前复位：回到「有新版本」状态 */
   resetDownload: () => void;
 }
@@ -78,7 +82,8 @@ export const useMobileUpdateStore = create<MobileUpdateState>((set) => ({
   reportProgress: (progress) => set({ progress }),
   reportDownloaded: (apkPath) => set({ phase: "installing", apkPath, progress: null }),
   reportDownloadFailed: () => set({ phase: "downloadFailed", progress: null }),
-  setInstallNeedsPermission: (needed) => set({ installNeedsPermission: needed }),
+  reportInstallInvoked: (needsPermission) => set({ phase: "installing", installNeedsPermission: needsPermission }),
+  reportInstallFailed: () => set({ phase: "installFailed" }),
   resetDownload: () =>
     set({ phase: "available", progress: null, apkPath: null, installNeedsPermission: false }),
 }));

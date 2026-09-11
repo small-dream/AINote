@@ -13,6 +13,7 @@ const ACTIVE_PHASES: readonly MobileUpdatePhase[] = [
   "available",
   "downloading",
   "installing",
+  "installFailed",
   "downloadFailed",
 ];
 
@@ -41,6 +42,7 @@ export function MobileUpdateDialog() {
       title={t("update.found", { version: release.version })}
       onClose={snooze}
       className="mx-4"
+      mobileSheet={false}
     >
       {phase === "downloading" ? (
         <DownloadingBody progress={state.progress} onCancel={cancelDownload} />
@@ -50,8 +52,18 @@ export function MobileUpdateDialog() {
           onReopen={() => void state.reopenInstaller()}
           onDone={snooze}
         />
+      ) : phase === "installFailed" ? (
+        <FailedBody
+          message={t("update.installFailed")}
+          onRetry={() => void state.reopenInstaller()}
+          onLater={snooze}
+        />
       ) : phase === "downloadFailed" ? (
-        <FailedBody onRetry={() => void state.download()} onLater={snooze} />
+        <FailedBody
+          message={t("update.mobileDownloadFailed")}
+          onRetry={() => void state.download()}
+          onLater={snooze}
+        />
       ) : (
         <AvailableBody
           apkUrl={release.apkUrl}
@@ -121,11 +133,11 @@ function InstallingBody({ needsPermission, onReopen, onDone }: { needsPermission
   );
 }
 
-function FailedBody({ onRetry, onLater }: { onRetry: () => void; onLater: () => void }) {
+function FailedBody({ message, onRetry, onLater }: { message: string; onRetry: () => void; onLater: () => void }) {
   const { t } = useTranslation();
   return (
     <div className="flex flex-col gap-4">
-      <p role="alert" className="text-sm text-danger">{t("update.mobileDownloadFailed")}</p>
+      <p role="alert" className="text-sm text-danger">{message}</p>
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onLater}>{t("update.mobileLater")}</Button>
         <Button variant="primary" onClick={onRetry}>{t("common.retry")}</Button>

@@ -122,13 +122,13 @@ describe("useMobileUpdate 检查", () => {
   });
 });
 
-describe("useMobileUpdate 下载与安装", () => {
-  async function renderAvailable() {
-    const rendered = renderHook(() => useMobileUpdate());
-    await waitFor(() => expect(rendered.result.current.phase).toBe("available"));
-    return rendered;
-  }
+async function renderAvailable() {
+  const rendered = renderHook(() => useMobileUpdate());
+  await waitFor(() => expect(rendered.result.current.phase).toBe("available"));
+  return rendered;
+}
 
+describe("useMobileUpdate 下载与安装", () => {
   it("下载成功后自动调起安装器", async () => {
     state.downloadResult = { path: "/cache/updates/ainote-0.25.0.apk" };
     const { result } = await renderAvailable();
@@ -177,6 +177,23 @@ describe("useMobileUpdate 下载与安装", () => {
     state.downloadResult = { path: "/cache/updates/ainote-0.25.0.apk" };
     await result.current.download();
     await waitFor(() => expect(result.current.phase).toBe("installing"));
+  });
+});
+
+describe("useMobileUpdate 安装失败与重试", () => {
+  it("下载成功但调起安装器失败时进入 installFailed，保留安装包可直接重试", async () => {
+    state.downloadResult = { path: "/cache/updates/ainote-0.25.0.apk" };
+    state.installFails = true;
+    const { result } = await renderAvailable();
+
+    await result.current.download();
+    await waitFor(() => expect(result.current.phase).toBe("installFailed"));
+    expect(result.current.apkPath).toBe("/cache/updates/ainote-0.25.0.apk");
+
+    state.installFails = false;
+    await result.current.reopenInstaller();
+    await waitFor(() => expect(result.current.phase).toBe("installing"));
+    expect(api.downloadUpdate).toHaveBeenCalledTimes(1);
   });
 
   it("reopenInstaller 复用已下载的 APK 路径", async () => {
