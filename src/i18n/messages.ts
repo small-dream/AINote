@@ -1,6 +1,7 @@
 import type { Locale } from "@/stores/ui.store";
 
 const zhCN = {
+  "common.back": "返回", "repo.bindLoginRequired": "登录 {provider} 后继续", "repo.loginHint": "请先到「设置 → 账户」登录 {provider} 账号。",
   "richtext.paragraph": "正文", "richtext.insert": "插入", "richtext.more": "更多",
   "ai.capability": "AI 能力", "ai.summary": "{providers} 个服务商 · {models} 个模型 · 默认 {model}", "ai.defaultModelEmpty": "未设置", "ai.enabled": "已启用", "ai.disabled": "已停用", "ai.unnamedProvider": "未命名服务商", "ai.baseUrlMissing": "未设置接口地址", "ai.modelCatalog": "模型目录", "ai.modelsEmpty": "还没有模型，点击“添加模型”或先拉取模型列表。", "ai.remoteModelsHint": "点击模型名可快速加入目录。", "ai.unnamedModel": "未命名模型", "ai.apiKeySavedPlaceholder": "留空保持不变（已加密存储）", "ai.apiKeyPlaceholderEmpty": "输入 API Key（加密存储）",
   "ai.selectRemoteModel": "从远程模型中选择", "ai.manualModelHint": "点击“拉取模型列表”，或直接输入模型 ID。", "ai.modelAlreadyExists": "该模型已存在。",
@@ -45,6 +46,7 @@ const enUS: Record<keyof typeof zhCN, string> = {
   "repo.sizeLabel": "Current repository size", "repo.sizeLoading": "Calculating…", "repo.sizeRefresh": "Refresh repository size", "repo.sizeUnavailable": "Unavailable",
   "ai.applyDocument": "Replace note",
   "richtext.paragraph": "Body", "richtext.insert": "Insert", "richtext.more": "More",
+  "common.back": "Back", "repo.bindLoginRequired": "Sign in to {provider} to continue", "repo.loginHint": "Sign in to {provider} from Settings → Account first.",
   "ai.capability": "AI capability", "ai.summary": "{providers} providers · {models} models · default {model}", "ai.defaultModelEmpty": "Not set", "ai.enabled": "Enabled", "ai.disabled": "Disabled", "ai.unnamedProvider": "Unnamed provider", "ai.baseUrlMissing": "Base URL not set", "ai.modelCatalog": "Models", "ai.modelsEmpty": "No models yet. Add one or fetch the model list.", "ai.remoteModelsHint": "Click a model name to add it to your catalog.", "ai.unnamedModel": "Unnamed model", "ai.apiKeySavedPlaceholder": "Leave empty to keep (stored encrypted)", "ai.apiKeyPlaceholderEmpty": "Enter API key (stored encrypted)",
   "ai.selectRemoteModel": "Select from remote models", "ai.manualModelHint": "Fetch the model list, or enter a model ID manually.", "ai.modelAlreadyExists": "This model already exists.",
   "ai.modelSelector": "Select model", "ai.noModels": "No usable models. Enable one in Settings.", "ai.addProvider": "Add provider", "ai.providerName": "Provider name", "ai.enableProvider": "Enable provider", "ai.removeProvider": "Remove provider", "ai.addModel": "Add model", "ai.modelDisplayName": "Model display name", "ai.enableModel": "Enable model", "ai.setDefault": "Set default", "ai.isDefault": "Default", "ai.removeModel": "Remove model", "ai.fetchModels": "Fetch models", "ai.fetchingModels": "Fetching…",

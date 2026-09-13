@@ -19,7 +19,8 @@ pub async fn create_repo(
     is_private: bool,
 ) -> Result<RepoPathDto, AppErrorDto> {
     let provider = auth_service::parse_provider(&provider).map_err(AppErrorDto::from)?;
-    let cred = auth_service::credential_for_provider(&app, provider)?;
+    let cred = auth_service::credential_for_provider(&app, provider)
+        .map_err(|err| AppErrorDto::from(err).with_auth_provider(provider.id()))?;
     let notes = config::notes_dir(&app)?;
     fs::create_dir_all(&notes).map_err(AppError::from).map_err(AppErrorDto::from)?;
     let display_name = name.trim().to_string();
@@ -29,7 +30,7 @@ pub async fn create_repo(
         repo_service::create_and_bind_repo(&backend, provider, &cred, &name, is_private, &dest)
     })
     .await
-    .map_err(AppErrorDto::from)?;
+    .map_err(|err| AppErrorDto::from(err).with_auth_provider(provider.id()))?;
     let id = config::repos::register(&app, &display_name, &repo_path, Some(remote_url))?;
     config::repos::switch_to(&app, &id)?;
     Ok(RepoPathDto { repo_path })

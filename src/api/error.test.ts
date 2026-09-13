@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { errorActionOf, isAppError, messageOf, type AppError } from "./error";
+import { errorActionOf, isAppError, loginProviderOf, messageOf, type AppError } from "./error";
 
 describe("isAppError", () => {
   it("识别 AppError 结构", () => {
@@ -26,6 +26,32 @@ describe("messageOf", () => {
 
   it("其他值转字符串", () => {
     expect(messageOf(42)).toBe("42");
+  });
+});
+
+describe("loginProviderOf", () => {
+  it("认证错误带回目标平台，供界面直接引导登录", () => {
+    expect(
+      loginProviderOf({
+        code: "AUTH_2001",
+        kind: "auth",
+        message: "尚未配置 GitHub 的访问令牌",
+        retriable: false,
+        provider: "github",
+      })
+    ).toBe("github");
+  });
+
+  it("缺少平台信息的认证错误返回 null（不猜平台）", () => {
+    expect(loginProviderOf(syncError("SYNC_4003", "auth", false))).toBeNull();
+    expect(loginProviderOf(syncError("AUTH_2002", "auth", true))).toBeNull();
+  });
+
+  it("非认证错误不引导登录", () => {
+    expect(
+      loginProviderOf({ ...syncError("GIT_4001", "unknown", false), provider: "github" })
+    ).toBeNull();
+    expect(loginProviderOf(new Error("boom"))).toBeNull();
   });
 });
 

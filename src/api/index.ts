@@ -27,7 +27,7 @@ export { openExternal, printPage } from "./app.api";
 export { supportApi } from "./support.api";
 export type { FrontendLogLevel } from "./support.api";
 export { isTauriRuntime, onAndroidBackButton } from "./back-button.api";
-export { isAppError, messageOf } from "./error";
+export { isAppError, loginProviderOf, messageOf } from "./error";
 export type { AppError, ErrorKind } from "./error";
 export type {
   AiChatMessage,

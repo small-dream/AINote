@@ -88,6 +88,7 @@ flowchart TB
 - **凭证按平台分槽**：`services/auth_store/{mod,desktop,mobile}.rs`。桌面对应 `auth.<平台>.token`（AES-256-GCM，共享密钥 `auth.key`，0600）；移动端对应钥匙串条目 `<平台>_token`。升级前的单一 `auth.token` 视为 GitHub 凭证，读取时回退、写入后清理。非敏感的账号名记在 `ainote.json` 的 `providerLogins`。
 - **凭证接缝**：Service 层组装 `RemoteCredential { username, token }` 交给 `GitBackend` 的五个远端方法（`clone_repo` / `ls_remote` / `fetch` / `pull` / `push`），Repository 层不再假设用户名。
 - **未知 host 回退默认平台**：绑定自建 GitLab 等未被识别的托管时沿用 GitHub 凭证与 `x-access-token`，保持历史行为不回归；该行为是刻意的兼容策略。
+- **缺凭证的可操作错误**：目标平台没有可用令牌时，Service 返回 `AppError::AuthLoginRequired { provider, display_name }`（仍映射为 `AUTH_2001`），`AppErrorDto.provider` 带上平台 id，`commands/repo/{bind,create}.rs` 对认证类失败统一用 `with_auth_provider` 补齐平台。前端 `loginProviderOf` 据此在绑定/建仓表单里直接给出「登录 {平台} 后继续」，而不是只弹一句「未登录」把用户卡住。
 - **添加新平台**：新增一个 `HostingProvider` 成员与元数据 → 新增一个 `services/hosting/<平台>.rs` 并在 `mod.rs` 注册 → 前端无需改动（平台列表由 `auth_status` 下发，平台 id 用字符串传递）。
 
 ### 前端

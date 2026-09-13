@@ -13,6 +13,8 @@ export interface AppError {
   kind: ErrorKind;
   message: string;
   retriable: boolean;
+  /** 认证类错误才有：需要登录的托管平台 id（后端按目标平台回填） */
+  provider?: string;
   /** 同步类错误才有：后端定位到的失败阶段（E4-T4） */
   stage?: SyncStage;
   /** 同步类错误才有：可定位到的失败文件（如拉取冲突的文件） */
@@ -41,6 +43,15 @@ export function isAppError(value: unknown): value is AppError {
 export function messageOf(err: unknown): string {
   if (isAppError(err)) return err.message;
   return err instanceof Error ? err.message : String(err);
+}
+
+/**
+ * 认证类错误对应的托管平台 id：据此可直接引导用户登录该平台。
+ * 无平台信息（如过期凭证来自 git 层）时返回 null，调用方不应猜测平台。
+ */
+export function loginProviderOf(err: unknown): string | null {
+  if (!isAppError(err) || err.kind !== "auth") return null;
+  return err.provider ?? null;
 }
 
 /** 同步类错误对应的可操作建议 */

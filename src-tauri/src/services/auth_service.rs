@@ -68,14 +68,41 @@ pub fn validate_token(provider: HostingProvider, token: &str) -> Result<String, 
     hosting_api::fetch_login(provider, token)
 }
 
-/// 未配置令牌时给出可操作提示，而不是笼统的"未登录"。
+/// 未配置令牌时给出可操作错误：带上平台 id，前端可直接引导登录该平台。
 fn missing_token_error(provider: HostingProvider, err: AppError) -> AppError {
     match err {
-        AppError::Auth(_) => AppError::Auth(format!(
-            "尚未配置 {} 的访问令牌，请先添加 {} 账号",
-            provider.display_name(),
-            provider.display_name()
-        )),
+        AppError::Auth(_) => AppError::AuthLoginRequired {
+            provider: provider.id().to_string(),
+            display_name: provider.display_name().to_string(),
+        },
         other => other,
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn missing_token_error_names_the_provider_for_login() {
+        let err = missing_token_error(
+            HostingProvider::Gitee,
+            AppError::Auth("未登录或本地凭证已失效".into()),
+        );
+        assert_eq!(
+            err.to_string(),
+            "auth error: 尚未配置 Gitee 的访问令牌，请先登录 Gitee 账号"
+        );
+        let AppError::AuthLoginRequired { provider, display_name } = err else {
+            panic!("应为可引导登录的认证错误");
+        };
+        assert_eq!(provider, "gitee");
+        assert_eq!(display_name, "Gitee");
+    }
+
+    #[test]
+    fn missing_token_error_keeps_non_auth_errors() {
+        let err = missing_token_error(HostingProvider::GitHub, AppError::Io("disk full".into()));
+        assert!(matches!(err, AppError::Io(_)));
     }
 }

@@ -13,6 +13,12 @@ pub enum AppError {
     InvalidPath(String),
     #[error("auth error: {0}")]
     Auth(String),
+    /// 目标平台尚未配置访问令牌：可操作错误，DTO 会带上平台 id 供前端直接引导登录。
+    #[error("auth error: 尚未配置 {display_name} 的访问令牌，请先登录 {display_name} 账号")]
+    AuthLoginRequired {
+        provider: String,
+        display_name: String,
+    },
     #[error("network error: {0}")]
     AuthNetwork(String),
     #[error("repo error: {0}")]
@@ -72,6 +78,9 @@ pub struct AppErrorDto {
     pub kind: ErrorKind,
     pub message: String,
     pub retriable: bool,
+    /// 认证类错误才有：需要登录的托管平台 id，前端据此直接发起登录
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub provider: Option<String>,
     /// 同步类错误才有：失败阶段（commit / pull / push），无法归因时为空
     #[serde(skip_serializing_if = "Option::is_none")]
     pub stage: Option<SyncStage>,
@@ -84,6 +93,14 @@ pub struct AppErrorDto {
 }
 
 impl AppErrorDto {
+    /// 认证类错误补上目标平台 id（前端可据此直接引导登录），其它错误原样返回。
+    pub fn with_auth_provider(mut self, provider: &str) -> Self {
+        if matches!(self.kind, ErrorKind::Auth) && self.provider.is_none() {
+            self.provider = Some(provider.to_string());
+        }
+        self
+    }
+
     /// 附加同步定位信息（E4-T4）：`stage` 为空表示无法归因，`files` 为空表示无法定位到文件。
     pub fn with_sync_context(mut self, stage: Option<SyncStage>, files: Vec<String>, hint: &str) -> Self {
         self.stage = stage;
@@ -99,6 +116,7 @@ impl From<AppError> for AppErrorDto {
             AppError::NoteNotFound(_) => ("NOTE_1001", ErrorKind::NotFound, false),
             AppError::InvalidPath(_) => ("NOTE_1002", ErrorKind::Unknown, false),
             AppError::Auth(_) => ("AUTH_2001", ErrorKind::Auth, false),
+            AppError::AuthLoginRequired { .. } => ("AUTH_2001", ErrorKind::Auth, false),
             AppError::AuthNetwork(_) => ("AUTH_2002", ErrorKind::Auth, true),
             AppError::Repo(_) => ("REPO_3001", ErrorKind::Unknown, false),
             AppError::Conflict(_) => ("SYNC_4001", ErrorKind::Conflict, false),
@@ -114,11 +132,16 @@ impl From<AppError> for AppErrorDto {
             AppError::UpdateChecksum(_) => ("UPDATE_7002", ErrorKind::Unknown, false),
             AppError::UpdateInstall(_) => ("UPDATE_7003", ErrorKind::Unknown, false),
         };
+        let provider = match &err {
+            AppError::AuthLoginRequired { provider, .. } => Some(provider.clone()),
+            _ => None,
+        };
         AppErrorDto {
             code: code.to_string(),
             kind,
             message: err.to_string(),
             retriable,
+            provider,
             stage: None,
             files: Vec::new(),
             hint: None,
@@ -182,6 +205,14 @@ mod tests {
         assert_eq!(dto(AppError::NoteNotFound("a".into())).code, "NOTE_1001");
         assert_eq!(dto(AppError::InvalidPath("..".into())).code, "NOTE_1002");
         assert_eq!(dto(AppError::Auth("bad".into())).code, "AUTH_2001");
+        assert_eq!(
+            dto(AppError::AuthLoginRequired {
+                provider: "gitee".into(),
+                display_name: "Gitee".into(),
+            })
+            .code,
+            "AUTH_2001"
+        );
         assert_eq!(dto(AppError::AuthNetwork("down".into())).code, "AUTH_2002");
         assert_eq!(dto(AppError::Repo("x".into())).code, "REPO_3001");
         assert_eq!(dto(AppError::Conflict("c".into())).code, "SYNC_4001");
@@ -203,6 +234,7 @@ mod tests {
         let auth = dto(AppError::Auth("x".into()));
         assert_eq!(auth.kind, ErrorKind::Auth);
         assert!(!auth.retriable);
+        assert!(auth.provider.is_none(), "无平台信息的认证错误不写 provider");
         let net = dto(AppError::AuthNetwork("x".into()));
         assert_eq!(net.kind, ErrorKind::Auth);
         assert!(net.retriable);
@@ -238,6 +270,41 @@ mod tests {
     #[test]
     fn local_git_errors_are_not_retriable() {
         assert!(!dto(AppError::Git("index lock".into())).retriable);
+    }
+
+    #[test]
+    fn login_required_error_carries_provider_for_the_ui() {
+        let json = serde_json::to_value(dto(AppError::AuthLoginRequired {
+            provider: "github".into(),
+            display_name: "GitHub".into(),
+        }))
+        .unwrap();
+        assert_eq!(json["code"], "AUTH_2001");
+        assert_eq!(json["kind"], "auth");
+        assert_eq!(json["provider"], "github");
+        assert_eq!(
+            json["message"],
+            "auth error: 尚未配置 GitHub 的访问令牌，请先登录 GitHub 账号"
+        );
+    }
+
+    #[test]
+    fn auth_provider_hint_fills_only_auth_errors() {
+        let filled = dto(AppError::Auth("bad".into())).with_auth_provider("gitee");
+        assert_eq!(filled.provider.as_deref(), Some("gitee"));
+
+        // 已带平台的错误不被覆盖。
+        let kept = dto(AppError::AuthLoginRequired {
+            provider: "github".into(),
+            display_name: "GitHub".into(),
+        })
+        .with_auth_provider("gitee");
+        assert_eq!(kept.provider.as_deref(), Some("github"));
+
+        // 非认证错误不写平台，避免误导用户去登录。
+        let untouched = dto(AppError::Git("boom".into())).with_auth_provider("gitee");
+        assert!(untouched.provider.is_none());
+        assert!(serde_json::to_value(untouched).unwrap().get("provider").is_none());
     }
 
     #[test]

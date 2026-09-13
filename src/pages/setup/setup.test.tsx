@@ -26,7 +26,14 @@ vi.mock("@/api", () => ({
   authApi: authApiMock,
   repoApi: repoApiMock,
   isAppError: () => false,
-  messageOf: (err: unknown) => (err instanceof Error ? err.message : String(err)),
+  messageOf: (err: unknown) =>
+    err && typeof err === "object" && "message" in err
+      ? String((err as { message: unknown }).message)
+      : String(err),
+  loginProviderOf: (err: unknown) =>
+    err && typeof err === "object" && (err as { kind?: string }).kind === "auth"
+      ? ((err as { provider?: string }).provider ?? null)
+      : null,
 }));
 
 function renderSetup() {
@@ -162,5 +169,83 @@ describe("SetupPage 绑定仓库", () => {
     await waitFor(() => expect(screen.getByText("workspace-page")).toBeTruthy());
     const cached = queryClient.getQueryData<{ providers?: unknown[] }>(["auth-status"]);
     expect(cached?.providers?.length).toBe(providers.length);
+  });
+
+});
+
+describe("SetupPage 缺少平台凭证时补登录", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("先登录该平台，再回到绑定表单并保留地址", async () => {
+    authApiMock.status.mockResolvedValue({ hasToken: true, repoPath: null, providers });
+    authApiMock.validateToken.mockResolvedValue({ login: "small-dream" });
+    authApiMock.saveToken.mockResolvedValue(null);
+    repoApiMock.bind.mockRejectedValue({
+      code: "AUTH_2001",
+      kind: "auth",
+      message: "auth error: 尚未配置 GitHub 的访问令牌，请先登录 GitHub 账号",
+      retriable: false,
+      provider: "github",
+    });
+
+    renderSetup();
+
+    const urlInput = await screen.findByPlaceholderText("https://github.com/user/my-notes.git");
+    fireEvent.change(urlInput, { target: { value: "https://github.com/u/r.git" } });
+    fireEvent.click(screen.getByText("绑定"));
+
+    // 报错的同时给出可点击的登录入口，用户不会被卡死在绑定表单
+    await screen.findByText("auth error: 尚未配置 GitHub 的访问令牌，请先登录 GitHub 账号");
+    fireEvent.click(screen.getByText("登录 GitHub 后继续"));
+
+    await loginThrough();
+
+    await waitFor(() => {
+      expect(authApiMock.saveToken).toHaveBeenCalledWith("github", "ghp_x", "small-dream");
+    });
+    const restored = await screen.findByPlaceholderText("https://github.com/user/my-notes.git");
+    expect((restored as HTMLInputElement).value).toBe("https://github.com/u/r.git");
+  });
+
+  it("补登录步骤可以放弃并返回绑定表单", async () => {
+    authApiMock.status.mockResolvedValue({ hasToken: true, repoPath: null, providers });
+    repoApiMock.bind.mockRejectedValue({
+      code: "AUTH_2001",
+      kind: "auth",
+      message: "尚未配置 Gitee 的访问令牌",
+      retriable: false,
+      provider: "gitee",
+    });
+
+    renderSetup();
+
+    const urlInput = await screen.findByPlaceholderText("https://github.com/user/my-notes.git");
+    fireEvent.change(urlInput, { target: { value: "https://gitee.com/u/r.git" } });
+    fireEvent.click(screen.getByText("绑定"));
+    fireEvent.click(await screen.findByText("登录 Gitee 后继续"));
+
+    await screen.findByPlaceholderText("粘贴 Gitee 访问令牌");
+    fireEvent.click(screen.getByText("返回"));
+
+    expect(await screen.findByText("绑定已有仓库")).toBeTruthy();
+  });
+});
+
+describe("SetupPage 建仓缺少平台账号", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("新建仓库缺少 GitHub 账号时同样给出登录入口", async () => {
+    authApiMock.status.mockResolvedValue({ hasToken: true, repoPath: null, providers });
+
+    renderSetup();
+
+    fireEvent.click(await screen.findByText("新建仓库"));
+    fireEvent.click(await screen.findByText("登录 GitHub 后继续"));
+
+    expect(await screen.findByPlaceholderText("粘贴 GitHub 访问令牌")).toBeTruthy();
   });
 });

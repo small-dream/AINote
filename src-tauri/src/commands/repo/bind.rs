@@ -6,6 +6,7 @@ use crate::commands::blocking;
 use crate::config;
 use crate::domain::dto::RepoPathDto;
 use crate::domain::error::{AppError, AppErrorDto};
+use crate::domain::hosting;
 use crate::domain::metrics::MetricEvent;
 use crate::repositories::git2_backend::Git2Backend;
 use crate::services::{auth_service, repo_service};
@@ -20,7 +21,12 @@ pub async fn bind_repo(app: AppHandle, repo_url: String) -> Result<RepoPathDto, 
         "绑定仓库开始 url={}",
         config::logging::redact(&repo_url)
     );
-    let cred = auth_service::credential_for_url(&app, Some(&repo_url))?;
+    // 平台先算一次：既用于取凭证，也用于把认证类失败标上平台，让前端能直接引导登录。
+    let provider = hosting::provider_for_url(Some(&repo_url));
+    let cred = auth_service::credential_for_provider(&app, provider).map_err(|err| {
+        log::warn!(target: "ainote::repo", "绑定仓库缺少可用凭证 platform={}", provider.id());
+        AppErrorDto::from(err).with_auth_provider(provider.id())
+    })?;
     let notes = config::notes_dir(&app)?;
     fs::create_dir_all(&notes).map_err(AppError::from).map_err(AppErrorDto::from)?;
     let name = repo_service::derive_name(&repo_url);
@@ -32,7 +38,7 @@ pub async fn bind_repo(app: AppHandle, repo_url: String) -> Result<RepoPathDto, 
             .await
             .map_err(|err| {
                 log::error!(target: "ainote::repo", "绑定仓库失败 error={err}");
-                AppErrorDto::from(err)
+                AppErrorDto::from(err).with_auth_provider(provider.id())
             })?;
     let id = config::repos::register(&app, &name, &repo_path, Some(repo_url))?;
     config::repos::switch_to(&app, &id)?;
