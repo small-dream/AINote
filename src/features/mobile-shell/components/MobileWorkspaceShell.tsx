@@ -9,6 +9,7 @@ import { MobileUpdateDialog } from "@/features/update/components/MobileUpdateDia
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 import { useMobileEditorView } from "../hooks/useMobileEditorView";
+import { useMobileKeyboardInsets } from "../hooks/useMobileKeyboardInsets";
 import type { SidebarTab } from "@/stores/ui.store";
 
 const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
@@ -43,6 +44,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
     onBackToList,
     onFlush: () => editorRef.current?.flush(),
   });
+  useMobileKeyboardInsets();
 
   return (
     <div className="mobile-workspace-shell flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-bg-primary">
@@ -186,7 +188,7 @@ function MobileListTabs({ active, onChange, onOpenGraph }: { active: SidebarTab;
 function MobileBottomNav({ notesActive, favoritesActive, onOpenNotes, onOpenFavorites, onOpenSettings }: { notesActive: boolean; favoritesActive: boolean; onOpenNotes: () => void; onOpenFavorites: () => void; onOpenSettings: () => void }) {
   const { t } = useTranslation();
   return (
-    <nav className="mobile-bottom-nav flex min-h-16 shrink-0 items-stretch justify-around border-t border-border bg-bg-secondary pb-[env(safe-area-inset-bottom)]" aria-label={t("app.workspaceNavigation")}>
+    <nav className="mobile-bottom-nav flex min-h-16 shrink-0 items-stretch justify-around border-t border-border bg-bg-secondary pb-[var(--safe-bottom)]" aria-label={t("app.workspaceNavigation")}>
       <MobileNavButton active={notesActive} label={t("app.notes")} icon={List} onClick={onOpenNotes} />
       <MobileNavButton active={favoritesActive} label={t("app.favorites")} icon={Star} onClick={onOpenFavorites} />
       <MobileNavButton label={t("settings.title")} icon={Settings} onClick={onOpenSettings} />

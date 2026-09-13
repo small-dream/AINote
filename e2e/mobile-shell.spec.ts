@@ -46,3 +46,40 @@ test.describe("桌面端可编辑控件字号不受影响", () => {
     expect(sizes.editor).toBeLessThan(16);
   });
 });
+
+test.describe("移动端键盘与底部安全区", () => {
+  test.use({ viewport: { width: 402, height: 874 } });
+
+  test("键盘遮挡高度让移动壳收缩到键盘上方", async ({ page }) => {
+    await openWorkspace(page, baseState());
+    const measured = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>(".mobile-workspace-shell");
+      if (!shell) throw new Error("缺少移动壳");
+      const height = () => shell.getBoundingClientRect().height;
+      const before = height();
+      // 真实设备上 --kb-inset 由 platform/keyboard-inset 按 visualViewport 写入
+      shell.style.setProperty("--kb-inset", "300px");
+      const during = height();
+      shell.style.removeProperty("--kb-inset");
+      return { before, during, after: height() };
+    });
+
+    expect(measured.before).toBeCloseTo(874, 0);
+    expect(measured.during).toBeCloseTo(574, 0);
+    expect(measured.after).toBeCloseTo(874, 0);
+  });
+
+  test("正文内容避开系统导航栏安全区", async ({ page }) => {
+    await openWorkspace(page, baseState());
+    await openNote(page, "first", "第一篇");
+    const paddingBottom = await page.evaluate(() => {
+      const shell = document.querySelector<HTMLElement>(".mobile-workspace-shell");
+      shell?.style.setProperty("--safe-bottom", "24px");
+      const content = document.querySelector<HTMLElement>(".mobile-editor-pane .cm-content");
+      return content ? getComputedStyle(content).paddingBottom : null;
+    });
+
+    // 24px 安全区（模拟系统导航栏）+ 1.5rem 呼吸位
+    expect(paddingBottom).toBe("48px");
+  });
+});

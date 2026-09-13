@@ -12,9 +12,13 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.ainote_core"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
+        <!-- 键盘避让：Android 11 以下（以及未强制 edge-to-edge 的机型）由系统直接缩小 WebView；
+             新版本 Android 强制 edge-to-edge 后该属性不再改变窗口，改由前端 CSS 变量 kb-inset 把移动壳
+             高度收到键盘上方（见 src/platform/keyboard-inset.ts）。 -->
         <activity
             android:configChanges="orientation|keyboardHidden|keyboard|screenSize|locale|smallestScreenSize|screenLayout|uiMode"
             android:launchMode="singleTask"
+            android:windowSoftInputMode="adjustResize"
             android:label="@string/main_activity_title"
             android:name=".MainActivity"
             android:exported="true">

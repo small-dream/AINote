@@ -1,5 +1,13 @@
 # 更新日志
 
+## 未发布（修复：Android 键盘遮挡正文与系统导航栏遮挡内容）
+
+### 修复
+
+- 修复 Android 端在文章底部编辑时键盘弹起后看不到光标处文字的问题：壳在 edge-to-edge 下不会因键盘缩小窗口（`MainActivity` 调用了 `enableEdgeToEdge()`，Tauri / wry 既不设置 `windowSoftInputMode` 也不处理 IME insets），WebView 只把 IME 高度作为 visual viewport 的底部 inset 下发，于是布局视口、`100dvh` 和编辑器滚动容器高度都保持整屏，CodeMirror 认为光标仍在可视区内，光标便停在键盘后面。现新增 `src/platform/keyboard-inset.ts`，按「布局视口高度 − (visualViewport.offsetTop + height)」算出遮挡高度并写入 `--kb-inset`；移动壳高度改为 `calc(100dvh - var(--kb-inset, 0px))` 随键盘收缩到键盘上方，`useKeyboardCaretIntoView` 在键盘弹起后重新测量并把光标滚回可视区。
+- 修复 Android 端编辑器正文压进系统导航栏（手势条 / 三键导航栏）的问题：编辑器页没有底部导航，此前只有列表页的底部导航带 `env(safe-area-inset-bottom)`。现移动壳统一提供 `--safe-bottom`，CodeMirror 正文、预览与富文本滚动容器各自留出安全区加呼吸位，背景仍铺满以避免笔记主题出现色带。
+- Android manifest 补 `android:windowSoftInputMode="adjustResize"`：Android 11 以下以及未强制 edge-to-edge 的机型由系统直接缩小 WebView，新版 Android 由 `--kb-inset` 接管，两条路径不会叠加。
+
 ## v0.28.3 — 2026-09-11（文档：README 界面预览，移动端聚焦缩放修复）
 
 ### 文档

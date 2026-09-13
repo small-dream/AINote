@@ -5,6 +5,7 @@ import { useFocusTitleOnLoad } from "../hooks/useEditorFocus";
 import { useEditorExtensions } from "../hooks/useEditorExtensions";
 import { useEditorViewReady } from "../hooks/useEditorViewReady";
 import { useEditorScrollPersistence } from "../hooks/useEditorScrollPersistence";
+import { useKeyboardCaretIntoView } from "../hooks/useKeyboardCaretIntoView";
 import { useSyncScroll } from "../hooks/useSyncScroll";
 import { useAssetImport } from "@/features/asset/hooks/useAssetImport";
 import { useEditorWiki } from "@/features/wiki/hooks/useEditorWiki";
@@ -63,6 +64,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const { richTextDialog, requestConvertToRichText, cancelConvertToRichText, confirmConvertToRichText, handleConvertToMarkdown } = useNoteConversion({ notePath, draft, flush, onOpenNote });
     const { ai, suggest, askAiOpen, closeAskAi, insertAnswer } = useEditorAi(viewRef, notePath, draft, onChange);
     useEditorScrollPersistence(readyView, previewRef, mode, { editorScrollTop, previewScrollTop, setEditorScrollTop, setPreviewScrollTop });
+    useKeyboardCaretIntoView(readyView, isCompact);
     useSyncScroll(readyView, previewRef, mode);
     useHistoryRequest(historyRequestPath, notePath, onHistoryRequestHandled, history.openHistory);
     useImperativeHandle(ref, () => ({ flush, setMode, openHistory: history.openHistory, insertCallout: () => { if (viewRef.current) dispatchFormat(viewRef.current, insertCallout); viewRef.current?.focus(); } }), [flush, setMode, history.openHistory, viewRef]);
