@@ -158,7 +158,7 @@ function needNote(map: MockStore["notes"], path: string) {
 
 const commandHandlers: Record<string, CommandHandler> = {
   auth_status: (_args, ctx) => ({ hasToken: true, repoPath: ctx.state.repoPath, providers: E2E_PROVIDERS }),
-  list_repos: () => E2E_REPOS,
+  list_repos: (_args, ctx) => ctx.state.repos ?? E2E_REPOS,
   switch_repo: (args, ctx) => {
     const next = E2E_REPOS.find((repo) => repo.id === String(args.id));
     if (!next) throw appError(`repo not found: ${String(args.id)}`);

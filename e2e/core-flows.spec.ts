@@ -1,4 +1,5 @@
-import { expect, test } from "@playwright/test";
+import { expect, test, type Page } from "@playwright/test";
+import { E2E_REPOS } from "../src/e2e/fixtures";
 import type { E2eState } from "../src/e2e/types";
 import { calls, openNote, openWorkspace } from "./helpers";
 
@@ -7,6 +8,29 @@ const PNG =
 
 function baseState(notes: E2eState["notes"]): E2eState {
   return { repoPath: "/mock-repo", notes };
+}
+
+/** 单仓库种子：此时侧栏不应再渲染仓库标识行。 */
+function singleRepoState(notes: E2eState["notes"]): E2eState {
+  return { ...baseState(notes), repos: E2E_REPOS.slice(0, 1) };
+}
+
+/** 侧栏顶部到目录工具栏搜索框的距离：有仓库标识行时约 68px，没有时贴顶（约 15px）。 */
+async function sidebarTopOffset(page: Page): Promise<number> {
+  return page.evaluate(() => {
+    const sidebar = document.querySelector(".workspace-sidebar");
+    const search = document.querySelector(".tree-search-input");
+    if (!sidebar || !search) return -1;
+    return search.getBoundingClientRect().top - sidebar.getBoundingClientRect().top;
+  });
+}
+
+/** 断言侧栏顶部没有仓库标识行：首行即目录工具栏，且工具栏贴顶。 */
+async function expectSidebarStartsAtTreeToolbar(page: Page): Promise<void> {
+  await expect(page.locator(".workspace-sidebar > *").first().locator(".tree-search-input")).toBeVisible();
+  const offset = await sidebarTopOffset(page);
+  expect(offset).toBeGreaterThan(0);
+  expect(offset).toBeLessThan(20);
 }
 
 test.describe("AINote 桌面核心流程", () => {
@@ -48,6 +72,13 @@ test.describe("AINote 桌面核心流程", () => {
     await expect(menu).toBeVisible();
     await expect(menu.getByRole("option", { selected: true })).toContainText("Mock Repo");
     await expect(menu.getByText("管理仓库…")).toBeVisible();
+  });
+
+  test("只绑定一个仓库时不渲染仓库标识行，目录工具栏上移到侧栏顶部", async ({ page }) => {
+    await openWorkspace(page, singleRepoState([{ path: "solo.md", content: "# 唯一仓库" }]));
+
+    await expect(page.getByRole("button", { name: "切换仓库" })).toHaveCount(0);
+    await expectSidebarStartsAtTreeToolbar(page);
   });
 
   test("最近面板：清空按钮与面板标题垂直居中对齐", async ({ page }) => {
@@ -205,6 +236,13 @@ test.describe("AINote 移动端窄屏", () => {
     await expect(switcher).toContainText("备份库");
     await expect(switcher).toContainText("Gitee");
     await expect(page.getByText("全部笔记").first()).toBeVisible();
+  });
+
+  test("窄屏单仓库时也不渲染仓库标识行，列表首行即目录工具栏", async ({ page }) => {
+    await openWorkspace(page, singleRepoState([{ path: "mobile.md", content: "# 移动端" }]));
+
+    await expect(page.getByRole("button", { name: "切换仓库" })).toHaveCount(0);
+    await expectSidebarStartsAtTreeToolbar(page);
   });
 
   test("窄屏用「源码」替代「分栏」并切换为全宽源码编辑", async ({ page }) => {

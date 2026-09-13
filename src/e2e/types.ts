@@ -1,5 +1,7 @@
 /** E2E 种子与记录类型（src/e2e/ipcMock.ts 与 e2e/ 测试共享）。 */
 
+import type { RepoInfo } from "@/api/types";
+
 export interface E2eNoteSeed {
   path: string;
   kind?: "markdown" | "richText";
@@ -29,6 +31,8 @@ export interface E2eConflictSeed {
 
 export interface E2eState {
   repoPath: string;
+  /** 覆盖已绑定仓库列表（默认 fixtures 的两个仓库）；单项用于验证单仓库不渲染仓库标识行 */
+  repos?: RepoInfo[];
   /** 当前安装版本（`plugin:app|version`，移动端更新检查用） */
   appVersion?: string;
   /** 本地指标开关初始状态（默认开启） */

@@ -13,8 +13,10 @@ const PROVIDER_LABELS: Record<string, string> = { github: "GitHub", gitee: "Gite
 /**
  * 目录树顶部的仓库标识 + 切换下拉。
  *
- * 工作区其余部分只呈现"当前仓库"，多仓库时用户无从判断自己在哪个库，
- * 这里常驻显示仓库名与平台，并提供切换入口（与设置页仓库列表共用同一套切换逻辑）。
+ * 仅在绑定多个仓库时渲染：单仓库时这行既没有可切换目标、也没有识别价值，整行高度
+ * 还给目录树本身（管理仓库仍可从导航轨进入设置页仓库分区）。多仓库时工作区其余部分
+ * 只呈现"当前仓库"，用户无从判断自己在哪个库，这里常驻显示仓库名与平台，并提供切换
+ * 入口（与设置页仓库列表共用同一套切换逻辑）。
  */
 export function RepoSwitcher() {
   const { t } = useTranslation();
@@ -33,38 +35,42 @@ export function RepoSwitcher() {
     activate.mutate(repo.id);
   }
 
+  if (repos.length <= 1) return null;
+
   return (
-    <div className="relative min-w-0" onClick={(event) => event.stopPropagation()}>
-      <button
-        type="button"
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        aria-label={t("tree.switchRepo")}
-        title={t("tree.switchRepo")}
-        disabled={activate.isPending}
-        onClick={toggle}
-        className="flex w-full min-w-0 items-center gap-1.5 rounded-md border border-border bg-bg-primary px-2 py-1.5 text-left transition-colors hover:border-accent max-md:min-h-9"
-      >
-        <FolderTree size={14} className="shrink-0 text-text-tertiary" aria-hidden="true" />
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-text-primary">{label}</span>
-        {providerLabel && (
-          <span className="shrink-0 rounded bg-bg-secondary px-1.5 py-0.5 text-[11px] text-text-tertiary">{providerLabel}</span>
+    <div className="min-w-0 shrink-0 border-b border-border px-3 py-2">
+      <div className="relative min-w-0" onClick={(event) => event.stopPropagation()}>
+        <button
+          type="button"
+          aria-haspopup="listbox"
+          aria-expanded={open}
+          aria-label={t("tree.switchRepo")}
+          title={t("tree.switchRepo")}
+          disabled={activate.isPending}
+          onClick={toggle}
+          className="flex w-full min-w-0 items-center gap-1.5 rounded-md border border-border bg-bg-primary px-2 py-1.5 text-left transition-colors hover:border-accent max-md:min-h-9"
+        >
+          <FolderTree size={14} className="shrink-0 text-text-tertiary" aria-hidden="true" />
+          <span className="min-w-0 flex-1 truncate text-xs font-medium text-text-primary">{label}</span>
+          {providerLabel && (
+            <span className="shrink-0 rounded bg-bg-secondary px-1.5 py-0.5 text-[11px] text-text-tertiary">{providerLabel}</span>
+          )}
+          <ChevronDown size={13} className="shrink-0 text-text-tertiary" aria-hidden="true" />
+        </button>
+        {open && (
+          <RepoMenu
+            repos={repos}
+            activePath={repoPath}
+            label={t("tree.repoListLabel")}
+            manageLabel={t("tree.manageRepos")}
+            onSelect={switchTo}
+            onManage={() => {
+              close();
+              useUiStore.getState().openSettings("repositories");
+            }}
+          />
         )}
-        <ChevronDown size={13} className="shrink-0 text-text-tertiary" aria-hidden="true" />
-      </button>
-      {open && (
-        <RepoMenu
-          repos={repos}
-          activePath={repoPath}
-          label={t("tree.repoListLabel")}
-          manageLabel={t("tree.manageRepos")}
-          onSelect={switchTo}
-          onManage={() => {
-            close();
-            useUiStore.getState().openSettings("repositories");
-          }}
-        />
-      )}
+      </div>
     </div>
   );
 }

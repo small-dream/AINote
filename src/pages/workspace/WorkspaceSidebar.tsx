@@ -39,10 +39,8 @@ export function WorkspaceSidebar({
 
   return (
     <div className="workspace-sidebar flex h-full min-h-0 shrink-0 flex-col overflow-hidden bg-bg-secondary" style={{ width: sidebarWidth }}>
-      {/* 仓库标识常驻：目录、最近、收藏、标签、回收站都只作用于当前仓库 */}
-      <div className="min-w-0 shrink-0 border-b border-border px-3 py-2">
-        <RepoSwitcher />
-      </div>
+      {/* 仓库标识：目录、最近、收藏、标签、回收站都只作用于当前仓库，多仓库时才常驻显示 */}
+      <RepoSwitcher />
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         {tab === "tree" ? (
           <FileTree repoPath={repoPath} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} createDir={createDir} onRequestMove={onRequestMove} onRequestRename={onRequestRename} onRequestHistory={onRequestHistory} />
