@@ -1,8 +1,8 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { repoApi } from "@/api";
+import { repoKeys } from "@/queries/repo.queries";
 import { useSessionStore } from "@/stores/session.store";
 import { flushPendingDrafts } from "@/features/note/utils/draftRegistry";
-import { repoKeys } from "./useRepoManager";
 
 /** 从备份恢复：成功后刷新仓库列表并切换到恢复出的仓库。 */
 export function useRepoRestore() {

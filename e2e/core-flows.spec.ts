@@ -35,6 +35,21 @@ test.describe("AINote 桌面核心流程", () => {
     expect(gaps).toEqual([12, 6, 6, 6, 6, 12, 6]);
   });
 
+  test("目录树顶部常驻显示当前仓库并可展开切换菜单", async ({ page }) => {
+    await openWorkspace(page, baseState([{ path: "first.md", content: "# 第一篇" }]));
+
+    const switcher = page.getByRole("button", { name: "切换仓库" });
+    await expect(switcher).toBeVisible();
+    await expect(switcher).toContainText("Mock Repo");
+    await expect(switcher).toContainText("GitHub");
+
+    await switcher.click();
+    const menu = page.getByRole("listbox", { name: "笔记仓库" });
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole("option", { selected: true })).toContainText("Mock Repo");
+    await expect(menu.getByText("管理仓库…")).toBeVisible();
+  });
+
   test("最近面板：清空按钮与面板标题垂直居中对齐", async ({ page }) => {
     await openWorkspace(page, baseState([
       { path: "a.md", content: "# A" },
@@ -170,6 +185,27 @@ test.describe("AINote 桌面核心流程", () => {
 
 test.describe("AINote 移动端窄屏", () => {
   test.use({ viewport: { width: 390, height: 844 } });
+
+  test("窄屏目录树顶部同样可看到、展开并切换仓库", async ({ page }) => {
+    await openWorkspace(page, baseState([{ path: "mobile.md", content: "# 移动端" }]));
+
+    const switcher = page.getByRole("button", { name: "切换仓库" });
+    await expect(switcher).toBeVisible();
+    await expect(switcher).toContainText("Mock Repo");
+
+    await switcher.click();
+    const menu = page.getByRole("listbox", { name: "笔记仓库" });
+    await expect(menu).toBeVisible();
+
+    // 窄屏下列表项必须有可点击的触控高度（≥36px，与移动端 tab 一致）
+    const optionHeight = await menu.getByRole("option", { name: /备份库/ }).evaluate((el) => el.getBoundingClientRect().height);
+    expect(optionHeight).toBeGreaterThanOrEqual(36);
+
+    await menu.getByRole("option", { name: /备份库/ }).click();
+    await expect(switcher).toContainText("备份库");
+    await expect(switcher).toContainText("Gitee");
+    await expect(page.getByText("全部笔记").first()).toBeVisible();
+  });
 
   test("窄屏用「源码」替代「分栏」并切换为全宽源码编辑", async ({ page }) => {
     await openWorkspace(page, baseState([{ path: "mobile.md", content: "# 移动端\n\n移动端正文内容" }]));

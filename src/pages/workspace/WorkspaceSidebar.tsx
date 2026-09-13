@@ -3,6 +3,7 @@ import { RecentPanel } from "@/features/recent/components/RecentPanel";
 import { FavoritePanel } from "@/features/favorites/components/FavoritePanel";
 import { TagIndex } from "@/features/wiki/components/TagIndex";
 import { TrashPanel } from "@/features/trash/components/TrashPanel";
+import { RepoSwitcher } from "@/features/file-tree/components/RepoSwitcher";
 import { useUiStore } from "@/stores/ui.store";
 import type { NoteKind } from "@/api/types";
 
@@ -37,7 +38,11 @@ export function WorkspaceSidebar({
   const tab = useUiStore((s) => s.sidebarTab);
 
   return (
-    <div className="workspace-sidebar flex h-full min-h-0 shrink-0 overflow-hidden bg-bg-secondary" style={{ width: sidebarWidth }}>
+    <div className="workspace-sidebar flex h-full min-h-0 shrink-0 flex-col overflow-hidden bg-bg-secondary" style={{ width: sidebarWidth }}>
+      {/* 仓库标识常驻：目录、最近、收藏、标签、回收站都只作用于当前仓库 */}
+      <div className="min-w-0 shrink-0 border-b border-border px-3 py-2">
+        <RepoSwitcher />
+      </div>
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">
         {tab === "tree" ? (
           <FileTree repoPath={repoPath} onSelect={onSelect} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onRequestImport={onRequestImport} onRequestImportNotes={onRequestImportNotes} createDir={createDir} onRequestMove={onRequestMove} onRequestRename={onRequestRename} onRequestHistory={onRequestHistory} />

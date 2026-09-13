@@ -1,22 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { repoApi } from "@/api";
 import type { RepoInfo } from "@/api/types";
-import { useSessionStore } from "@/stores/session.store";
 import { flushPendingDrafts } from "@/features/note/utils/draftRegistry";
-
-export const repoKeys = {
-  list: ["repos"] as const,
-};
-
-/** 已绑定仓库列表（服务端/Git 状态权威来源） */
-export function useRepoListQuery() {
-  return useQuery({
-    queryKey: repoKeys.list,
-    queryFn: () => repoApi.list(),
-    staleTime: 30_000,
-  });
-}
+import { repoKeys, useRepoListQuery, useSwitchRepoMutation } from "@/queries/repo.queries";
+import { useSessionStore } from "@/stores/session.store";
 
 interface RenameInput {
   id: string;
@@ -30,6 +18,7 @@ export function useRepoManager() {
   const switchRepo = useSessionStore((s) => s.switchRepo);
   const reset = useSessionStore((s) => s.reset);
   const list = useRepoListQuery();
+  const activate = useSwitchRepoMutation();
 
   const rename = useMutation({
     mutationFn: ({ id, name }: RenameInput) => repoApi.rename(id, name),
@@ -51,17 +40,6 @@ export function useRepoManager() {
       } else if (newActive !== current) {
         switchRepo(newActive);
       }
-    },
-  });
-
-  const activate = useMutation({
-    mutationFn: async (id: string) => {
-      await flushPendingDrafts();
-      return repoApi.switchRepo(id);
-    },
-    onSuccess: (path) => {
-      void queryClient.invalidateQueries({ queryKey: repoKeys.list });
-      switchRepo(path);
     },
   });
 
