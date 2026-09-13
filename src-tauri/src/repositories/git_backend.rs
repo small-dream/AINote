@@ -2,25 +2,27 @@ use std::path::Path;
 
 use crate::domain::error::AppError;
 use crate::domain::history::{CommitInfo, FileDiff, RepoCommit};
+use crate::domain::remote::RemoteCredential;
 use crate::domain::sync::{ChangedFile, ConflictFile};
 
 /// Git 能力抽象（防腐化关键：Service 只依赖此 trait，不依赖 git2）。
 /// 实现：git2_backend.rs（本地）+ git2_remote.rs（网络）。测试注入 MockGitBackend。
-/// token 由 Service 层从本地加密存储读出后传入，Repository 不关心持久化方式。
+/// 远端凭证由 Service 层从本地加密存储读出后组装（平台决定用户名），
+/// Repository 不关心持久化方式与平台差异。
 pub trait GitBackend: Send + Sync {
     fn is_git_repo(&self, path: &str) -> Result<bool, AppError>;
-    /// HTTPS clone，凭证回调使用 x-access-token
-    fn clone_repo(&self, url: &str, dest: &Path, token: &str) -> Result<(), AppError>;
+    /// HTTPS clone，凭证回调使用传入的用户名与令牌
+    fn clone_repo(&self, url: &str, dest: &Path, cred: &RemoteCredential) -> Result<(), AppError>;
     /// 验证远端可达且凭证有效（只读探测，clone 前置校验）
-    fn ls_remote(&self, url: &str, token: &str) -> Result<(), AppError>;
+    fn ls_remote(&self, url: &str, cred: &RemoteCredential) -> Result<(), AppError>;
     /// 提交全部变更；无变更返回 None，有则返回 commit id
     fn commit_all(&self, path: &str, message: &str) -> Result<Option<String>, AppError>;
     /// 契约保留项：独立 fetch（当前仅被 pull 内部复用，暂无单独 Command）
     #[allow(dead_code)]
-    fn fetch(&self, path: &str, token: &str) -> Result<(), AppError>;
+    fn fetch(&self, path: &str, cred: &RemoteCredential) -> Result<(), AppError>;
     /// fetch + merge origin/<当前分支>；冲突时返回 AppError::Conflict 并保留 MERGE_HEAD
-    fn pull(&self, path: &str, token: &str) -> Result<(), AppError>;
-    fn push(&self, path: &str, token: &str) -> Result<(), AppError>;
+    fn pull(&self, path: &str, cred: &RemoteCredential) -> Result<(), AppError>;
+    fn push(&self, path: &str, cred: &RemoteCredential) -> Result<(), AppError>;
     /// 相对 origin/<当前分支> 的 (ahead, behind)；无上游时 behind=0
     fn ahead_behind(&self, path: &str) -> Result<(u32, u32), AppError>;
     fn has_uncommitted(&self, path: &str) -> Result<bool, AppError>;
@@ -67,6 +69,8 @@ pub struct MockGitBackend {
     pub conflicts: Vec<ConflictFile>,
     pub all_resolved_after_file: bool,
     pub calls: std::sync::Mutex<Vec<String>>,
+    /// 每次远端操作收到的凭证（用于断言平台用户名 / 令牌透传）
+    pub credentials: std::sync::Mutex<Vec<RemoteCredential>>,
 }
 
 #[cfg(test)]
@@ -77,6 +81,15 @@ impl MockGitBackend {
 
     pub fn recorded(&self) -> Vec<String> {
         self.calls.lock().unwrap().clone()
+    }
+
+    /// 最近一次远端操作使用的凭证。
+    pub fn last_credential(&self) -> Option<RemoteCredential> {
+        self.credentials.lock().unwrap().last().cloned()
+    }
+
+    fn record_credential(&self, cred: &RemoteCredential) {
+        self.credentials.lock().unwrap().push(cred.clone());
     }
 
     /// 消耗一次编排好的 pull 网络失败；返回本次是否应失败。
@@ -96,12 +109,14 @@ impl GitBackend for MockGitBackend {
         Ok(self.is_repo)
     }
 
-    fn clone_repo(&self, url: &str, _dest: &Path, _token: &str) -> Result<(), AppError> {
+    fn clone_repo(&self, url: &str, _dest: &Path, cred: &RemoteCredential) -> Result<(), AppError> {
+        self.record_credential(cred);
         self.record(format!("clone:{url}"));
         Ok(())
     }
 
-    fn ls_remote(&self, url: &str, _token: &str) -> Result<(), AppError> {
+    fn ls_remote(&self, url: &str, cred: &RemoteCredential) -> Result<(), AppError> {
+        self.record_credential(cred);
         self.record(format!("ls_remote:{url}"));
         Ok(())
     }
@@ -114,12 +129,14 @@ impl GitBackend for MockGitBackend {
         Ok(self.uncommitted.then(|| "mock-commit-id".to_string()))
     }
 
-    fn fetch(&self, _path: &str, _token: &str) -> Result<(), AppError> {
+    fn fetch(&self, _path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
+        self.record_credential(cred);
         self.record("fetch".into());
         Ok(())
     }
 
-    fn pull(&self, _path: &str, _token: &str) -> Result<(), AppError> {
+    fn pull(&self, _path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
+        self.record_credential(cred);
         self.record("pull".into());
         if self.take_pull_failure() {
             return Err(AppError::SyncNetwork("mock network".into()));
@@ -130,7 +147,8 @@ impl GitBackend for MockGitBackend {
         Ok(())
     }
 
-    fn push(&self, _path: &str, _token: &str) -> Result<(), AppError> {
+    fn push(&self, _path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
+        self.record_credential(cred);
         self.record("push".into());
         if self.push_rejected {
             return Err(AppError::SyncRejected("mock non-fast-forward".into()));

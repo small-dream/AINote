@@ -11,9 +11,10 @@ use crate::services::{auth_service, sync_service};
 #[tauri::command]
 pub async fn resolve_conflict(app: AppHandle, use_local: bool) -> Result<SyncStatus, AppErrorDto> {
     let root = config::require_repo_path(&app)?;
-    let token = auth_service::read_token(&app)?;
+    let remote = config::active_remote_url(&app)?;
+    let cred = auth_service::credential_for_url(&app, remote.as_deref())?;
     let backend = Git2Backend;
-    blocking::run(move || sync_service::resolve(&backend, &root, &token, use_local))
+    blocking::run(move || sync_service::resolve(&backend, &root, &cred, use_local))
         .await
         .map_err(AppErrorDto::from)
 }

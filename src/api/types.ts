@@ -62,10 +62,29 @@ export interface LoginDto {
   login: string;
 }
 
+/**
+ * 单个托管平台的登录状态。
+ * `id` 用普通字符串而非联合类型，便于后端追加平台（如后续的 AtomGit）。
+ */
+export interface HostingProviderDto {
+  id: string;
+  displayName: string;
+  /** 该平台是否已保存可用令牌 */
+  hasToken: boolean;
+  /** 已保存的账号名（未登录为 null） */
+  login: string | null;
+  /** 创建 / 管理访问令牌的页面 */
+  tokenPage: string;
+  /** 是否支持应用内建仓 */
+  supportsCreate: boolean;
+}
+
 /** auth_status 返回 */
 export interface AuthStatusDto {
+  /** 任一平台已配置令牌即为 true */
   hasToken: boolean;
   repoPath: string | null;
+  providers: HostingProviderDto[];
 }
 
 /** AI Provider：统一 OpenAI 兼容 chat/completions 协议（Ollama 走 /v1 兼容端点） */
@@ -214,6 +233,8 @@ export interface RepoInfo {
   path: string;
   /** 远端 HTTPS 地址（bind 时记录） */
   remoteUrl: string | null;
+  /** 远端所属托管平台 id；无远端或未识别的 host 为 null（不展示平台标签） */
+  providerId: string | null;
 }
 
 /** get_repo_size 返回：当前仓库磁盘占用 */

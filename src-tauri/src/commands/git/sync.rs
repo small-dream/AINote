@@ -61,7 +61,8 @@ pub async fn sync_now(
     on_event: Channel<SyncProgressDto>,
 ) -> Result<SyncStatus, AppErrorDto> {
     let root = config::require_repo_path(&app)?;
-    let token = auth_service::read_token(&app)?;
+    let remote = config::active_remote_url(&app)?;
+    let cred = auth_service::credential_for_url(&app, remote.as_deref())?;
     let backend = Git2Backend;
     let key = root.to_string_lossy().into_owned();
     let cancel = app
@@ -85,7 +86,7 @@ pub async fn sync_now(
             sleep: None,
             report: Some(&mut report),
         };
-        sync_service::sync(&backend, &root, &token, &mut ctx)
+        sync_service::sync(&backend, &root, &cred, &mut ctx)
     })
     .await;
     app.state::<SyncRetryState>().release(&key, &slot);

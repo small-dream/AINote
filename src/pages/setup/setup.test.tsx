@@ -4,6 +4,11 @@ import { MemoryRouter, Route, Routes } from "react-router";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SetupPage } from "./index";
 
+const providers = [
+  { id: "github", displayName: "GitHub", hasToken: false, login: null, tokenPage: "https://github.com/settings/tokens", supportsCreate: true },
+  { id: "gitee", displayName: "Gitee", hasToken: false, login: null, tokenPage: "https://gitee.com/profile/personal_access_tokens", supportsCreate: false },
+];
+
 const authApiMock = vi.hoisted(() => ({
   status: vi.fn(),
   validateToken: vi.fn(),
@@ -28,7 +33,7 @@ function renderSetup() {
   const queryClient = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return render(
+  const result = render(
     <QueryClientProvider client={queryClient}>
       <MemoryRouter initialEntries={["/setup"]}>
         <Routes>
@@ -38,10 +43,11 @@ function renderSetup() {
       </MemoryRouter>
     </QueryClientProvider>
   );
+  return { ...result, queryClient };
 }
 
 async function loginThrough() {
-  const input = await screen.findByPlaceholderText("ghp_...");
+  const input = await screen.findByPlaceholderText("粘贴 GitHub 访问令牌");
   fireEvent.change(input, { target: { value: "ghp_x" } });
   fireEvent.click(screen.getByText("校验 Token"));
   await screen.findByText("small-dream");
@@ -51,7 +57,7 @@ async function loginThrough() {
 describe("SetupPage 登录并保存 Token", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    authApiMock.status.mockResolvedValue({ hasToken: false, repoPath: null });
+    authApiMock.status.mockResolvedValue({ hasToken: false, repoPath: null, providers });
   });
 
   it("允许从页面顶部空白区域拖动窗口", () => {
@@ -64,15 +70,37 @@ describe("SetupPage 登录并保存 Token", () => {
     authApiMock.validateToken.mockResolvedValue({ login: "small-dream" });
     authApiMock.saveToken.mockResolvedValue(null);
     authApiMock.status
-      .mockResolvedValueOnce({ hasToken: false, repoPath: null })
-      .mockResolvedValueOnce({ hasToken: true, repoPath: null });
+      .mockResolvedValueOnce({ hasToken: false, repoPath: null, providers })
+      .mockResolvedValueOnce({ hasToken: true, repoPath: null, providers });
 
     renderSetup();
     await loginThrough();
 
     await waitFor(() => {
-      expect(authApiMock.saveToken).toHaveBeenCalledWith("ghp_x");
+      expect(authApiMock.saveToken).toHaveBeenCalledWith("github", "ghp_x", "small-dream");
       expect(screen.getByText("绑定已有仓库")).toBeTruthy();
+    });
+  });
+
+  it("切换到 Gitee 后按该平台校验并保存凭证", async () => {
+    authApiMock.validateToken.mockResolvedValue({ login: "small-dream" });
+    authApiMock.saveToken.mockResolvedValue(null);
+    authApiMock.status
+      .mockResolvedValueOnce({ hasToken: false, repoPath: null, providers })
+      .mockResolvedValueOnce({ hasToken: true, repoPath: null, providers });
+
+    renderSetup();
+
+    fireEvent.click(await screen.findByText("Gitee"));
+    const input = await screen.findByPlaceholderText("粘贴 Gitee 访问令牌");
+    fireEvent.change(input, { target: { value: "gitee_tok" } });
+    fireEvent.click(screen.getByText("校验 Token"));
+    await screen.findByText("small-dream");
+    fireEvent.click(screen.getByText("确认并继续"));
+
+    await waitFor(() => {
+      expect(authApiMock.validateToken).toHaveBeenCalledWith("gitee", "gitee_tok");
+      expect(authApiMock.saveToken).toHaveBeenCalledWith("gitee", "gitee_tok", "small-dream");
     });
   });
 
@@ -94,7 +122,7 @@ describe("SetupPage 绑定仓库", () => {
   });
 
   it("绑定仓库成功后跳转到工作区", async () => {
-    authApiMock.status.mockResolvedValue({ hasToken: true, repoPath: null });
+    authApiMock.status.mockResolvedValue({ hasToken: true, repoPath: null, providers });
     repoApiMock.bind.mockResolvedValue({ repoPath: "/notes/myrepo" });
 
     renderSetup();
@@ -113,12 +141,26 @@ describe("SetupPage 绑定仓库", () => {
     authApiMock.validateToken.mockResolvedValue({ login: "small-dream" });
     authApiMock.saveToken.mockResolvedValue(null);
     authApiMock.status
-      .mockResolvedValueOnce({ hasToken: false, repoPath: null })
+      .mockResolvedValueOnce({ hasToken: false, repoPath: null, providers })
       .mockRejectedValueOnce(new Error("ipc down"));
 
     renderSetup();
     await loginThrough();
 
     await waitFor(() => expect(screen.getByText("绑定已有仓库")).toBeTruthy());
+  });
+
+  it("绑定仓库后仍保留平台列表缓存（否则设置页账户区会空白）", async () => {
+    authApiMock.status.mockResolvedValue({ hasToken: true, repoPath: null, providers });
+    repoApiMock.bind.mockResolvedValue({ repoPath: "/notes/myrepo" });
+
+    const { queryClient } = renderSetup();
+    const urlInput = await screen.findByPlaceholderText("https://github.com/user/my-notes.git");
+    fireEvent.change(urlInput, { target: { value: "https://gitee.com/u/r.git" } });
+    fireEvent.click(screen.getByText("绑定"));
+
+    await waitFor(() => expect(screen.getByText("workspace-page")).toBeTruthy());
+    const cached = queryClient.getQueryData<{ providers?: unknown[] }>(["auth-status"]);
+    expect(cached?.providers?.length).toBe(providers.length);
   });
 });

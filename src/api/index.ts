@@ -49,6 +49,7 @@ export type {
   DiffLine,
   DiffLineKind,
   FileDiff,
+  HostingProviderDto,
   IntegrityIssue,
   IntegrityReport,
   IntegritySeverity,

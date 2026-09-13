@@ -18,8 +18,8 @@ vi.mock("@/api", () => ({
 }));
 
 const REPOS = [
-  { id: "/a/work", name: "工作", path: "/a/work", remoteUrl: "https://github.com/u/work.git" },
-  { id: "/b/life", name: "生活", path: "/b/life", remoteUrl: null },
+  { id: "/a/work", name: "工作", path: "/a/work", remoteUrl: "https://gitee.com/u/work.git", providerId: "gitee" },
+  { id: "/b/life", name: "生活", path: "/b/life", remoteUrl: null, providerId: null },
 ];
 
 function renderManager() {
@@ -54,6 +54,13 @@ describe("RepoManager 列表与切换", () => {
     expect(await screen.findByText("工作")).toBeTruthy();
     expect(screen.getByText("生活")).toBeTruthy();
     expect(screen.getByText("当前")).toBeTruthy();
+  });
+
+  it("按远端平台展示标签，没有远端的仓库不展示平台标签", async () => {
+    renderManager();
+    expect(await screen.findByText("Gitee")).toBeTruthy();
+    // 从备份恢复 / 早期迁移的仓库没有远端，不得被标成默认平台
+    expect(screen.queryByText("GitHub")).toBeNull();
   });
 
   it("点击「设为当前」切换活动仓库", async () => {

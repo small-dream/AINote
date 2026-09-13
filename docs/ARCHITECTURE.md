@@ -26,7 +26,7 @@
 | 样式 | **Tailwind CSS 4（CSS-first 配置）+ CSS Variables** | 原子类声明式，设计 Token 集中管理（`src/styles/tokens.css` + `@theme` 映射） |
 | Git 引擎 | **Rust 后端 `git2` (libgit2)** | 完整离线 Git 能力（commit/pull/push/merge），移动端可用 |
 | 前后端桥 | **Tauri Commands (IPC) + `serde`** | Rust 强类型入参/出参，TS 侧镜像类型，双向类型安全 |
-| GitHub 接入 | **OAuth Device Flow / PAT + GitHub REST API** | 仅用于仓库创建与授权验证；数据同步走纯 Git 协议 |
+| 托管平台接入 | **PAT + 平台 REST API（GitHub / Gitee，可扩展）** | 仅用于凭证校验与建库；数据同步走纯 Git 协议。平台差异收敛在 `domain/hosting.rs` + `services/hosting/*` |
 | 软件更新 | **Tauri updater + GitHub Releases** | `latest.json` 与安装包使用签名密钥；客户端通过内置公钥校验，安装后自动重启 |
 | AI | **可插拔 Provider + 模型目录：OpenAI 兼容 API + Ollama（本地）** | 尊重本地优先与数据主权；Provider 与模型分层管理，支持多连接、多模型、启停和默认模型；统一 OpenAI 兼容 `chat/completions` 协议，HTTP 复用 `ureq`；API Key 按 Provider 经 `SecureStore` 存储，前端拿不到明文 |
 | 前端状态 | **Zustand（全局 UI 态）+ TanStack Query（服务端/Git 态）** | 轻量、无样板、职责边界清晰 |
@@ -67,7 +67,7 @@ flowchart TB
 
     IPC <-- "Tauri IPC (serde)" --> Commands
     Repos <--> Git[(本地 Git 仓库<br/>工作目录)]
-    Repos <--> GitHub[(GitHub Remote<br/>HTTPS + Token)]
+    Repos <--> Remote[(远端 Git 仓库<br/>GitHub / Gitee / 自建<br/>HTTPS + 平台凭证)]
 ```
 
 ## 3. 分层职责与防腐化规则
@@ -77,7 +77,18 @@ flowchart TB
 - `commands/`（Controller）：一命令一文件。只做参数反序列化、调用 Service、把 `Result<T, AppError>` 返回给前端。**禁止出现业务逻辑**。
 - `services/`（Service）：一个业务用例一个文件/模块。编排 Repository，实现 PRD 中的业务规则（如防抖提交策略）。
 - `repositories/`：trait 与实现分离。`git_backend.rs` 定义 `GitBackend` trait，`git2_backend.rs`（本地操作）+ `git2_remote.rs`（网络操作）是 libgit2 实现；`repo_maintenance.rs` 定义 `RepoMaintenanceBackend` trait（完整性检查，避免继续膨胀 `GitBackend`），`git2_maintenance.rs` 为 libgit2 只读实现；`file_storage.rs` / `note_files.rs` / `file_tree.rs` / `trash_files.rs` 为文件系统访问（受 300 行上限拆分）。未来可换实现，Service 零感知。
-- `domain/`：实体（`Note`）、值对象、统一错误 `AppError`。**零外部依赖**，不 import git2 / tauri。
+- `domain/`：实体（`Note`）、值对象（含 `hosting.rs` 的托管平台元数据与 `remote.rs` 的远端凭证）、统一错误 `AppError`。**零外部依赖**，不 import git2 / tauri。
+
+#### 托管平台抽象（多平台笔记仓库）
+
+笔记仓库的远端平台是可扩展维度，当前支持 GitHub 与 Gitee：
+
+- **平台单一事实来源**：`domain/hosting.rs` 的 `HostingProvider` 承载 API 基址、Token 获取页、展示名、是否支持应用内建仓与 **HTTPS 凭证用户名**（GitHub 用 `x-access-token`；Gitee 用账号名，未知时回退 OAuth 克隆约定 `oauth2`）。同一文件提供 `host_of` / `from_remote_url` / `provider_for_url` 三个纯函数负责从远端地址识别平台。
+- **REST 适配**：`services/hosting/{mod,github,gitee}.rs` 按平台分发 `fetch_login` / `create_repo`，共用 `hosting/http.rs` 的 agent 与错误映射（401/403 → AUTH_2001，网络 → AUTH_2002）。平台差异（如 Gitee 用 `Authorization: token`、GitHub 用 `Bearer`）只出现在各自适配文件内。
+- **凭证按平台分槽**：`services/auth_store/{mod,desktop,mobile}.rs`。桌面对应 `auth.<平台>.token`（AES-256-GCM，共享密钥 `auth.key`，0600）；移动端对应钥匙串条目 `<平台>_token`。升级前的单一 `auth.token` 视为 GitHub 凭证，读取时回退、写入后清理。非敏感的账号名记在 `ainote.json` 的 `providerLogins`。
+- **凭证接缝**：Service 层组装 `RemoteCredential { username, token }` 交给 `GitBackend` 的五个远端方法（`clone_repo` / `ls_remote` / `fetch` / `pull` / `push`），Repository 层不再假设用户名。
+- **未知 host 回退默认平台**：绑定自建 GitLab 等未被识别的托管时沿用 GitHub 凭证与 `x-access-token`，保持历史行为不回归；该行为是刻意的兼容策略。
+- **添加新平台**：新增一个 `HostingProvider` 成员与元数据 → 新增一个 `services/hosting/<平台>.rs` 并在 `mod.rs` 注册 → 前端无需改动（平台列表由 `auth_status` 下发，平台 id 用字符串传递）。
 
 ### 前端
 
@@ -125,7 +136,7 @@ AINote/
 │   │   │   ├── hooks/            # 状态/副作用/IPC 编排全部在此
 │   │   │   ├── utils/            # 纯函数
 │   │   │   └── types.ts
-│   │   ├── file-tree/
+│   │   ├── file-tree/           # 目录树 + 顶部仓库标识/切换器（多仓库时定位当前库）
 │   │   ├── sync/
 │   │   ├── history/             # Git 版本历史 / Diff / 回滚
 │   │   ├── search/              # 全文搜索 + Cmd+K 命令面板
@@ -164,9 +175,9 @@ AINote/
 │   │   │   ├── ai/               # config.rs（get/save）/ generate.rs / chat.rs
 │   │   │   ├── trash/            # list.rs / restore.rs / delete.rs / empty.rs
 │   │   │   └── support/          # log_frontend.rs / export.rs（诊断包）
-│   │   ├── services/             # 一用例一模块（含 search_service / history_service / asset_service / wiki_service / trash_service / ai_service / ai_store / secure_store / diagnostics_service）
+│   │   ├── services/             # 一用例一模块（含 search_service / history_service / asset_service / wiki_service / trash_service / ai_service / ai_store / secure_store / diagnostics_service / hosting（平台 REST 适配）/ auth_store（按平台分槽的凭证存储））
 │   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / repo_maintenance / git2_maintenance / file_storage / note_files / file_tree / asset_files / trash_files / diagnostics_files / backup_files / restore_files / llm）
-│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs / wiki.rs / trash.rs / rich_text.rs / ai.rs / diagnostics.rs）
+│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / asset.rs / wiki.rs / trash.rs / rich_text.rs / ai.rs / diagnostics.rs / hosting.rs（托管平台元数据）/ remote.rs（远端凭证））
 │   │   └── config/            # mod.rs（持久化）+ repos.rs（仓库注册表纯逻辑）+ logging.rs（结构化日志与脱敏）
 │   └── Cargo.toml
 ├── package.json / tsconfig.json (strict: true)
@@ -184,7 +195,7 @@ AINote/
 - **同步失败定位**：`sync()` 返回 `Result<SyncStatus, SyncFailure>`（`services/sync_service.rs`），在 commit / pull / push 三段各自归因，把 `SyncStage`、可定位文件（拉取冲突路径、未完成合并的冲突文件）与建议码 `hint` 一并交给命令层；`sync_now` 因此不走会抹平错误上下文的 `commands::blocking`，改用 `spawn_blocking` 后经 `sync_failure_dto(...)` 映射为 `AppErrorDto`（`stage` / `files` / `hint` 均为可选，非同步错误不序列化）。前端 `deriveSyncFailure` 优先采用后端 `stage` / `hint`，缺失时才按错误码推断，保证旧数据与本地错误仍有可读阶段；失败文件为仓库相对路径，桌面与移动共用同一 `shared` 横幅（>5 条折叠为计数）。
 - **移动端更新（平台专属）**：Android 走 GitHub APK 分发，不接 updater 插件（`capabilities/mobile.json` 只有 `core:default`，`plugin-process` 也只在非移动 target 依赖中）。链路：`releaseApi.fetchLatestRelease`（`src/api/release.api.ts`）取最新正式版并解析 `assets[]` 中的 APK 与 `.sha256` 下载地址 → 弹窗/设置页点「立即更新」→ Rust `download_update`（`commands/update.rs` + `services/update_service.rs`，ureq 分块下载到 `app_cache_dir/updates/`，Channel 回传进度，可取消）→ SHA-256 校验（校验和随 Release 上传，下载地址白名单限定官方仓库）→ `install_update` 经 `src-tauri/src/platform/` 的 JNI 桥调 Kotlin `ApkInstaller`（FileProvider + 系统安装 Intent；缺「安装未知应用」权限时先跳系统授权页）。安装确认由系统弹窗完成，应用不代办；Release 缺 APK 资产时降级为浏览器跳转。版本比较是 `features/update/utils/version.ts` 纯函数（严格大于、无法解析即 false）；检查/下载/安装状态收敛在 `useMobileUpdateStore`，弹窗与设置页共用；请求失败静默降级。「忽略此版本」按版本号持久化到本机 localStorage。Android 上 `open_external` 也走同一 Kotlin 桥（opener crate 无 Android 实现）。
 - **本地度量（`services/metrics_service.rs`）**：事件白名单与聚合是 `domain/metrics.rs` 的纯逻辑（零 IO），快照只有 `platform` / `appVersion` / `updatedAt` / `totals` / `daily` / `firstSeen` 六个字段——**结构上不存在**笔记内容、路径、Token 或远端 URL 的落点；新增事件必须进 `METRIC_EVENTS` 白名单，未登记事件名在命令层被忽略并记 warn。存储是本机 app config dir 下的 `metrics.json`（明文、体量极小、读改写），每日明细滚动保留 56 天，聚合窗口默认 7 天（`sync_success_rate` 无样本返回 `null`，不制造 0% 假象）。写入统一走 `record_best_effort` → `record_if_enabled`：开关来自 `ainote.json` 的 `metricsEnabled`（缺省开启），关闭时**直接返回、连文件都不创建**；失败只记 debug 日志，永不阻断同步 / 保存等主流程。记录点：`lib.rs` setup（`app_launched`）、`bind_repo`（`repo_bound`）、`create_note`（`note_created`）、`sync_now` 成功 / 失败（`sync_succeeded` / `sync_failed`）、前端 `useUpdate` / `useMobileUpdate`（`update_checked`）、`useAiWrite.confirm`（`ai_action_confirmed`）。设置页开关与清空见 `settings/components/MetricsCard.tsx`，采集范围与删除方式的用户说明见 `docs/PRIVACY.md`。指标只在本机，远程上报不在此模块（见 M1b）。
-- **凭证流**：Token/API Key 通过 `SecureStore` 按平台分流写入——移动端走系统钥匙串（iOS Keychain / Android Keystore，`keyring` 插件），桌面端为 AES-256-GCM 加密文件落盘到 app_config_dir（密钥 `auth.key` 与密文 `auth.token` 同目录，文件权限 0600）；Rust 层按需读取，前端永远拿不到明文。威胁模型：桌面端任何能读取用户配置目录的本地进程即可同时拿到密钥与密文完成解密，机密性完全依赖 OS 级目录权限（0600）缓解；对凭证保护有更高要求的场景应使用移动端钥匙串路径。
+- **凭证流**：Token/API Key 通过 `SecureStore` 按平台分流写入——移动端走系统钥匙串（iOS Keychain / Android Keystore，`keyring` 插件），桌面端为 AES-256-GCM 加密文件落盘到 app_config_dir（密钥 `auth.key` 与密文 `auth.<平台>.token` 同目录，文件权限 0600；升级前的单一 `auth.token` 按 GitHub 凭证兼容读取）；Rust 层按需读取，前端永远拿不到明文。威胁模型：桌面端任何能读取用户配置目录的本地进程即可同时拿到密钥与密文完成解密，机密性完全依赖 OS 级目录权限（0600）缓解；对凭证保护有更高要求的场景应使用移动端钥匙串路径。
 - **多仓库注册表**：config 维护 `repos` 列表与 `active_repo_id`；活动仓库即各 note/git Command 通过 `config::require_repo_path` 解析的当前仓库，切换活动仓库后工作区以 `workspaceEpoch` 触发整页重挂载加载新仓库。移除活动仓库后自动切换剩余仓库；旧版单仓库 `repoPath` 配置在加载时自动迁移。
 - **登录态**：`has_token` 这类非敏感状态存于 app config，路由守卫不直接解密 token。
 - **版本历史 / Diff / 回滚**：`features/history` 提供历史面板；编辑器工具栏入口。`git_file_history` 遍历提交过滤出修改过该文件的提交（时间倒序），`git_file_diff` 计算选中提交相对其父提交的单文件 diff（行级 +/-），`git_restore_file` 把文件恢复到指定提交并写回工作区，随后前端刷新列表/树/同步状态并让编辑器重载（不生成提交，版本化交给用户手动提交或同步前兜底）。实现位于 `repositories/git2_history.rs`（libgit2），Service 仅依赖 `GitBackend` trait。

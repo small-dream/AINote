@@ -68,7 +68,7 @@ describe("SyncNotice", () => {
     );
     expect(screen.getByRole("button", { name: "重新登录" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "重试同步" })).toBeNull();
-    expect(screen.getByText("登录凭证已失效，请重新登录 GitHub")).toBeTruthy();
+    expect(screen.getByText("登录凭证已失效，请在「设置 → 账户」重新登录")).toBeTruthy();
   });
 
   it("导出诊断包走 IPC 并反馈结果", async () => {

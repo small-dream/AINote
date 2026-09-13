@@ -6,6 +6,7 @@ use git2::{
 };
 
 use crate::domain::error::AppError;
+use crate::domain::remote::RemoteCredential;
 use crate::domain::sync::ConflictFile;
 use crate::repositories::note_files::validate_rel_path;
 
@@ -13,62 +14,63 @@ use super::ca_bundle;
 use super::git2_backend::{current_branch, open, signature, to_git};
 use super::git2_error::to_sync;
 
-fn callbacks(token: &str) -> RemoteCallbacks<'static> {
-    let token = token.to_owned();
+fn callbacks(cred: &RemoteCredential) -> RemoteCallbacks<'static> {
+    let username = cred.username.clone();
+    let token = cred.token.clone();
     let mut cb = RemoteCallbacks::new();
-    cb.credentials(move |_url, _user, _allowed| Cred::userpass_plaintext("x-access-token", &token));
+    cb.credentials(move |_url, _user, _allowed| Cred::userpass_plaintext(&username, &token));
     cb
 }
 
-fn fetch_options(token: &str) -> FetchOptions<'static> {
+fn fetch_options(cred: &RemoteCredential) -> FetchOptions<'static> {
     let mut fo = FetchOptions::new();
-    fo.remote_callbacks(callbacks(token));
+    fo.remote_callbacks(callbacks(cred));
     fo
 }
 
-pub fn clone_repo(url: &str, dest: &Path, token: &str) -> Result<(), AppError> {
+pub fn clone_repo(url: &str, dest: &Path, cred: &RemoteCredential) -> Result<(), AppError> {
     ca_bundle::configure_ssl_certificates()?;
     RepoBuilder::new()
-        .fetch_options(fetch_options(token))
+        .fetch_options(fetch_options(cred))
         .clone(url, dest)
         .map_err(to_sync)?;
     Ok(())
 }
 
 /// 只读探测远端：能列出引用即视为可达且凭证有效。
-pub fn ls_remote(url: &str, token: &str) -> Result<(), AppError> {
+pub fn ls_remote(url: &str, cred: &RemoteCredential) -> Result<(), AppError> {
     ca_bundle::configure_ssl_certificates()?;
     let mut remote = git2::Remote::create_detached(url).map_err(to_git)?;
     remote
-        .connect_auth(git2::Direction::Fetch, Some(callbacks(token)), None)
+        .connect_auth(git2::Direction::Fetch, Some(callbacks(cred)), None)
         .map_err(to_sync)?;
     remote.list().map_err(to_sync)?;
     remote.disconnect().map_err(to_sync)?;
     Ok(())
 }
 
-pub fn fetch(path: &str, token: &str) -> Result<(), AppError> {
+pub fn fetch(path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
     ca_bundle::configure_ssl_certificates()?;
     let repo = open(path)?;
     let mut remote = repo.find_remote("origin").map_err(to_git)?;
     remote
-        .fetch(&[] as &[&str], Some(&mut fetch_options(token)), None)
+        .fetch(&[] as &[&str], Some(&mut fetch_options(cred)), None)
         .map_err(to_sync)
 }
 
-pub fn push(path: &str, token: &str) -> Result<(), AppError> {
+pub fn push(path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
     ca_bundle::configure_ssl_certificates()?;
     let repo = open(path)?;
     let branch = current_branch(&repo)?;
     let refspec = format!("refs/heads/{branch}:refs/heads/{branch}");
     let mut po = PushOptions::new();
-    po.remote_callbacks(callbacks(token));
+    po.remote_callbacks(callbacks(cred));
     let mut remote = repo.find_remote("origin").map_err(to_git)?;
     remote.push(&[refspec], Some(&mut po)).map_err(to_sync)
 }
 
-pub fn pull(path: &str, token: &str) -> Result<(), AppError> {
-    fetch(path, token)?;
+pub fn pull(path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
+    fetch(path, cred)?;
     let repo = open(path)?;
     let branch = current_branch(&repo)?;
     let remote_ref = format!("refs/remotes/origin/{branch}");

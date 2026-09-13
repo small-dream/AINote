@@ -7,6 +7,7 @@ import { RepoSetup } from "@/features/repo/components/RepoSetup";
 import { useAuthStatusQuery } from "@/queries/auth.queries";
 import { useSessionStore } from "@/stores/session.store";
 import { useTranslation } from "@/i18n";
+import type { AuthStatusDto } from "@/api/types";
 
 /** 首次启动引导：登录 → 绑定/创建笔记仓库 → 进入工作区（P0-1） */
 export function SetupPage() {
@@ -38,13 +39,26 @@ function useSetupGate() {
     }
   }, [data, navigate, setRepoPath]);
 
-  const handleAuthed = () => {
-    queryClient.setQueryData(["auth-status"], { hasToken: true, repoPath: null });
+  /** 乐观更新登录状态：随后的 refetch 失败也要让用户进入下一步（既有行为） */
+  const handleAuthed = ({ login, providerId }: { login: string; providerId: string }) => {
+    queryClient.setQueryData<AuthStatusDto>(["auth-status"], (prev) => ({
+      hasToken: true,
+      repoPath: prev?.repoPath ?? null,
+      providers: (prev?.providers ?? []).map((provider) =>
+        provider.id === providerId ? { ...provider, hasToken: true, login } : provider
+      ),
+    }));
+    void refetch();
   };
 
   const handleBound = (repoPath: string) => {
     setRepoPath(repoPath);
-    queryClient.setQueryData(["auth-status"], { hasToken: true, repoPath });
+    // 必须整份合并：局部对象会让 providers 丢失，设置页账户区将无平台可展示
+    queryClient.setQueryData<AuthStatusDto>(["auth-status"], (prev) => ({
+      hasToken: prev?.hasToken ?? true,
+      repoPath,
+      providers: prev?.providers ?? [],
+    }));
     navigate("/workspace", { replace: true });
   };
 

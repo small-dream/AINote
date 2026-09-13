@@ -1,5 +1,6 @@
 /** E2E mock 后端：命令处理器按策略表分发（单一职责，便于 lint 指标达标）。 */
 import type { E2eConflictSeed, E2eState } from "./types";
+import { E2E_PROVIDERS, E2E_REPOS } from "./fixtures";
 
 interface MockStore {
   notes: Map<string, { content: string; kind: string }>;
@@ -156,7 +157,14 @@ function needNote(map: MockStore["notes"], path: string) {
 }
 
 const commandHandlers: Record<string, CommandHandler> = {
-  auth_status: (_args, ctx) => ({ hasToken: true, repoPath: ctx.state.repoPath }),
+  auth_status: (_args, ctx) => ({ hasToken: true, repoPath: ctx.state.repoPath, providers: E2E_PROVIDERS }),
+  list_repos: () => E2E_REPOS,
+  switch_repo: (args, ctx) => {
+    const next = E2E_REPOS.find((repo) => repo.id === String(args.id));
+    if (!next) throw appError(`repo not found: ${String(args.id)}`);
+    ctx.state.repoPath = next.path;
+    return next.path;
+  },
   sync_status: (_args, ctx) => syncStatus(ctx.store),
   sync_now: (args, ctx) => {
     if (ctx.state.syncFailure) return Promise.reject(ctx.state.syncFailure);

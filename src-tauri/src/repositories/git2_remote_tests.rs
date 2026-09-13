@@ -4,6 +4,12 @@ use std::path::Path;
 
 use super::{clone_repo, pull, push};
 use crate::domain::error::AppError;
+use crate::domain::remote::RemoteCredential;
+
+/// 本地 bare 仓库模拟远端不需要认证，用户名与令牌留空即可。
+fn cred() -> RemoteCredential {
+    RemoteCredential::new("x-access-token", "")
+}
 
 fn sig() -> git2::Signature<'static> {
     git2::Signature::now("t", "t@t").unwrap()
@@ -66,7 +72,7 @@ fn push_creates_branch_on_empty_remote() {
         let repo = git2::Repository::open(&local).unwrap();
         commit_file(&repo, "a.md", "hi", "c1");
     }
-    push(&local.to_string_lossy(), "").unwrap();
+    push(&local.to_string_lossy(), &cred()).unwrap();
 
     let remote_repo = git2::Repository::open(&bare).unwrap();
     assert!(remote_repo.find_reference("refs/heads/master").is_ok());
@@ -83,7 +89,7 @@ fn pull_ok_when_remote_branch_absent() {
         let repo = git2::Repository::open(&local).unwrap();
         commit_file(&repo, "a.md", "hi", "c1");
     }
-    let res = pull(&local.to_string_lossy(), "");
+    let res = pull(&local.to_string_lossy(), &cred());
     assert!(res.is_ok());
 }
 
@@ -95,13 +101,13 @@ fn clone_commit_pull_push_roundtrip() {
 
     let work = tempfile::tempdir().unwrap();
     let local = work.path().join("repo");
-    clone_repo(&bare.to_string_lossy(), &local, "").unwrap();
+    clone_repo(&bare.to_string_lossy(), &local, &cred()).unwrap();
 
     let repo = git2::Repository::open(&local).unwrap();
     commit_file(&repo, "note.md", "hello", "c2");
 
-    pull(&local.to_string_lossy(), "").unwrap();
-    push(&local.to_string_lossy(), "").unwrap();
+    pull(&local.to_string_lossy(), &cred()).unwrap();
+    push(&local.to_string_lossy(), &cred()).unwrap();
 
     let remote_repo = git2::Repository::open(&bare).unwrap();
     let head = remote_repo.head().unwrap().peel_to_commit().unwrap();
@@ -116,7 +122,7 @@ fn fast_forward_keeps_local_modification_instead_of_overwriting_it() {
 
     let work = tempfile::tempdir().unwrap();
     let local = work.path().join("repo");
-    clone_repo(&bare.to_string_lossy(), &local, "").unwrap();
+    clone_repo(&bare.to_string_lossy(), &local, &cred()).unwrap();
 
     // 远端前进：修改 seed.md 的新提交
     {
@@ -126,7 +132,7 @@ fn fast_forward_keeps_local_modification_instead_of_overwriting_it() {
     // 本地同一文件存在未提交修改
     std::fs::write(local.join("seed.md"), "local-change").unwrap();
 
-    let error = pull(&local.to_string_lossy(), "").unwrap_err();
+    let error = pull(&local.to_string_lossy(), &cred()).unwrap_err();
 
     assert!(matches!(error, AppError::Git(_)), "检出冲突报错而不是静默覆盖");
     assert_eq!(

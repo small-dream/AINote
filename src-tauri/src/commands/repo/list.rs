@@ -11,6 +11,7 @@ pub fn list_repos(app: AppHandle) -> Result<Vec<RepoInfoDto>, AppErrorDto> {
     Ok(repos
         .into_iter()
         .map(|r| RepoInfoDto {
+            provider_id: RepoInfoDto::provider_of(r.remote_url.as_deref()),
             id: r.id,
             name: r.name,
             path: r.path,

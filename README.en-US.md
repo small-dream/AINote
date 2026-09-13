@@ -40,7 +40,7 @@ The same notes and the same file format, editable offline and synced when you re
 
 ## Why AINote
 
-- **Data ownership**: Notes live in your own GitHub repository, so they are portable, auditable, backup-friendly, and versioned.
+- **Data ownership**: Notes live in your own Git repository (GitHub or Gitee), so they are portable, auditable, backup-friendly, and versioned.
 - **Offline-first**: Browsing, searching, editing, and local commits work without a network. Push and pull when you reconnect.
 - **Local-first AI**: Use OpenAI-compatible APIs or local Ollama. Providers and models are pluggable, and API keys are stored encrypted.
 - **Native performance**: A React frontend connects to a Rust/Tauri backend; Git, file, and network work run outside the UI layer.
@@ -49,7 +49,7 @@ The same notes and the same file format, editable offline and synced when you re
 
 - **Markdown editing**: CodeMirror soft rendering provides a Typora-style WYSIWYG experience while saving source Markdown losslessly.
 - **Rich-text notes**: An optional `.ainote` note type is powered by TipTap and supports tables, images, task lists, slash commands, and Markdown conversion.
-- **GitHub sync**: Bind an existing or new repository through OAuth Device Flow or a PAT, then commit, push, and pull with one action.
+- **Multi-platform sync**: Bind an existing repository on GitHub or Gitee with a PAT (GitHub repositories can also be created in-app), then commit, push, and pull with one action.
 - **Conflict resolution**: Resolve conflicts with a three-pane view showing local, merged, and remote content.
 - **Version history**: Inspect per-note commit history and diffs, then restore a selected version.
 - **Knowledge network**: Use `[[wiki links]]`, backlinks, `#tags`, full-text search, and a command palette.

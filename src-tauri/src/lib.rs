@@ -15,6 +15,7 @@ mod perf_baseline;
 mod recovery_drill;
 
 pub use services::auth_store::AuthStore;
+pub use domain::hosting::HostingProvider;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {

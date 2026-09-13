@@ -2,6 +2,7 @@ use std::path::Path;
 
 use crate::domain::commit::build_commit_message;
 use crate::domain::error::AppError;
+use crate::domain::remote::RemoteCredential;
 use crate::domain::sync::{ChangedFile, ConflictFile, SyncStage, SyncStatus};
 use crate::repositories::git_backend::GitBackend;
 
@@ -84,7 +85,7 @@ pub fn format_now() -> String {
 pub fn pull<B: GitBackend>(
     backend: &B,
     repo_path: &Path,
-    token: &str,
+    cred: &RemoteCredential,
 ) -> Result<SyncStatus, AppError> {
     if backend.has_uncommitted(&repo_path.to_string_lossy())? {
         return Err(AppError::Repo(
@@ -92,7 +93,7 @@ pub fn pull<B: GitBackend>(
         ));
     }
     let mut ctx = RetryContext::background();
-    pull_stage(backend, repo_path, token, &mut ctx)?;
+    pull_stage(backend, repo_path, cred, &mut ctx)?;
     status(backend, repo_path)
 }
 
@@ -101,20 +102,20 @@ pub fn pull<B: GitBackend>(
 pub fn pull_stage<B: GitBackend>(
     backend: &B,
     repo_path: &Path,
-    token: &str,
+    cred: &RemoteCredential,
     ctx: &mut RetryContext<'_>,
 ) -> Result<(), AppError> {
     let path = repo_path.to_string_lossy();
-    retry::with_retry(RetryPolicy::network(), ctx, || backend.pull(&path, token))
+    retry::with_retry(RetryPolicy::network(), ctx, || backend.pull(&path, cred))
 }
 
 /// 用例：推送本地提交
 pub fn push<B: GitBackend>(
     backend: &B,
     repo_path: &Path,
-    token: &str,
+    cred: &RemoteCredential,
 ) -> Result<SyncStatus, AppError> {
-    backend.push(&repo_path.to_string_lossy(), token)?;
+    backend.push(&repo_path.to_string_lossy(), cred)?;
     status(backend, repo_path)
 }
 
@@ -123,7 +124,7 @@ pub fn push<B: GitBackend>(
 pub fn sync<B: GitBackend>(
     backend: &B,
     repo_path: &Path,
-    token: &str,
+    cred: &RemoteCredential,
     ctx: &mut RetryContext<'_>,
 ) -> Result<SyncStatus, SyncFailure> {
     let path = repo_path.to_string_lossy();
@@ -145,7 +146,7 @@ pub fn sync<B: GitBackend>(
     let message = build_commit_message(&files, &format_now());
     commit_pending(backend, repo_path, &message)
         .map_err(|error| stage_failure("commit", SyncStage::Commit, error, Vec::new()))?;
-    pull_stage(backend, repo_path, token, ctx).map_err(|error| {
+    pull_stage(backend, repo_path, cred, ctx).map_err(|error| {
         let files = if matches!(error, AppError::Conflict(_)) {
             conflict_paths(backend, &path)
         } else {
@@ -154,7 +155,7 @@ pub fn sync<B: GitBackend>(
         stage_failure("pull", SyncStage::Pull, error, files)
     })?;
     backend
-        .push(&path, token)
+        .push(&path, cred)
         .map_err(|error| stage_failure("push", SyncStage::Push, error, Vec::new()))?;
     let result = status(backend, repo_path).map_err(|error| SyncFailure::new(None, error, Vec::new()))?;
     log::info!(
@@ -175,7 +176,7 @@ fn stage_failure(stage: &str, named: SyncStage, error: AppError, files: Vec<Stri
 pub fn resolve<B: GitBackend>(
     backend: &B,
     repo_path: &Path,
-    token: &str,
+    cred: &RemoteCredential,
     use_local: bool,
 ) -> Result<SyncStatus, AppError> {
     let path = repo_path.to_string_lossy();
@@ -184,7 +185,7 @@ pub fn resolve<B: GitBackend>(
     } else {
         backend.resolve_conflict_theirs(&path)?;
     }
-    backend.push(&path, token)?;
+    backend.push(&path, cred)?;
     status(backend, repo_path)
 }
 
@@ -230,6 +231,11 @@ mod tests {
         RetryContext::background()
     }
 
+    /// 测试凭证：用户名与令牌都参与透传断言。
+    fn cred() -> RemoteCredential {
+        RemoteCredential::new("alice", "secret")
+    }
+
     #[test]
     fn status_assembles_from_backend() {
         let mock = MockGitBackend {
@@ -251,10 +257,22 @@ mod tests {
             uncommitted: true,
             ..Default::default()
         };
-        sync(&mock, &root(), "tok", &mut background()).unwrap();
+        sync(&mock, &root(), &cred(), &mut background()).unwrap();
         assert_eq!(
             mock.recorded(),
             vec!["changed_files", "commit:", "pull", "push"]
+        );
+    }
+
+    #[test]
+    fn remote_calls_receive_the_platform_credential() {
+        let mock = MockGitBackend::default();
+        let credential = cred();
+        sync(&mock, &root(), &credential, &mut background()).unwrap();
+        assert_eq!(
+            mock.last_credential().as_ref(),
+            Some(&credential),
+            "远端操作必须拿到 Service 传入的凭证（用户名含平台差异）"
         );
     }
 
@@ -274,7 +292,7 @@ mod tests {
             ],
             ..Default::default()
         };
-        sync(&mock, &root(), "tok", &mut background()).unwrap();
+        sync(&mock, &root(), &cred(), &mut background()).unwrap();
         let recorded = mock.recorded();
         assert_eq!(recorded[0], "changed_files");
         assert!(recorded[1].starts_with("commit:chore: "), "subject 含时间与文件数");
@@ -289,7 +307,7 @@ mod tests {
             merging: true,
             ..Default::default()
         };
-        let err = sync(&mock, &root(), "tok", &mut background()).unwrap_err();
+        let err = sync(&mock, &root(), &cred(), &mut background()).unwrap_err();
         assert!(matches!(err.error, AppError::Conflict(_)));
         assert_eq!(mock.recorded(), vec!["conflicts"], "只读取冲突清单，不做任何写操作");
     }
@@ -301,7 +319,7 @@ mod tests {
             ..Default::default()
         };
         assert!(matches!(
-            sync(&mock, &root(), "tok", &mut background()),
+            sync(&mock, &root(), &cred(), &mut background()),
             Err(SyncFailure { error: AppError::Conflict(_), .. })
         ));
         assert_eq!(
@@ -327,7 +345,7 @@ mod tests {
                 sleep: Some(&mut sleep),
                 report: Some(&mut report),
             };
-            sync(&mock, &root(), "tok", &mut ctx)
+            sync(&mock, &root(), &cred(), &mut ctx)
         };
 
         assert!(outcome.is_ok());
@@ -348,7 +366,7 @@ mod tests {
                 sleep: Some(&mut |_ms: u64| {}),
                 report: None,
             };
-            sync(&mock, &root(), "tok", &mut ctx)
+            sync(&mock, &root(), &cred(), &mut ctx)
         };
 
         assert!(matches!(outcome, Err(SyncFailure { error: AppError::SyncNetwork(_), .. })));
@@ -372,7 +390,7 @@ mod tests {
             ..Default::default()
         };
 
-        let error = pull(&mock, &root(), "tok").unwrap_err();
+        let error = pull(&mock, &root(), &cred()).unwrap_err();
 
         assert!(matches!(error, AppError::Repo(_)), "给出可读的拒绝原因");
         assert!(
@@ -385,7 +403,7 @@ mod tests {
     fn pull_runs_when_worktree_clean() {
         let mock = MockGitBackend::default();
 
-        pull(&mock, &root(), "tok").unwrap();
+        pull(&mock, &root(), &cred()).unwrap();
 
         assert_eq!(mock.recorded(), vec!["pull"]);
     }
@@ -396,7 +414,7 @@ mod tests {
             commit_fails: true,
             ..Default::default()
         };
-        let failure = sync(&mock, &root(), "tok", &mut background()).unwrap_err();
+        let failure = sync(&mock, &root(), &cred(), &mut background()).unwrap_err();
 
         assert_eq!(failure.stage, Some(SyncStage::Commit));
         assert!(failure.files.is_empty());
@@ -412,7 +430,7 @@ mod tests {
             conflicts: vec![conflict("daily/a.md"), conflict("daily/b.md")],
             ..Default::default()
         };
-        let failure = sync(&mock, &root(), "tok", &mut background()).unwrap_err();
+        let failure = sync(&mock, &root(), &cred(), &mut background()).unwrap_err();
 
         assert_eq!(failure.stage, Some(SyncStage::Pull));
         assert_eq!(failure.files, vec!["daily/a.md", "daily/b.md"]);
@@ -426,7 +444,7 @@ mod tests {
             conflicts: vec![conflict("daily/a.md")],
             ..Default::default()
         };
-        let failure = sync(&mock, &root(), "tok", &mut background()).unwrap_err();
+        let failure = sync(&mock, &root(), &cred(), &mut background()).unwrap_err();
 
         assert_eq!(failure.stage, Some(SyncStage::Pull));
         assert_eq!(failure.files, vec!["daily/a.md"]);
@@ -443,7 +461,7 @@ mod tests {
             sleep: Some(&mut |_ms: u64| {}),
             report: None,
         };
-        let failure = sync(&mock, &root(), "tok", &mut ctx).unwrap_err();
+        let failure = sync(&mock, &root(), &cred(), &mut ctx).unwrap_err();
 
         assert_eq!(failure.stage, Some(SyncStage::Pull));
         assert!(failure.files.is_empty(), "网络错误无法定位到文件");
@@ -456,7 +474,7 @@ mod tests {
             push_rejected: true,
             ..Default::default()
         };
-        let failure = sync(&mock, &root(), "tok", &mut background()).unwrap_err();
+        let failure = sync(&mock, &root(), &cred(), &mut background()).unwrap_err();
 
         assert_eq!(failure.stage, Some(SyncStage::Push));
         assert_eq!(failure.hint(), "checkPermission");
@@ -466,8 +484,8 @@ mod tests {
     #[test]
     fn resolve_picks_side_and_pushes() {
         let mock = MockGitBackend::default();
-        resolve(&mock, &root(), "tok", true).unwrap();
-        resolve(&mock, &root(), "tok", false).unwrap();
+        resolve(&mock, &root(), &cred(), true).unwrap();
+        resolve(&mock, &root(), &cred(), false).unwrap();
         assert_eq!(
             mock.recorded(),
             vec!["resolve:ours", "push", "resolve:theirs", "push"]

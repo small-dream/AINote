@@ -4,6 +4,7 @@ use git2::{Repository, Signature, StatusOptions};
 
 use crate::domain::error::AppError;
 use crate::domain::history::{CommitInfo, FileDiff, RepoCommit};
+use crate::domain::remote::RemoteCredential;
 use crate::domain::sync::{ChangedFile, ChangedFileStatus};
 
 use super::git2_history;
@@ -136,28 +137,28 @@ impl GitBackend for Git2Backend {
         Ok(Repository::discover(path).is_ok())
     }
 
-    fn clone_repo(&self, url: &str, dest: &Path, token: &str) -> Result<(), AppError> {
-        git2_remote::clone_repo(url, dest, token)
+    fn clone_repo(&self, url: &str, dest: &Path, cred: &RemoteCredential) -> Result<(), AppError> {
+        git2_remote::clone_repo(url, dest, cred)
     }
 
-    fn ls_remote(&self, url: &str, token: &str) -> Result<(), AppError> {
-        git2_remote::ls_remote(url, token)
+    fn ls_remote(&self, url: &str, cred: &RemoteCredential) -> Result<(), AppError> {
+        git2_remote::ls_remote(url, cred)
     }
 
     fn commit_all(&self, path: &str, message: &str) -> Result<Option<String>, AppError> {
         commit_all(path, message)
     }
 
-    fn fetch(&self, path: &str, token: &str) -> Result<(), AppError> {
-        git2_remote::fetch(path, token)
+    fn fetch(&self, path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
+        git2_remote::fetch(path, cred)
     }
 
-    fn pull(&self, path: &str, token: &str) -> Result<(), AppError> {
-        git2_remote::pull(path, token)
+    fn pull(&self, path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
+        git2_remote::pull(path, cred)
     }
 
-    fn push(&self, path: &str, token: &str) -> Result<(), AppError> {
-        git2_remote::push(path, token)
+    fn push(&self, path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
+        git2_remote::push(path, cred)
     }
 
     fn ahead_behind(&self, path: &str) -> Result<(u32, u32), AppError> {

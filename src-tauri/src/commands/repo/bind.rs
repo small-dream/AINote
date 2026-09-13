@@ -11,6 +11,7 @@ use crate::repositories::git2_backend::Git2Backend;
 use crate::services::{auth_service, repo_service};
 
 /// Controller：绑定远端仓库（剥离内嵌凭证 → 探测 → clone 到唯一目录 → 写入注册表并设为活动仓库）。
+/// 平台由仓库地址推断，凭证取对应平台保存的令牌。
 #[tauri::command]
 pub async fn bind_repo(app: AppHandle, repo_url: String) -> Result<RepoPathDto, AppErrorDto> {
     let repo_url = repo_service::strip_userinfo(&repo_url);
@@ -19,7 +20,7 @@ pub async fn bind_repo(app: AppHandle, repo_url: String) -> Result<RepoPathDto, 
         "绑定仓库开始 url={}",
         config::logging::redact(&repo_url)
     );
-    let token = auth_service::read_token(&app)?;
+    let cred = auth_service::credential_for_url(&app, Some(&repo_url))?;
     let notes = config::notes_dir(&app)?;
     fs::create_dir_all(&notes).map_err(AppError::from).map_err(AppErrorDto::from)?;
     let name = repo_service::derive_name(&repo_url);
@@ -27,7 +28,7 @@ pub async fn bind_repo(app: AppHandle, repo_url: String) -> Result<RepoPathDto, 
     let backend = Git2Backend;
     let url = repo_url.clone();
     let repo_path =
-        blocking::run(move || repo_service::bind_repo(&backend, &url, &dest, &token))
+        blocking::run(move || repo_service::bind_repo(&backend, &url, &dest, &cred))
             .await
             .map_err(|err| {
                 log::error!(target: "ainote::repo", "绑定仓库失败 error={err}");

@@ -1,9 +1,11 @@
 use std::path::Path;
 
 use crate::domain::error::AppError;
+use crate::domain::hosting::HostingProvider;
+use crate::domain::remote::RemoteCredential;
 use crate::repositories::git_backend::GitBackend;
 
-use super::github_api;
+use super::hosting as hosting_api;
 
 /// 用例：校验路径是否为可用的 Git 仓库（P0-1 绑定前置校验）
 pub fn validate_repo<B: GitBackend>(backend: &B, repo_path: &str) -> Result<bool, AppError> {
@@ -24,7 +26,7 @@ pub fn bind_repo<B: GitBackend>(
     backend: &B,
     url: &str,
     dest: &Path,
-    token: &str,
+    cred: &RemoteCredential,
 ) -> Result<String, AppError> {
     if dest.exists() {
         return Err(AppError::Repo(format!(
@@ -33,8 +35,8 @@ pub fn bind_repo<B: GitBackend>(
         )));
     }
     let url = strip_userinfo(url);
-    backend.ls_remote(&url, token)?;
-    backend.clone_repo(&url, dest, token)?;
+    backend.ls_remote(&url, cred)?;
+    backend.clone_repo(&url, dest, cred)?;
     Ok(dest.to_string_lossy().into_owned())
 }
 
@@ -52,10 +54,12 @@ pub fn strip_userinfo(url: &str) -> String {
     }
 }
 
-/// 用例：在 GitHub 建仓后走绑定流程，返回 (本地路径, 远端 URL)。
+/// 用例：在指定平台建仓后走绑定流程，返回 (本地路径, 远端 URL)。
+/// 当前只有 GitHub 提供建仓接口，其它平台由 hosting_api 返回可读错误。
 pub fn create_and_bind_repo<B: GitBackend>(
     backend: &B,
-    token: &str,
+    provider: HostingProvider,
+    cred: &RemoteCredential,
     name: &str,
     is_private: bool,
     dest: &Path,
@@ -63,8 +67,8 @@ pub fn create_and_bind_repo<B: GitBackend>(
     if name.trim().is_empty() {
         return Err(AppError::Repo("仓库名不能为空".into()));
     }
-    let url = github_api::create_repo(token, name, is_private)?;
-    let path = bind_repo(backend, &url, dest, token)?;
+    let url = hosting_api::create_repo(provider, &cred.token, name, is_private)?;
+    let path = bind_repo(backend, &url, dest, cred)?;
     Ok((path, url))
 }
 
@@ -122,6 +126,10 @@ mod tests {
     use super::*;
     use crate::repositories::git_backend::MockGitBackend;
 
+    fn cred() -> RemoteCredential {
+        RemoteCredential::new("x-access-token", "tok")
+    }
+
     #[test]
     fn repo_size_rejects_non_git_path() {
         let backend = MockGitBackend::default();
@@ -131,7 +139,7 @@ mod tests {
     #[test]
     fn bind_rejects_existing_dest() {
         let tmp = tempfile::tempdir().unwrap();
-        let err = bind_repo(&MockGitBackend::default(), "u", tmp.path(), "t").unwrap_err();
+        let err = bind_repo(&MockGitBackend::default(), "u", tmp.path(), &cred()).unwrap_err();
         assert!(matches!(err, AppError::Repo(_)));
     }
 
@@ -140,7 +148,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dest = tmp.path().join("notes");
         let mock = MockGitBackend::default();
-        let path = bind_repo(&mock, "https://x/y.git", &dest, "tok").unwrap();
+        let path = bind_repo(&mock, "https://x/y.git", &dest, &cred()).unwrap();
         assert_eq!(path, dest.to_string_lossy());
         assert_eq!(
             mock.recorded(),
@@ -170,7 +178,7 @@ mod tests {
         let tmp = tempfile::tempdir().unwrap();
         let dest = tmp.path().join("notes");
         let mock = MockGitBackend::default();
-        bind_repo(&mock, "https://token@github.com/u/r.git", &dest, "tok").unwrap();
+        bind_repo(&mock, "https://token@github.com/u/r.git", &dest, &cred()).unwrap();
         assert_eq!(
             mock.recorded(),
             vec!["ls_remote:https://github.com/u/r.git", "clone:https://github.com/u/r.git"],
@@ -182,9 +190,32 @@ mod tests {
     fn create_rejects_empty_name() {
         let tmp = tempfile::tempdir().unwrap();
         let dest = tmp.path().join("notes");
-        let err =
-            create_and_bind_repo(&MockGitBackend::default(), "t", "  ", true, &dest).unwrap_err();
+        let err = create_and_bind_repo(
+            &MockGitBackend::default(),
+            HostingProvider::GitHub,
+            &cred(),
+            "  ",
+            true,
+            &dest,
+        )
+        .unwrap_err();
         assert!(matches!(err, AppError::Repo(_)));
+    }
+
+    #[test]
+    fn create_rejects_platforms_without_create_support() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dest = tmp.path().join("notes");
+        let err = create_and_bind_repo(
+            &MockGitBackend::default(),
+            HostingProvider::Gitee,
+            &cred(),
+            "notes",
+            true,
+            &dest,
+        )
+        .unwrap_err();
+        assert!(err.to_string().contains("Gitee"));
     }
 
     #[test]

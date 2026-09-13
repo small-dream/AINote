@@ -13,6 +13,9 @@ import { RepoBackupCard } from "./RepoBackupCard";
 import { RepoRestoreCard } from "./RepoRestoreCard";
 import { useTranslation } from "@/i18n";
 
+/** 平台展示名（品牌名不翻译）；未知 id 原样展示，后端新增平台时不会留空。 */
+const PROVIDER_LABELS: Record<string, string> = { github: "GitHub", gitee: "Gitee" };
+
 /** 设置页仓库管理内容区：列表 + 添加/设为当前/重命名/移除（标题由设置视图统一提供） */
 export function RepoManager() {
   const { repos, rename, remove, activate, handleAdded } = useRepoManager();
@@ -109,6 +112,11 @@ function RepoRow({ repo, isActive, activating, onActivate, onRename, onRemove }:
         <div className="min-w-0">
           <div className="flex items-center gap-2">
             <span className="truncate text-sm font-medium">{repo.name}</span>
+            {repo.providerId && (
+              <span className="shrink-0 rounded bg-bg-secondary px-1.5 py-0.5 text-[11px] text-text-tertiary">
+                {PROVIDER_LABELS[repo.providerId] ?? repo.providerId}
+              </span>
+            )}
             {isActive && (
               <span className="shrink-0 rounded bg-accent/15 px-1.5 py-0.5 text-[11px] text-accent">{t("repo.current")}</span>
             )}

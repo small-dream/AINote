@@ -16,9 +16,9 @@ export const repoApi = {
   validate: (repoPath: string) => call<boolean>("validate_repo", { repoPath }),
   /** 绑定已有远端仓库：探测 → clone 到唯一目录 → 注册并设为活动仓库 */
   bind: (repoUrl: string) => call<RepoPathDto>("bind_repo", { repoUrl }),
-  /** 在 GitHub 新建私有/公开仓库并绑定为活动仓库 */
-  create: (name: string, isPrivate: boolean) =>
-    call<RepoPathDto>("create_repo", { name, isPrivate }),
+  /** 在指定平台新建私有/公开仓库并绑定为活动仓库（当前仅 GitHub 支持建仓） */
+  create: (provider: string, name: string, isPrivate: boolean) =>
+    call<RepoPathDto>("create_repo", { provider, name, isPrivate }),
   /** 当前 config 中的活动 repoPath（未绑定为 null） */
   path: () => call<string | null>("get_repo_path"),
   /** 当前活动仓库的本地磁盘占用（字节） */

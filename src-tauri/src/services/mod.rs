@@ -6,7 +6,7 @@ pub mod auth_store;
 pub(crate) mod backup_service;
 pub(crate) mod conflict_export_service;
 pub(crate) mod diagnostics_service;
-pub mod github_api;
+pub mod hosting;
 pub mod history_service;
 pub mod maintenance_service;
 pub mod metrics_service;

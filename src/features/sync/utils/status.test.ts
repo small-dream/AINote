@@ -92,7 +92,7 @@ describe("deriveSyncFailure", () => {
     const failure = deriveSyncFailure(appError("SYNC_4003", "401", false));
     expect(failure?.action).toBe("relogin");
     expect(failure?.stage).toBe("拉取 / 推送");
-    expect(failure?.suggestion).toBe("登录凭证已失效，请重新登录 GitHub");
+    expect(failure?.suggestion).toBe("登录凭证已失效，请在「设置 → 账户」重新登录");
   });
 
   it("远端拒绝落到推送阶段并提示权限", () => {
@@ -122,7 +122,7 @@ describe("deriveSyncFailure / 后端同步上下文（E4-T4）", () => {
 
   it("后端 hint 优先于错误码推断", () => {
     const failure = deriveSyncFailure(syncError("SYNC_4002", { hint: "relogin" }));
-    expect(failure?.suggestion).toBe("登录凭证已失效，请重新登录 GitHub");
+    expect(failure?.suggestion).toBe("登录凭证已失效，请在「设置 → 账户」重新登录");
   });
 
   it("hint 为 retry 时保留错误码给出的具体建议", () => {

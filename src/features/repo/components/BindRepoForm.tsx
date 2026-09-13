@@ -8,7 +8,7 @@ interface BindRepoFormProps {
   onBound: (repoPath: string) => void;
 }
 
-/** 绑定已有 GitHub 仓库（P0-1） */
+/** 绑定已有仓库（P0-1）：平台由仓库地址自动识别，凭证取对应平台 */
 export function BindRepoForm({ onBound }: BindRepoFormProps) {
   const { t } = useTranslation();
   const [url, setUrl] = useState("");

@@ -30,6 +30,9 @@ pub(crate) struct AppConfig {
     /// 本地指标开关；None 视为开启（D4：本地计数默认开启、不含笔记内容）。
     #[serde(default)]
     pub(crate) metrics_enabled: Option<bool>,
+    /// 各托管平台的账号名（非敏感，仅用于设置页展示用户名）；键为平台 id。
+    #[serde(default)]
+    pub(crate) provider_logins: std::collections::BTreeMap<String, String>,
     /// 旧版单仓库字段（repoPath），加载时迁移进 repos。
     #[serde(default, rename = "repoPath")]
     legacy_repo_path: Option<String>,
@@ -132,6 +135,35 @@ pub fn save_token_present(app: &AppHandle, has_token: bool) -> Result<(), AppErr
     let mut cfg = load_config(app)?;
     cfg.has_token = Some(has_token);
     save_config(app, &cfg)
+}
+
+/// 某平台已记录的账号名（无记录返回 None）。
+pub fn provider_login(app: &AppHandle, provider_id: &str) -> Result<Option<String>, AppError> {
+    Ok(load_config(app)?.provider_logins.get(provider_id).cloned())
+}
+
+/// 记录某平台的账号名（非敏感展示信息）。
+pub fn set_provider_login(
+    app: &AppHandle,
+    provider_id: &str,
+    login: &str,
+) -> Result<(), AppError> {
+    let mut cfg = load_config(app)?;
+    cfg.provider_logins
+        .insert(provider_id.to_string(), login.to_string());
+    save_config(app, &cfg)
+}
+
+/// 清除某平台的账号名记录（断开该平台账号时调用）。
+pub fn clear_provider_login(app: &AppHandle, provider_id: &str) -> Result<(), AppError> {
+    let mut cfg = load_config(app)?;
+    cfg.provider_logins.remove(provider_id);
+    save_config(app, &cfg)
+}
+
+/// 当前活动仓库的远端地址（未绑定或未登记远端时为 None）。
+pub fn active_remote_url(app: &AppHandle) -> Result<Option<String>, AppError> {
+    Ok(repos::active_cfg(&load_config(app)?).and_then(|repo| repo.remote_url.clone()))
 }
 
 /// 清除全部配置（logout 时调用）。
