@@ -19,14 +19,24 @@ pub use domain::hosting::HostingProvider;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    tauri::Builder::default()
+    let builder = tauri::Builder::default()
         .plugin(config::logging::plugin())
         .plugin(tauri_plugin_dialog::init())
         .plugin(
             tauri_plugin_keyring_store::Builder::new()
                 .service("dev.ainote.app.credentials")
                 .build(),
-        )
+        );
+    #[cfg(desktop)]
+    let builder = builder.plugin(
+        tauri_plugin_window_state::Builder::new()
+            .with_state_flags(
+                tauri_plugin_window_state::StateFlags::SIZE
+                    | tauri_plugin_window_state::StateFlags::MAXIMIZED,
+            )
+            .build(),
+    );
+    builder
         .manage(commands::repo::backup::BackupState::default())
         .manage(commands::update::UpdateDownloadState::default())
         .manage(commands::git::sync::SyncRetryState::default())
