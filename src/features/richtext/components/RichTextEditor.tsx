@@ -3,6 +3,9 @@ import { EditorContent } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import { RichTextToolbar } from "./RichTextToolbar";
 import { RichTextBubbleMenu } from "./RichTextBubbleMenu";
+import { RichTextContextMenu } from "./RichTextContextMenu";
+import { useRichTextContextMenu } from "../hooks/useRichTextContextMenu";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { useRichTextEditor } from "../hooks/useRichTextEditor";
 import { useRichTextOutline } from "../hooks/useRichTextOutline";
 import { useUiStore } from "@/stores/ui.store";
@@ -34,6 +37,7 @@ interface RichTextEditorProps {
  * 通过父组件 key 重挂载以切换笔记；异步加载的 content 会由 hook 同步到编辑器。 */
 export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, outlineOpen = false, onOutlineToggle = () => undefined }: RichTextEditorProps) {
   const { editor, handleFiles, status } = useRichTextEditor({ content, onChange, repoPath });
+  const contextMenu = useRichTextContextMenu();
   const outline = useRichTextOutline(content);
   const openTagIndex = useUiStore((s) => s.openTagIndex);
   const noteTheme = useUiStore((s) => s.noteTheme);
@@ -42,11 +46,13 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
     onApply: (text) => applyToTipTapEditor(editor, text),
     onApplyFull: (text) => applyToTipTapDocument(editor, text),
   });
+  const longPressProps = useLongPressContextMenu((point) => contextMenu.openAt(point, editor));
 
   return (
-    <div data-note-theme={noteTheme} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)}>
+    <div data-note-theme={noteTheme} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" {...longPressProps} onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)} onContextMenu={(event) => contextMenu.handleContextMenu(event, editor)}>
       <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} trailing={<AiToolbarButton onOpen={ai.openMenu} compact />} />
       <RichTextBubbleMenu editor={editor} />
+      <RichTextContextMenu position={contextMenu.position} editor={editor} hasSelection={contextMenu.hasSelection} onOpenAi={() => { contextMenu.close(); ai.openMenu(); }} onClose={contextMenu.close} noteTheme={noteTheme} />
       <AiWriteControls ai={ai} />
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <NoteOutlineFloating items={outline} open={outlineOpen} onToggle={onOutlineToggle} onSelect={(item) => scrollToOutline(editor, item)} />

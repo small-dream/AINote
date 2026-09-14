@@ -1,5 +1,5 @@
 import type { Extension } from "@codemirror/state";
-import { lazy, Suspense, useCallback, useEffect, useRef, type RefObject } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, type MouseEvent, type ReactElement, type RefObject } from "react";
 import type { EditorView } from "@codemirror/view";
 import type { NoteWikiDto } from "@/api/types";
 import CodeMirror from "@uiw/react-codemirror";
@@ -11,6 +11,7 @@ import type { ViewMode } from "./EditorToolbar";
 import type { OutlineItem } from "../utils/outline";
 import type { NoteTheme } from "@/stores/ui.store";
 import { useDebouncedValue } from "@/hooks/useDebouncedValue";
+import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 
 /** 预览渲染防抖窗口：击键后延迟重跑 Markdown 管线（与 3s 落盘防抖 AUTOSAVE_DEBOUNCE_MS 解耦）。 */
 export const PREVIEW_DEBOUNCE_MS = 250;
@@ -46,16 +47,20 @@ export interface MarkdownEditorSurfaceProps {
   activeFormats: Set<string>;
   onImagePicked: (files: File[]) => void;
   assetStatus: string | null;
+  onContextMenu: (event: MouseEvent<HTMLElement>) => void;
+  onLongPress?: ((point: { x: number; y: number }) => void) | undefined;
+  contextMenu?: ReactElement | undefined;
   /** 是否启用软渲染（WYSIWYG），false = 源码模式 */
   softRender?: boolean;
 }
 
 /** Markdown 编辑器主体：大纲 + 格式工具栏 + 编辑/分栏/预览三模式（P0-2） */
-export function MarkdownEditorSurface({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect, viewRef, activeFormats, onImagePicked, assetStatus, softRender = true }: MarkdownEditorSurfaceProps) {
+export function MarkdownEditorSurface({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect, viewRef, activeFormats, onImagePicked, assetStatus, onContextMenu, onLongPress, contextMenu, softRender = true }: MarkdownEditorSurfaceProps) {
   return (
     <>
       {mode !== "preview" ? <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={onImagePicked} status={assetStatus} diagnostics={diagnostics} diagnosticsOpen={diagnosticsOpen} onDiagnosticsToggle={onDiagnosticsToggle} onDiagnosticsSelect={onDiagnosticsSelect} /> : null}
-      <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} previewRef={previewRef} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} ratio={ratio} onRatioChange={onRatioChange} outline={outline} outlineOpen={outlineOpen} onOutlineToggle={onOutlineToggle} onOutlineSelect={onOutlineSelect} softRender={softRender} />
+      <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} previewRef={previewRef} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} ratio={ratio} onRatioChange={onRatioChange} outline={outline} outlineOpen={outlineOpen} onOutlineToggle={onOutlineToggle} onOutlineSelect={onOutlineSelect} softRender={softRender} onContextMenu={onContextMenu} onLongPress={onLongPress} />
+      {contextMenu}
     </>
   );
 }
@@ -77,16 +82,19 @@ interface EditorBodyProps {
   outlineOpen: boolean;
   onOutlineToggle: () => void;
   onOutlineSelect: (item: OutlineItem) => void;
+  onContextMenu: (event: MouseEvent<HTMLElement>) => void;
+  onLongPress?: ((point: { x: number; y: number }) => void) | undefined;
   softRender: boolean;
 }
 
-function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, softRender }: EditorBodyProps) {
+function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, softRender, onContextMenu, onLongPress }: EditorBodyProps) {
+  const longPressProps = useLongPressContextMenu(onLongPress ?? (() => undefined));
   const stableOnChange = useStableCallback(onChange);
   const editor = <EditorShell softRender={softRender}><CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" basicSetup={softRender ? SOFT_RENDER_BASIC_SETUP : SOURCE_BASIC_SETUP} onChange={stableOnChange} extensions={extensions} onCreateEditor={onCreateEditor} /></EditorShell>;
   const outlineFloat = <NoteOutlineFloating items={outline} open={outlineOpen} onToggle={onOutlineToggle} onSelect={onOutlineSelect} />;
   if (mode === "split") {
     return (
-      <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
+      <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden" {...longPressProps} onContextMenu={onContextMenu}>
         {outlineFloat}
         <SplitPane ratio={ratio} onRatioChange={onRatioChange} left={editor} right={<PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} />} />
       </div>
@@ -94,14 +102,14 @@ function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, on
   }
   if (mode === "preview") {
     return (
-      <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
+      <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden" {...longPressProps} onContextMenu={onContextMenu}>
         {outlineFloat}
         <PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} />
       </div>
     );
   }
   return (
-    <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden">
+    <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden" {...longPressProps} onContextMenu={onContextMenu}>
       {outlineFloat}
       <div className="min-h-0 min-w-0 flex-1 overflow-hidden">{editor}</div>
     </div>
