@@ -18,6 +18,14 @@ const INLINE_MARKERS: Record<InlineFormat, string> = {
   code: "`",
 };
 
+/** 行内格式对应的语法节点与标记节点（与工具栏高亮的判定保持一致）。 */
+const INLINE_NODES: Record<InlineFormat, { node: string; mark: string }> = {
+  bold: { node: "StrongEmphasis", mark: "EmphasisMark" },
+  italic: { node: "Emphasis", mark: "EmphasisMark" },
+  strikethrough: { node: "Strikethrough", mark: "StrikethroughMark" },
+  code: { node: "InlineCode", mark: "CodeMark" },
+};
+
 const BLOCK_PREFIX: Record<BlockFormat, RegExp> = {
   quote: /^> /,
   bullet: /^- (?!\[)/,
@@ -29,6 +37,20 @@ const BLOCK_PREFIX: Record<BlockFormat, RegExp> = {
 export function toggleInline(state: EditorState, format: InlineFormat): FormatResult {
   const marker = INLINE_MARKERS[format];
   const { from, to } = state.selection.main;
+  if (from === to) {
+    const enclosing = enclosingFormatRange(state, format);
+    if (enclosing) {
+      // 光标已在格式内（工具栏此时是高亮态）：按下按钮 = 取消该格式，
+      // 避免插入一对空标记（在加粗末尾按加粗会留下 `****` 残渣）。
+      return {
+        changes: [
+          { from: enclosing.from, to: enclosing.from + marker.length },
+          { from: enclosing.to - marker.length, to: enclosing.to },
+        ],
+        selection: { anchor: Math.max(enclosing.from, from - marker.length) },
+      };
+    }
+  }
   if (matchOutside(state, marker, from, to)) {
     return {
       changes: [
@@ -54,6 +76,24 @@ export function toggleInline(state: EditorState, format: InlineFormat): FormatRe
     ],
     selection: { anchor: from + marker.length, head: to + marker.length },
   };
+}
+
+/** 空光标所在的该格式区间：只在标记长度与按钮一致时命中（避免把 `*` 与 `**` 混淆）。 */
+function enclosingFormatRange(state: EditorState, format: InlineFormat): { from: number; to: number } | null {
+  const { node: nodeName, mark: markName } = INLINE_NODES[format];
+  const markerLength = INLINE_MARKERS[format].length;
+  const head = state.selection.main.head;
+  const tree = ensureSyntaxTree(state, head, 50) ?? syntaxTree(state);
+  for (let node: SyntaxNode | null = tree.resolveInner(head, 0); node; node = node.parent) {
+    if (node.name !== nodeName) continue;
+    const marks = node.getChildren(markName);
+    const first = marks[0];
+    const last = marks[marks.length - 1];
+    if (!first || !last || first === last) continue;
+    if (first.to - first.from !== markerLength || last.to - last.from !== markerLength) continue;
+    return { from: first.from, to: last.to };
+  }
+  return null;
 }
 
 /** 行前缀格式 toggle：选区覆盖行全部已有前缀则批量去除，否则批量添加（有序按行递增） */

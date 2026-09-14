@@ -16,7 +16,7 @@ export function planMarkedPair(node: SyntaxNode, markName: string, cls: string, 
   const first = marks[0];
   const last = marks[marks.length - 1];
   if (!first || !last) return;
-  for (const mark of marks) plan.hides.push({ from: mark.from, to: mark.to, reveal: false, zeroWidth: true });
+  for (const mark of marks) plan.hides.push({ from: mark.from, to: mark.to, reveal: false });
   if (first.to < last.from) plan.marks.push({ from: first.to, to: last.from, cls });
 }
 
@@ -27,7 +27,7 @@ export function planInlineCode(node: SyntaxNode, _doc: string, _cursor: number, 
   const first = marks[0];
   const last = marks[marks.length - 1];
   if (!first || !last) return;
-  for (const mark of marks) plan.hides.push({ from: mark.from, to: mark.to, reveal: false, zeroWidth: true });
+  for (const mark of marks) plan.hides.push({ from: mark.from, to: mark.to, reveal: false });
   plan.marks.push({ from: first.to, to: last.from, cls: "cm-sr-inline-code" });
 }
 
@@ -38,7 +38,6 @@ export function planEscape(node: SyntaxNode, _doc: string, cursor: number, plan:
     from: node.from,
     to: node.from + 1,
     reveal: isActiveRange(node.from, node.to, cursor, selectionTo),
-    zeroWidth: true,
   });
 }
 

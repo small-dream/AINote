@@ -72,8 +72,9 @@ function toWidgetDecoration(widget: WidgetRange, options: SoftRenderOptions): Ra
 }
 
 function toHideDecoration(hide: HideRange): Decoration {
-  if (hide.zeroWidth) return Decoration.mark({ class: "cm-sr-zero" });
   if (hide.reveal) return Decoration.mark({ class: "cm-sr-marker" });
+  // 隐藏标记用装饰替换：DOM 里不占位，浏览器与 CodeMirror 的光标几何都取自相邻可见正文，
+  // 不会出现「1px 隐形字符」把光标压成小点、也无法落点的问题。
   return Decoration.replace({});
 }
 

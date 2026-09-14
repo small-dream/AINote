@@ -14,10 +14,7 @@ describe("planSoftRender 转义符", () => {
     const text = "a \\[b";
     const plan = planFor(text, 0);
     const backslashPos = text.indexOf("\\");
-    expect(plan.hides.find((h) => h.from === backslashPos && h.to === backslashPos + 1)).toMatchObject({
-      reveal: false,
-      zeroWidth: true,
-    });
+    expect(plan.hides.find((h) => h.from === backslashPos && h.to === backslashPos + 1)).toMatchObject({ reveal: false });
     expect(plan.marks.find((m) => m.cls === "cm-sr-inline-code")).toBeUndefined();
   });
 

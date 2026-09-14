@@ -52,8 +52,10 @@ describe("softRender 渲染", () => {
     expect(text).toContain("bold");
     expect(text).toContain("code");
     expect(text).not.toContain("(https://ex.com)");
-    const zeroMarks = view.contentDOM.querySelectorAll(".cm-sr-zero");
-    expect(zeroMarks.length).toBeGreaterThanOrEqual(4);
+    // 隐藏标记走装饰替换：DOM 里完全看不到 `**` 与反引号（零占位，光标几何取自相邻正文）。
+    expect(text).not.toContain("**");
+    expect(text).not.toContain("`");
+    expect(view.state.doc.toString()).toBe("a **bold** and `code` and [link](https://ex.com)");
     view.destroy();
   });
 
@@ -68,9 +70,10 @@ describe("softRender 渲染", () => {
 
   it("转义符隐藏反斜杠（只显示字面字符）", async () => {
     const view = await createView("\\[设计师 负责]", 0);
-    const zero = view.contentDOM.querySelector(".cm-sr-zero");
-    expect(zero).toBeDefined();
-    expect(zero?.textContent).toBe("\\");
+    const text = view.contentDOM.textContent ?? "";
+    expect(text).toContain("[设计师 负责]");
+    expect(text).not.toContain("\\");
+    expect(view.state.doc.toString()).toBe("\\[设计师 负责]");
     view.destroy();
   });
 

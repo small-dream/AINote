@@ -49,6 +49,15 @@ describe("toggleInline", () => {
     expect(run("ab", 1, 1, inline("code"))).toEqual({ doc: "a``b", anchor: 2, head: 2 });
   });
 
+  it("空光标已在格式内时取消格式，不插入空标记对", () => {
+    expect(run("**hello**", 4, 4, inline("bold"))).toEqual({ doc: "hello", anchor: 2, head: 2 });
+    expect(run("~~hello~~", 4, 4, inline("strikethrough"))).toEqual({ doc: "hello", anchor: 2, head: 2 });
+  });
+
+  it("空光标在斜体标记内按加粗仍按原逻辑包裹", () => {
+    expect(run("*hello*", 3, 3, inline("bold"))).toEqual({ doc: "*he****llo*", anchor: 5, head: 5 });
+  });
+
   it("选区外侧有标记时去除标记", () => {
     expect(run("**hello**", 2, 7, inline("bold"))).toEqual({ doc: "hello", anchor: 0, head: 5 });
   });
