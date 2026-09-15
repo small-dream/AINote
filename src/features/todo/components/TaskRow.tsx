@@ -17,7 +17,7 @@ const PRIORITY_LABEL_KEY: Record<Exclude<TaskPriority, "none">, TranslationKey> 
   low: "todo.priorityLow",
 };
 
-function DueBadge({ dueDate, done }: { dueDate: string; done: boolean }) {
+export function DueBadge({ dueDate, done }: { dueDate: string; done: boolean }) {
   const { t } = useTranslation();
   const offset = dueDayOffset(dueDate, new Date());
   const label = !done && offset === 0
@@ -37,7 +37,7 @@ function DueBadge({ dueDate, done }: { dueDate: string; done: boolean }) {
   );
 }
 
-/** 单条任务行：完成勾选、标题（完成删除线）、截止徽标、优先级旗帜。点击进入行内编辑。 */
+/** 单条任务行：完成勾选、标题（完成删除线）、截止徽标、优先级旗帜。点击进入编辑器。 */
 export function TaskRow({ task, onToggle, onOpenEditor }: TaskRowProps) {
   const { t } = useTranslation();
   return (
@@ -57,8 +57,13 @@ export function TaskRow({ task, onToggle, onOpenEditor }: TaskRowProps) {
         onClick={onOpenEditor}
         className="flex min-w-0 flex-1 items-center gap-2 text-left"
       >
-        <span className={`min-w-0 flex-1 truncate text-sm ${task.done ? "text-text-tertiary line-through" : "text-text-primary"}`}>
-          {task.title}
+        <span className="min-w-0 flex-1">
+          <span className={`block truncate text-sm ${task.done ? "text-text-tertiary line-through" : "text-text-primary"}`}>
+            {task.title}
+          </span>
+          {task.description ? (
+            <span className="mt-0.5 block truncate text-xs text-text-tertiary">{task.description}</span>
+          ) : null}
         </span>
         {task.dueDate ? <DueBadge dueDate={task.dueDate} done={task.done} /> : null}
         {task.priority !== "none" ? (

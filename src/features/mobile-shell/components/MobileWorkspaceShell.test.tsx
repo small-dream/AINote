@@ -1,5 +1,5 @@
 import type { RefObject } from "react";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileWorkspaceShell } from "./MobileWorkspaceShell";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
@@ -83,6 +83,14 @@ describe("MobileWorkspaceShell", () => {
     expect(useUiStore.getState().sidebarTab).toBe("tags");
     screen.getByRole("button", { name: "搜索" }).click();
     expect(useCommandPaletteStore.getState().open).toBe(true);
+  });
+
+  it("opens todo from the bottom navigation", async () => {
+    renderShell();
+    expect(screen.getByRole("heading", { name: "笔记" })).toBeTruthy();
+    fireEvent.click(screen.getByRole("button", { name: "待办" }));
+    expect(useUiStore.getState().sidebarTab).toBe("todo");
+    expect(screen.getByRole("button", { name: "待办" })).toBeTruthy();
   });
 
   it("opens the conflict resolver from the sync pill", async () => {

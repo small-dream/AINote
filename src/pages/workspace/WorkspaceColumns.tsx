@@ -3,6 +3,8 @@ import { WorkspaceSidebar } from "./WorkspaceSidebar";
 import { useSidebarResizer, type SidebarResizeHandleProps } from "./useSidebarResizer";
 import { NoteEditor, type NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import type { NoteKind } from "@/api/types";
+import { TodoWorkspace } from "@/features/todo/components/TodoWorkspace";
+import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 import { getDirectoryPath } from "@/features/file-tree/utils/path";
 
@@ -26,6 +28,12 @@ export interface WorkspaceColumnsProps {
 export function WorkspaceColumns({ repoPath, currentNotePath, createdPath, editorRef, onSelect, onRequestHistory, historyRequestPath, onHistoryRequestHandled, onRequestNew, onRequestFolder, onRequestImport, onRequestImportNotes, onSetMove, onSetRename }: WorkspaceColumnsProps) {
   const { t } = useTranslation();
   const { sidebarWidth, isResizing, resizeHandleProps } = useSidebarResizer();
+  const sidebarTab = useUiStore((state) => state.sidebarTab);
+
+  if (sidebarTab === "todo") {
+    return <TodoWorkspace repoPath={repoPath} />;
+  }
+
   return (
     <div className="workspace-columns flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
       <WorkspaceSidebar

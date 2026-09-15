@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::domain::error::AppError;
 
-pub const TASK_SCHEMA_VERSION: u32 = 1;
+pub const TASK_SCHEMA_VERSION: u32 = 2;
 
 /// Todo 看板的落盘结构；`schemaVersion` 供后续规则演进使用。
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
@@ -32,6 +32,8 @@ pub struct TaskItem {
     pub id: String,
     pub list_id: String,
     pub title: String,
+    #[serde(default)]
+    pub description: String,
     pub done: bool,
     pub priority: TaskPriority,
     pub due_date: Option<String>,
@@ -40,6 +42,12 @@ pub struct TaskItem {
     pub created_at: String,
     pub updated_at: String,
     pub completed_at: Option<String>,
+}
+
+/// 兼容旧版 todos.json：缺失 description 回退空文本，并统一升级 schemaVersion。
+pub fn normalize_board(mut board: TaskBoard) -> TaskBoard {
+    board.schema_version = TASK_SCHEMA_VERSION;
+    board
 }
 
 /// 优先级序列化为小写字符串，与前端 TS 字面量类型保持一致。
@@ -137,6 +145,7 @@ mod tests {
             id: id.to_string(),
             list_id: "l1".to_string(),
             title: id.to_string(),
+            description: String::new(),
             done,
             priority,
             due_date: due.map(str::to_string),

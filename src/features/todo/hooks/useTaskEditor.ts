@@ -6,6 +6,7 @@ import { defaultRemindAt, fromLocalInputValue, toLocalInputValue } from "../util
 
 export interface TaskDraft {
   title: string;
+  description: string;
   dueDate: string | null;
   priority: TaskPriority;
   remindAt: string | null;
@@ -20,12 +21,13 @@ export function useTaskEditor({ task, onSave, onClose }: { task: TaskItemDto; on
   const { t } = useTranslation();
   const pushToast = useToastStore((state) => state.push);
   const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description);
   const [dueDate, setDueDate] = useState(task.dueDate);
   const [priority, setPriority] = useState<TaskPriority>(task.priority);
   const [remindValue, setRemindValue] = useState(toLocalInputValue(task.remindAt));
 
   function commit(overrides: Partial<TaskDraft>): boolean {
-    const draft: TaskDraft = { title: title.trim(), dueDate, priority, remindAt: fromLocalInputValue(remindValue), ...overrides };
+    const draft: TaskDraft = { title: title.trim(), description, dueDate, priority, remindAt: fromLocalInputValue(remindValue), ...overrides };
     if (!draft.title) {
       pushToast(t("todo.titleRequired"), "error");
       return false;
@@ -36,6 +38,7 @@ export function useTaskEditor({ task, onSave, onClose }: { task: TaskItemDto; on
 
   function close(): void {
     const dirty = title.trim() !== task.title
+      || description !== task.description
       || dueDate !== task.dueDate
       || priority !== task.priority
       || !sameInstant(fromLocalInputValue(remindValue), task.remindAt);
@@ -67,5 +70,5 @@ export function useTaskEditor({ task, onSave, onClose }: { task: TaskItemDto; on
     commit({ remindAt: fromLocalInputValue(value) });
   }
 
-  return { title, setTitle, dueDate, priority, remindValue, close, commitDueDate, commitPriority, toggleReminder, commitReminder };
+  return { title, setTitle, description, setDescription, dueDate, priority, remindValue, close, save: () => commit({}), commitDueDate, commitPriority, toggleReminder, commitReminder };
 }

@@ -68,6 +68,7 @@ pub fn create_task(
     root: &Path,
     list_id: &str,
     title: &str,
+    description: Option<String>,
     due_date: Option<String>,
     priority: TaskPriority,
     remind_at: Option<String>,
@@ -90,6 +91,7 @@ pub fn create_task(
             id: task::new_task_id(),
             list_id: list_id.to_string(),
             title,
+            description: description.unwrap_or_default(),
             done: false,
             priority,
             due_date,
@@ -111,6 +113,7 @@ pub fn update_task(
     task_id: &str,
     title: &str,
     list_id: &str,
+    description: Option<String>,
     due_date: Option<String>,
     priority: TaskPriority,
     remind_at: Option<String>,
@@ -128,6 +131,7 @@ pub fn update_task(
             .ok_or_else(|| AppError::TaskNotFound(task_id.to_string()))?;
         item.title = title;
         item.list_id = list_id.to_string();
+        item.description = description.unwrap_or_default();
         item.due_date = due_date;
         item.priority = priority;
         item.remind_at = remind_at;
@@ -192,15 +196,15 @@ mod tests {
     fn create_task_validates_list_title_and_reminder() {
         let (root, list) = setup();
         assert!(matches!(
-            create_task(root.path(), "missing", "x", None, TaskPriority::None, None),
+            create_task(root.path(), "missing", "x", None, None, TaskPriority::None, None),
             Err(AppError::TaskListNotFound(_))
         ));
         assert!(matches!(
-            create_task(root.path(), &list.id, "  ", None, TaskPriority::None, None),
+            create_task(root.path(), &list.id, "  ", None, None, TaskPriority::None, None),
             Err(AppError::TaskInvalid(_))
         ));
         assert!(matches!(
-            create_task(root.path(), &list.id, "x", None, TaskPriority::None, Some("2026-09-20T09:00:00+08:00".into())),
+            create_task(root.path(), &list.id, "x", None, None, TaskPriority::None, Some("2026-09-20T09:00:00+08:00".into())),
             Err(AppError::TaskInvalid(_))
         ));
 
@@ -208,6 +212,7 @@ mod tests {
             root.path(),
             &list.id,
             "写周报",
+            Some("包含本周三项交付进展".into()),
             Some("2026-09-20".into()),
             TaskPriority::High,
             Some("2026-09-20T09:00:00+08:00".into()),
@@ -216,7 +221,7 @@ mod tests {
         assert_eq!(item.sort_order, 0);
         assert!(!item.done);
 
-        let second = create_task(root.path(), &list.id, "回邮件", None, TaskPriority::Low, None).unwrap();
+        let second = create_task(root.path(), &list.id, "回邮件", None, None, TaskPriority::Low, None).unwrap();
         assert_eq!(second.sort_order, 1);
     }
 
@@ -224,25 +229,27 @@ mod tests {
     fn update_task_replaces_editable_fields() {
         let (root, list) = setup();
         let other = create_list(root.path(), "工作").unwrap();
-        let item = create_task(root.path(), &list.id, "旧标题", None, TaskPriority::None, None).unwrap();
+        let item = create_task(root.path(), &list.id, "旧标题", None, None, TaskPriority::None, None).unwrap();
 
         let updated = update_task(
             root.path(),
             &item.id,
             "新标题",
             &other.id,
+            Some("新详情".into()),
             Some("2026-10-01".into()),
             TaskPriority::Medium,
             None,
         )
         .unwrap();
         assert_eq!(updated.title, "新标题");
+        assert_eq!(updated.description, "新详情");
         assert_eq!(updated.list_id, other.id);
         assert_eq!(updated.due_date.as_deref(), Some("2026-10-01"));
         assert_eq!(updated.priority, TaskPriority::Medium);
 
         assert!(matches!(
-            update_task(root.path(), "missing", "x", &list.id, None, TaskPriority::None, None),
+            update_task(root.path(), "missing", "x", &list.id, None, None, TaskPriority::None, None),
             Err(AppError::TaskNotFound(_))
         ));
     }
@@ -250,7 +257,7 @@ mod tests {
     #[test]
     fn toggle_task_flips_done_state() {
         let (root, list) = setup();
-        let item = create_task(root.path(), &list.id, "t", None, TaskPriority::None, None).unwrap();
+        let item = create_task(root.path(), &list.id, "t", None, None, TaskPriority::None, None).unwrap();
 
         let done = toggle_task(root.path(), &item.id).unwrap();
         assert!(done.done);
@@ -270,8 +277,8 @@ mod tests {
     fn delete_list_cascades_tasks() {
         let (root, list) = setup();
         let keep = create_list(root.path(), "保留").unwrap();
-        create_task(root.path(), &list.id, "将被级联", None, TaskPriority::None, None).unwrap();
-        create_task(root.path(), &keep.id, "应保留", None, TaskPriority::None, None).unwrap();
+        create_task(root.path(), &list.id, "将被级联", None, None, TaskPriority::None, None).unwrap();
+        create_task(root.path(), &keep.id, "应保留", None, None, TaskPriority::None, None).unwrap();
 
         delete_list(root.path(), &list.id).unwrap();
         let board = board(root.path()).unwrap();
@@ -283,7 +290,7 @@ mod tests {
     #[test]
     fn delete_task_is_idempotent() {
         let (root, list) = setup();
-        let item = create_task(root.path(), &list.id, "t", None, TaskPriority::None, None).unwrap();
+        let item = create_task(root.path(), &list.id, "t", None, None, TaskPriority::None, None).unwrap();
         delete_task(root.path(), &item.id).unwrap();
         delete_task(root.path(), &item.id).unwrap();
         assert!(board(root.path()).unwrap().tasks.is_empty());

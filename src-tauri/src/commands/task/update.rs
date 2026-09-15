@@ -13,13 +13,14 @@ pub async fn task_update(
     task_id: String,
     title: String,
     list_id: String,
+    description: Option<String>,
     due_date: Option<String>,
     priority: TaskPriority,
     remind_at: Option<String>,
 ) -> Result<TaskItem, AppErrorDto> {
     let root = config::require_repo_path(&app)?;
     blocking::run(move || {
-        task_service::update_task(&root, &task_id, &title, &list_id, due_date, priority, remind_at)
+        task_service::update_task(&root, &task_id, &title, &list_id, description, due_date, priority, remind_at)
     })
     .await
     .map_err(AppErrorDto::from)

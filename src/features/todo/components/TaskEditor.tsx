@@ -53,6 +53,13 @@ export function TaskEditor({ task, busy, onSave, onDelete, onClose }: TaskEditor
             <Trash2 size={13} aria-hidden="true" />
           </button>
         </div>
+        <textarea
+          className="mt-2 min-h-20 w-full resize-none rounded-md border border-border bg-bg-secondary px-2 py-1.5 text-sm leading-5 text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent"
+          value={editor.description}
+          placeholder={t("todo.detailsPlaceholder")}
+          aria-label={t("todo.details")}
+          onChange={(event) => editor.setDescription(event.target.value)}
+        />
       </div>
     </>
   );

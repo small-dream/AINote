@@ -12,6 +12,7 @@ import { useTranslation } from "@/i18n";
 import { useMobileEditorView } from "../hooks/useMobileEditorView";
 import { useMobileKeyboardInsets } from "../hooks/useMobileKeyboardInsets";
 import type { SidebarTab } from "@/stores/ui.store";
+import type { TranslationKey } from "@/i18n/messages";
 
 const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
 const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
@@ -38,13 +39,13 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
   const [conflictOpen, setConflictOpen] = useState(false);
   const [commitOpen, setCommitOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
-  const title = currentNotePath?.split(/[\\/]/).pop() ?? t("app.notes");
   const { showEditor, backToList } = useMobileEditorView({
     currentNotePath,
     openEditorSignal,
     onBackToList,
     onFlush: () => editorRef.current?.flush(),
   });
+  const title = currentNotePath?.split(/[\\/]/).pop() ?? t(MOBILE_LIST_TITLES[sidebarTab]);
   useMobileKeyboardInsets();
 
   return (
@@ -87,6 +88,15 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
   );
 }
 
+const MOBILE_LIST_TITLES: Record<SidebarTab, TranslationKey> = {
+  tree: "app.notes",
+  recent: "app.recent",
+  favorites: "app.favorites",
+  todo: "todo.title",
+  tags: "wiki.tags",
+  trash: "trash.title",
+};
+
 function MobileContent({ showEditor, sidebarTab, setSidebarTab, onOpenGraph, editor, sidebar }: { showEditor: boolean; sidebarTab: SidebarTab; setSidebarTab: (tab: SidebarTab) => void; onOpenGraph: () => void; editor: ReactNode; sidebar: ReactNode }) {
   return (
     <>
@@ -104,7 +114,9 @@ function MobileContent({ showEditor, sidebarTab, setSidebarTab, onOpenGraph, edi
         <MobileBottomNav
           notesActive={sidebarTab === "tree"}
           favoritesActive={sidebarTab === "favorites"}
+          todoActive={sidebarTab === "todo"}
           onOpenNotes={() => setSidebarTab("tree")}
+          onOpenTodo={() => setSidebarTab("todo")}
           onOpenFavorites={() => setSidebarTab("favorites")}
           onOpenSettings={() => useUiStore.getState().openSettings()}
         />
@@ -187,11 +199,12 @@ function MobileListTabs({ active, onChange, onOpenGraph }: { active: SidebarTab;
   );
 }
 
-function MobileBottomNav({ notesActive, favoritesActive, onOpenNotes, onOpenFavorites, onOpenSettings }: { notesActive: boolean; favoritesActive: boolean; onOpenNotes: () => void; onOpenFavorites: () => void; onOpenSettings: () => void }) {
+function MobileBottomNav({ notesActive, todoActive, favoritesActive, onOpenNotes, onOpenTodo, onOpenFavorites, onOpenSettings }: { notesActive: boolean; todoActive: boolean; favoritesActive: boolean; onOpenNotes: () => void; onOpenTodo: () => void; onOpenFavorites: () => void; onOpenSettings: () => void }) {
   const { t } = useTranslation();
   return (
     <nav className="mobile-bottom-nav flex min-h-16 shrink-0 items-stretch justify-around border-t border-border bg-bg-secondary pb-[var(--safe-bottom)]" aria-label={t("app.workspaceNavigation")}>
       <MobileNavButton active={notesActive} label={t("app.notes")} icon={List} onClick={onOpenNotes} />
+      <MobileNavButton active={todoActive} label={t("todo.title")} icon={ListTodo} onClick={onOpenTodo} />
       <MobileNavButton active={favoritesActive} label={t("app.favorites")} icon={Star} onClick={onOpenFavorites} />
       <MobileNavButton label={t("settings.title")} icon={Settings} onClick={onOpenSettings} />
     </nav>

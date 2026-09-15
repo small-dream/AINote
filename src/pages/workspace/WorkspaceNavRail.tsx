@@ -18,11 +18,10 @@ interface WorkspaceNavRailProps {
 
 const NAV_ITEMS = [
   { key: "app.notes", icon: FileText, sidebarTab: "tree" },
+  { key: "todo.title", icon: ListTodo, sidebarTab: "todo" },
   { key: "app.recent", icon: Clock3, sidebarTab: "recent" },
   { key: "app.favorites", icon: Star, sidebarTab: "favorites" },
-  { key: "todo.title", icon: ListTodo, sidebarTab: "todo" },
   { key: "wiki.tags", icon: Tags, sidebarTab: "tags" },
-  { key: "trash.title", icon: Trash2, sidebarTab: "trash" },
 ] as const;
 
 const SYNC_ICON = { synced: CloudCheck, pending: CloudSync, conflict: TriangleAlert, offline: CloudOff } as const;
@@ -41,6 +40,7 @@ export function WorkspaceNavRail({ repoPath, startupSyncing, sync }: WorkspaceNa
       <NavigationItems />
       <CommitNavButton repoPath={repoPath} sync={sync} />
       <GraphNavButton repoPath={repoPath} />
+      <TrashNavButton />
       <SettingsNavButton />
     </nav>
   );
@@ -65,11 +65,24 @@ function NavigationItems() {
   );
 }
 
+function TrashNavButton() {
+  const { t } = useTranslation();
+  const sidebarTab = useUiStore((state) => state.sidebarTab);
+  const active = sidebarTab === "trash";
+  return (
+    <Tooltip content={t("trash.title")} placement="right">
+      <button type="button" aria-label={t("trash.title")} aria-current={active ? "page" : undefined} onClick={() => useUiStore.getState().setSidebarTab("trash")} className={`${NAV_BUTTON_CLASS} mt-auto ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}>
+        <Trash2 size={18} strokeWidth={active ? 2.3 : 1.9} />
+      </button>
+    </Tooltip>
+  );
+}
+
 function SettingsNavButton() {
   const { t } = useTranslation();
   return (
     <Tooltip content={t("settings.title")} placement="right">
-      <button type="button" aria-label={t("settings.title")} onClick={() => useUiStore.getState().openSettings()} className={`${NAV_BUTTON_CLASS} mt-auto`}>
+      <button type="button" aria-label={t("settings.title")} onClick={() => useUiStore.getState().openSettings()} className={NAV_BUTTON_CLASS}>
         <Settings size={18} />
       </button>
     </Tooltip>

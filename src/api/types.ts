@@ -341,6 +341,7 @@ export interface TaskItemDto {
   id: string;
   listId: string;
   title: string;
+  description: string;
   done: boolean;
   priority: TaskPriority;
   dueDate: string | null;

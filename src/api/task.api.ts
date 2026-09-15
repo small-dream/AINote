@@ -5,6 +5,7 @@ import type { TaskBoardDto, TaskItemDto, TaskListDto, TaskPriority } from "./typ
 export interface CreateTaskInput {
   listId: string;
   title: string;
+  description: string;
   dueDate: string | null;
   priority: TaskPriority;
   remindAt: string | null;
@@ -15,6 +16,7 @@ export interface UpdateTaskInput {
   taskId: string;
   title: string;
   listId: string;
+  description: string;
   dueDate: string | null;
   priority: TaskPriority;
   remindAt: string | null;

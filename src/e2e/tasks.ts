@@ -71,6 +71,7 @@ function createTask(args: Record<string, unknown>, ctx: TaskCommandContext): Tas
     id: `task-${ctx.store.taskSeq++}`,
     listId,
     title,
+    description: typeof args.description === "string" ? args.description : "",
     done: false,
     priority: (nullable(args.priority) ?? "none") as TaskPriority,
     dueDate,
@@ -94,6 +95,7 @@ function updateTask(args: Record<string, unknown>, ctx: TaskCommandContext): Tas
   checkReminder(dueDate, remindAt);
   task.title = title;
   task.listId = listId;
+  task.description = typeof args.description === "string" ? args.description : task.description;
   task.dueDate = dueDate;
   task.remindAt = remindAt;
   task.priority = (nullable(args.priority) ?? "none") as TaskPriority;

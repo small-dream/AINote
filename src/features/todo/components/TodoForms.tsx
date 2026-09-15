@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ArrowUp, ListTodo } from "lucide-react";
+import { ArrowUp, FileText, ListTodo } from "lucide-react";
 import type { TaskPriority } from "@/api/types";
 import { useTranslation } from "@/i18n";
 import { useToastStore } from "@/stores/toast.store";
@@ -8,8 +8,39 @@ import { DueDateChip, PriorityChip } from "./TaskMetaControls";
 
 export interface QuickAddDraft {
   title: string;
+  description: string;
   dueDate: string | null;
   priority: TaskPriority;
+}
+
+function DetailsToggle({ open, onToggle }: { open: boolean; onToggle: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <button
+      type="button"
+      aria-label={t("todo.toggleDetails")}
+      aria-expanded={open}
+      onClick={onToggle}
+      className={`grid h-6 w-6 shrink-0 place-items-center rounded-md transition-colors hover:bg-bg-tertiary ${open ? "text-accent" : "text-text-tertiary"}`}
+    >
+      <FileText size={13} strokeWidth={2} aria-hidden="true" />
+    </button>
+  );
+}
+
+function DetailsField({ value, disabled, onChange, onSubmit }: { value: string; disabled: boolean; onChange: (value: string) => void; onSubmit: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <textarea
+      className="mt-1.5 min-h-20 w-full resize-none rounded-md border border-border bg-bg-secondary px-2 py-1.5 text-sm leading-5 text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent"
+      value={value}
+      placeholder={t("todo.detailsPlaceholder")}
+      aria-label={t("todo.details")}
+      disabled={disabled}
+      onChange={(event) => onChange(event.target.value)}
+      onKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key === "Enter") onSubmit(); }}
+    />
+  );
 }
 
 /** 快捷新增任务：标题内识别「明天 / 周五 / p1」等日期与优先级，chip 可手动覆盖。 */
@@ -17,6 +48,8 @@ export function QuickAdd({ busy, onAdd }: { busy: boolean; onAdd: (draft: QuickA
   const { t } = useTranslation();
   const pushToast = useToastStore((state) => state.push);
   const [value, setValue] = useState("");
+  const [description, setDescription] = useState("");
+  const [detailsOpen, setDetailsOpen] = useState(false);
   const [dueOverride, setDueOverride] = useState<string | null>(null);
   const [priorityOverride, setPriorityOverride] = useState<TaskPriority | null>(null);
 
@@ -30,8 +63,10 @@ export function QuickAdd({ busy, onAdd }: { busy: boolean; onAdd: (draft: QuickA
       pushToast(t("todo.titleRequired"), "error");
       return;
     }
-    onAdd({ title: parsed.title, dueDate, priority });
+    onAdd({ title: parsed.title, description: description.trim(), dueDate, priority });
     setValue("");
+    setDescription("");
+    setDetailsOpen(false);
     setDueOverride(null);
     setPriorityOverride(null);
   }
@@ -52,6 +87,7 @@ export function QuickAdd({ busy, onAdd }: { busy: boolean; onAdd: (draft: QuickA
           <DueDateChip value={dueDate} onChange={setDueOverride} />
           <PriorityChip value={priority} onChange={setPriorityOverride} />
           <div className="flex-1" />
+          <DetailsToggle open={detailsOpen} onToggle={() => setDetailsOpen((open) => !open)} />
           <button
             type="button"
             aria-label={t("todo.addTask")}
@@ -62,6 +98,9 @@ export function QuickAdd({ busy, onAdd }: { busy: boolean; onAdd: (draft: QuickA
             <ArrowUp size={13} strokeWidth={2.5} aria-hidden="true" />
           </button>
         </div>
+        {detailsOpen ? (
+          <DetailsField value={description} disabled={busy} onChange={setDescription} onSubmit={submit} />
+        ) : null}
       </div>
     </div>
   );

@@ -2,7 +2,7 @@ use std::fs;
 use std::path::Path;
 
 use crate::domain::error::AppError;
-use crate::domain::task::{TaskBoard, TASK_SCHEMA_VERSION};
+use crate::domain::task::{normalize_board, TaskBoard, TASK_SCHEMA_VERSION};
 
 pub const TASKS_FILE: &str = ".ainote/todos.json";
 
@@ -20,7 +20,7 @@ pub fn load(root: &Path) -> Result<TaskBoard, AppError> {
     let raw = fs::read_to_string(path)?;
     let board: TaskBoard = serde_json::from_str(&raw)
         .map_err(|error| AppError::Repo(format!("invalid task board: {error}")))?;
-    Ok(board)
+    Ok(normalize_board(board))
 }
 
 /// Repository 边界：原子写入 Todo 看板，避免半写状态破坏 JSON。
@@ -48,6 +48,17 @@ mod tests {
         let board = load(root.path()).unwrap();
         assert!(board.lists.is_empty());
         assert!(board.tasks.is_empty());
+        assert_eq!(board.schema_version, TASK_SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn load_upgrades_legacy_schema_version() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join(TASKS_FILE);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(&path, r#"{"schemaVersion":1,"lists":[],"tasks":[]}"#).unwrap();
+
+        let board = load(root.path()).unwrap();
         assert_eq!(board.schema_version, TASK_SCHEMA_VERSION);
     }
 

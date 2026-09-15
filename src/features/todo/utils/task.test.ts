@@ -17,6 +17,7 @@ function task(partial: Partial<TaskItemDto>): TaskItemDto {
     id: "t-1",
     listId: "l-1",
     title: "任务",
+    description: "",
     done: false,
     priority: "none",
     dueDate: null,
