@@ -33,30 +33,64 @@ async function expectSidebarStartsAtTreeToolbar(page: Page): Promise<void> {
   expect(offset).toBeLessThan(20);
 }
 
+/** 取一列实际渲染色（截图交给浏览器解码，避免为测试引入图像依赖）。 */
+async function columnPixels(page: Page, column: { x: number; y: number; height: number }): Promise<number[][]> {
+  const shot = await page.screenshot({ clip: { x: Math.round(column.x), y: Math.round(column.y), width: 1, height: Math.round(column.height) } });
+  return page.evaluate(async (dataUrl) => {
+    const image = new Image();
+    image.src = dataUrl;
+    await image.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = image.width;
+    canvas.height = image.height;
+    const context = canvas.getContext("2d");
+    if (!context) throw new Error("canvas 2d 不可用");
+    context.drawImage(image, 0, 0);
+    const data = context.getImageData(0, 0, image.width, image.height).data;
+    const rows: number[][] = [];
+    for (let y = 0; y < image.height; y += 1) {
+      const offset = y * 4;
+      rows.push([data[offset] ?? 0, data[offset + 1] ?? 0, data[offset + 2] ?? 0]);
+    }
+    return rows;
+  }, `data:image/png;base64,${shot.toString("base64")}`);
+}
+
+/** 两列像素的最大通道差：选区可见时，同一列会因选区底色显著变色。 */
+function maxChannelDelta(left: number[][], right: number[][]): number {
+  return Math.max(
+    ...left.map((row, index) => Math.max(...row.map((channel, channelIndex) => Math.abs(channel - (right[index]?.[channelIndex] ?? channel))))),
+  );
+}
+
 test.describe("AINote 桌面核心流程", () => {
-  test("导航轨：「笔记」是同步按钮之后的第一个入口", async ({ page }) => {
+  test("导航轨：「笔记」之后紧跟「待办」，其后是最近 / 收藏 / 标签", async ({ page }) => {
     await openWorkspace(page, baseState([{ path: "first.md", content: "# 第一篇" }]));
     const labels = await page
       .locator(".workspace-nav-rail button")
       .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")));
-    expect(labels.slice(0, 3)).toEqual(["立即同步", "笔记", "最近"]);
+    expect(labels.slice(0, 6)).toEqual(["立即同步", "笔记", "待办", "最近", "收藏", "标签"]);
   });
 
-  test("导航轨：组内间距 6px、分组间距 12px", async ({ page }) => {
+  test("导航轨：功能组组内 6px / 分组 12px，回收站与设置贴底", async ({ page }) => {
     await openWorkspace(page, baseState([{ path: "first.md", content: "# 第一篇" }]));
-    const gaps = await page.locator(".workspace-nav-rail button").evaluateAll((nodes) => {
-      const rects = nodes.map((node) => node.getBoundingClientRect());
-      const out: number[] = [];
-      // 末位「设置」由 mt-auto 顶到底部，间距不参与比较
-      for (let index = 0; index < rects.length - 2; index++) {
-        const current = rects[index];
-        const next = rects[index + 1];
-        if (current && next) out.push(Math.round(next.top - current.bottom));
-      }
-      return out;
-    });
-    // 同步 | 笔记/最近/收藏/待办/标签/回收站 | 提交版本/Git 历史
-    expect(gaps).toEqual([12, 6, 6, 6, 6, 6, 12, 6]);
+    const rail = page.locator(".workspace-nav-rail");
+    const railBox = await rail.boundingBox();
+    if (!railBox) throw new Error("导航轨未渲染");
+    const rects = await rail.locator("button").evaluateAll((nodes) =>
+      nodes.map((node) => {
+        const rect = node.getBoundingClientRect();
+        return { top: Math.round(rect.top), bottom: Math.round(rect.bottom) };
+      }),
+    );
+    const gaps = rects.slice(0, -1).map((rect, index) => (rects[index + 1]?.top ?? 0) - rect.bottom);
+    // 同步 | 笔记 待办 最近 收藏 标签 | 提交版本 Git 历史 …：分组处多 6px
+    expect(gaps.slice(0, 7)).toEqual([12, 6, 6, 6, 6, 12, 6]);
+    // 「回收站/设置」系统组由 mt-auto 顶到导轨底部：与上一组拉开距离，组内仍 6px
+    expect(gaps[7]).toBeGreaterThan(12);
+    expect(gaps[8]).toBe(6);
+    const settings = rects[rects.length - 1];
+    expect(Math.round(railBox.y + railBox.height - (settings?.bottom ?? 0))).toBeLessThanOrEqual(16);
   });
 
   test("目录树顶部常驻显示当前仓库并可展开切换菜单", async ({ page }) => {
@@ -201,16 +235,23 @@ test.describe("AINote 桌面核心流程", () => {
     const box = await line.boundingBox();
     if (!box) throw new Error("编辑器未渲染");
     const y = box.y + box.height / 2;
+    // 先落一次光标：目标行成为活动行（分栏模式开启 highlightActiveLine），基准色与选中态同帧可比
+    await page.mouse.click(box.x + box.width - 10, y);
+    const probeColumn = { x: box.x + 60, y: box.y + 1, height: box.height - 4 };
+    const before = await columnPixels(page, probeColumn);
     await page.mouse.move(box.x + 4, y);
     await page.mouse.down();
     await page.mouse.move(box.x + Math.min(box.width - 4, 200), y, { steps: 20 });
     await page.mouse.up();
     await expect(page.locator(".cm-selectionBackground").first()).toBeAttached();
     expect(await page.evaluate(() => window.getSelection()?.toString() ?? "")).toContain("这是一段");
-    // 回归：分栏（源码）模式开启 highlightActiveLine，其不透明背景会盖住 CodeMirror 内联的 z-index:-1 选区层，
-    // 造成「已选中但看不见」。选区层必须被提升到活动行之上。
-    const selectionLayerZ = await page.locator(".cm-selectionLayer").first().evaluate((el) => getComputedStyle(el).zIndex);
-    expect(Number(selectionLayerZ)).toBeGreaterThan(0);
+    // 回归：CodeMirror 把选区层内联为负 z-index（位于内容之下），活动行一旦用不透明背景就会整段吞掉选区，
+    // 出现「已选中但看不见」。因此直接比同一列的实际渲染色：选中后必须显著变色（上一条 z-index 断言
+    // 只锁死了当时的实现手段，选区层改成「位于内容之下 + 不透明选区色」后即失效）。
+    const afterBox = await line.boundingBox();
+    if (!afterBox) throw new Error("拖选后编辑器未渲染");
+    const after = await columnPixels(page, { ...probeColumn, y: afterBox.y + 1 });
+    expect(maxChannelDelta(before, after)).toBeGreaterThan(24);
   });
 });
 
