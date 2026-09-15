@@ -149,7 +149,7 @@ function createLineSelectionStyle(view: EditorView, event: MouseEvent, options: 
 }
 
 function isPlainSingleClick(event: MouseEvent): boolean {
-  return event.detail === 1 && !(event.shiftKey || event.altKey || event.ctrlKey || event.metaKey);
+  return event.button === 0 && event.detail === 1 && !(event.shiftKey || event.altKey || event.ctrlKey || event.metaKey);
 }
 
 function closestElement(target: EventTarget | null, selector: string): HTMLElement | null {

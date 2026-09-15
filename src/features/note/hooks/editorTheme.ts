@@ -25,18 +25,13 @@ const EDITOR_THEME_STYLES = {
     borderLeftColor: "var(--accent)",
   },
   "&.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionBackground, &.cm-focused > .cm-scroller > .cm-selectionLayer .cm-selectionMatch": {
-    backgroundColor: "color-mix(in srgb, var(--accent) 40%, transparent)",
+    backgroundColor: "color-mix(in srgb, var(--accent) 40%, var(--bg-primary))",
   },
   ".cm-selectionBackground, .cm-selectionMatch": {
-    backgroundColor: "color-mix(in srgb, var(--text-tertiary) 34%, transparent)",
+    backgroundColor: "color-mix(in srgb, var(--text-tertiary) 34%, var(--bg-primary))",
   },
   ".cm-activeLine": {
-    backgroundColor: "var(--bg-secondary)",
-  },
-  // CodeMirror 把选区层内联设为 z-index:-1（设计上依赖半透明 activeLine）。
-  // 本应用 activeLine 用不透明色，会完全遮挡选区，导致分栏模式「选中了却看不见」。
-  ".cm-selectionLayer": {
-    zIndex: "1 !important",
+    backgroundColor: "color-mix(in srgb, var(--bg-secondary) 45%, transparent)",
   },
   ".cm-gutters": {
     backgroundColor: "var(--bg-secondary)",
