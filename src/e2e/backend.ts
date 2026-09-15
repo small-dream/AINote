@@ -1,6 +1,8 @@
 /** E2E mock 后端：命令处理器按策略表分发（单一职责，便于 lint 指标达标）。 */
 import type { E2eConflictSeed, E2eState } from "./types";
+import { markWorkspaceDirty } from "./dirty";
 import { E2E_PROVIDERS, E2E_REPOS } from "./fixtures";
+import { needNote, noteCommandHandlers } from "./notes";
 import { taskCommandHandlers, type TaskStore } from "./tasks";
 
 interface MockStore extends TaskStore {
@@ -65,59 +67,8 @@ function emitSyncProgress(channel: unknown, progress: { retry: number; maxRetrie
   onmessage?.({ phase: "retrying", ...progress });
 }
 
-function titleOf(content: string, fallback: string): string {
-  if (!content.startsWith("---\n") && !content.startsWith("---\r\n")) return fallback;
-  for (const line of content.split("\n").slice(1)) {
-    if (line.trimEnd() === "---") break;
-    const match = /^title:\s*(.+)$/.exec(line);
-    if (!match) continue;
-    const value = (match[1] ?? "").trim();
-    return value.replace(/^["']|["']$/g, "") || fallback;
-  }
-  return fallback;
-}
-
-function fileName(path: string): string {
-  const normalized = path.replace(/\\/g, "/");
-  return normalized.slice(normalized.lastIndexOf("/") + 1);
-}
-
-function displayName(path: string): string {
-  return fileName(path).replace(/\.(md|ainote)$/i, "");
-}
-
 function syncStatus(store: MockStore) {
   return { ahead: 0, behind: 0, hasUncommitted: store.uncommitted, conflicted: store.conflicted };
-}
-
-function metaOf(path: string, note: { content: string; kind: string }) {
-  return { path, kind: note.kind, title: titleOf(note.content, displayName(path)), updatedAt: Math.floor(Date.now() / 1000) };
-}
-
-interface E2eTreeNode {
-  name: string;
-  path: string;
-  nodeType: "file" | "dir";
-  children: E2eTreeNode[];
-}
-
-function treeOf(notes: Map<string, { content: string; kind: string }>): E2eTreeNode {
-  const root: E2eTreeNode = { name: "", path: "", nodeType: "dir", children: [] };
-  for (const path of notes.keys()) {
-    const segments = path.split("/");
-    let folder = root.children;
-    segments.forEach((segment, index) => {
-      const isFile = index === segments.length - 1;
-      const existing = folder.find((item) => item.name === segment);
-      if (existing) { folder = existing.children; return; }
-      const node: E2eTreeNode = isFile
-        ? { name: segment, path, nodeType: "file", children: [] }
-        : { name: segment, path: segments.slice(0, index + 1).join("/"), nodeType: "dir", children: [] };
-      folder.push(node);
-      folder = node.children;
-    });
-  }
-  return root;
 }
 
 /** 全仓提交历史：优先种子，缺省时由各文件版本聚合（每个版本视为一条提交）。 */
@@ -153,12 +104,6 @@ function repoHistoryOf(ctx: E2eCommandContext) {
   }));
 }
 
-function needNote(map: MockStore["notes"], path: string) {
-  const note = map.get(path);
-  if (!note) throw appError(`note not found: ${path}`);
-  return note;
-}
-
 const commandHandlers: Record<string, CommandHandler> = {
   auth_status: (_args, ctx) => ({ hasToken: true, repoPath: ctx.state.repoPath, providers: E2E_PROVIDERS }),
   list_repos: (_args, ctx) => ctx.state.repos ?? E2E_REPOS,
@@ -191,28 +136,7 @@ const commandHandlers: Record<string, CommandHandler> = {
   git_commit: () => "e2e-commit",
   git_status_files: (_args, ctx) => ctx.store.changedFiles,
   git_repo_history: (_args, ctx) => repoHistoryOf(ctx),
-  list_notes: (_args, ctx) => [...ctx.store.notes.entries()].map(([path, note]) => metaOf(path, note)),
-  read_note: (args, ctx) => {
-    const path = String(args.path ?? "");
-    const note = needNote(ctx.store.notes, path);
-    return { path, kind: note.kind, content: note.content };
-  },
-  update_note: (args, ctx) => {
-    const path = String(args.path ?? "");
-    needNote(ctx.store.notes, path).content = String(args.content ?? "");
-    return null;
-  },
-  create_note: (args, ctx) => {
-    const path = String(args.path ?? "");
-    const kind = String(args.kind ?? "markdown") as "markdown" | "richText";
-    const content = String(args.content ?? "");
-    ctx.store.notes.set(path, { content, kind });
-    return metaOf(path, { content, kind });
-  },
-  note_tree: (_args, ctx) => treeOf(ctx.store.notes),
-  wiki_index: (_args, ctx) => [...ctx.store.notes.entries()].map(([path, note]) => ({
-    path, title: titleOf(note.content, displayName(path)), tags: [], links: [], linkContexts: [],
-  })),
+  ...noteCommandHandlers,
   search_notes: () => [],
   create_folder: () => null,
   asset_exists: (args, ctx) => {
@@ -226,6 +150,7 @@ const commandHandlers: Record<string, CommandHandler> = {
     const useLocal = args.useLocal === true;
     for (const conflict of ctx.store.conflicts) {
       needNote(ctx.store.notes, conflict.path).content = useLocal ? conflict.local : conflict.remote;
+      markWorkspaceDirty(ctx.store, conflict.path);
     }
     ctx.store.conflicted = false;
     return syncStatus(ctx.store);
@@ -233,6 +158,7 @@ const commandHandlers: Record<string, CommandHandler> = {
   resolve_file_conflict: (args, ctx) => {
     const path = String(args.path ?? "");
     needNote(ctx.store.notes, path).content = String(args.content ?? "");
+    markWorkspaceDirty(ctx.store, path);
     ctx.store.conflicts = ctx.store.conflicts.filter((conflict) => conflict.path !== path);
     ctx.store.conflicted = ctx.store.conflicts.length > 0;
     return syncStatus(ctx.store);
@@ -263,6 +189,7 @@ const commandHandlers: Record<string, CommandHandler> = {
     const version = (ctx.state.versions?.[file] ?? []).find((item) => item.id === commitId);
     if (!version) throw appError(`commit not found: ${commitId}`);
     needNote(ctx.store.notes, file).content = version.content;
+    markWorkspaceDirty(ctx.store, file);
     return null;
   },
   "plugin:event|listen": () => 1,

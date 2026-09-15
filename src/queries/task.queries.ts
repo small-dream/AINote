@@ -19,6 +19,8 @@ function useTaskMutation<TInput>(mutationFn: (input: TInput) => Promise<unknown>
     mutationFn,
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      // todos.json 落在仓库工作区，写入即产生待提交变更：即时刷新 [sync] 才能点亮待提交徽标。
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
       markActivity();
     },
     onError: reportToastError,

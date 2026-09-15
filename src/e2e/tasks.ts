@@ -1,7 +1,11 @@
 /** E2E mock：Todo 看板（todos.json）的内存实现，按 IPC 契约模拟 CRUD/toggle 语义。 */
 import type { TaskBoardDto, TaskItemDto, TaskPriority } from "@/api/types";
+import { markWorkspaceDirty, type DirtyTrackedStore } from "./dirty";
 
-export interface TaskStore {
+/** 待办写盘落在仓库工作区 `.ainote/todos.json`：每次写入都产生待提交变更。 */
+const TASKS_PATH = ".ainote/todos.json";
+
+export interface TaskStore extends DirtyTrackedStore {
   taskBoard: TaskBoardDto;
   taskSeq: number;
 }
@@ -45,6 +49,8 @@ function createTask(args: Record<string, unknown>, ctx: TaskCommandContext): Tas
   const dueAt = nullable(args.dueAt);
   const remindAt = nullable(args.remindAt);
   checkReminder(dueAt, remindAt);
+  // 空看板意味着 todos.json 尚未落盘：首次写入按新增登记，其后都算修改。
+  const isFirstWrite = ctx.store.taskBoard.tasks.length === 0;
   const now = nowIso();
   const task: TaskItemDto = {
     id: `task-${ctx.store.taskSeq++}`,
@@ -60,6 +66,7 @@ function createTask(args: Record<string, unknown>, ctx: TaskCommandContext): Tas
     completedAt: null,
   };
   ctx.store.taskBoard.tasks.push(task);
+  markWorkspaceDirty(ctx.store, TASKS_PATH, isFirstWrite ? "added" : "modified");
   return task;
 }
 
@@ -75,6 +82,7 @@ function updateTask(args: Record<string, unknown>, ctx: TaskCommandContext): Tas
   task.remindAt = remindAt;
   task.priority = (nullable(args.priority) ?? "none") as TaskPriority;
   task.updatedAt = nowIso();
+  markWorkspaceDirty(ctx.store, TASKS_PATH);
   return task;
 }
 
@@ -87,12 +95,14 @@ export const taskCommandHandlers: Record<string, TaskCommandHandler> = {
     task.done = !task.done;
     task.completedAt = task.done ? nowIso() : null;
     task.updatedAt = nowIso();
+    markWorkspaceDirty(ctx.store, TASKS_PATH);
     return task;
   },
   task_delete: (args, ctx) => {
     const taskId = String(args.taskId ?? "");
     needTask(ctx.store, taskId);
     ctx.store.taskBoard.tasks = ctx.store.taskBoard.tasks.filter((item) => item.id !== taskId);
+    markWorkspaceDirty(ctx.store, TASKS_PATH);
     return null;
   },
 };
