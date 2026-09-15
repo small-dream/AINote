@@ -54,7 +54,7 @@ function createStore(state: E2eState): MockStore {
     syncSuccessRate: state.metricsSyncSuccessRate ?? null,
     uncommitted: state.uncommitted === true,
     changedFiles: state.changedFiles ?? [],
-    taskBoard: state.taskBoard ?? { schemaVersion: 1, lists: [], tasks: [] },
+    taskBoard: state.taskBoard ?? { schemaVersion: 3, tasks: [] },
     taskSeq: 1,
   };
 }

@@ -3,7 +3,7 @@ import type { TaskItemDto, TaskPriority } from "@/api/types";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 import { PRIORITY_FLAG_CLASS } from "./TaskMetaControls";
-import { dueDayOffset } from "../utils/task";
+import { dueDay, dueDayOffset, dueInstant, dueTime } from "../utils/task";
 
 interface TaskRowProps {
   task: TaskItemDto;
@@ -17,22 +17,25 @@ const PRIORITY_LABEL_KEY: Record<Exclude<TaskPriority, "none">, TranslationKey> 
   low: "todo.priorityLow",
 };
 
-export function DueBadge({ dueDate, done }: { dueDate: string; done: boolean }) {
+/** 截止徽标：今天 / 明天 / MM-DD，带具体时刻时追加 HH:mm；未完成且已过截止时刻标红。 */
+export function DueBadge({ dueAt, done }: { dueAt: string; done: boolean }) {
   const { t } = useTranslation();
-  const offset = dueDayOffset(dueDate, new Date());
-  const label = !done && offset === 0
+  const now = new Date();
+  const offset = dueDayOffset(dueAt, now);
+  const day = !done && offset === 0
     ? t("todo.dateToday")
     : !done && offset === 1
       ? t("todo.dateTomorrow")
-      : dueDate.slice(5);
-  const tone = !done && offset < 0
+      : dueDay(dueAt).slice(5);
+  const time = dueTime(dueAt);
+  const tone = !done && dueInstant(dueAt) < now
     ? "bg-danger/10 text-danger"
     : !done && offset === 0
       ? "bg-accent/10 text-accent"
       : "bg-bg-tertiary text-text-tertiary";
   return (
     <span className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium ${tone}`}>
-      {label}
+      {time ? `${day} ${time}` : day}
     </span>
   );
 }
@@ -50,8 +53,13 @@ export function TaskRow({ task, onToggle, onOpenEditor }: TaskRowProps) {
         onClick={onToggle}
         className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border transition-colors sm:h-4.5 sm:w-4.5 ${task.done ? "border-accent bg-accent text-white" : "border-text-tertiary hover:border-accent"}`}
       >
-        <Check size={13} strokeWidth={3} aria-hidden="true" className="sm:hidden" />
-        <Check size={11} strokeWidth={3} aria-hidden="true" className="hidden sm:block" />
+        {/* 未完成是空心圆：勾只在 done 时渲染，否则继承字色会画成「圆圈里带勾」 */}
+        {task.done ? (
+          <>
+            <Check size={13} strokeWidth={3} aria-hidden="true" className="sm:hidden" />
+            <Check size={11} strokeWidth={3} aria-hidden="true" className="hidden sm:block" />
+          </>
+        ) : null}
       </button>
       <button
         type="button"
@@ -68,7 +76,7 @@ export function TaskRow({ task, onToggle, onOpenEditor }: TaskRowProps) {
               </span>
             ) : null}
         </span>
-        {task.dueDate ? <DueBadge dueDate={task.dueDate} done={task.done} /> : null}
+        {task.dueAt ? <DueBadge dueAt={task.dueAt} done={task.done} /> : null}
         {task.priority !== "none" ? (
           <Flag size={12} className={`shrink-0 ${PRIORITY_FLAG_CLASS[task.priority]}`} aria-label={t(PRIORITY_LABEL_KEY[task.priority])} />
         ) : null}

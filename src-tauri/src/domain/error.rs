@@ -58,8 +58,6 @@ pub enum AppError {
     UpdateInstall(String),
     #[error("task not found: {0}")]
     TaskNotFound(String),
-    #[error("task list not found: {0}")]
-    TaskListNotFound(String),
     /// 任务字段校验失败（空标题、提醒时间缺少截止日期等）
     #[error("invalid task: {0}")]
     TaskInvalid(String),
@@ -139,7 +137,6 @@ impl From<AppError> for AppErrorDto {
             AppError::UpdateChecksum(_) => ("UPDATE_7002", ErrorKind::Unknown, false),
             AppError::UpdateInstall(_) => ("UPDATE_7003", ErrorKind::Unknown, false),
             AppError::TaskNotFound(_) => ("TASK_8001", ErrorKind::NotFound, false),
-            AppError::TaskListNotFound(_) => ("TASK_8002", ErrorKind::NotFound, false),
             AppError::TaskInvalid(_) => ("TASK_8003", ErrorKind::Unknown, false),
         };
         let provider = match &err {
@@ -238,7 +235,6 @@ mod tests {
         assert_eq!(dto(AppError::UpdateChecksum("bad".into())).code, "UPDATE_7002");
         assert_eq!(dto(AppError::UpdateInstall("bridge".into())).code, "UPDATE_7003");
         assert_eq!(dto(AppError::TaskNotFound("t".into())).code, "TASK_8001");
-        assert_eq!(dto(AppError::TaskListNotFound("l".into())).code, "TASK_8002");
         assert_eq!(dto(AppError::TaskInvalid("bad".into())).code, "TASK_8003");
     }
 

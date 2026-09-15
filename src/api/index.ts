@@ -69,7 +69,6 @@ export type {
   SyncProgress,
   TaskBoardDto,
   TaskItemDto,
-  TaskListDto,
   TaskPriority,
   TrashItem,
   TreeNode,

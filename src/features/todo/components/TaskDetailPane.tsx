@@ -2,7 +2,7 @@ import type { TaskItemDto } from "@/api/types";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { useTaskEditor, type TaskDraft } from "../hooks/useTaskEditor";
-import { DueDateChip, PriorityChip, ReminderChip } from "./TaskMetaControls";
+import { DueDateChip, DueTimeChip, PriorityChip, ReminderChip } from "./TaskMetaControls";
 
 interface TaskDetailPaneProps {
   task: TaskItemDto;
@@ -34,27 +34,26 @@ export function TaskDetailPane({ task, busy, onSave, onDelete, onClose }: TaskDe
         onKeyDown={(event) => { if (event.key === "Escape") editor.close(); }}
       />
       <div className="mt-3 flex flex-wrap items-center gap-2">
-        <DueDateChip value={editor.dueDate} onChange={editor.commitDueDate} />
+        <DueDateChip value={editor.dueAt} onChange={editor.commitDueDate} />
+        <DueTimeChip dueAt={editor.dueAt} onChange={editor.commitDueDate} />
         <PriorityChip value={editor.priority} onChange={editor.commitPriority} />
-        <ReminderChip
-          dueDate={editor.dueDate}
-          value={editor.remindValue}
-          onToggle={editor.toggleReminder}
-          onChange={editor.commitReminder}
-        />
+        <ReminderChip dueAt={editor.dueAt} value={editor.remindAt} onChange={editor.commitReminder} />
         <div className="flex-1" />
         <button type="button" onClick={onDelete} disabled={busy} className="rounded-md px-2 py-1 text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-50">
           {t("todo.deleteTask")}
         </button>
       </div>
-      <textarea
-        className="mt-4 min-h-[45vh] w-full resize-none rounded-xl border border-border bg-bg-primary px-4 py-3 text-sm leading-6 text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent"
-        value={editor.description}
-        placeholder={t("todo.detailsPlaceholder")}
-        aria-label={t("todo.details")}
-        onChange={(event) => editor.setDescription(event.target.value)}
-        onBlur={editor.save}
-      />
+      {/* 聚焦态交给外层容器：避免与全局 focus-visible 外框叠成双层描边 */}
+      <div className="mt-4 min-h-[45vh] rounded-xl border border-border bg-bg-primary transition-colors focus-within:border-accent">
+        <textarea
+          className="bare-textarea block min-h-[45vh] w-full resize-none bg-transparent px-4 py-3 text-sm leading-6 text-text-primary placeholder:text-text-tertiary"
+          value={editor.description}
+          placeholder={t("todo.detailsPlaceholder")}
+          aria-label={t("todo.details")}
+          onChange={(event) => editor.setDescription(event.target.value)}
+          onBlur={editor.save}
+        />
+      </div>
     </div>
   );
 }

@@ -2,7 +2,7 @@ import { Trash2 } from "lucide-react";
 import type { TaskItemDto } from "@/api/types";
 import { useTranslation } from "@/i18n";
 import { useTaskEditor, type TaskDraft } from "../hooks/useTaskEditor";
-import { DueDateChip, PriorityChip, ReminderChip } from "./TaskMetaControls";
+import { DueDateChip, DueTimeChip, PriorityChip, ReminderChip } from "./TaskMetaControls";
 
 export type { TaskDraft };
 
@@ -34,14 +34,10 @@ export function TaskEditor({ task, busy, onSave, onDelete, onClose }: TaskEditor
           }}
         />
         <div className="mt-1 flex flex-wrap items-center gap-1">
-          <DueDateChip value={editor.dueDate} onChange={editor.commitDueDate} />
+          <DueDateChip value={editor.dueAt} onChange={editor.commitDueDate} />
+          <DueTimeChip dueAt={editor.dueAt} onChange={editor.commitDueDate} />
           <PriorityChip value={editor.priority} onChange={editor.commitPriority} />
-          <ReminderChip
-            dueDate={editor.dueDate}
-            value={editor.remindValue}
-            onToggle={editor.toggleReminder}
-            onChange={editor.commitReminder}
-          />
+          <ReminderChip dueAt={editor.dueAt} value={editor.remindAt} onChange={editor.commitReminder} />
           <div className="flex-1" />
           <button
             type="button"

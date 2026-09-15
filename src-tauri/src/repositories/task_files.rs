@@ -12,7 +12,6 @@ pub fn load(root: &Path) -> Result<TaskBoard, AppError> {
     if !path.is_file() {
         return Ok(TaskBoard {
             schema_version: TASK_SCHEMA_VERSION,
-            lists: Vec::new(),
             tasks: Vec::new(),
         });
     }
@@ -40,13 +39,11 @@ pub fn save(root: &Path, board: &TaskBoard) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::task::{now_rfc3339, TaskList};
 
     #[test]
     fn load_treats_missing_board_as_empty() {
         let root = tempfile::tempdir().unwrap();
         let board = load(root.path()).unwrap();
-        assert!(board.lists.is_empty());
         assert!(board.tasks.is_empty());
         assert_eq!(board.schema_version, TASK_SCHEMA_VERSION);
     }
@@ -56,10 +53,27 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let path = root.path().join(TASKS_FILE);
         fs::create_dir_all(path.parent().unwrap()).unwrap();
-        fs::write(&path, r#"{"schemaVersion":1,"lists":[],"tasks":[]}"#).unwrap();
+        fs::write(&path, r#"{"schemaVersion":1,"tasks":[]}"#).unwrap();
 
         let board = load(root.path()).unwrap();
         assert_eq!(board.schema_version, TASK_SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn load_ignores_removed_lists_field() {
+        let root = tempfile::tempdir().unwrap();
+        let path = root.path().join(TASKS_FILE);
+        fs::create_dir_all(path.parent().unwrap()).unwrap();
+        fs::write(
+            &path,
+            r#"{"schemaVersion":2,"lists":[{"id":"l1","name":"工作","sortOrder":0,"createdAt":"2026-09-01T00:00:00Z"}],"tasks":[{"id":"t1","listId":"l1","title":"写周报","done":false,"priority":"high","dueDate":null,"remindAt":null,"sortOrder":0,"createdAt":"2026-09-01T00:00:00Z","updatedAt":"2026-09-01T00:00:00Z","completedAt":null}]}"#,
+        )
+        .unwrap();
+
+        let board = load(root.path()).unwrap();
+        assert_eq!(board.schema_version, TASK_SCHEMA_VERSION);
+        assert_eq!(board.tasks.len(), 1);
+        assert_eq!(board.tasks[0].title, "写周报");
     }
 
     #[test]
@@ -67,18 +81,11 @@ mod tests {
         let root = tempfile::tempdir().unwrap();
         let board = TaskBoard {
             schema_version: TASK_SCHEMA_VERSION,
-            lists: vec![TaskList {
-                id: "l1".to_string(),
-                name: "默认".to_string(),
-                sort_order: 0,
-                created_at: now_rfc3339(),
-            }],
             tasks: Vec::new(),
         };
         save(root.path(), &board).unwrap();
         let loaded = load(root.path()).unwrap();
-        assert_eq!(loaded.lists.len(), 1);
-        assert_eq!(loaded.lists[0].name, "默认");
+        assert!(loaded.tasks.is_empty());
         assert_eq!(loaded.schema_version, TASK_SCHEMA_VERSION);
     }
 }

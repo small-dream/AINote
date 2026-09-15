@@ -11,7 +11,7 @@ export const TASK_GROUP_ORDER: TaskGroup[] = ["overdue", "today", "upcoming", "n
 
 const PRIORITY_RANK: Record<TaskPriority, number> = { high: 0, medium: 1, low: 2, none: 3 };
 
-/** 本地日期的 YYYY-MM-DD（与 dueDate 同口径比较） */
+/** 本地日期的 YYYY-MM-DD（与截止时间的日期部分同口径比较） */
 export function localDateString(date: Date): string {
   const month = String(date.getMonth() + 1).padStart(2, "0");
   const day = String(date.getDate()).padStart(2, "0");
@@ -25,28 +25,61 @@ export function addLocalDays(base: Date, days: number): Date {
   return next;
 }
 
-/** dueDate 相对今天的偏移天数：0 今天、1 明天、负数已逾期 */
-export function dueDayOffset(dueDate: string, today: Date): number {
-  const [year, month, day] = dueDate.split("-").map(Number);
+/** 截止时间的日期部分（YYYY-MM-DD），忽略具体时刻 */
+export function dueDay(dueAt: string): string {
+  return dueAt.slice(0, 10);
+}
+
+/** 截止时间的具体时刻（HH:mm）；只到天时返回空串 */
+export function dueTime(dueAt: string): string {
+  return dueAt.includes("T") ? dueAt.slice(11, 16) : "";
+}
+
+/** 组装截止时间：没有时刻时只保留日期，语义为「当天结束前」 */
+export function buildDueAt(date: string, time: string): string {
+  return time ? `${date}T${time}` : date;
+}
+
+/** 截止时刻：只到天时取当天 23:59，到分钟时取该本地时刻 */
+export function dueInstant(dueAt: string): Date {
+  const [date, time] = dueAt.split("T");
+  const [year, month, day] = (date ?? "").split("-").map(Number);
+  const [hour, minute] = time ? time.split(":").map(Number) : [23, 59];
+  return new Date(year ?? 0, (month ?? 1) - 1, day ?? 1, hour ?? 0, minute ?? 0, time ? 0 : 59);
+}
+
+/** 截止日期相对今天的偏移天数：0 今天、1 明天、负数已逾期（只看日期，不看时刻） */
+export function dueDayOffset(dueAt: string, today: Date): number {
+  const [year, month, day] = dueDay(dueAt).split("-").map(Number);
   const due = new Date(year ?? 0, (month ?? 1) - 1, day ?? 1);
   const base = new Date(today.getFullYear(), today.getMonth(), today.getDate());
   return Math.round((due.getTime() - base.getTime()) / 86400000);
 }
 
-function groupOf(task: TaskItemDto, today: string): TaskGroup {
+function groupOf(task: TaskItemDto, now: Date): TaskGroup {
   if (task.done) return "done";
-  if (!task.dueDate) return "none";
-  if (task.dueDate < today) return "overdue";
-  if (task.dueDate === today) return "today";
-  return "upcoming";
+  if (!task.dueAt) return "none";
+  const today = localDateString(now);
+  const day = dueDay(task.dueAt);
+  if (day < today) return "overdue";
+  if (day > today) return "upcoming";
+  // 当天的任务按具体时刻判逾期：今天 18:00 在 18:00 之后落到「已逾期」
+  return dueInstant(task.dueAt) < now ? "overdue" : "today";
 }
 
-/** 组内排序：dueDate 升序 → 优先级 high>medium>low>none → createdAt 升序 */
+/** 与后端 due_sort_key 等价：只到天的截止视为当天最后 */
+function dueSortKey(dueAt: string): string {
+  return dueAt.includes("T") ? dueAt : `${dueAt}T99:99`;
+}
+
+/** 组内排序：dueAt 升序 → 优先级 high>medium>low>none → createdAt 升序 */
 export function compareTasks(a: TaskItemDto, b: TaskItemDto): number {
-  if (a.dueDate !== b.dueDate) {
-    if (a.dueDate === null) return 1;
-    if (b.dueDate === null) return -1;
-    return a.dueDate < b.dueDate ? -1 : 1;
+  if (a.dueAt !== b.dueAt) {
+    if (a.dueAt === null) return 1;
+    if (b.dueAt === null) return -1;
+    const keyA = dueSortKey(a.dueAt);
+    const keyB = dueSortKey(b.dueAt);
+    if (keyA !== keyB) return keyA < keyB ? -1 : 1;
   }
   const byPriority = PRIORITY_RANK[a.priority] - PRIORITY_RANK[b.priority];
   if (byPriority !== 0) return byPriority;
@@ -54,19 +87,13 @@ export function compareTasks(a: TaskItemDto, b: TaskItemDto): number {
 }
 
 /** 把任务按逾期/今天/未来/无日期/已完成分组并排序；空组也保留（由 UI 决定是否隐藏）。 */
-export function groupTasks(tasks: TaskItemDto[], today: string): TaskGroupSection[] {
+export function groupTasks(tasks: TaskItemDto[], now: Date): TaskGroupSection[] {
   const sections: TaskGroupSection[] = TASK_GROUP_ORDER.map((group) => ({ group, tasks: [] }));
   for (const task of tasks) {
-    sections[TASK_GROUP_ORDER.indexOf(groupOf(task, today))]?.tasks.push(task);
+    sections[TASK_GROUP_ORDER.indexOf(groupOf(task, now))]?.tasks.push(task);
   }
   for (const section of sections) section.tasks.sort(compareTasks);
   return sections;
-}
-
-/** 默认提醒时间：截止日当天 09:00（本地时间）的 RFC3339。 */
-export function defaultRemindAt(dueDate: string): string {
-  const [year, month, day] = dueDate.split("-").map(Number);
-  return new Date(year ?? 1970, (month ?? 1) - 1, day ?? 1, 9, 0, 0).toISOString();
 }
 
 /** RFC3339 → input[type=datetime-local] 的本地值；空值回退空串。 */
@@ -107,7 +134,7 @@ export function reconcileReminders(tasks: TaskItemDto[], now: Date): ReminderPla
 
 export interface ParsedTaskInput {
   title: string;
-  dueDate: string | null;
+  dueAt: string | null;
   priority: TaskPriority;
 }
 
@@ -172,25 +199,71 @@ function priorityOf(match: RegExpMatchArray): TaskPriority {
   return "low";
 }
 
-/** 快速添加的自然语言识别：从标题中摘出截止日期与优先级（首个命中的日期规则生效）。 */
-export function parseTaskInput(raw: string, today: Date): ParsedTaskInput {
-  let text = raw;
-  let dueDate: string | null = null;
-  let priority: TaskPriority = "none";
+interface TimeToken {
+  hour: number;
+  minute: number;
+}
+
+const TIME_RULES: { pattern: RegExp; read: (match: RegExpMatchArray) => TimeToken | null }[] = [
+  { pattern: /(?:^|\s)(\d{1,2})[:：](\d{2})(?=\s|$)/, read: (m) => timeToken(Number(m[1]), Number(m[2])) },
+  { pattern: /(?:^|\s)(\d{1,2})\s*[点时](?:(\d{1,2})\s*分?)?(?=\s|$)/, read: (m) => timeToken(Number(m[1]), m[2] ? Number(m[2]) : 0) },
+];
+
+function timeToken(hour: number, minute: number): TimeToken | null {
+  return hour < 24 && minute < 60 ? { hour, minute } : null;
+}
+
+function clockLabel(token: TimeToken): string {
+  return `${String(token.hour).padStart(2, "0")}:${String(token.minute).padStart(2, "0")}`;
+}
+
+/** 从标题中摘出日期（首个命中的日期规则生效） */
+function extractDate(text: string, today: Date): { rest: string; value: string | null } {
+  const rest = text;
   for (const rule of DATE_RULES) {
-    const match = text.match(rule.pattern);
+    const match = rest.match(rule.pattern);
     if (!match) continue;
     const resolved = rule.resolve(match, today);
     if (!resolved) continue;
-    dueDate = localDateString(resolved);
-    text = text.replace(rule.pattern, " ");
-    break;
+    return { rest: rest.replace(rule.pattern, " "), value: localDateString(resolved) };
   }
+  return { rest, value: null };
+}
+
+/** 从标题中摘出时刻（首个命中的时间规则生效） */
+function extractTime(text: string): { rest: string; token: TimeToken | null } {
+  for (const rule of TIME_RULES) {
+    const match = text.match(rule.pattern);
+    if (!match) continue;
+    const token = rule.read(match);
+    if (!token) continue;
+    return { rest: text.replace(rule.pattern, " "), token };
+  }
+  return { rest: text, token: null };
+}
+
+/** 只有时刻没有日期时按今天算；该时刻已过则顺延到明天 */
+function joinDueAt(date: string | null, token: TimeToken | null, now: Date): string | null {
+  if (!date) {
+    if (!token) return null;
+    const at = new Date(now.getFullYear(), now.getMonth(), now.getDate(), token.hour, token.minute);
+    const day = at < now ? addLocalDays(now, 1) : now;
+    return `${localDateString(day)}T${clockLabel(token)}`;
+  }
+  return token ? `${date}T${clockLabel(token)}` : date;
+}
+
+/** 快速添加的自然语言识别：从标题中摘出截止时间（日期 + 可选时刻）与优先级。 */
+export function parseTaskInput(raw: string, now: Date): ParsedTaskInput {
+  const date = extractDate(raw, now);
+  const time = extractTime(date.rest);
+  let text = time.rest;
+  let priority: TaskPriority = "none";
   const priorityMatch = text.match(PRIORITY_PATTERN);
   if (priorityMatch) {
     priority = priorityOf(priorityMatch);
     text = text.replace(PRIORITY_PATTERN, " ");
   }
   const title = text.replace(/\s+/g, " ").trim();
-  return { title: title || raw.trim(), dueDate, priority };
+  return { title: title || raw.trim(), dueAt: joinDueAt(date.value, time.token, now), priority };
 }

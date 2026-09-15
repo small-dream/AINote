@@ -25,18 +25,6 @@ function useTaskMutation<TInput>(mutationFn: (input: TInput) => Promise<unknown>
   });
 }
 
-export function useTaskCreateListMutation() {
-  return useTaskMutation((name: string) => taskApi.createList(name));
-}
-
-export function useTaskRenameListMutation() {
-  return useTaskMutation((input: { listId: string; name: string }) => taskApi.renameList(input.listId, input.name));
-}
-
-export function useTaskDeleteListMutation() {
-  return useTaskMutation((listId: string) => taskApi.deleteList(listId));
-}
-
 export function useTaskCreateMutation() {
   return useTaskMutation((input: CreateTaskInput) => taskApi.create(input));
 }

@@ -7,12 +7,10 @@ import { DueBadge } from "./TaskRow";
 
 interface TodoOverviewPaneProps {
   tasks: TaskItemDto[];
-  listName: string;
-  hasLists: boolean;
   onSelectTask: (taskId: string) => void;
 }
 
-export function TodoOverviewPane({ tasks, listName, hasLists, onSelectTask }: TodoOverviewPaneProps) {
+export function TodoOverviewPane({ tasks, onSelectTask }: TodoOverviewPaneProps) {
   const { t } = useTranslation();
   const overview = useMemo(() => buildTodoOverview(tasks, new Date()), [tasks]);
 
@@ -20,12 +18,8 @@ export function TodoOverviewPane({ tasks, listName, hasLists, onSelectTask }: To
     <div className="flex h-full min-h-0 flex-1 flex-col overflow-y-auto bg-bg-primary px-8 py-7">
       <div className="mx-auto w-full max-w-4xl">
         <p className="text-xs font-medium uppercase tracking-wide text-text-tertiary">{t("todo.title")}</p>
-        <h1 className="mt-1 text-2xl font-semibold text-text-primary">{listName}</h1>
-        {!hasLists ? (
-          <p className="mt-2 text-sm text-text-secondary">{t("todo.emptyHint")}</p>
-        ) : tasks.length === 0 ? (
-          <p className="mt-2 text-sm text-text-secondary">{t("todo.overviewEmpty")}</p>
-        ) : null}
+        <h1 className="mt-1 text-2xl font-semibold text-text-primary">{t("todo.overviewTitle")}</h1>
+        {tasks.length === 0 ? <p className="mt-2 text-sm text-text-secondary">{t("todo.overviewEmpty")}</p> : null}
 
         <div className="mt-6 grid grid-cols-2 gap-3 lg:grid-cols-4">
           <OverviewCard icon={CircleDashed} label={t("todo.openTasks")} value={overview.open} tone="text-accent" />
@@ -88,7 +82,7 @@ function FocusSection({ title, tasks, empty, onSelectTask }: { title: string; ta
               <p className="font-medium text-text-primary">{task.title}</p>
               {task.description ? <p className="mt-1 line-clamp-2 text-xs leading-5 text-text-tertiary">{task.description}</p> : null}
               <div className="mt-3 flex items-center gap-2">
-                {task.dueDate ? <DueBadge dueDate={task.dueDate} done={task.done} /> : null}
+                {task.dueAt ? <DueBadge dueAt={task.dueAt} done={task.done} /> : null}
               </div>
             </button>
           ))}

@@ -1,5 +1,5 @@
 import type { TaskItemDto } from "@/api/types";
-import { compareTasks, dueDayOffset } from "./task";
+import { compareTasks, groupTasks, type TaskGroup } from "./task";
 
 export interface TodoOverview {
   total: number;
@@ -13,25 +13,26 @@ export interface TodoOverview {
 }
 
 export function buildTodoOverview(tasks: TaskItemDto[], today: Date): TodoOverview {
-  const openTasks = tasks.filter((task) => !task.done);
-  const focusTasks = openTasks
-    .filter((task) => (task.dueDate ? dueDayOffset(task.dueDate, today) <= 0 : task.priority === "high"))
+  const sections = groupTasks(tasks, today);
+  const inGroup = (group: TaskGroup) => sections.find((section) => section.group === group)?.tasks ?? [];
+  const overdue = inGroup("overdue");
+  const dueToday = inGroup("today");
+  const upcoming = inGroup("upcoming");
+  const noDate = inGroup("none");
+  const done = inGroup("done").length;
+  // 重点任务：逾期 + 今天到期 + 无日期的高优先级，按截止时间与优先级重排
+  const focusTasks = [...overdue, ...dueToday, ...noDate.filter((task) => task.priority === "high")]
     .sort(compareTasks)
     .slice(0, 4);
-  const upcomingTasks = openTasks
-    .filter((task) => task.dueDate && dueDayOffset(task.dueDate, today) > 0)
-    .sort(compareTasks)
-    .slice(0, 4);
-  const done = tasks.length - openTasks.length;
 
   return {
     total: tasks.length,
-    open: openTasks.length,
+    open: overdue.length + dueToday.length + upcoming.length + noDate.length,
     done,
-    overdue: openTasks.filter((task) => task.dueDate !== null && dueDayOffset(task.dueDate, today) < 0).length,
-    dueToday: openTasks.filter((task) => task.dueDate !== null && dueDayOffset(task.dueDate, today) === 0).length,
+    overdue: overdue.length,
+    dueToday: dueToday.length,
     progress: tasks.length === 0 ? 0 : Math.round((done / tasks.length) * 100),
     focusTasks,
-    upcomingTasks,
+    upcomingTasks: upcoming.sort(compareTasks).slice(0, 4),
   };
 }

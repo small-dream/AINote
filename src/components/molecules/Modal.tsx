@@ -1,6 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useBackHandler } from "@/platform/back-navigation";
+import { hasOpenFloatingLayer } from "@/hooks/floatingLayer";
 
 interface ModalProps {
   open: boolean;
@@ -20,7 +21,8 @@ export function Modal({ open, title, onClose, children, className = "", noteThem
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") onClose();
+      // 弹窗内的下拉浮层打开时，Esc 先交给浮层收起，避免连带关掉整个弹窗
+      if (event.key === "Escape" && !hasOpenFloatingLayer()) onClose();
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
@@ -34,7 +36,9 @@ export function Modal({ open, title, onClose, children, className = "", noteThem
       className="fixed inset-0 z-[70] flex items-center justify-center bg-black/40"
       role="presentation"
       onMouseDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target !== event.currentTarget) return;
+        if (hasOpenFloatingLayer()) return;
+        onClose();
       }}
     >
       <div
