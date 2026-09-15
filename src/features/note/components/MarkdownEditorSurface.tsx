@@ -50,16 +50,17 @@ export interface MarkdownEditorSurfaceProps {
   onContextMenu: (event: MouseEvent<HTMLElement>) => void;
   onLongPress?: ((point: { x: number; y: number }) => void) | undefined;
   contextMenu?: ReactElement | undefined;
+  previewContextMenu?: { onContextMenu: (event: MouseEvent<HTMLElement>) => void; onLongPress?: ((point: { x: number; y: number }) => void) | undefined } | undefined;
   /** 是否启用软渲染（WYSIWYG），false = 源码模式 */
   softRender?: boolean;
 }
 
 /** Markdown 编辑器主体：大纲 + 格式工具栏 + 编辑/分栏/预览三模式（P0-2） */
-export function MarkdownEditorSurface({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect, viewRef, activeFormats, onImagePicked, assetStatus, onContextMenu, onLongPress, contextMenu, softRender = true }: MarkdownEditorSurfaceProps) {
+export function MarkdownEditorSurface({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect, viewRef, activeFormats, onImagePicked, assetStatus, onContextMenu, onLongPress, contextMenu, previewContextMenu, softRender = true }: MarkdownEditorSurfaceProps) {
   return (
     <>
       {mode !== "preview" ? <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={onImagePicked} status={assetStatus} diagnostics={diagnostics} diagnosticsOpen={diagnosticsOpen} onDiagnosticsToggle={onDiagnosticsToggle} onDiagnosticsSelect={onDiagnosticsSelect} /> : null}
-      <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} previewRef={previewRef} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} ratio={ratio} onRatioChange={onRatioChange} outline={outline} outlineOpen={outlineOpen} onOutlineToggle={onOutlineToggle} onOutlineSelect={onOutlineSelect} softRender={softRender} onContextMenu={onContextMenu} onLongPress={onLongPress} />
+      <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} previewRef={previewRef} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} ratio={ratio} onRatioChange={onRatioChange} outline={outline} outlineOpen={outlineOpen} onOutlineToggle={onOutlineToggle} onOutlineSelect={onOutlineSelect} softRender={softRender} onContextMenu={onContextMenu} onLongPress={onLongPress} previewContextMenu={previewContextMenu} />
       {contextMenu}
     </>
   );
@@ -85,9 +86,10 @@ interface EditorBodyProps {
   onContextMenu: (event: MouseEvent<HTMLElement>) => void;
   onLongPress?: ((point: { x: number; y: number }) => void) | undefined;
   softRender: boolean;
+  previewContextMenu?: { onContextMenu: (event: MouseEvent<HTMLElement>) => void; onLongPress?: ((point: { x: number; y: number }) => void) | undefined } | undefined;
 }
 
-function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, softRender, onContextMenu, onLongPress }: EditorBodyProps) {
+function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, softRender, onContextMenu, onLongPress, previewContextMenu }: EditorBodyProps) {
   const longPressProps = useLongPressContextMenu(onLongPress ?? (() => undefined));
   const stableOnChange = useStableCallback(onChange);
   const editor = <EditorShell softRender={softRender}><CodeMirror className={softRender ? "cm-soft-render h-full" : "h-full"} value={draft} theme="none" basicSetup={softRender ? SOFT_RENDER_BASIC_SETUP : SOURCE_BASIC_SETUP} onChange={stableOnChange} extensions={extensions} onCreateEditor={onCreateEditor} /></EditorShell>;
@@ -96,7 +98,7 @@ function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, on
     return (
       <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden" {...longPressProps} onContextMenu={onContextMenu}>
         {outlineFloat}
-        <SplitPane ratio={ratio} onRatioChange={onRatioChange} left={editor} right={<PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} />} />
+        <SplitPane ratio={ratio} onRatioChange={onRatioChange} left={editor} right={<PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} {...previewContextMenu} />} />
       </div>
     );
   }
@@ -104,7 +106,7 @@ function EditorBody({ mode, noteTheme, repoPath, draft, onChange, extensions, on
     return (
       <div data-note-theme={noteTheme} className="note-theme-surface relative flex min-h-0 flex-1 overflow-hidden" {...longPressProps} onContextMenu={onContextMenu}>
         {outlineFloat}
-        <PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} />
+        <PreviewPane previewRef={previewRef} content={draft} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} {...previewContextMenu} />
       </div>
     );
   }
@@ -123,11 +125,14 @@ interface PreviewPaneProps {
   onOpenWiki: (name: string) => void;
   wikiNotes: NoteWikiDto[];
   onChange: (content: string) => void;
+  onContextMenu?: ((event: MouseEvent<HTMLElement>) => void) | undefined;
+  onLongPress?: ((point: { x: number; y: number }) => void) | undefined;
 }
 
-function PreviewPane({ previewRef, content, repoPath, onOpenWiki, wikiNotes, onChange }: PreviewPaneProps) {
+function PreviewPane({ previewRef, content, repoPath, onOpenWiki, wikiNotes, onChange, onContextMenu, onLongPress }: PreviewPaneProps) {
   const debouncedContent = useDebouncedValue(content, PREVIEW_DEBOUNCE_MS);
-  return <div ref={previewRef} className="note-preview-pane h-full min-h-0 flex-1 overflow-y-auto p-6"><Suspense fallback={<PreviewLoading />}><LazyMarkdownPreview content={debouncedContent} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} /></Suspense></div>;
+  const longPressProps = useLongPressContextMenu(onLongPress ?? (() => undefined), { stopPropagation: Boolean(onLongPress) });
+  return <div ref={previewRef} className="note-preview-pane h-full min-h-0 flex-1 overflow-y-auto p-6" {...longPressProps} onContextMenu={onContextMenu}><Suspense fallback={<PreviewLoading />}><LazyMarkdownPreview content={debouncedContent} repoPath={repoPath} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} onChange={onChange} /></Suspense></div>;
 }
 
 function PreviewLoading() {

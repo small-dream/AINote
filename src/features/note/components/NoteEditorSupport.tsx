@@ -18,6 +18,8 @@ import type { OutlineItem } from "../utils/outline";
 import type { useEditorWiki } from "@/features/wiki/hooks/useEditorWiki";
 import type { useNoteHistory } from "@/features/history/hooks/useNoteHistory";
 import type { usePdfExport } from "@/features/export/hooks/usePdfExport";
+import type { usePreviewContextMenu } from "../hooks/usePreviewContextMenu";
+import { PreviewContextMenu } from "./PreviewContextMenu";
 import { useTranslation } from "@/i18n";
 
 const LazyRichTextEditor = lazy(() => import("@/features/richtext/components/RichTextEditor").then(({ RichTextEditor }) => ({ default: RichTextEditor })));
@@ -40,6 +42,8 @@ export interface NoteEditorContentProps {
   setOutlineOpen: Dispatch<SetStateAction<boolean>>;
   outlineOpen: boolean;
   surfaceProps: MarkdownEditorSurfaceProps;
+  previewMenu: ReturnType<typeof usePreviewContextMenu>;
+  noteTheme: ReturnType<typeof useUiStore.getState>["noteTheme"];
   richTextDialog: RichTextConvertDialogState;
   onRequestConvertToRichText: () => void;
   onConfirmConvertToRichText: () => void;
@@ -61,7 +65,7 @@ export interface NoteEditorContentProps {
   pdf: ReturnType<typeof usePdfExport>;
 }
 
-export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, richTextDialog, onRequestConvertToRichText, onConfirmConvertToRichText, onCancelConvertToRichText, onConvertToMarkdown, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf }: NoteEditorContentProps) {
+export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, previewMenu, noteTheme, richTextDialog, onRequestConvertToRichText, onConfirmConvertToRichText, onCancelConvertToRichText, onConvertToMarkdown, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf }: NoteEditorContentProps) {
   const richText = kind === "richText";
   // 首次打开后才挂载（触发懒加载分块），之后保持挂载以保留问答历史。
   const [askAiMounted, setAskAiMounted] = useState(askAiOpen);
@@ -70,6 +74,7 @@ export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, o
     <EditorToolbar path={notePath} mode={mode} compact={compact} richText={richText} saving={saving} dirty={dirty} saveError={saveError} saveErrorCode={saveErrorCode} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={onRequestConvertToRichText} onConvertToMarkdown={onConvertToMarkdown} onExportPdf={() => void pdf.request()} onExportMarkdown={onExportMarkdown} {...(richText ? {} : { onAi: ai.openMenu })} isNewNote={notePath === createdPath} draft={draft} onTitleChange={onChange} onFlush={flush} onRenamed={onOpenNote} />
     <ConvertNoteDialog open={richTextDialog.open} losses={richTextDialog.losses} converting={richTextDialog.converting} onCancel={onCancelConvertToRichText} onConfirm={onConfirmConvertToRichText} />
     <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
+    <PreviewContextMenu menu={previewMenu} noteTheme={noteTheme} />
     <AiWriteControls ai={ai} canSummarize={!richText} canSuggest={!richText} suggest={suggest} />
     {askAiMounted ? <Suspense fallback={null}><LazyAskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} /></Suspense> : null}
     {history.open ? <Suspense fallback={null}><LazyHistoryPanel repoPath={repoPath} path={notePath} open onClose={history.closeHistory} onRestored={history.onRestored} /></Suspense> : null}
