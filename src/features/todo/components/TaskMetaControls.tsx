@@ -2,10 +2,12 @@ import { Bell, BellOff, Calendar, Clock, Flag } from "lucide-react";
 import type { TaskPriority } from "@/api/types";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
-import { buildDueAt, dueDay, dueDayOffset, dueTime } from "../utils/task";
+import { usesNativeDateTimeInput } from "@/platform/native-datetime";
+import { buildDueAt, dueDateLabel, dueDay, dueDayOffset, dueTime } from "../utils/task";
 import { reminderClock, reminderPresetOf } from "../utils/reminder";
 import { Chip, MenuItem } from "./ChipShell";
 import { DueDatePanel } from "./DueDatePanel";
+import { NativeDueDateChip, NativeDueTimeChip } from "./NativeDueChips";
 import { ReminderPanel } from "./ReminderPanel";
 import { TimePicker } from "./TimePicker";
 
@@ -22,21 +24,19 @@ const PRIORITY_LABEL_KEY: Record<TaskPriority, TranslationKey> = {
   none: "todo.priorityNone",
 };
 
-/** 截止日期展示文案：今天 / 明天 / MM-DD */
-export function dueDateLabel(dueAt: string, todayLabel: string, tomorrowLabel: string): string {
-  const offset = dueDayOffset(dueAt, new Date());
-  if (offset === 0) return todayLabel;
-  if (offset === 1) return tomorrowLabel;
-  return dueDay(dueAt).slice(5);
-}
-
 interface DueDateChipProps {
   value: string | null;
   onChange: (value: string | null) => void;
 }
 
-/** 截止日期 chip：只选到哪天。具体时刻由旁边的「时间」chip 单独设置。 */
+/** 截止日期 chip：移动壳交给系统日期选择器，桌面壳用自研月历面板。 */
 export function DueDateChip({ value, onChange }: DueDateChipProps) {
+  if (usesNativeDateTimeInput("date")) return <NativeDueDateChip value={value} onChange={onChange} />;
+  return <DesktopDueDateChip value={value} onChange={onChange} />;
+}
+
+/** 桌面截止日期 chip：只选到哪天。具体时刻由旁边的「时间」chip 单独设置。 */
+function DesktopDueDateChip({ value, onChange }: DueDateChipProps) {
   const { t } = useTranslation();
   const offset = value ? dueDayOffset(value, new Date()) : null;
   const toneClass = offset !== null && offset < 0 ? "text-danger" : offset === 0 ? "text-accent" : undefined;
@@ -52,7 +52,7 @@ export function DueDateChip({ value, onChange }: DueDateChipProps) {
       menuWidth={300}
     >
       {(close) => <DueDatePanel value={value} onChange={onChange} onDone={close} />}
-      </Chip>
+    </Chip>
   );
 }
 
@@ -64,6 +64,12 @@ interface DueTimeChipProps {
 
 /** 时间 chip：在已选日期上追加一天中的具体时刻，留空即「当天结束前」。 */
 export function DueTimeChip({ dueAt, onChange }: DueTimeChipProps) {
+  if (usesNativeDateTimeInput("time")) return <NativeDueTimeChip dueAt={dueAt} onChange={onChange} />;
+  return <DesktopDueTimeChip dueAt={dueAt} onChange={onChange} />;
+}
+
+/** 桌面时间 chip：在已选日期上追加一天中的具体时刻，留空即「当天结束前」。 */
+function DesktopDueTimeChip({ dueAt, onChange }: DueTimeChipProps) {
   const { t } = useTranslation();
   const time = dueAt ? dueTime(dueAt) : "";
   const disabled = dueAt === null;

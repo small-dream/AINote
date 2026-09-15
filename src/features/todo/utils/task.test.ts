@@ -1,7 +1,8 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import type { TaskItemDto } from "@/api/types";
 import {
   compareTasks,
+  dueDateLabel,
   dueInstant,
   dueDayOffset,
   fromLocalInputValue,
@@ -149,6 +150,18 @@ describe("dueDayOffset", () => {
     expect(dueDayOffset("2026-09-15", today)).toBe(0);
     expect(dueDayOffset("2026-09-16", today)).toBe(1);
     expect(dueDayOffset("2026-09-14", today)).toBe(-1);
+  });
+});
+
+describe("dueDateLabel", () => {
+  it("今天 / 明天用调用方文案，其余落到 MM-DD", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 8, 15, 12, 0));
+    expect(dueDateLabel("2026-09-15", "今天", "明天")).toBe("今天");
+    expect(dueDateLabel("2026-09-16T18:00", "今天", "明天")).toBe("明天");
+    expect(dueDateLabel("2026-09-20", "今天", "明天")).toBe("09-20");
+    expect(dueDateLabel("2026-09-14", "今天", "明天")).toBe("09-14");
+    vi.useRealTimers();
   });
 });
 

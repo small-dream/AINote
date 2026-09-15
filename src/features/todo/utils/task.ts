@@ -56,6 +56,14 @@ export function dueDayOffset(dueAt: string, today: Date): number {
   return Math.round((due.getTime() - base.getTime()) / 86400000);
 }
 
+/** 截止日期展示文案：今天 / 明天 / MM-DD（今天与明天的文案由调用方按语言传入） */
+export function dueDateLabel(dueAt: string, todayLabel: string, tomorrowLabel: string): string {
+  const offset = dueDayOffset(dueAt, new Date());
+  if (offset === 0) return todayLabel;
+  if (offset === 1) return tomorrowLabel;
+  return dueDay(dueAt).slice(5);
+}
+
 function groupOf(task: TaskItemDto, now: Date): TaskGroup {
   if (task.done) return "done";
   if (!task.dueAt) return "none";
