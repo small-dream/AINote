@@ -70,8 +70,10 @@ function TrashNavButton() {
   const sidebarTab = useUiStore((state) => state.sidebarTab);
   const active = sidebarTab === "trash";
   return (
-    <Tooltip content={t("trash.title")} placement="right">
-      <button type="button" aria-label={t("trash.title")} aria-current={active ? "page" : undefined} onClick={() => useUiStore.getState().setSidebarTab("trash")} className={`${NAV_BUTTON_CLASS} mt-auto ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}>
+    // mt-auto 必须落在 Tooltip 外层 span 上：它才是导航轨的 flex item，
+    // 加在按钮上只会被包一层外壳吞掉，系统组不会贴底。
+    <Tooltip content={t("trash.title")} placement="right" className="mt-auto">
+      <button type="button" aria-label={t("trash.title")} aria-current={active ? "page" : undefined} onClick={() => useUiStore.getState().setSidebarTab("trash")} className={`${NAV_BUTTON_CLASS} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}>
         <Trash2 size={18} strokeWidth={active ? 2.3 : 1.9} />
       </button>
     </Tooltip>
