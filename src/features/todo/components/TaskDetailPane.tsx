@@ -2,7 +2,7 @@ import type { TaskItemDto } from "@/api/types";
 import { ArrowLeft } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { useTaskEditor, type TaskDraft } from "../hooks/useTaskEditor";
-import { DueDateChip, DueTimeChip, PriorityChip, ReminderChip } from "./TaskMetaControls";
+import { TaskFormCard } from "./TaskFormCard";
 
 interface TaskDetailPaneProps {
   task: TaskItemDto;
@@ -25,35 +25,29 @@ export function TaskDetailPane({ task, busy, onSave, onDelete, onClose }: TaskDe
         <ArrowLeft size={13} aria-hidden="true" />
         {t("todo.backToOverview")}
       </button>
-      <input
-        className="bare-input w-full bg-transparent px-0 pb-2 text-xl font-semibold text-text-primary outline-none"
-        value={editor.title}
-        aria-label={t("todo.taskTitle")}
-        onChange={(event) => editor.setTitle(event.target.value)}
-        onBlur={editor.save}
-        onKeyDown={(event) => { if (event.key === "Escape") editor.close(); }}
+      <TaskFormCard
+        density="pane"
+        className="mt-3"
+        title={editor.title}
+        description={editor.description}
+        dueAt={editor.dueAt}
+        priority={editor.priority}
+        remindAt={editor.remindAt}
+        disabled={busy}
+        onTitleChange={editor.setTitle}
+        onDescriptionChange={editor.setDescription}
+        onDueAtChange={editor.commitDueDate}
+        onPriorityChange={editor.commitPriority}
+        onRemindAtChange={editor.commitReminder}
+        onTitleKeyDown={(event) => { if (event.key === "Escape") editor.close(); }}
+        onTitleBlur={editor.save}
+        onDescriptionBlur={editor.save}
+        metaTrailing={
+          <button type="button" onClick={onDelete} disabled={busy} className="rounded-md px-2 py-1 text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-50">
+            {t("todo.deleteTask")}
+          </button>
+        }
       />
-      <div className="mt-3 flex flex-wrap items-center gap-2">
-        <DueDateChip value={editor.dueAt} onChange={editor.commitDueDate} />
-        <DueTimeChip dueAt={editor.dueAt} onChange={editor.commitDueDate} />
-        <PriorityChip value={editor.priority} onChange={editor.commitPriority} />
-        <ReminderChip dueAt={editor.dueAt} value={editor.remindAt} onChange={editor.commitReminder} />
-        <div className="flex-1" />
-        <button type="button" onClick={onDelete} disabled={busy} className="rounded-md px-2 py-1 text-xs text-danger transition-colors hover:bg-danger/10 disabled:opacity-50">
-          {t("todo.deleteTask")}
-        </button>
-      </div>
-      {/* 聚焦态交给外层容器：避免与全局 focus-visible 外框叠成双层描边 */}
-      <div className="mt-4 min-h-[45vh] rounded-xl border border-border bg-bg-primary transition-colors focus-within:border-accent">
-        <textarea
-          className="bare-textarea block min-h-[45vh] w-full resize-none bg-transparent px-4 py-3 text-sm leading-6 text-text-primary placeholder:text-text-tertiary"
-          value={editor.description}
-          placeholder={t("todo.detailsPlaceholder")}
-          aria-label={t("todo.details")}
-          onChange={(event) => editor.setDescription(event.target.value)}
-          onBlur={editor.save}
-        />
-      </div>
     </div>
   );
 }

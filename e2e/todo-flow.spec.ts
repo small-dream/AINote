@@ -19,6 +19,20 @@ async function presetNoteTheme(page: Page, noteTheme: string, scope: "content" |
   }, { noteTheme, scope });
 }
 
+/**
+ * 任务卡片同构断言：标题、详情、元数据 chips 必须落在同一张 `[data-task-form]` 卡片里，
+ * 且自上而下是「标题 → 详情 → chips」（内容在上、元数据在下）。
+ */
+async function assertCardOrder(page: Page, density: "dialog" | "inline" | "pane"): Promise<void> {
+  const card = page.locator(`[data-task-form="${density}"]`);
+  const title = await card.getByLabel("任务标题").boundingBox();
+  const detail = await card.getByRole("textbox", { name: "任务详情" }).boundingBox();
+  const meta = await card.getByRole("button", { name: "设置截止日期" }).boundingBox();
+  if (!title || !detail || !meta) throw new Error(`${density} 卡片未渲染完整`);
+  expect(title.y + title.height).toBeLessThanOrEqual(detail.y + 1);
+  expect(detail.y + detail.height).toBeLessThanOrEqual(meta.y + 1);
+}
+
 test.describe("Todo 待办（桌面壳）", () => {
   test("弹窗建任务 → 设置截止日期 → 勾选完成", async ({ page }) => {
     await openWorkspace(page, baseState());
@@ -99,6 +113,27 @@ test.describe("Todo 待办（桌面壳）", () => {
     expect(menuBox.x).toBeGreaterThanOrEqual(dialogBox.x);
     expect(menuBox.x + menuBox.width).toBeLessThanOrEqual(dialogBox.x + dialogBox.width);
     expect(await menu.evaluate((node) => getComputedStyle(node).zIndex)).toBe("80");
+  });
+
+  test("弹窗与桌面详情同卡同序：内容在上，元数据 chips 贴近底部操作栏", async ({ page }) => {
+    await openWorkspace(page, baseState());
+    await page.getByRole("button", { name: "待办", exact: true }).click();
+    await page.getByRole("button", { name: "新建任务" }).click();
+
+    const dialog = page.getByRole("dialog", { name: "新建任务" });
+    await assertCardOrder(page, "dialog");
+
+    await dialog.getByLabel("任务标题").fill("写周报");
+    const meta = await dialog.getByRole("button", { name: "设置截止日期" }).boundingBox();
+    const actions = await dialog.getByRole("button", { name: "添加任务" }).boundingBox();
+    if (!meta || !actions) throw new Error("新建任务弹窗未渲染完整");
+    expect(meta.y + meta.height).toBeLessThanOrEqual(actions.y + 1);
+
+    await dialog.getByRole("button", { name: "添加任务" }).click();
+
+    // 点任务行 → 主区详情面板：同一张卡、同一顺序
+    await page.getByRole("button", { name: /写周报/ }).click();
+    await assertCardOrder(page, "pane");
   });
 
   test("日期与时间分两次选，时刻精确到分钟并存成带时刻的 dueAt", async ({ page }) => {
@@ -209,6 +244,25 @@ test.describe("Todo 待办（移动壳）", () => {
     await page.getByRole("button", { name: "添加任务" }).click();
     await expect(page.getByRole("button", { name: /随身任务/ })).toBeVisible();
   });
+
+  test("行内编辑器同序：详情在上，元数据 chips 与删除入口收在底部", async ({ page }) => {
+    await openWorkspace(page, baseState());
+    await page.locator(".mobile-list-tabs").getByRole("tab", { name: "待办" }).click();
+    await page.getByRole("button", { name: "新建任务" }).click();
+    await page.getByLabel("任务标题").fill("随身任务");
+    await page.getByRole("button", { name: "添加任务" }).click();
+
+    const list = page.locator(".mobile-list-content");
+    await list.getByRole("button", { name: /随身任务/ }).click();
+    await assertCardOrder(page, "inline");
+
+    const meta = await list.getByRole("button", { name: "设置截止日期" }).boundingBox();
+    const remove = await list.getByRole("button", { name: "删除任务" }).boundingBox();
+    if (!meta || !remove) throw new Error("行内编辑器未渲染完整");
+    // 删除入口与 chips 同在卡片底部这一行
+    expect(Math.abs(remove.y - meta.y)).toBeLessThanOrEqual(8);
+    expect(remove.x).toBeGreaterThan(meta.x + meta.width);
+  });
 });
 
 test.describe("Todo 待办（移动小屏 375×667）", () => {
@@ -219,6 +273,12 @@ test.describe("Todo 待办（移动小屏 375×667）", () => {
     await page.locator(".mobile-list-tabs").getByRole("tab", { name: "待办" }).click();
     await page.getByRole("button", { name: "新建任务" }).click();
     await page.getByLabel("任务标题").fill("随身任务");
+
+    // 元数据条在卡片底部：矮视口下不滚动也能看到「明天 18:00」这类识别回显
+    const chipBox = await page.getByRole("button", { name: "设置截止日期" }).boundingBox();
+    const screen = page.viewportSize();
+    expect(chipBox?.y ?? -1).toBeGreaterThanOrEqual(0);
+    expect((chipBox?.y ?? 0) + (chipBox?.height ?? 0)).toBeLessThanOrEqual(screen?.height ?? 0);
 
     const inViewport = async (label: string) => {
       const box = await page.getByRole("menu", { name: label }).boundingBox();

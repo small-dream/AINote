@@ -2,7 +2,7 @@ import { Trash2 } from "lucide-react";
 import type { TaskItemDto } from "@/api/types";
 import { useTranslation } from "@/i18n";
 import { useTaskEditor, type TaskDraft } from "../hooks/useTaskEditor";
-import { DueDateChip, DueTimeChip, PriorityChip, ReminderChip } from "./TaskMetaControls";
+import { TaskFormCard } from "./TaskFormCard";
 
 export type { TaskDraft };
 
@@ -14,7 +14,10 @@ interface TaskEditorProps {
   onClose: () => void;
 }
 
-/** 任务行内编辑器：替换任务行渲染，chip 设置日期/优先级/提醒，Esc 或点击外部收起。 */
+/**
+ * 任务行内编辑器：替换任务行渲染，chip 设置日期/优先级/提醒，Esc 或点击外部收起。
+ * 顺序与新建弹窗一致：内容（标题 + 详情）在上，元数据 chips 与删除入口收在卡片底部。
+ */
 export function TaskEditor({ task, busy, onSave, onDelete, onClose }: TaskEditorProps) {
   const { t } = useTranslation();
   const editor = useTaskEditor({ task, onSave, onClose });
@@ -22,23 +25,24 @@ export function TaskEditor({ task, busy, onSave, onDelete, onClose }: TaskEditor
   return (
     <>
       <div className="fixed inset-0 z-30 cursor-default" aria-hidden="true" onPointerDown={editor.close} />
-      <div className="relative z-40 mx-1 mb-2 rounded-lg border border-accent/30 bg-bg-primary p-3 shadow-sm sm:p-2">
-        <input
-          autoFocus
-          className="bare-input w-full rounded-md bg-transparent px-1 py-1 text-base leading-6 text-text-primary outline-none placeholder:text-text-tertiary sm:text-sm"
-          value={editor.title}
-          aria-label={t("todo.taskTitle")}
-          onChange={(event) => editor.setTitle(event.target.value)}
-          onKeyDown={(event) => {
-            if (event.key === "Enter" || event.key === "Escape") editor.close();
-          }}
-        />
-        <div className="mt-1 flex flex-wrap items-center gap-1">
-          <DueDateChip value={editor.dueAt} onChange={editor.commitDueDate} />
-          <DueTimeChip dueAt={editor.dueAt} onChange={editor.commitDueDate} />
-          <PriorityChip value={editor.priority} onChange={editor.commitPriority} />
-          <ReminderChip dueAt={editor.dueAt} value={editor.remindAt} onChange={editor.commitReminder} />
-          <div className="flex-1" />
+      <TaskFormCard
+        density="inline"
+        className="relative z-40 mx-1 mb-2"
+        autoFocusTitle
+        title={editor.title}
+        description={editor.description}
+        dueAt={editor.dueAt}
+        priority={editor.priority}
+        remindAt={editor.remindAt}
+        onTitleChange={editor.setTitle}
+        onDescriptionChange={editor.setDescription}
+        onDueAtChange={editor.commitDueDate}
+        onPriorityChange={editor.commitPriority}
+        onRemindAtChange={editor.commitReminder}
+        onTitleKeyDown={(event) => {
+          if (event.key === "Enter" || event.key === "Escape") editor.close();
+        }}
+        metaTrailing={
           <button
             type="button"
             onClick={onDelete}
@@ -49,15 +53,8 @@ export function TaskEditor({ task, busy, onSave, onDelete, onClose }: TaskEditor
               <Trash2 size={15} aria-hidden="true" className="sm:hidden" />
               <Trash2 size={13} aria-hidden="true" className="hidden sm:block" />
           </button>
-        </div>
-        <textarea
-          className="bare-textarea mt-2 min-h-24 w-full resize-none rounded-lg bg-transparent px-1 py-2 text-base leading-6 text-text-primary outline-none placeholder:text-text-tertiary focus:outline-none sm:min-h-20 sm:px-1 sm:py-1.5 sm:text-sm"
-          value={editor.description}
-          placeholder={t("todo.detailsPlaceholder")}
-          aria-label={t("todo.details")}
-          onChange={(event) => editor.setDescription(event.target.value)}
-        />
-      </div>
+        }
+      />
     </>
   );
 }
