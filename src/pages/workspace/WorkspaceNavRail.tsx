@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from "react";
-import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, GitCommitHorizontal, GitGraph, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
+import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, GitCommitHorizontal, GitGraph, ListTodo, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
 import { Tooltip } from "@/components/atoms/Tooltip";
 import type { SyncController } from "@/features/sync/hooks/useSync";
 import { deriveSyncFailure, deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
@@ -20,6 +20,7 @@ const NAV_ITEMS = [
   { key: "app.notes", icon: FileText, sidebarTab: "tree" },
   { key: "app.recent", icon: Clock3, sidebarTab: "recent" },
   { key: "app.favorites", icon: Star, sidebarTab: "favorites" },
+  { key: "todo.title", icon: ListTodo, sidebarTab: "todo" },
   { key: "wiki.tags", icon: Tags, sidebarTab: "tags" },
   { key: "trash.title", icon: Trash2, sidebarTab: "trash" },
 ] as const;

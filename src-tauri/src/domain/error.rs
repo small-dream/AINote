@@ -56,6 +56,13 @@ pub enum AppError {
     /// 应用内安装不可用（非 Android 平台或系统桥调用失败）
     #[error("update install unavailable: {0}")]
     UpdateInstall(String),
+    #[error("task not found: {0}")]
+    TaskNotFound(String),
+    #[error("task list not found: {0}")]
+    TaskListNotFound(String),
+    /// 任务字段校验失败（空标题、提醒时间缺少截止日期等）
+    #[error("invalid task: {0}")]
+    TaskInvalid(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -131,6 +138,9 @@ impl From<AppError> for AppErrorDto {
             AppError::UpdateDownload(_) => ("UPDATE_7001", ErrorKind::Network, true),
             AppError::UpdateChecksum(_) => ("UPDATE_7002", ErrorKind::Unknown, false),
             AppError::UpdateInstall(_) => ("UPDATE_7003", ErrorKind::Unknown, false),
+            AppError::TaskNotFound(_) => ("TASK_8001", ErrorKind::NotFound, false),
+            AppError::TaskListNotFound(_) => ("TASK_8002", ErrorKind::NotFound, false),
+            AppError::TaskInvalid(_) => ("TASK_8003", ErrorKind::Unknown, false),
         };
         let provider = match &err {
             AppError::AuthLoginRequired { provider, .. } => Some(provider.clone()),
@@ -227,6 +237,9 @@ mod tests {
         assert_eq!(dto(AppError::UpdateDownload("net".into())).code, "UPDATE_7001");
         assert_eq!(dto(AppError::UpdateChecksum("bad".into())).code, "UPDATE_7002");
         assert_eq!(dto(AppError::UpdateInstall("bridge".into())).code, "UPDATE_7003");
+        assert_eq!(dto(AppError::TaskNotFound("t".into())).code, "TASK_8001");
+        assert_eq!(dto(AppError::TaskListNotFound("l".into())).code, "TASK_8002");
+        assert_eq!(dto(AppError::TaskInvalid("bad".into())).code, "TASK_8003");
     }
 
     #[test]

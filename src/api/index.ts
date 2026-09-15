@@ -23,6 +23,8 @@ export type {
   MetricsExportFormat,
 } from "./metrics.api";
 export { trashApi } from "./trash.api";
+export { taskApi } from "./task.api";
+export type { CreateTaskInput, UpdateTaskInput } from "./task.api";
 export { openExternal, printPage } from "./app.api";
 export { supportApi } from "./support.api";
 export type { FrontendLogLevel } from "./support.api";
@@ -65,6 +67,10 @@ export type {
   SyncStatus,
   SupportInfoDto,
   SyncProgress,
+  TaskBoardDto,
+  TaskItemDto,
+  TaskListDto,
+  TaskPriority,
   TrashItem,
   TreeNode,
 } from "./types";

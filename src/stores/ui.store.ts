@@ -4,7 +4,7 @@ export type Theme = "light" | "dark" | "system";
 export type Locale = "zh-CN" | "en-US";
 export type NoteTheme = "classic" | "paper" | "midnight" | "forest" | "solar" | "graphite" | "inkblue" | "warmdark";
 export type NoteThemeScope = "content" | "workspace";
-export type SidebarTab = "tree" | "recent" | "favorites" | "tags" | "trash";
+export type SidebarTab = "tree" | "recent" | "favorites" | "todo" | "tags" | "trash";
 /** 最近打开记录条目；按仓库隔离保存到本机。 */
 export interface RecentNoteEntry {
   path: string;

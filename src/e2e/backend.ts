@@ -1,8 +1,9 @@
 /** E2E mock 后端：命令处理器按策略表分发（单一职责，便于 lint 指标达标）。 */
 import type { E2eConflictSeed, E2eState } from "./types";
 import { E2E_PROVIDERS, E2E_REPOS } from "./fixtures";
+import { taskCommandHandlers, type TaskStore } from "./tasks";
 
-interface MockStore {
+interface MockStore extends TaskStore {
   notes: Map<string, { content: string; kind: string }>;
   conflicted: boolean;
   conflicts: E2eConflictSeed[];
@@ -53,6 +54,8 @@ function createStore(state: E2eState): MockStore {
     syncSuccessRate: state.metricsSyncSuccessRate ?? null,
     uncommitted: state.uncommitted === true,
     changedFiles: state.changedFiles ?? [],
+    taskBoard: state.taskBoard ?? { schemaVersion: 1, lists: [], tasks: [] },
+    taskSeq: 1,
   };
 }
 
@@ -306,6 +309,7 @@ const commandHandlers: Record<string, CommandHandler> = {
   "plugin:event|unlisten": () => null,
   "plugin:event|emit": () => null,
   "plugin:event|emit_to": () => null,
+  ...taskCommandHandlers,
 };
 
 let session: E2eCommandContext | null = null;

@@ -22,6 +22,7 @@ pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(config::logging::plugin())
         .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_notification::init())
         .plugin(
             tauri_plugin_keyring_store::Builder::new()
                 .service("dev.ainote.app.credentials")
@@ -177,6 +178,14 @@ pub fn run() {
             commands::metrics::metrics_clear,
             commands::metrics::metrics_set_enabled,
             commands::metrics::export::metrics_export,
+            commands::task::board::task_board,
+            commands::task::create_list::task_create_list,
+            commands::task::rename_list::task_rename_list,
+            commands::task::delete_list::task_delete_list,
+            commands::task::create::task_create,
+            commands::task::update::task_update,
+            commands::task::toggle::task_toggle,
+            commands::task::delete::task_delete,
             commands::update::download_update,
             commands::update::cancel_update_download,
             commands::update::install_update,

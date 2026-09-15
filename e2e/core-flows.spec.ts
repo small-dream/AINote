@@ -55,8 +55,8 @@ test.describe("AINote 桌面核心流程", () => {
       }
       return out;
     });
-    // 同步 | 笔记/最近/收藏/标签/回收站 | 提交版本/Git 历史
-    expect(gaps).toEqual([12, 6, 6, 6, 6, 12, 6]);
+    // 同步 | 笔记/最近/收藏/待办/标签/回收站 | 提交版本/Git 历史
+    expect(gaps).toEqual([12, 6, 6, 6, 6, 6, 12, 6]);
   });
 
   test("目录树顶部常驻显示当前仓库并可展开切换菜单", async ({ page }) => {

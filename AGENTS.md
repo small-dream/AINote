@@ -75,7 +75,7 @@ View → Hooks/Queries → api/ → IPC → commands → services → repositori
 ### 错误处理
 
 - Rust Command 一律返回 `Result<T, AppErrorDto>`；原始 `git2::Error`/IO 错误在 Repository 边界转换，**不泄漏到前端**。
-- 错误码规范：`<域>_<序号>`（NOTE_1xxx / AUTH_2xxx / REPO_3xxx / SYNC_4xxx / IO_5xxx），定义在 `domain/error.rs`。
+- 错误码规范：`<域>_<序号>`（NOTE_1xxx / AUTH_2xxx / REPO_3xxx / SYNC_4xxx / IO_5xxx / TASK_8xxx），定义在 `domain/error.rs`。
 - 前端只在 `api/client.ts` 统一反序列化错误；组件只处理需要 UI 特化响应的错误。
 
 ## 测试义务

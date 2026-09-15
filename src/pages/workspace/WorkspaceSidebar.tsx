@@ -1,6 +1,7 @@
 import { FileTree } from "@/features/file-tree/components/FileTree";
 import { RecentPanel } from "@/features/recent/components/RecentPanel";
 import { FavoritePanel } from "@/features/favorites/components/FavoritePanel";
+import { TodoPanel } from "@/features/todo/components/TodoPanel";
 import { TagIndex } from "@/features/wiki/components/TagIndex";
 import { TrashPanel } from "@/features/trash/components/TrashPanel";
 import { RepoSwitcher } from "@/features/file-tree/components/RepoSwitcher";
@@ -48,6 +49,8 @@ export function WorkspaceSidebar({
           <RecentPanel repoPath={repoPath} onSelect={onSelect} />
         ) : tab === "favorites" ? (
           <FavoritePanel repoPath={repoPath} onSelect={onSelect} />
+        ) : tab === "todo" ? (
+          <TodoPanel repoPath={repoPath} />
         ) : tab === "tags" ? (
           <TagIndex repoPath={repoPath} onSelect={onSelect} />
         ) : (

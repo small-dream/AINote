@@ -17,6 +17,7 @@ pub(crate) mod restore_service;
 pub(crate) mod retry;
 pub mod search_service;
 pub mod sync_service;
+pub mod task_service;
 pub mod wiki_service;
 pub mod secure_store;
 pub mod trash_service;

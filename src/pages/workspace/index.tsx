@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate } from "react-router";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { useStartupSync } from "@/features/sync/hooks/useStartupSync";
+import { useTaskReminders } from "@/features/todo/hooks/useTaskReminders";
 import { useAuthStatusQuery } from "@/queries/auth.queries";
 import { useSessionStore } from "@/stores/session.store";
 import { useUiStore } from "@/stores/ui.store";
@@ -13,6 +14,8 @@ import { useTranslation } from "@/i18n";
 export function WorkspacePage() {
   const { ready, repoPath } = useWorkspaceGate();
   const startupSyncing = useStartupSync(repoPath);
+  // 提醒调度挂在工作区根部：桌面/移动双壳都会经过这里，且只挂一次
+  useTaskReminders(ready ? repoPath : null);
   const currentNotePath = useSessionStore((s) => s.currentNotePath);
   const openNote = useSessionStore((s) => s.openNote);
   const recordRecentNote = useUiStore((state) => state.recordRecentNote);

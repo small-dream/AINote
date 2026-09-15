@@ -1,0 +1,73 @@
+use std::fs;
+use std::path::Path;
+
+use crate::domain::error::AppError;
+use crate::domain::task::{TaskBoard, TASK_SCHEMA_VERSION};
+
+pub const TASKS_FILE: &str = ".ainote/todos.json";
+
+/// Repository 边界：读取 Todo 看板；缺失文件视为空看板。
+pub fn load(root: &Path) -> Result<TaskBoard, AppError> {
+    let path = root.join(TASKS_FILE);
+    if !path.is_file() {
+        return Ok(TaskBoard {
+            schema_version: TASK_SCHEMA_VERSION,
+            lists: Vec::new(),
+            tasks: Vec::new(),
+        });
+    }
+
+    let raw = fs::read_to_string(path)?;
+    let board: TaskBoard = serde_json::from_str(&raw)
+        .map_err(|error| AppError::Repo(format!("invalid task board: {error}")))?;
+    Ok(board)
+}
+
+/// Repository 边界：原子写入 Todo 看板，避免半写状态破坏 JSON。
+pub fn save(root: &Path, board: &TaskBoard) -> Result<(), AppError> {
+    let path = root.join(TASKS_FILE);
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)?;
+    }
+    let temporary = path.with_extension("tmp");
+    let serialized = serde_json::to_vec_pretty(board)
+        .map_err(|error| AppError::Repo(format!("serialize task board failed: {error}")))?;
+    fs::write(&temporary, serialized)?;
+    fs::rename(&temporary, &path)?;
+    Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::domain::task::{now_rfc3339, TaskList};
+
+    #[test]
+    fn load_treats_missing_board_as_empty() {
+        let root = tempfile::tempdir().unwrap();
+        let board = load(root.path()).unwrap();
+        assert!(board.lists.is_empty());
+        assert!(board.tasks.is_empty());
+        assert_eq!(board.schema_version, TASK_SCHEMA_VERSION);
+    }
+
+    #[test]
+    fn save_and_load_round_trips_board() {
+        let root = tempfile::tempdir().unwrap();
+        let board = TaskBoard {
+            schema_version: TASK_SCHEMA_VERSION,
+            lists: vec![TaskList {
+                id: "l1".to_string(),
+                name: "默认".to_string(),
+                sort_order: 0,
+                created_at: now_rfc3339(),
+            }],
+            tasks: Vec::new(),
+        };
+        save(root.path(), &board).unwrap();
+        let loaded = load(root.path()).unwrap();
+        assert_eq!(loaded.lists.len(), 1);
+        assert_eq!(loaded.lists[0].name, "默认");
+        assert_eq!(loaded.schema_version, TASK_SCHEMA_VERSION);
+    }
+}

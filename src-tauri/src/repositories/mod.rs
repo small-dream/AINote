@@ -18,4 +18,5 @@ pub mod note_files;
 pub mod repo_size;
 pub mod repo_maintenance;
 pub(crate) mod restore_files;
+pub mod task_files;
 pub mod trash_files;

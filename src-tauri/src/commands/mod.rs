@@ -11,5 +11,6 @@ pub mod print;
 pub mod repo;
 pub mod save_file;
 pub mod support;
+pub mod task;
 pub mod trash;
 pub mod update;

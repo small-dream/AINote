@@ -1,6 +1,6 @@
 /** E2E 种子与记录类型（src/e2e/ipcMock.ts 与 e2e/ 测试共享）。 */
 
-import type { RepoInfo } from "@/api/types";
+import type { RepoInfo, TaskBoardDto } from "@/api/types";
 
 export interface E2eNoteSeed {
   path: string;
@@ -74,6 +74,8 @@ export interface E2eState {
   };
   /** 注入一次「拉取自动重试中」：进度下发后保持挂起，直到用户取消 */
   syncRetry?: { retry: number; maxRetries: number; delayMs: number };
+  /** Todo 看板种子（默认空看板） */
+  taskBoard?: TaskBoardDto;
 }
 
 export interface E2eRecord {

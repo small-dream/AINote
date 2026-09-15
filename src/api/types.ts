@@ -324,3 +324,36 @@ export interface RestoreResultDto {
   name: string;
   fileCount: number;
 }
+
+/** 任务优先级（与 Rust domain/task.rs 一致） */
+export type TaskPriority = "none" | "low" | "medium" | "high";
+
+/** task_board / task_create_list 返回的 Todo 清单 */
+export interface TaskListDto {
+  id: string;
+  name: string;
+  sortOrder: number;
+  createdAt: string;
+}
+
+/** 单条任务；dueDate 为 YYYY-MM-DD，时间戳为 RFC3339 */
+export interface TaskItemDto {
+  id: string;
+  listId: string;
+  title: string;
+  done: boolean;
+  priority: TaskPriority;
+  dueDate: string | null;
+  remindAt: string | null;
+  sortOrder: number;
+  createdAt: string;
+  updatedAt: string;
+  completedAt: string | null;
+}
+
+/** task_board 返回的整块 Todo 看板（todos.json 快照） */
+export interface TaskBoardDto {
+  schemaVersion: number;
+  lists: TaskListDto[];
+  tasks: TaskItemDto[];
+}

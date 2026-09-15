@@ -16,6 +16,7 @@ pub mod remote;
 pub mod rich_text;
 pub mod search;
 pub mod sync;
+pub mod task;
 pub mod trash;
 pub mod update;
 pub mod wiki;

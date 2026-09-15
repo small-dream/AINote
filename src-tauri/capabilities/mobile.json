@@ -4,5 +4,5 @@
   "description": "AINote iOS and Android capabilities",
   "windows": ["main"],
   "platforms": ["iOS", "android"],
-  "permissions": ["core:default"]
+  "permissions": ["core:default", "notification:default"]
 }

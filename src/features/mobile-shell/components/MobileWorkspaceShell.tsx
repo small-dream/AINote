@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState, type ReactNode, type RefObject } from "react";
-import { ArrowLeft, Clock, FolderTree, GitCommitHorizontal, GitGraph, Hash, List, RefreshCw, Search, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
+import { ArrowLeft, Clock, FolderTree, GitCommitHorizontal, GitGraph, Hash, List, ListTodo, RefreshCw, Search, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
 import { Tooltip } from "@/components/atoms/Tooltip";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { useCommandPaletteStore } from "@/stores/command-palette.store";
@@ -170,6 +170,7 @@ function MobileListTabs({ active, onChange, onOpenGraph }: { active: SidebarTab;
     { id: "tree", label: t("tree.label"), icon: FolderTree },
     { id: "recent", label: t("app.recent"), icon: Clock },
     { id: "favorites", label: t("app.favorites"), icon: Star },
+    { id: "todo", label: t("todo.title"), icon: ListTodo },
     { id: "tags", label: t("wiki.tags"), icon: Hash },
     { id: "trash", label: t("trash.title"), icon: Trash2 },
     { id: "graph", label: t("graph.title"), icon: GitGraph },
