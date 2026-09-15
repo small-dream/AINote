@@ -1,5 +1,6 @@
 import { Hash, Link2, Plus, X } from "lucide-react";
 import { useState, type ReactNode } from "react";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useTranslation } from "@/i18n";
 import { useBackHandler } from "@/platform/back-navigation";
 import type { NoteWikiDto } from "@/api/types";
@@ -52,9 +53,11 @@ function PanelHeader({ path, onClose }: { path: string; onClose: () => void }) {
         <h2 className="text-sm font-semibold">{t("wiki.title")}</h2>
         <p className="truncate text-[11px] text-text-tertiary">{path}</p>
       </div>
-      <button type="button" aria-label={t("common.cancel")} onClick={onClose} className="shrink-0 rounded p-1 text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary">
-        <X size={16} />
-      </button>
+      <Tooltip content={t("common.close")}>
+        <button type="button" aria-label={t("common.cancel")} onClick={onClose} className="shrink-0 rounded p-1 text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary">
+          <X size={16} />
+        </button>
+      </Tooltip>
     </div>
   );
 }
@@ -68,9 +71,11 @@ function TagsSection({ tags, suggestions, onAdd, onRemove }: { tags: string[]; s
         {tags.map((tag) => (
           <span key={tag} className="inline-flex items-center gap-1 rounded-full bg-accent-soft px-2.5 py-1 text-xs text-accent">
             <Hash size={11} /> {tag}
-            <button type="button" aria-label={`${t("wiki.removeTag")} ${tag}`} onClick={() => onRemove(tag)} className="ml-1 rounded-full text-accent/70 transition-colors hover:text-danger">
-              <X size={11} />
-            </button>
+            <Tooltip content={`${t("wiki.removeTag")} ${tag}`}>
+              <button type="button" aria-label={`${t("wiki.removeTag")} ${tag}`} onClick={() => onRemove(tag)} className="ml-1 rounded-full text-accent/70 transition-colors hover:text-danger">
+                <X size={11} />
+              </button>
+            </Tooltip>
           </span>
         ))}
       </div>

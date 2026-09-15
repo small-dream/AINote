@@ -1,6 +1,7 @@
 import { useRef, useState, type CSSProperties, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { ChevronDown } from "lucide-react";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useTranslation } from "@/i18n";
 import { useAnchoredLayer } from "@/hooks/useAnchoredLayer";
 
@@ -31,22 +32,23 @@ export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
   const current = OPTIONS.find((o) => o.level > 0 && active.has(`h${o.level}`)) ?? OPTIONS[0];
   return (
     <div ref={rootRef} className="relative">
-      <button
-        type="button"
-        aria-label={t("note.headingLevel")}
-        title={t("note.headingLevel")}
-        aria-expanded={open}
-        onMouseDown={(e) => e.preventDefault()}
-        onClick={() => setOpen((v) => !v)}
-        className={`flex h-7 items-center gap-0.5 rounded-md px-2 text-xs transition-colors duration-120 ${
-          current.level > 0
-            ? "bg-accent-soft text-accent"
-            : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
-        }`}
-      >
-        {current.labelKey === "H1" ? "H1" : current.labelKey === "H2" ? "H2" : current.labelKey === "H3" ? "H3" : t(current.labelKey)}
-        <ChevronDown size={12} />
-      </button>
+      <Tooltip content={t("note.headingLevel")}>
+        <button
+          type="button"
+          aria-label={t("note.headingLevel")}
+          aria-expanded={open}
+          onMouseDown={(e) => e.preventDefault()}
+          onClick={() => setOpen((v) => !v)}
+          className={`flex h-7 items-center gap-0.5 rounded-md px-2 text-xs transition-colors duration-120 ${
+            current.level > 0
+              ? "bg-accent-soft text-accent"
+              : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
+          }`}
+        >
+          {current.labelKey === "H1" ? "H1" : current.labelKey === "H2" ? "H2" : current.labelKey === "H3" ? "H3" : t(current.labelKey)}
+          <ChevronDown size={12} />
+        </button>
+      </Tooltip>
       {open ? createPortal(
         <MenuList
           current={current}

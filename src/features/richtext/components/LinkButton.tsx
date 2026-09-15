@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
 import { useTranslation } from "@/i18n";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useAnchoredLayer } from "@/hooks/useAnchoredLayer";
 import { LINK_INPUT_EVENT, normalizeLinkUrl } from "../utils/linkUrl";
 import { LINK_COMMAND } from "../utils/toolbarCommands";
@@ -23,24 +24,25 @@ export function LinkButton({ editor, variant }: LinkButtonProps) {
   const label = active ? t("richtext.removeLink") : t(LINK_COMMAND.labelKey);
   return (
     <>
-      <button
-        ref={buttonRef}
-        type="button"
-        title={label}
-        aria-label={label}
-        aria-pressed={active}
-        className={buttonClass(variant, active)}
-        onMouseDown={(event) => event.preventDefault()}
-        onClick={() => {
-          if (editor.isActive("link")) {
-            editor.chain().focus().extendMarkRange("link").unsetLink().run();
-            return;
-          }
-          link.openInput();
-        }}
-      >
-        <LINK_COMMAND.icon size={variant === "bubble" ? 15 : 16} strokeWidth={1.9} aria-hidden="true" />
-      </button>
+      <Tooltip content={label}>
+        <button
+          ref={buttonRef}
+          type="button"
+          aria-label={label}
+          aria-pressed={active}
+          className={buttonClass(variant, active)}
+          onMouseDown={(event) => event.preventDefault()}
+          onClick={() => {
+            if (editor.isActive("link")) {
+              editor.chain().focus().extendMarkRange("link").unsetLink().run();
+              return;
+            }
+            link.openInput();
+          }}
+        >
+          <LINK_COMMAND.icon size={variant === "bubble" ? 15 : 16} strokeWidth={1.9} aria-hidden="true" />
+        </button>
+      </Tooltip>
       <LinkUrlPopover anchorRef={buttonRef} link={link} />
     </>
   );

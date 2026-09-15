@@ -1,5 +1,6 @@
 import type { ButtonHTMLAttributes } from "react";
 import type { LucideIcon } from "lucide-react";
+import { Tooltip } from "./Tooltip";
 
 type IconButtonSize = "sm" | "md";
 
@@ -18,15 +19,16 @@ export function IconButton({ icon: Icon, label, size = "md", active, className =
     ? "border-accent/30 bg-accent-soft text-accent"
     : "border-transparent text-text-secondary hover:border-border hover:bg-bg-secondary hover:text-text-primary";
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      aria-pressed={active}
-      className={`group inline-flex ${dimension} shrink-0 items-center justify-center rounded-md border p-0 transition-[background-color,border-color,color,transform] duration-150 ease-out active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 ${state} ${className}`}
-      {...rest}
-    >
-      <Icon size={iconSize} strokeWidth={1.9} aria-hidden="true" />
-    </button>
+    <Tooltip content={label}>
+      <button
+        type="button"
+        aria-label={label}
+        aria-pressed={active}
+        className={`inline-flex ${dimension} shrink-0 items-center justify-center rounded-md border p-0 transition-[background-color,border-color,color,transform] duration-150 ease-out active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 ${state} ${className}`}
+        {...rest}
+      >
+        <Icon size={iconSize} strokeWidth={1.9} aria-hidden="true" />
+      </button>
+    </Tooltip>
   );
 }

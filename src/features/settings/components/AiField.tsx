@@ -46,7 +46,6 @@ export function AiToggle({ checked, label, onChange }: AiToggleProps) {
       role="switch"
       aria-checked={checked}
       aria-label={label}
-      title={label}
       onClick={() => onChange(!checked)}
       className={`relative h-5 w-9 shrink-0 rounded-full transition-colors duration-150 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent ${
         checked ? "bg-accent" : "bg-bg-tertiary"

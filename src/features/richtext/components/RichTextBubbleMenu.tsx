@@ -15,6 +15,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import { useTranslation } from "@/i18n";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { LinkButton } from "./LinkButton";
 
 interface RichTextBubbleMenuProps {
@@ -57,18 +58,18 @@ export function RichTextBubbleMenu({ editor }: RichTextBubbleMenuProps) {
     >
       <div className="flex items-center gap-0.5 rounded-lg border border-border bg-bg-primary px-1 py-1 shadow-lg">
         {BUBBLE_BUTTONS.map(({ icon: Icon, labelKey, active, run }) => (
-          <button
-            key={labelKey}
-            type="button"
-            title={t(labelKey)}
-            aria-label={t(labelKey)}
-            aria-pressed={active(editor)}
-            className={`grid h-7 w-7 place-items-center rounded-md transition-colors ${active(editor) ? "bg-accent/15 text-accent" : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"}`}
-            onMouseDown={(e) => e.preventDefault()}
-            onClick={() => run(editor)}
-          >
-            <Icon size={15} />
-          </button>
+          <Tooltip key={labelKey} content={t(labelKey)}>
+            <button
+              type="button"
+              aria-label={t(labelKey)}
+              aria-pressed={active(editor)}
+              className={`grid h-7 w-7 place-items-center rounded-md transition-colors ${active(editor) ? "bg-accent/15 text-accent" : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"}`}
+              onMouseDown={(e) => e.preventDefault()}
+              onClick={() => run(editor)}
+            >
+              <Icon size={15} />
+            </button>
+          </Tooltip>
         ))}
         <LinkButton editor={editor} variant="bubble" />
       </div>

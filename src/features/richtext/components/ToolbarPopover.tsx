@@ -1,6 +1,7 @@
 import { useRef, useState, type CSSProperties, type RefObject } from "react";
 import { createPortal } from "react-dom";
 import { Check, ChevronDown, type LucideIcon } from "lucide-react";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useAnchoredLayer } from "@/hooks/useAnchoredLayer";
 
 export interface ToolbarMenuItem {
@@ -35,11 +36,13 @@ export function ToolbarPopover({ label, icon: Icon, text, active = false, align 
 
   return (
     <div ref={containerRef} className="relative shrink-0">
-      <button type="button" aria-expanded={open} aria-haspopup="menu" aria-label={label} title={label} className={`inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-md border px-1.5 text-xs font-medium transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] ${triggerState(active)}`} onMouseDown={(event) => event.preventDefault()} onClick={() => setOpen((value) => !value)}>
-        {Icon ? <Icon size={16} strokeWidth={1.9} aria-hidden="true" /> : null}
-        {text ? <span>{text}</span> : null}
-        <ChevronDown size={13} strokeWidth={2.2} aria-hidden="true" />
-      </button>
+      <Tooltip content={label}>
+        <button type="button" aria-expanded={open} aria-haspopup="menu" aria-label={label} className={`inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-md border px-1.5 text-xs font-medium transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] ${triggerState(active)}`} onMouseDown={(event) => event.preventDefault()} onClick={() => setOpen((value) => !value)}>
+          {Icon ? <Icon size={16} strokeWidth={1.9} aria-hidden="true" /> : null}
+          {text ? <span>{text}</span> : null}
+          <ChevronDown size={13} strokeWidth={2.2} aria-hidden="true" />
+        </button>
+      </Tooltip>
       {open ? createPortal(<ToolbarMenuItems items={items} label={label} position={position} menuRef={menuRef} onClose={() => setOpen(false)} />, document.body) : null}
     </div>
   );

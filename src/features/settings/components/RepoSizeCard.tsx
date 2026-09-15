@@ -1,4 +1,5 @@
 import { RefreshCw } from "lucide-react";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useTranslation } from "@/i18n";
 import { useRepoSize } from "../hooks/useRepoSize";
 import { formatRepoSize } from "../utils/repoSize";
@@ -19,16 +20,17 @@ export function RepoSizeCard() {
         <p className="text-xs text-text-tertiary">{t("repo.sizeLabel")}</p>
         <p className="mt-0.5 text-sm font-medium">{size}</p>
       </div>
-      <button
-        type="button"
-        aria-label={t("repo.sizeRefresh")}
-        title={t("repo.sizeRefresh")}
-        onClick={() => void refetch()}
-        disabled={isFetching}
-        className="grid h-7 w-7 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-bg-tertiary hover:text-text-primary disabled:opacity-50"
-      >
-        <RefreshCw size={15} />
-      </button>
+      <Tooltip content={t("repo.sizeRefresh")}>
+        <button
+          type="button"
+          aria-label={t("repo.sizeRefresh")}
+          onClick={() => void refetch()}
+          disabled={isFetching}
+          className="grid h-7 w-7 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-bg-tertiary hover:text-text-primary disabled:opacity-50"
+        >
+          <RefreshCw size={15} />
+        </button>
+      </Tooltip>
     </div>
   );
 }

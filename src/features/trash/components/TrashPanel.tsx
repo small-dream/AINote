@@ -2,6 +2,7 @@ import { useState } from "react";
 import { RotateCcw, Trash2, X } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
 import { Modal } from "@/components/molecules/Modal";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useTranslation } from "@/i18n";
 import { formatDate } from "@/features/history/utils/format";
 import type { TrashItem } from "@/api/types";
@@ -88,12 +89,16 @@ function TrashRow({ item, busy, onRestore, onDelete }: TrashRowProps) {
           {item.path} · {formatDate(item.deletedAt)}
         </p>
       </div>
-      <button type="button" aria-label={t("trash.restore")} title={t("trash.restore")} onClick={onRestore} disabled={busy} className="grid h-7 w-7 shrink-0 place-items-center rounded text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-accent disabled:opacity-50">
-        <RotateCcw size={15} />
-      </button>
-      <button type="button" aria-label={t("trash.deletePermanent")} title={t("trash.deletePermanent")} onClick={onDelete} disabled={busy} className="grid h-7 w-7 shrink-0 place-items-center rounded text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-danger disabled:opacity-50">
-        <X size={15} />
-      </button>
+      <Tooltip content={t("trash.restore")}>
+        <button type="button" aria-label={t("trash.restore")} onClick={onRestore} disabled={busy} className="grid h-7 w-7 shrink-0 place-items-center rounded text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-accent disabled:opacity-50">
+          <RotateCcw size={15} />
+        </button>
+      </Tooltip>
+      <Tooltip content={t("trash.deletePermanent")}>
+        <button type="button" aria-label={t("trash.deletePermanent")} onClick={onDelete} disabled={busy} className="grid h-7 w-7 shrink-0 place-items-center rounded text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-danger disabled:opacity-50">
+          <X size={15} />
+        </button>
+      </Tooltip>
     </div>
   );
 }

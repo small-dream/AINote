@@ -33,7 +33,6 @@ export function NoteTitleField({ notePath, isNewNote, draft, onChange, flush, on
         autoFocus={isNewNote}
         className={`note-title-input field-sizing-content min-w-16 max-w-56 truncate border-b bg-transparent text-[15px] font-semibold tracking-[-0.01em] text-text-primary outline-none placeholder:text-text-tertiary ${error ? "border-danger" : "border-transparent"}`}
         placeholder={t("note.untitled")}
-        title={t("note.title")}
         value={value}
         disabled={pending}
         onChange={(event) => setValue(event.target.value)}

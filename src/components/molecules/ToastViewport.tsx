@@ -2,6 +2,7 @@ import { AlertCircle, CheckCircle2, Info, X } from "lucide-react";
 import { messageOf } from "@/api";
 import { useToastStore, type ToastItem, type ToastTone } from "@/stores/toast.store";
 import { useTranslation } from "@/i18n";
+import { Tooltip } from "@/components/atoms/Tooltip";
 
 const ICONS: Record<ToastTone, typeof AlertCircle> = {
   error: AlertCircle,
@@ -35,9 +36,11 @@ function Toast({ item, onDismiss, closeLabel }: { item: ToastItem; onDismiss: ()
     <div role={item.tone === "error" ? "alert" : "status"} className={`pointer-events-auto flex items-start gap-2 rounded-md border px-3 py-2 text-sm shadow-sm ${TONE_CLASS[item.tone]}`}>
       <Icon size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
       <span className="min-w-0 flex-1 break-words">{messageOf(item.message)}</span>
-      <button type="button" aria-label={closeLabel} title={closeLabel} onClick={onDismiss} className="shrink-0 rounded p-0.5 opacity-75 hover:opacity-100">
-        <X size={15} />
-      </button>
+      <Tooltip content={closeLabel}>
+        <button type="button" aria-label={closeLabel} onClick={onDismiss} className="shrink-0 rounded p-0.5 opacity-75 hover:opacity-100">
+          <X size={15} />
+        </button>
+      </Tooltip>
     </div>
   );
 }

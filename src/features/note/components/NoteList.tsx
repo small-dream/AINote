@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Button } from "@/components/atoms/Button";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import type { NoteMeta } from "@/api/types";
 import {
   useDeleteNoteMutation,
@@ -53,7 +54,7 @@ function NoteListHeader({ onNew }: { onNew: () => void }) {
         <p className="text-[15px] font-semibold">{t("note.all")}</p>
         <p className="mt-0.5 text-xs text-text-tertiary">{t("note.recentSort")}</p>
       </div>
-      <Button aria-label={t("tree.newNote")} title={t("tree.newNote")} variant="primary" className="h-8 px-2.5 text-xs" onClick={onNew}>
+      <Button aria-label={t("tree.newNote")} variant="primary" className="h-8 px-2.5 text-xs" onClick={onNew}>
         + {t("common.create")}
       </Button>
     </header>
@@ -128,20 +129,12 @@ function NoteListItem({ note, active, onSelect, onMove, onDelete }: NoteListItem
         <span className="block truncate">{noteDisplayName(note.title)}</span>
         <span className="mt-0.5 block truncate text-[11px] text-text-tertiary">{formatUpdatedAt(note.updatedAt, locale)}</span>
       </button>
-      <button
-        title={t("note.moving")}
-        className="shrink-0 px-1 text-text-secondary opacity-0 group-hover:opacity-100"
-        onClick={() => onMove(note.path)}
-      >
-        ↗
-      </button>
-      <button
-        title={t("common.delete")}
-        className="shrink-0 px-1 text-text-secondary opacity-0 group-hover:opacity-100"
-        onClick={handleDelete}
-      >
-        ×
-      </button>
+      <Tooltip content={t("note.moving")}>
+        <button className="shrink-0 px-1 text-text-secondary opacity-0 group-hover:opacity-100" onClick={() => onMove(note.path)}>↗</button>
+      </Tooltip>
+      <Tooltip content={t("common.delete")}>
+        <button className="shrink-0 px-1 text-text-secondary opacity-0 group-hover:opacity-100" onClick={handleDelete}>×</button>
+      </Tooltip>
     </div>
   );
 }

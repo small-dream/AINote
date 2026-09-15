@@ -1,5 +1,6 @@
 import { X } from "lucide-react";
 import { Button } from "@/components/atoms/Button";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useTranslation } from "@/i18n";
 import { useBackHandler } from "@/platform/back-navigation";
 import { useConflictMerge } from "../hooks/useConflictMerge";
@@ -70,9 +71,11 @@ function MergeHeader({ conflicts, current, onSelect, keepAll, onClose }: MergeHe
         <Button variant="ghost" className="px-2 text-xs" onClick={() => keepAll(true)}>{t("sync.keepLocalAll")}</Button>
         <Button variant="ghost" className="px-2 text-xs" onClick={() => keepAll(false)}>{t("sync.keepRemoteAll")}</Button>
       </div>
-      <button type="button" aria-label={t("common.cancel")} onClick={onClose} className="shrink-0 rounded p-1 text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary">
-        <X size={16} />
-      </button>
+      <Tooltip content={t("common.close")}>
+        <button type="button" aria-label={t("common.cancel")} onClick={onClose} className="shrink-0 rounded p-1 text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary">
+          <X size={16} />
+        </button>
+      </Tooltip>
     </div>
   );
 }

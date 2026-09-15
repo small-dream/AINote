@@ -1,5 +1,6 @@
 import { FilePenLine, Search, X } from "lucide-react";
 import type { SearchResult } from "@/api/types";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { noteKindOfPath } from "@/features/note/utils/noteKind";
 import { useTranslation } from "@/i18n";
 
@@ -22,15 +23,16 @@ export function TreeSearchInput({ value, onChange }: TreeSearchInputProps) {
         className="tree-search-input min-w-0 flex-1 bg-transparent text-xs text-text-primary outline-none focus-visible:outline-none placeholder:text-text-tertiary"
       />
       {value && (
-        <button
-          type="button"
-          aria-label={t("tree.clearSearch")}
-          title={t("tree.clearSearch")}
-          onClick={() => onChange("")}
-          className="shrink-0 rounded p-0.5 text-text-tertiary transition-colors hover:text-text-secondary"
-        >
-          <X size={13} aria-hidden="true" />
-        </button>
+        <Tooltip content={t("tree.clearSearch")}>
+          <button
+            type="button"
+            aria-label={t("tree.clearSearch")}
+            onClick={() => onChange("")}
+            className="shrink-0 rounded p-0.5 text-text-tertiary transition-colors hover:text-text-secondary"
+          >
+            <X size={13} aria-hidden="true" />
+          </button>
+        </Tooltip>
       )}
     </div>
   );

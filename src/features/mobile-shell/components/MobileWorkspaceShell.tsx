@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState, type ReactNode, type RefObject } from "react";
 import { ArrowLeft, Clock, FolderTree, GitCommitHorizontal, GitGraph, Hash, List, RefreshCw, Search, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useSync } from "@/features/sync/hooks/useSync";
@@ -198,9 +199,11 @@ function MobileBottomNav({ notesActive, favoritesActive, onOpenNotes, onOpenFavo
 
 function MobileIconButton({ icon: Icon, label, onClick, disabled = false, spinning = false }: { icon: LucideIcon; label: string; onClick?: () => void; disabled?: boolean; spinning?: boolean }) {
   return (
-    <button type="button" className="mobile-icon-button" aria-label={label} title={label} onClick={onClick} disabled={disabled}>
-      <Icon size={20} className={spinning ? "animate-spin" : ""} />
-    </button>
+    <Tooltip content={label}>
+      <button type="button" className="mobile-icon-button" aria-label={label} onClick={onClick} disabled={disabled}>
+        <Icon size={20} className={spinning ? "animate-spin" : ""} />
+      </button>
+    </Tooltip>
   );
 }
 

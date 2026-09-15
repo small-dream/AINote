@@ -32,7 +32,6 @@ export function NoteOutlineFloating({ items, open, onToggle, onSelect }: NoteOut
         aria-label={t("note.outline")}
         aria-expanded={visible}
         aria-haspopup="true"
-        title={t("note.outline")}
         className={`note-outline-floating-trigger ${visible ? "is-open" : ""}`}
         onClick={handleToggle}
       >

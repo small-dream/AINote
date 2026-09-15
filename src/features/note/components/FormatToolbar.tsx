@@ -22,6 +22,7 @@ import { insertCodeBlock, insertDivider, insertImage, insertTable } from "../uti
 import { useFormatCommands } from "../hooks/useFormatCommands";
 import { DiagnosticsToolbarButton } from "@/features/diagnostics/components/DiagnosticsToolbarButton";
 import type { DiagnosticIssue } from "@/features/diagnostics/utils/diagnostics";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { ToolbarButton } from "./ToolbarButton";
 import { HeadingDropdown } from "./HeadingDropdown";
 import { useTranslation } from "@/i18n";
@@ -84,10 +85,12 @@ function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (file
     if (files.length > 0) onPicked(files);
   };
   return (
-    <label aria-label={label} title={label} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors duration-120 text-text-secondary hover:bg-bg-tertiary hover:text-text-primary">
-      <Image size={16} />
-      <input type="file" multiple className="hidden" onChange={handleChange} />
-    </label>
+    <Tooltip content={label}>
+      <label aria-label={label} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors duration-120 text-text-secondary hover:bg-bg-tertiary hover:text-text-primary">
+        <Image size={16} />
+        <input type="file" multiple className="hidden" onChange={handleChange} />
+      </label>
+    </Tooltip>
   );
 }
 

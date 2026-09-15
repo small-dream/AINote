@@ -28,7 +28,7 @@ describe("RichTextToolbar", () => {
     const { chainMethods, editor, run } = createEditor("heading");
     render(<RichTextToolbar editor={editor} />);
 
-    fireEvent.click(screen.getByTitle("标题级别"));
+    fireEvent.click(screen.getByRole("button", { name: "标题级别" }));
     fireEvent.click(screen.getByRole("menuitem", { name: "二级标题" }));
 
     expect(chainMethods.toggleHeading).toHaveBeenCalledWith({ level: 2 });

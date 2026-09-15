@@ -45,7 +45,6 @@ export function RepoSwitcher() {
           aria-haspopup="listbox"
           aria-expanded={open}
           aria-label={t("tree.switchRepo")}
-          title={t("tree.switchRepo")}
           disabled={activate.isPending}
           onClick={toggle}
           className="flex w-full min-w-0 items-center gap-1.5 rounded-md border border-border bg-bg-primary px-2 py-1.5 text-left transition-colors hover:border-accent max-md:min-h-9"

@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type ImgHTMLAttributes, type Ref, type RefObject } from "react";
 import { createPortal } from "react-dom";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useTranslation } from "@/i18n";
 import { useBackHandler } from "@/platform/back-navigation";
 
@@ -54,9 +55,11 @@ interface ImageFigureProps {
 
 const ImageFigure = ({ ref, src, alt, label, line, state, onLoad, onError, onOpen, imageProps, errorLabel }: ImageFigureProps & { ref: Ref<HTMLButtonElement> }) => (
   <span className={`markdown-image markdown-image-${state}`} data-line={line} role="group">
-    <button ref={ref} type="button" className="markdown-image-trigger" aria-label={label} disabled={state === "error"} onClick={onOpen}>
-      <img {...imageProps} src={src} alt={alt} loading="lazy" onLoad={onLoad} onError={onError} />
-    </button>
+    <Tooltip content={label}>
+      <button ref={ref} type="button" className="markdown-image-trigger" aria-label={label} disabled={state === "error"} onClick={onOpen}>
+        <img {...imageProps} src={src} alt={alt} loading="lazy" onLoad={onLoad} onError={onError} />
+      </button>
+    </Tooltip>
     {state === "error" ? <span className="markdown-image-error" role="status">{errorLabel}</span> : null}
   </span>
 );
@@ -91,9 +94,11 @@ function ImageLightbox({ src, alt, label, onClose }: { src: string; alt: string;
       }}
     >
       <div className="markdown-image-lightbox-content" role="dialog" aria-modal="true" aria-label={label}>
-        <button type="button" autoFocus className="markdown-image-lightbox-close" aria-label={t("common.close")} onClick={onClose}>
-          <span aria-hidden="true">×</span>
-        </button>
+        <Tooltip content={t("common.close")}>
+          <button type="button" autoFocus className="markdown-image-lightbox-close" aria-label={t("common.close")} onClick={onClose}>
+            <span aria-hidden="true">×</span>
+          </button>
+        </Tooltip>
         <img src={src} alt={alt} />
       </div>
     </div>,

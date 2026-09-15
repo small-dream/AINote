@@ -2,6 +2,7 @@ import { useState, type ReactNode } from "react";
 import { Check, Pencil, Plus, Trash2 } from "lucide-react";
 import type { RepoInfo } from "@/api/types";
 import { Button } from "@/components/atoms/Button";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useSessionStore } from "@/stores/session.store";
 import { useRepoManager } from "../hooks/useRepoManager";
 import { AddRepoDialog } from "./AddRepoDialog";
@@ -125,14 +126,14 @@ function RepoRow({ repo, isActive, activating, onActivate, onRename, onRemove }:
         </div>
         <div className="flex shrink-0 items-center gap-1">
           {!isActive && (
-            <IconButton label={t("repo.setCurrent", { name: repo.name })} title={t("repo.setCurrent", { name: repo.name })} disabled={activating} onClick={onActivate}>
+            <IconButton label={t("repo.setCurrent", { name: repo.name })} disabled={activating} onClick={onActivate}>
               <Check size={15} />
             </IconButton>
           )}
-          <IconButton label={t("repo.rename", { name: repo.name })} title={t("repo.rename", { name: repo.name })} onClick={onRename}>
+          <IconButton label={t("repo.rename", { name: repo.name })} onClick={onRename}>
             <Pencil size={15} />
           </IconButton>
-          <IconButton label={t("repo.remove", { name: repo.name })} title={t("repo.remove", { name: repo.name })} danger onClick={onRemove}>
+          <IconButton label={t("repo.remove", { name: repo.name })} danger onClick={onRemove}>
             <Trash2 size={15} />
           </IconButton>
         </div>
@@ -143,26 +144,26 @@ function RepoRow({ repo, isActive, activating, onActivate, onRename, onRemove }:
 
 interface IconButtonProps {
   label: string;
-  title: string;
   danger?: boolean;
   disabled?: boolean;
   onClick: () => void;
   children: ReactNode;
 }
 
-function IconButton({ label, title, danger, disabled, onClick, children }: IconButtonProps) {
+function IconButton({ label, danger, disabled, onClick, children }: IconButtonProps) {
   const tone = danger ? "hover:text-danger" : "hover:text-text-primary";
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={title}
-      onClick={onClick}
-      disabled={disabled}
-      className={`grid h-7 w-7 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-bg-tertiary disabled:opacity-50 ${tone}`}
-    >
-      {children}
-    </button>
+    <Tooltip content={label}>
+      <button
+        type="button"
+        aria-label={label}
+        onClick={onClick}
+        disabled={disabled}
+        className={`grid h-7 w-7 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-bg-tertiary disabled:opacity-50 ${tone}`}
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }
 

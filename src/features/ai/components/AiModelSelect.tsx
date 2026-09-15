@@ -29,7 +29,6 @@ export function AiModelSelect({ className = "" }: AiModelSelectProps) {
       value={resolvedId ?? ""}
       onChange={(event) => setSelectedId(event.target.value)}
       aria-label={t("ai.modelSelector")}
-      title={options.find((model) => model.id === resolvedId)?.label ?? t("ai.modelSelector")}
       className={`h-9 w-full min-w-0 rounded-md border border-border bg-bg-primary px-3 pr-8 text-sm text-text-primary transition-colors hover:border-text-tertiary focus:border-accent focus:outline-none ${className}`}
     >
       {options.map((model) => (

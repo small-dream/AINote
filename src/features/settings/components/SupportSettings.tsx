@@ -3,6 +3,7 @@ import { type UseQueryResult } from "@tanstack/react-query";
 import { Copy, ExternalLink, ShieldCheck, Trash2 } from "lucide-react";
 import { openExternal, type SupportInfoDto } from "@/api";
 import { Button } from "@/components/atoms/Button";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useTranslation } from "@/i18n";
 import { ExportDiagnosticsButton } from "@/features/support/components/ExportDiagnosticsButton";
 import { useClearLogs, useSetLoggingEnabled, useSupportInfo } from "../hooks/useSupportInfo";
@@ -174,15 +175,16 @@ function IconButton({ label, disabled, onClick, children }: {
   children: ReactNode;
 }) {
   return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-bg-tertiary hover:text-text-primary disabled:opacity-40"
-    >
-      {children}
-    </button>
+    <Tooltip content={label}>
+      <button
+        type="button"
+        aria-label={label}
+        disabled={disabled}
+        onClick={onClick}
+        className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-bg-tertiary hover:text-text-primary disabled:opacity-40"
+      >
+        {children}
+      </button>
+    </Tooltip>
   );
 }

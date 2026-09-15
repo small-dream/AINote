@@ -1,6 +1,7 @@
 import { useTranslation } from "@/i18n";
 import { Modal } from "@/components/molecules/Modal";
 import { Button } from "@/components/atoms/Button";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import type { TranslationKey } from "@/i18n/messages";
 import { useCommitDialog } from "../hooks/useCommitDialog";
 import { STATUS_LETTER } from "../utils/message";
@@ -36,13 +37,11 @@ export function CommitDialog({ repoPath, onClose }: CommitDialogProps) {
             <ul className="divide-y divide-border/60">
               {files.map((file) => (
                 <li key={file.path} className="flex items-center gap-2 px-3 py-1.5 text-sm">
-                  <span
-                    title={t(STATUS_TITLE[file.status])}
-                    className="w-5 shrink-0 text-center font-mono text-xs"
-                    data-commit-status={file.status}
-                  >
-                    {STATUS_LETTER[file.status]}
-                  </span>
+                  <Tooltip content={t(STATUS_TITLE[file.status])}>
+                    <span className="w-5 shrink-0 text-center font-mono text-xs" data-commit-status={file.status}>
+                      {STATUS_LETTER[file.status]}
+                    </span>
+                  </Tooltip>
                   <span className="min-w-0 flex-1 truncate text-text-secondary">{file.path}</span>
                 </li>
               ))}

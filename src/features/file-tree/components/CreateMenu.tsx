@@ -31,7 +31,6 @@ export function CreateMenu({ onCreateNote, onCreateFolder, onImportFiles, onImpo
         type="button"
         ref={triggerRef}
         aria-label={t("create.open")}
-        title={tooltip}
         data-tooltip={tooltip}
         disabled={menu.busy}
         className={`tree-action tree-create-trigger flex items-center justify-center rounded-md text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-accent ${compact ? "h-7 w-7" : "h-8 w-8"}`}

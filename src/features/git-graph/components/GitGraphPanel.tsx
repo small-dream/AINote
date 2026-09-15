@@ -1,4 +1,5 @@
 import { X } from "lucide-react";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 import { useBackHandler } from "@/platform/back-navigation";
@@ -139,9 +140,11 @@ function GraphFileList({ files, commitId, selectedFile, onSelect }: { files: Cha
                   onClick={() => onSelect(file.path)}
                   className={`flex w-full items-center gap-2 px-3 py-2 text-left transition-colors ${file.path === selectedFile ? "bg-accent/10" : "hover:bg-bg-secondary"}`}
                 >
-                  <span title={t(FILE_STATUS_LABEL[file.status])} className="w-5 shrink-0 text-center font-mono text-xs" data-commit-status={file.status}>
-                    {file.status === "added" ? "A" : file.status === "deleted" ? "D" : "M"}
-                  </span>
+                  <Tooltip content={t(FILE_STATUS_LABEL[file.status])}>
+                    <span className="w-5 shrink-0 text-center font-mono text-xs" data-commit-status={file.status}>
+                      {file.status === "added" ? "A" : file.status === "deleted" ? "D" : "M"}
+                    </span>
+                  </Tooltip>
                   <span className="min-w-0 flex-1 truncate text-sm text-text-secondary">{file.path}</span>
                 </button>
               </li>

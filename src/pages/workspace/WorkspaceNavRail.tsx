@@ -1,5 +1,6 @@
 import { lazy, Suspense, useState } from "react";
 import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, GitCommitHorizontal, GitGraph, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import type { SyncController } from "@/features/sync/hooks/useSync";
 import { deriveSyncFailure, deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
 import { useUiStore } from "@/stores/ui.store";
@@ -26,7 +27,6 @@ const NAV_ITEMS = [
 const SYNC_ICON = { synced: CloudCheck, pending: CloudSync, conflict: TriangleAlert, offline: CloudOff } as const;
 const SYNC_COLOR = { synced: "bg-success", pending: "bg-warning", conflict: "bg-danger", offline: "bg-text-secondary" } as const;
 const NAV_BUTTON_CLASS = "group relative grid h-10 w-10 shrink-0 place-items-center rounded-lg text-text-tertiary transition-colors hover:bg-bg-primary/70 hover:text-text-secondary focus-visible:text-text-secondary";
-const NAV_TOOLTIP_CLASS = "pointer-events-none absolute left-full top-1/2 z-50 ml-2 -translate-y-1/2 whitespace-nowrap rounded-md border border-border bg-bg-primary px-2 py-1 text-xs text-text-primary opacity-0 shadow-sm transition-opacity duration-150 group-hover:opacity-100 group-focus-within:opacity-100";
 /** 两级间距：同一分组内 6px（轨道 gap），分组之间再加 6px 共 12px。 */
 const NAV_SECTION_GAP_CLASS = "mt-1.5";
 
@@ -54,7 +54,11 @@ function NavigationItems() {
       {NAV_ITEMS.map(({ key, icon: Icon, sidebarTab: targetTab }, index) => {
         const label = t(key);
         const active = sidebarTab === targetTab;
-        return <button key={key} type="button" aria-label={label} aria-current={active ? "page" : undefined} title={label} onClick={() => setSidebarTab(targetTab)} className={`${NAV_BUTTON_CLASS} ${index === 0 ? NAV_SECTION_GAP_CLASS : ""} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /><span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{label}</span></button>;
+        return (
+          <Tooltip key={key} content={label} placement="right">
+            <button type="button" aria-label={label} aria-current={active ? "page" : undefined} onClick={() => setSidebarTab(targetTab)} className={`${NAV_BUTTON_CLASS} ${index === 0 ? NAV_SECTION_GAP_CLASS : ""} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /></button>
+          </Tooltip>
+        );
       })}
     </>
   );
@@ -63,10 +67,11 @@ function NavigationItems() {
 function SettingsNavButton() {
   const { t } = useTranslation();
   return (
-    <button type="button" aria-label={t("settings.title")} title={t("settings.title")} onClick={() => useUiStore.getState().openSettings()} className={`${NAV_BUTTON_CLASS} mt-auto`}>
-      <Settings size={18} />
-      <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{t("settings.title")}</span>
-    </button>
+    <Tooltip content={t("settings.title")} placement="right">
+      <button type="button" aria-label={t("settings.title")} onClick={() => useUiStore.getState().openSettings()} className={`${NAV_BUTTON_CLASS} mt-auto`}>
+        <Settings size={18} />
+      </button>
+    </Tooltip>
   );
 }
 
@@ -84,17 +89,17 @@ function SyncNavButton({ repoPath, startupSyncing, sync }: WorkspaceNavRailProps
 
   return (
     <>
-      <button
-        type="button"
-        aria-label={label}
-        title={tip}
-        onClick={() => (hasConflict ? setConflictOpen(true) : syncNow.mutate())}
-        disabled={display.busy || (!online && !hasConflict)}
-        className={`group relative grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${SYNC_COLOR[tone]}`}
-      >
-        <Icon size={19} className={display.busy ? "animate-spin" : ""} />
-        <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{tip}</span>
-      </button>
+      <Tooltip content={tip} placement="right">
+        <button
+          type="button"
+          aria-label={label}
+          onClick={() => (hasConflict ? setConflictOpen(true) : syncNow.mutate())}
+          disabled={display.busy || (!online && !hasConflict)}
+          className={`group relative grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${SYNC_COLOR[tone]}`}
+        >
+          <Icon size={19} className={display.busy ? "animate-spin" : ""} />
+        </button>
+      </Tooltip>
       {conflictOpen ? <Suspense fallback={null}><LazyConflictMergeDialog repoPath={repoPath} open onClose={() => setConflictOpen(false)} /></Suspense> : null}
     </>
   );
@@ -107,17 +112,17 @@ function CommitNavButton({ repoPath, sync }: { repoPath: string | null; sync: Sy
   const hasUncommitted = sync.status.hasUncommitted;
   return (
     <>
-      <button
-        type="button"
-        aria-label={t("commit.title")}
-        title={t("commit.title")}
-        onClick={() => setCommitOpen(true)}
-        className={`${NAV_BUTTON_CLASS} ${NAV_SECTION_GAP_CLASS} relative`}
-      >
-        <GitCommitHorizontal size={18} />
-        {hasUncommitted ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-warning" aria-hidden="true" /> : null}
-        <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{t("commit.title")}</span>
-      </button>
+      <Tooltip content={t("commit.title")} placement="right">
+        <button
+          type="button"
+          aria-label={t("commit.title")}
+          onClick={() => setCommitOpen(true)}
+          className={`${NAV_BUTTON_CLASS} ${NAV_SECTION_GAP_CLASS} relative`}
+        >
+          <GitCommitHorizontal size={18} />
+          {hasUncommitted ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-warning" aria-hidden="true" /> : null}
+        </button>
+      </Tooltip>
       {commitOpen ? (
         <Suspense fallback={null}>
           <LazyCommitDialog repoPath={repoPath} onClose={() => setCommitOpen(false)} />
@@ -133,16 +138,16 @@ function GraphNavButton({ repoPath }: { repoPath: string | null }) {
   const [graphOpen, setGraphOpen] = useState(false);
   return (
     <>
-      <button
-        type="button"
-        aria-label={t("graph.title")}
-        title={t("graph.title")}
-        onClick={() => setGraphOpen(true)}
-        className={NAV_BUTTON_CLASS}
-      >
-        <GitGraph size={18} />
-        <span aria-hidden="true" className={NAV_TOOLTIP_CLASS}>{t("graph.title")}</span>
-      </button>
+      <Tooltip content={t("graph.title")} placement="right">
+        <button
+          type="button"
+          aria-label={t("graph.title")}
+          onClick={() => setGraphOpen(true)}
+          className={NAV_BUTTON_CLASS}
+        >
+          <GitGraph size={18} />
+        </button>
+      </Tooltip>
       {graphOpen ? (
         <Suspense fallback={null}>
           <LazyGitGraphPanel repoPath={repoPath} open onClose={() => setGraphOpen(false)} />

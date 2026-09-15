@@ -1,5 +1,6 @@
 import { useEffect } from "react";
 import { ArrowLeft, X } from "lucide-react";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useUiStore } from "@/stores/ui.store";
 import { useBackHandler } from "@/platform/back-navigation";
 import { SETTINGS_SECTIONS } from "../settingsSections";
@@ -58,22 +59,22 @@ function SettingsHeader({ onClose }: { onClose: () => void }) {
         type="button"
         onClick={onClose}
         aria-label={t("settings.back")}
-        title={t("settings.back")}
         className="inline-flex shrink-0 items-center gap-1.5 whitespace-nowrap rounded-md px-2 py-1.5 text-sm text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
       >
         <ArrowLeft size={16} />
         {t("settings.back")}
       </button>
       <h1 id="settings-title" className="min-w-0 truncate text-sm font-semibold text-text-primary">{t("settings.title")}</h1>
-      <button
-        type="button"
-        onClick={onClose}
-        aria-label={t("common.close")}
-        title={t("common.close")}
-        className="settings-close-button ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
-      >
-        <X size={18} />
-      </button>
+      <Tooltip content={t("common.close")}>
+        <button
+          type="button"
+          onClick={onClose}
+          aria-label={t("common.close")}
+          className="settings-close-button ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
+        >
+          <X size={18} />
+        </button>
+      </Tooltip>
     </header>
   );
 }

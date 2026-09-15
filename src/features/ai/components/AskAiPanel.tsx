@@ -1,5 +1,6 @@
 import type { FormEvent } from "react";
 import { Button } from "@/components/atoms/Button";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { Loader2, MessageSquareText, Send, Trash2, X, CornerDownLeft } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -64,12 +65,16 @@ function AskAiHeader({ onClose, onReset }: { onClose: () => void; onReset: () =>
         {t("ai.ask")}
       </h2>
       <div className="flex items-center gap-1">
-        <Button variant="ghost" aria-label={t("ai.clear")} title={t("ai.clear")} className="px-2 py-1" onClick={onReset}>
-          <Trash2 size={14} />
-        </Button>
-        <Button variant="ghost" aria-label={t("common.close")} title={t("common.close")} className="px-2 py-1" onClick={onClose}>
-          <X size={14} />
-        </Button>
+        <Tooltip content={t("ai.clear")}>
+          <Button variant="ghost" aria-label={t("ai.clear")} className="px-2 py-1" onClick={onReset}>
+            <Trash2 size={14} />
+          </Button>
+        </Tooltip>
+        <Tooltip content={t("common.close")}>
+          <Button variant="ghost" aria-label={t("common.close")} className="px-2 py-1" onClick={onClose}>
+            <X size={14} />
+          </Button>
+        </Tooltip>
       </div>
     </div>
   );

@@ -1,5 +1,6 @@
 import { useEffect, useRef, type RefObject } from "react";
 import { AlertCircle, CircleAlert, TriangleAlert } from "lucide-react";
+import { Tooltip } from "@/components/atoms/Tooltip";
 import { useTranslation } from "@/i18n";
 import type { DiagnosticIssue } from "../utils/diagnostics";
 
@@ -18,18 +19,19 @@ export function DiagnosticsToolbarButton({ issues, open, onToggle, onSelect }: D
 
   return (
     <div ref={rootRef} className="diagnostics-toolbar relative">
-      <button
-        type="button"
-        aria-label={t("note.diagnostics")}
-        aria-haspopup="dialog"
-        aria-expanded={open}
-        title={t("note.diagnostics")}
-        className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors duration-120 ${open ? "bg-accent-soft text-accent" : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"}`}
-        onClick={onToggle}
-      >
-        <CircleAlert size={16} aria-hidden="true" />
-        {issues.length > 0 ? <span className="diagnostics-count">{issues.length}</span> : null}
-      </button>
+      <Tooltip content={t("note.diagnostics")}>
+        <button
+          type="button"
+          aria-label={t("note.diagnostics")}
+          aria-haspopup="dialog"
+          aria-expanded={open}
+          className={`relative flex h-8 w-8 shrink-0 items-center justify-center rounded-md transition-colors duration-120 ${open ? "bg-accent-soft text-accent" : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"}`}
+          onClick={onToggle}
+        >
+          <CircleAlert size={16} aria-hidden="true" />
+          {issues.length > 0 ? <span className="diagnostics-count">{issues.length}</span> : null}
+        </button>
+      </Tooltip>
       {open ? (
         <div className="diagnostics-toolbar-panel" role="dialog" aria-label={t("note.diagnostics")}>
           <DiagnosticsList issues={issues} onSelect={onSelect} />
