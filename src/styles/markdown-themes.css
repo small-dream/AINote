@@ -278,7 +278,8 @@
 .workspace-shell.workspace-theme-linked .workspace-nav-rail,
 .workspace-shell.workspace-theme-linked .workspace-sidebar,
 .workspace-shell.workspace-theme-linked .workspace-columns,
-.workspace-shell.workspace-theme-linked .workspace-toolbar {
+.workspace-shell.workspace-theme-linked .workspace-toolbar,
+.workspace-shell.workspace-theme-linked .workspace-todo {
   --bg-primary: var(--workspace-toolbar-bg);
   --bg-secondary: var(--workspace-nav-bg);
   --bg-tertiary: var(--workspace-tertiary-bg);
@@ -297,6 +298,17 @@
 .workspace-shell.workspace-theme-linked .workspace-sidebar {
   --bg-primary: var(--workspace-sidebar-bg);
   --bg-secondary: var(--workspace-sidebar-bg);
+}
+
+/* 待办工作区的清单列等价于目录侧栏：只换侧栏底色，主内容列仍用工具栏底色，
+   保住 Quick Add 卡片与底条的层次（不加这条会两级同色，卡片边界消失）。 */
+.workspace-shell.workspace-theme-linked .workspace-todo-list {
+  --bg-secondary: var(--workspace-sidebar-bg);
+}
+
+/* Quick Add 条再降一级到导航壳表面色：卡片（bg-primary）才能从条上浮起来。 */
+.workspace-shell.workspace-theme-linked .workspace-todo-form {
+  --bg-secondary: var(--workspace-nav-bg);
 }
 
 /* AI 回答使用 Tailwind Typography 的独立灰阶，需显式映射回阅读主题。 */

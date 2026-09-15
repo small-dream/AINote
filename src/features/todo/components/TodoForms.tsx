@@ -72,11 +72,12 @@ export function QuickAdd({ busy, onAdd }: { busy: boolean; onAdd: (draft: QuickA
   }
 
   return (
-    <div className="shrink-0 border-b border-border bg-bg-secondary p-2 sm:p-3">
+    <div className="workspace-todo-form shrink-0 border-b border-border bg-bg-secondary p-2 sm:p-3">
       <div className="overflow-hidden rounded-lg border border-border bg-bg-primary shadow-sm transition-all focus-within:border-accent/70 focus-within:shadow-[0_0_0_3px_var(--accent-soft)] sm:rounded-xl">
         <input
           className="bare-input w-full bg-transparent px-3 pb-2 pt-3 text-base leading-6 text-text-primary outline-none placeholder:text-text-tertiary sm:text-sm"
           aria-label={t("todo.addTask")}
+          placeholder={t("todo.addTaskPlaceholder")}
           value={value}
           disabled={busy}
           onChange={(event) => setValue(event.target.value)}
