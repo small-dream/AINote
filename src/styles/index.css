@@ -41,6 +41,14 @@ input.ai-input:focus-visible { outline: none; }
 input.note-title-input:focus-visible { outline: none; }
 /* 无边框裸输入框（聚焦态由外层容器高亮）：不再叠加全局 accent 外框 */
 input.bare-input:focus-visible { outline: none; }
+textarea.bare-textarea,
+textarea.bare-textarea:focus,
+textarea.bare-textarea:focus-visible,
+textarea.bare-textarea:focus-within {
+  outline: none !important;
+  box-shadow: none !important;
+  border: 0 !important;
+}
 /* 侧边栏目录搜索框：聚焦态由外层容器高亮，输入框本身不再叠加浏览器/全局蓝色外框 */
 .tree-search-input:focus-visible { outline: none; box-shadow: none; }
 ::selection { background: color-mix(in srgb, var(--accent) 20%, transparent); }

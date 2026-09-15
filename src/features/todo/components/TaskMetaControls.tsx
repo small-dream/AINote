@@ -52,7 +52,7 @@ function Chip({ icon: Icon, label, menuLabel, tooltip, active = false, disabled 
           disabled={disabled}
           onMouseDown={(event) => event.preventDefault()}
           onClick={() => setOpen((value) => !value)}
-          className={`flex h-6 max-w-32 items-center gap-1 rounded-md border px-1.5 text-[11px] font-medium transition-colors disabled:opacity-40 ${
+          className={`flex h-9 max-w-40 items-center gap-1.5 rounded-lg border px-2 text-xs font-medium transition-colors disabled:opacity-40 sm:h-6 sm:max-w-32 sm:rounded-md sm:px-1.5 sm:text-[11px] ${
             active
               ? `border-transparent bg-bg-tertiary ${toneClass ?? "text-text-primary"}`
               : "border-transparent text-text-tertiary hover:bg-bg-tertiary hover:text-text-secondary"

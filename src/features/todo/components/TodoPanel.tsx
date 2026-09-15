@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { ChevronDown, ChevronRight } from "lucide-react";
+import { ChevronDown, ChevronRight, ListTodo } from "lucide-react";
 import type { TaskItemDto } from "@/api/types";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
@@ -111,7 +111,13 @@ function TodoBoardContent({ panel, tasks, openCounts, mutations, busy }: TodoBoa
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-1 py-2">
         {tasks.length === 0 ? (
-          <p className="px-3 py-4 text-center text-xs text-text-tertiary">{t("todo.listEmpty")}</p>
+          <div className="flex h-full flex-col items-center justify-center px-6 py-10 text-center">
+            <div className="grid h-10 w-10 place-items-center rounded-xl bg-bg-tertiary text-text-tertiary">
+              <ListTodo size={18} aria-hidden="true" />
+            </div>
+            <p className="mt-3 text-sm font-medium text-text-secondary">{t("todo.listEmpty")}</p>
+            <p className="mt-1 text-xs leading-5 text-text-tertiary">{t("todo.listEmptyHint")}</p>
+          </div>
         ) : (
           sections.map((section) => (
             <TaskGroupView

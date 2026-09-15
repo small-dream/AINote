@@ -22,10 +22,10 @@ export function TaskEditor({ task, busy, onSave, onDelete, onClose }: TaskEditor
   return (
     <>
       <div className="fixed inset-0 z-30 cursor-default" aria-hidden="true" onPointerDown={editor.close} />
-      <div className="relative z-40 mx-1 mb-2 rounded-lg border border-accent/30 bg-bg-primary p-2 shadow-sm">
+      <div className="relative z-40 mx-1 mb-2 rounded-lg border border-accent/30 bg-bg-primary p-3 shadow-sm sm:p-2">
         <input
           autoFocus
-          className="bare-input w-full rounded-md bg-transparent px-1 py-0.5 text-sm text-text-primary outline-none placeholder:text-text-tertiary"
+          className="bare-input w-full rounded-md bg-transparent px-1 py-1 text-base leading-6 text-text-primary outline-none placeholder:text-text-tertiary sm:text-sm"
           value={editor.title}
           aria-label={t("todo.taskTitle")}
           onChange={(event) => editor.setTitle(event.target.value)}
@@ -48,13 +48,14 @@ export function TaskEditor({ task, busy, onSave, onDelete, onClose }: TaskEditor
             onClick={onDelete}
             disabled={busy}
             aria-label={t("todo.deleteTask")}
-            className="grid h-6 w-6 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg text-text-tertiary transition-colors hover:bg-danger/10 hover:text-danger disabled:opacity-50 sm:h-6 sm:w-6 sm:rounded-md"
           >
-            <Trash2 size={13} aria-hidden="true" />
+              <Trash2 size={15} aria-hidden="true" className="sm:hidden" />
+              <Trash2 size={13} aria-hidden="true" className="hidden sm:block" />
           </button>
         </div>
         <textarea
-          className="mt-2 min-h-20 w-full resize-none rounded-md border border-border bg-bg-secondary px-2 py-1.5 text-sm leading-5 text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent"
+          className="bare-textarea mt-2 min-h-24 w-full resize-none rounded-lg bg-transparent px-1 py-2 text-base leading-6 text-text-primary outline-none placeholder:text-text-tertiary focus:outline-none sm:min-h-20 sm:px-1 sm:py-1.5 sm:text-sm"
           value={editor.description}
           placeholder={t("todo.detailsPlaceholder")}
           aria-label={t("todo.details")}

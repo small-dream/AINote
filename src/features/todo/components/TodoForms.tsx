@@ -21,9 +21,9 @@ function DetailsToggle({ open, onToggle }: { open: boolean; onToggle: () => void
       aria-label={t("todo.toggleDetails")}
       aria-expanded={open}
       onClick={onToggle}
-      className={`grid h-6 w-6 shrink-0 place-items-center rounded-md transition-colors hover:bg-bg-tertiary ${open ? "text-accent" : "text-text-tertiary"}`}
+      className={`grid h-9 w-9 shrink-0 place-items-center rounded-lg transition-colors hover:bg-bg-tertiary sm:h-6 sm:w-6 sm:rounded-md ${open ? "text-accent" : "text-text-tertiary"}`}
     >
-      <FileText size={13} strokeWidth={2} aria-hidden="true" />
+      <FileText size={15} strokeWidth={2} aria-hidden="true" />
     </button>
   );
 }
@@ -32,7 +32,7 @@ function DetailsField({ value, disabled, onChange, onSubmit }: { value: string; 
   const { t } = useTranslation();
   return (
     <textarea
-      className="mt-1.5 min-h-20 w-full resize-none rounded-md border border-border bg-bg-secondary px-2 py-1.5 text-sm leading-5 text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent"
+      className="bare-textarea min-h-24 w-full resize-none border-0 bg-transparent px-3 pb-2 pt-2 text-base leading-6 text-text-primary outline-none placeholder:text-text-tertiary focus:outline-none sm:min-h-20 sm:text-sm"
       value={value}
       placeholder={t("todo.detailsPlaceholder")}
       aria-label={t("todo.details")}
@@ -72,18 +72,20 @@ export function QuickAdd({ busy, onAdd }: { busy: boolean; onAdd: (draft: QuickA
   }
 
   return (
-    <div className="shrink-0 border-b border-border p-2">
-      <div className="rounded-lg border border-border bg-bg-primary transition-colors focus-within:border-accent">
+    <div className="shrink-0 border-b border-border bg-bg-secondary p-2 sm:p-3">
+      <div className="overflow-hidden rounded-lg border border-border bg-bg-primary shadow-sm transition-all focus-within:border-accent/70 focus-within:shadow-[0_0_0_3px_var(--accent-soft)] sm:rounded-xl">
         <input
-          className="bare-input w-full bg-transparent px-2.5 pb-1 pt-2 text-sm text-text-primary outline-none placeholder:text-text-tertiary"
-          placeholder={t("todo.addTaskPlaceholder")}
+          className="bare-input w-full bg-transparent px-3 pb-2 pt-3 text-base leading-6 text-text-primary outline-none placeholder:text-text-tertiary sm:text-sm"
           aria-label={t("todo.addTask")}
           value={value}
           disabled={busy}
           onChange={(event) => setValue(event.target.value)}
           onKeyDown={(event) => { if (event.key === "Enter") submit(); }}
         />
-        <div className="flex items-center gap-1 px-1.5 pb-1.5">
+        {detailsOpen ? (
+          <DetailsField value={description} disabled={busy} onChange={setDescription} onSubmit={submit} />
+        ) : null}
+        <div className="flex items-center gap-1 border-t border-border/70 bg-bg-secondary/50 px-2 py-1.5">
           <DueDateChip value={dueDate} onChange={setDueOverride} />
           <PriorityChip value={priority} onChange={setPriorityOverride} />
           <div className="flex-1" />
@@ -93,14 +95,12 @@ export function QuickAdd({ busy, onAdd }: { busy: boolean; onAdd: (draft: QuickA
             aria-label={t("todo.addTask")}
             onClick={submit}
             disabled={!canSubmit}
-            className="grid h-6 w-6 shrink-0 place-items-center rounded-md bg-accent text-white transition-all hover:brightness-95 active:scale-95 disabled:opacity-40"
+            className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-accent text-white shadow-sm transition-all hover:brightness-95 active:scale-95 disabled:opacity-40 sm:h-6.5 sm:w-6.5"
           >
-            <ArrowUp size={13} strokeWidth={2.5} aria-hidden="true" />
+            <ArrowUp size={16} strokeWidth={2.5} aria-hidden="true" className="sm:hidden" />
+            <ArrowUp size={14} strokeWidth={2.5} aria-hidden="true" className="hidden sm:block" />
           </button>
         </div>
-        {detailsOpen ? (
-          <DetailsField value={description} disabled={busy} onChange={setDescription} onSubmit={submit} />
-        ) : null}
       </div>
     </div>
   );
@@ -129,9 +129,9 @@ export function EmptyLists({ busy, onCreate }: { busy: boolean; onCreate: (name:
       </div>
       <p className="mt-3 text-sm font-medium text-text-primary">{t("todo.emptyTitle")}</p>
       <p className="mt-1 text-xs leading-5 text-text-secondary">{t("todo.emptyHint")}</p>
-      <div className="mt-4 w-full max-w-56">
+      <div className="mt-4 w-full max-w-72 sm:max-w-56">
         <input
-          className="w-full rounded-md border border-border bg-bg-primary px-2.5 py-1.5 text-sm text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent"
+          className="h-11 w-full rounded-lg border border-border bg-bg-primary px-3 text-base text-text-primary outline-none placeholder:text-text-tertiary focus:border-accent sm:h-9 sm:rounded-md sm:px-2.5 sm:text-sm"
           placeholder={t("todo.listNamePlaceholder")}
           aria-label={t("todo.listNamePlaceholder")}
           value={value}
@@ -143,7 +143,7 @@ export function EmptyLists({ busy, onCreate }: { busy: boolean; onCreate: (name:
           type="button"
           onClick={submit}
           disabled={busy}
-          className="mt-2 w-full rounded-md bg-accent px-3 py-1.5 text-sm text-white transition-colors hover:brightness-95 disabled:opacity-50"
+          className="mt-2 h-10 w-full rounded-lg bg-accent px-3 text-sm text-white transition-colors hover:brightness-95 disabled:opacity-50 sm:rounded-md sm:py-1.5 sm:text-sm"
         >
           {t("todo.createFirstList")}
         </button>

@@ -52,6 +52,7 @@ const zhCN = {
   "todo.focusTasks": "重点任务",
   "todo.noFocusTasks": "当前没有逾期、今天或高优先级任务。",
   "todo.noUpcomingTasks": "当前没有带日期的未来任务。",
+  "todo.listEmptyHint": "在上方输入标题，日期和优先级会自动识别。",
 } as const;
 const enUS: Record<keyof typeof zhCN, string> = {
 
@@ -106,6 +107,7 @@ const enUS: Record<keyof typeof zhCN, string> = {
   "todo.focusTasks": "Focus",
   "todo.noFocusTasks": "No overdue, today, or high-priority tasks.",
   "todo.noUpcomingTasks": "No upcoming dated tasks.",
+  "todo.listEmptyHint": "Add a title above — due dates and priority are parsed automatically.",
 };
 
 export type TranslationKey = keyof typeof zhCN;

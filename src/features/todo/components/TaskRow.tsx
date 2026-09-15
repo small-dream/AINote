@@ -41,16 +41,17 @@ export function DueBadge({ dueDate, done }: { dueDate: string; done: boolean }) 
 export function TaskRow({ task, onToggle, onOpenEditor }: TaskRowProps) {
   const { t } = useTranslation();
   return (
-    <div className="flex items-center gap-2 rounded-md px-2 py-1.5 transition-colors hover:bg-bg-tertiary">
+    <div className="flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-bg-tertiary sm:min-h-0 sm:gap-2 sm:rounded-md sm:px-2 sm:py-1.5">
       <button
         type="button"
         role="checkbox"
         aria-checked={task.done}
         aria-label={task.title}
         onClick={onToggle}
-        className={`grid h-4.5 w-4.5 shrink-0 place-items-center rounded-full border transition-colors ${task.done ? "border-accent bg-accent text-white" : "border-text-tertiary hover:border-accent"}`}
+        className={`grid h-6 w-6 shrink-0 place-items-center rounded-full border transition-colors sm:h-4.5 sm:w-4.5 ${task.done ? "border-accent bg-accent text-white" : "border-text-tertiary hover:border-accent"}`}
       >
-        {task.done ? <Check size={11} strokeWidth={3} aria-hidden="true" /> : null}
+        <Check size={13} strokeWidth={3} aria-hidden="true" className="sm:hidden" />
+        <Check size={11} strokeWidth={3} aria-hidden="true" className="hidden sm:block" />
       </button>
       <button
         type="button"
@@ -58,12 +59,14 @@ export function TaskRow({ task, onToggle, onOpenEditor }: TaskRowProps) {
         className="flex min-w-0 flex-1 items-center gap-2 text-left"
       >
         <span className="min-w-0 flex-1">
-          <span className={`block truncate text-sm ${task.done ? "text-text-tertiary line-through" : "text-text-primary"}`}>
+          <span className={`block truncate text-base ${task.done ? "text-text-tertiary line-through" : "text-text-primary"} sm:text-sm`}>
             {task.title}
           </span>
           {task.description ? (
-            <span className="mt-0.5 block truncate text-xs text-text-tertiary">{task.description}</span>
-          ) : null}
+              <span className="mt-0.5 block truncate text-sm leading-5 text-text-tertiary sm:mt-0.5 sm:text-xs">
+                {task.description}
+              </span>
+            ) : null}
         </span>
         {task.dueDate ? <DueBadge dueDate={task.dueDate} done={task.done} /> : null}
         {task.priority !== "none" ? (

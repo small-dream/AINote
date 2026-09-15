@@ -22,7 +22,7 @@ interface ListBarProps {
 }
 
 const MENU_CLASS = "fixed z-50 rounded-xl border border-border bg-bg-primary p-1 shadow-xl";
-const ACTION_CLASS = "grid h-6 w-6 shrink-0 place-items-center rounded-md text-text-tertiary transition-colors hover:bg-bg-tertiary hover:text-text-primary disabled:opacity-50";
+const ACTION_CLASS = "grid h-9 w-9 shrink-0 place-items-center rounded-lg text-text-tertiary transition-colors hover:bg-bg-tertiary hover:text-text-primary disabled:opacity-50 sm:h-6 sm:w-6 sm:rounded-md";
 const MENU_ITEM_CLASS = "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-left text-sm transition-colors";
 
 /** 清单选择器：当前清单下拉切换 + 新建 / 重命名 / 删除（删除二次确认）。 */
@@ -53,18 +53,21 @@ export function ListBar({ lists, counts, activeListId, busy, onSelect, onCreate,
             aria-haspopup="menu"
             aria-expanded={menuOpen}
             onClick={() => setMenuOpen((value) => !value)}
-            className="flex h-7 max-w-44 items-center gap-1.5 rounded-md px-1.5 text-sm font-medium text-text-primary transition-colors hover:bg-bg-tertiary"
+            className="flex h-9 max-w-44 items-center gap-1.5 rounded-lg px-2 text-base font-medium text-text-primary transition-colors hover:bg-bg-tertiary sm:h-7 sm:gap-1.5 sm:px-1.5 sm:text-sm"
           >
-            <ListTodo size={13} aria-hidden="true" className="shrink-0 text-text-tertiary" />
+            <ListTodo size={15} aria-hidden="true" className="shrink-0 text-text-tertiary sm:hidden" />
+            <ListTodo size={13} aria-hidden="true" className="hidden shrink-0 text-text-tertiary sm:block" />
             <span className="truncate">{activeList?.name ?? t("todo.title")}</span>
-            <ChevronDown size={12} aria-hidden="true" className="shrink-0 text-text-tertiary" />
+            <ChevronDown size={14} aria-hidden="true" className="shrink-0 text-text-tertiary sm:hidden" />
+            <ChevronDown size={12} aria-hidden="true" className="hidden shrink-0 text-text-tertiary sm:block" />
           </button>
         </div>
       )}
       <div className="flex-1" />
       <Tooltip content={t("todo.newList")} placement="bottom" align="end">
         <button type="button" aria-label={t("todo.newList")} onClick={() => setEditing("creating")} disabled={busy} className={ACTION_CLASS}>
-          <Plus size={14} aria-hidden="true" />
+          <Plus size={15} strokeWidth={2} aria-hidden="true" className="sm:hidden" />
+          <Plus size={14} aria-hidden="true" className="hidden sm:block" />
         </button>
       </Tooltip>
       {activeList ? (
@@ -173,7 +176,7 @@ function ListNameInput({ initial, onSubmit, onCancel }: { initial: string; onSub
   return (
     <input
       autoFocus
-      className="h-7 w-36 min-w-0 rounded-md border border-accent bg-bg-primary px-2 py-1 text-sm text-text-primary outline-none"
+          className="h-11 w-40 min-w-0 rounded-lg border border-accent bg-bg-primary px-3 text-base text-text-primary outline-none sm:h-7 sm:w-36 sm:rounded-md sm:px-2 sm:text-sm"
       placeholder={t("todo.listNamePlaceholder")}
       aria-label={t("todo.listNamePlaceholder")}
       value={value}
