@@ -1,6 +1,6 @@
 import type { PropsWithChildren, ReactNode } from "react";
 
-type TooltipPlacement = "top" | "bottom" | "right";
+export type TooltipPlacement = "top" | "bottom" | "right";
 
 interface TooltipProps extends PropsWithChildren {
   content: ReactNode;

@@ -19,7 +19,7 @@ export function DiagnosticsToolbarButton({ issues, open, onToggle, onSelect }: D
 
   return (
     <div ref={rootRef} className="diagnostics-toolbar relative">
-      <Tooltip content={t("note.diagnostics")}>
+      <Tooltip content={t("note.diagnostics")} placement="bottom">
         <button
           type="button"
           aria-label={t("note.diagnostics")}

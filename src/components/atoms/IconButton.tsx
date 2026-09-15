@@ -1,6 +1,6 @@
 import type { ButtonHTMLAttributes } from "react";
 import type { LucideIcon } from "lucide-react";
-import { Tooltip } from "./Tooltip";
+import { Tooltip, type TooltipPlacement } from "./Tooltip";
 
 type IconButtonSize = "sm" | "md";
 
@@ -9,17 +9,18 @@ interface IconButtonProps extends Omit<ButtonHTMLAttributes<HTMLButtonElement>, 
   label: string;
   size?: IconButtonSize;
   active?: boolean;
+  tooltipPlacement?: TooltipPlacement;
 }
 
 /** 工具栏图标按钮：固定触控尺寸，统一图标、状态与焦点反馈。 */
-export function IconButton({ icon: Icon, label, size = "md", active, className = "", ...rest }: IconButtonProps) {
+export function IconButton({ icon: Icon, label, size = "md", active, tooltipPlacement = "top", className = "", ...rest }: IconButtonProps) {
   const dimension = size === "sm" ? "h-8 w-8" : "h-9 w-9";
   const iconSize = size === "sm" ? 16 : 18;
   const state = active
     ? "border-accent/30 bg-accent-soft text-accent"
     : "border-transparent text-text-secondary hover:border-border hover:bg-bg-secondary hover:text-text-primary";
   return (
-    <Tooltip content={label}>
+    <Tooltip content={label} placement={tooltipPlacement}>
       <button
         type="button"
         aria-label={label}

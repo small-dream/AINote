@@ -32,7 +32,7 @@ export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
   const current = OPTIONS.find((o) => o.level > 0 && active.has(`h${o.level}`)) ?? OPTIONS[0];
   return (
     <div ref={rootRef} className="relative">
-      <Tooltip content={t("note.headingLevel")}>
+      <Tooltip content={t("note.headingLevel")} placement="bottom">
         <button
           type="button"
           aria-label={t("note.headingLevel")}

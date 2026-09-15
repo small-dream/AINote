@@ -55,6 +55,7 @@ export function ToolbarOverflowMenu({ richText, hasConvert, isPdfAvailable, onEx
       <IconButton
         icon={Ellipsis}
         label={t("note.more")}
+        tooltipPlacement="bottom"
         active={open}
         aria-haspopup="menu"
         aria-expanded={open}

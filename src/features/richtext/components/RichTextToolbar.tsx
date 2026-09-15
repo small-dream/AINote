@@ -51,7 +51,7 @@ function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (file
     if (files.length > 0) onPicked(files);
   };
   return (
-    <Tooltip content={label}>
+    <Tooltip content={label} placement="bottom">
       <label aria-label={label} className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-transparent text-text-secondary transition-[background-color,border-color,color,transform] duration-150 hover:border-border hover:bg-bg-tertiary hover:text-text-primary active:scale-[0.96]">
         <ImageIcon size={16} strokeWidth={1.9} aria-hidden="true" />
         <input type="file" accept="image/*" multiple className="hidden" onChange={handleChange} />
@@ -94,7 +94,7 @@ function ToolbarButton({ icon, label, active, disabled, onClick }: { icon: Edito
   const state = active ? "border-accent/30 bg-accent-soft text-accent" : "border-transparent text-text-secondary hover:border-border hover:bg-bg-tertiary hover:text-text-primary";
   const Icon = icon;
   return (
-    <Tooltip content={label}>
+    <Tooltip content={label} placement="bottom">
       <button type="button" aria-label={label} aria-pressed={active} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={onClick} className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 ${state}`}>
         <Icon size={16} strokeWidth={1.9} aria-hidden="true" />
       </button>

@@ -115,7 +115,7 @@ function SaveStatus({ saving, dirty }: { saving: boolean; dirty: boolean }) {
  * 工具条图标按钮：统一直观尺寸，整套图标选用近似笔画/占位深度的字形，观感一致。
  */
 function ToolbarIconButton({ icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
-  return <IconButton icon={icon} label={label} onClick={onClick} />;
+  return <IconButton icon={icon} label={label} tooltipPlacement="bottom" onClick={onClick} />;
 }
 
 function ToolbarDivider() {

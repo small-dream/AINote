@@ -12,7 +12,7 @@ interface ToolbarButtonProps {
 /** 格式工具栏按钮：统一 30px 命中区，hover/激活双态。 */
 export function ToolbarButton({ icon: Icon, label, shortcut, active = false, onClick }: ToolbarButtonProps) {
   return (
-    <Tooltip content={shortcut ? `${label} ${shortcut}` : label}>
+    <Tooltip content={shortcut ? `${label} ${shortcut}` : label} placement="bottom">
       <button
         type="button"
         aria-label={label}

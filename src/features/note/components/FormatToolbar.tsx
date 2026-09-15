@@ -85,7 +85,7 @@ function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (file
     if (files.length > 0) onPicked(files);
   };
   return (
-    <Tooltip content={label}>
+    <Tooltip content={label} placement="bottom">
       <label aria-label={label} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors duration-120 text-text-secondary hover:bg-bg-tertiary hover:text-text-primary">
         <Image size={16} />
         <input type="file" multiple className="hidden" onChange={handleChange} />

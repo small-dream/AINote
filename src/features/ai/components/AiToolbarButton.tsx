@@ -23,6 +23,7 @@ export function AiToolbarButton({ onOpen, disabled, compact = false }: AiToolbar
       icon={Wand2}
       label={label}
       size={compact ? "sm" : "md"}
+      tooltipPlacement="bottom"
       onClick={action}
       disabled={disabled}
     />

@@ -23,6 +23,7 @@ export function NoteThemePicker() {
       <IconButton
         icon={Palette}
         label={t("note.theme")}
+        tooltipPlacement="bottom"
         active={open}
         aria-haspopup="menu"
         aria-expanded={open}

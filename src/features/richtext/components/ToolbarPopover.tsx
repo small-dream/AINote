@@ -36,7 +36,7 @@ export function ToolbarPopover({ label, icon: Icon, text, active = false, align 
 
   return (
     <div ref={containerRef} className="relative shrink-0">
-      <Tooltip content={label}>
+      <Tooltip content={label} placement="bottom">
         <button type="button" aria-expanded={open} aria-haspopup="menu" aria-label={label} className={`inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-md border px-1.5 text-xs font-medium transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] ${triggerState(active)}`} onMouseDown={(event) => event.preventDefault()} onClick={() => setOpen((value) => !value)}>
           {Icon ? <Icon size={16} strokeWidth={1.9} aria-hidden="true" /> : null}
           {text ? <span>{text}</span> : null}
