@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { ChevronDown, ChevronRight } from "lucide-react";
 import type { TaskItemDto } from "@/api/types";
 import { useTranslation } from "@/i18n";
@@ -18,7 +18,7 @@ import { groupTasks, localDateString, type TaskGroup, type TaskGroupSection } fr
 import { ListBar } from "./ListBar";
 import { TaskRow } from "./TaskRow";
 import { TaskEditor, type TaskDraft } from "./TaskEditor";
-import { EmptyLists, QuickAdd } from "./TodoForms";
+import { EmptyLists, QuickAdd, type QuickAddDraft } from "./TodoForms";
 
 const GROUP_LABEL_KEY: Record<TaskGroup, TranslationKey> = {
   overdue: "todo.groupOverdue",
@@ -54,6 +54,13 @@ export function TodoPanel({ repoPath }: { repoPath: string | null }) {
   };
   const busy = Object.values(mutations).some((mutation) => mutation.isPending);
   const tasks = board?.tasks.filter((task) => task.listId === panel.activeListId) ?? [];
+  const openCounts = useMemo(() => {
+    const counts: Record<string, number> = {};
+    for (const task of board?.tasks ?? []) {
+      if (!task.done) counts[task.listId] = (counts[task.listId] ?? 0) + 1;
+    }
+    return counts;
+  }, [board]);
 
   return (
     <div className="flex h-full min-h-0 flex-col">
@@ -66,7 +73,7 @@ export function TodoPanel({ repoPath }: { repoPath: string | null }) {
       ) : panel.lists.length === 0 ? (
         <EmptyLists busy={mutations.createList.isPending} onCreate={(name) => mutations.createList.mutate(name)} />
       ) : (
-        <TodoBoardContent panel={panel} tasks={tasks} mutations={mutations} busy={busy} />
+        <TodoBoardContent panel={panel} tasks={tasks} openCounts={openCounts} mutations={mutations} busy={busy} />
       )}
     </div>
   );
@@ -75,11 +82,12 @@ export function TodoPanel({ repoPath }: { repoPath: string | null }) {
 interface TodoBoardContentProps {
   panel: ReturnType<typeof useTodoPanel>;
   tasks: TaskItemDto[];
+  openCounts: Record<string, number>;
   mutations: TaskMutations;
   busy: boolean;
 }
 
-function TodoBoardContent({ panel, tasks, mutations, busy }: TodoBoardContentProps) {
+function TodoBoardContent({ panel, tasks, openCounts, mutations, busy }: TodoBoardContentProps) {
   const { t } = useTranslation();
   const sections = groupTasks(tasks, localDateString(new Date()));
 
@@ -87,6 +95,7 @@ function TodoBoardContent({ panel, tasks, mutations, busy }: TodoBoardContentPro
     <>
       <ListBar
         lists={panel.lists}
+        counts={openCounts}
         activeListId={panel.activeListId}
         busy={busy}
         onSelect={panel.selectList}
@@ -95,7 +104,10 @@ function TodoBoardContent({ panel, tasks, mutations, busy }: TodoBoardContentPro
         onDelete={(listId) => mutations.deleteList.mutate(listId)}
       />
       {panel.activeListId ? (
-        <QuickAdd busy={busy} onAdd={(title) => mutations.createTask.mutate({ listId: panel.activeListId ?? "", title, dueDate: null, priority: "none", remindAt: null })} />
+        <QuickAdd
+          busy={busy}
+          onAdd={(draft: QuickAddDraft) => mutations.createTask.mutate({ listId: panel.activeListId ?? "", ...draft, remindAt: null })}
+        />
       ) : null}
       <div className="min-h-0 flex-1 overflow-y-auto px-1 py-2">
         {tasks.length === 0 ? (
@@ -146,23 +158,23 @@ function TaskGroupView({ section, panel, busy, onToggle, onSave, onDelete }: Tas
         <span className="normal-case">{section.tasks.length}</span>
       </button>
       {expanded ? section.tasks.map((task) => (
-        <div key={task.id}>
-          <TaskRow
+        panel.editingTaskId === task.id ? (
+          <TaskEditor
+            key={`${task.id}:${task.updatedAt}`}
             task={task}
-            editing={panel.editingTaskId === task.id}
+            busy={busy}
+            onSave={(draft) => onSave(task, draft)}
+            onDelete={() => onDelete(task)}
+            onClose={panel.closeEditor}
+          />
+        ) : (
+          <TaskRow
+            key={task.id}
+            task={task}
             onToggle={() => onToggle(task)}
             onOpenEditor={() => panel.toggleEditing(task.id)}
           />
-          {panel.editingTaskId === task.id ? (
-            <TaskEditor
-              key={`${task.id}:${task.updatedAt}`}
-              task={task}
-              busy={busy}
-              onSave={(draft) => onSave(task, draft)}
-              onDelete={() => onDelete(task)}
-            />
-          ) : null}
-        </div>
+        )
       )) : null}
     </section>
   );

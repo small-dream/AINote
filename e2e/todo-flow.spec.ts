@@ -17,13 +17,15 @@ test.describe("Todo 清单（桌面壳）", () => {
     await page.getByRole("button", { name: "创建清单" }).click();
     await expect(page.getByRole("button", { name: "工作" })).toBeVisible();
 
-    const quickAdd = page.getByPlaceholder("添加任务，Enter 创建");
+    const quickAdd = page.getByPlaceholder(/添加任务/);
     await quickAdd.fill("写周报");
     await quickAdd.press("Enter");
     await expect(page.getByText("写周报")).toBeVisible();
 
     await page.getByText("写周报").click();
-    await page.locator('input[type="date"]').fill("2026-09-20");
+    await page.locator("section").getByRole("button", { name: "设置截止日期" }).click();
+    await page.getByLabel("选择日期").fill("2026-09-20");
+    await page.keyboard.press("Escape");
     await expect(page.getByText("09-20")).toBeVisible();
 
     await page.getByRole("checkbox", { name: "写周报" }).click();
