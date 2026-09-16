@@ -82,3 +82,6 @@ export interface E2eRecord {
   cmd: string;
   args: Record<string, unknown>;
 }
+
+/** mock 加密库状态机（与 Rust `VaultState` 一致）：absent = 未建库。 */
+export type E2eVaultState = "absent" | "locked" | "unlocked";

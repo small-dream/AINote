@@ -1,11 +1,14 @@
 /** E2E mock：笔记读写与目录树（note_tree / wiki 索引）的内存实现，写入即登记待提交变更。 */
 import { markWorkspaceDirty, type DirtyTrackedStore } from "./dirty";
+import { isEnvelopeText, unwrapEnvelope, wrapEnvelope } from "./envelope";
+import type { E2eVaultState } from "./types";
 
 export type E2eNoteMap = Map<string, { content: string; kind: string }>;
 
-/** 笔记命令只依赖「笔记表 + 待提交记账」，与 backend 的完整 mock store 解耦。 */
+/** 笔记命令依赖「笔记表 + 待提交记账 + 加密库状态机」，与 backend 的完整 mock store 解耦。 */
 export interface NoteStore extends DirtyTrackedStore {
   notes: E2eNoteMap;
+  vaultState: E2eVaultState;
 }
 
 interface NoteCommandContext {
@@ -45,8 +48,28 @@ function displayName(path: string): string {
   return fileName(path).replace(/\.(md|ainote)$/i, "");
 }
 
-function metaOf(path: string, note: { content: string; kind: string }) {
-  return { path, kind: note.kind, title: titleOf(note.content, displayName(path)), updatedAt: Math.floor(Date.now() / 1000), encrypted: false };
+/** 加密态由内容信封首行派生（与 Rust `is_envelope_file` 同口径），信封内容标题回退为文件名。 */
+export function metaOf(path: string, note: { content: string; kind: string }) {
+  return { path, kind: note.kind, title: titleOf(note.content, displayName(path)), updatedAt: Math.floor(Date.now() / 1000), encrypted: isEnvelopeText(note.content) };
+}
+
+/** read_note 的加密语义（Rust note_service::read_note）：锁定态返回 locked + 空内容，解锁态返回解密明文。 */
+function readNoteContent(path: string, note: { content: string; kind: string }, vaultState: E2eVaultState) {
+  if (!isEnvelopeText(note.content)) return { path, kind: note.kind, content: note.content, locked: false, encrypted: false };
+  if (vaultState !== "unlocked") return { path, kind: note.kind, content: "", locked: true, encrypted: true };
+  return { path, kind: note.kind, content: unwrapEnvelope(note.content), locked: false, encrypted: true };
+}
+
+/** update_note 的信封语义（Rust note_content::write_text）：信封笔记继续以密文落盘，锁定态拒绝写入。 */
+function writeNoteContent(store: NoteStore, note: { content: string; kind: string }, content: string): void {
+  if (isEnvelopeText(note.content)) {
+    if (store.vaultState !== "unlocked") {
+      throw { code: "VAULT_9001", kind: "Permission", message: "加密笔记需要先解锁仓库密钥", retriable: false };
+    }
+    note.content = wrapEnvelope(content);
+    return;
+  }
+  note.content = content;
 }
 
 interface E2eTreeNode {
@@ -79,12 +102,11 @@ export const noteCommandHandlers: Record<string, NoteCommandHandler> = {
   list_notes: (_args, ctx) => [...ctx.store.notes.entries()].map(([path, note]) => metaOf(path, note)),
   read_note: (args, ctx) => {
     const path = String(args.path ?? "");
-    const note = needNote(ctx.store.notes, path);
-    return { path, kind: note.kind, content: note.content };
+    return readNoteContent(path, needNote(ctx.store.notes, path), ctx.store.vaultState);
   },
   update_note: (args, ctx) => {
     const path = String(args.path ?? "");
-    needNote(ctx.store.notes, path).content = String(args.content ?? "");
+    writeNoteContent(ctx.store, needNote(ctx.store.notes, path), String(args.content ?? ""));
     markWorkspaceDirty(ctx.store, path);
     return null;
   },

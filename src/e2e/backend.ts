@@ -60,6 +60,7 @@ function createStore(state: E2eState): MockStore {
     taskBoard: state.taskBoard ?? { schemaVersion: 3, tasks: [] },
     taskSeq: 1,
     vaultState: "absent",
+    passphrase: null,
   };
 }
 
