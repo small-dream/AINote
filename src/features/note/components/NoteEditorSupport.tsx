@@ -77,13 +77,17 @@ export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, o
   // 首次打开后才挂载（触发懒加载分块），之后保持挂载以保留问答历史。
   const [askAiMounted, setAskAiMounted] = useState(askAiOpen);
   if (askAiOpen && !askAiMounted) setAskAiMounted(true);
+  // 决策③：加密笔记（含解锁态）不提供任何 AI 入口；切到加密笔记时静默关闭残留的全局问答面板。
+  useEffect(() => {
+    if (encrypted) closeAskAi();
+  }, [encrypted, closeAskAi]);
   return <div className="flex h-full min-h-0 flex-col bg-bg-primary">
     <EditorToolbar path={notePath} mode={mode} compact={compact} richText={richText} saving={saving} dirty={dirty} saveError={saveError} saveErrorCode={saveErrorCode} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={onRequestConvertToRichText} onConvertToMarkdown={onConvertToMarkdown} onExportPdf={() => void pdf.request()} onExportMarkdown={onExportMarkdown} {...(richText ? {} : { onAi: ai.openMenu })} aiBlocked={encrypted} historyBlocked={encrypted} onToggleEncryption={encryption.available ? encryption.toggle : undefined} encryptionAction={encryption.action} isNewNote={notePath === createdPath} draft={draft} onTitleChange={onChange} onFlush={flush} onRenamed={onOpenNote} />
     <ConvertNoteDialog open={richTextDialog.open} losses={richTextDialog.losses} converting={richTextDialog.converting} onCancel={onCancelConvertToRichText} onConfirm={onConfirmConvertToRichText} />
     <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
     <PreviewContextMenu menu={previewMenu} noteTheme={noteTheme} />
-    <AiWriteControls ai={ai} canSummarize={!richText} canSuggest={!richText} suggest={suggest} />
-    {askAiMounted ? <Suspense fallback={null}><LazyAskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} /></Suspense> : null}
+    {encrypted ? null : <AiWriteControls ai={ai} canSummarize={!richText} canSuggest={!richText} suggest={suggest} />}
+    {!encrypted && askAiMounted ? <Suspense fallback={null}><LazyAskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} /></Suspense> : null}
     {history.open ? <Suspense fallback={null}><LazyHistoryPanel repoPath={repoPath} path={notePath} open onClose={history.closeHistory} onRestored={history.onRestored} /></Suspense> : null}
     <WikiPanel
       repoPath={repoPath}

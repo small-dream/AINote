@@ -23,6 +23,14 @@ pub(crate) fn open(path: &str) -> Result<Repository, AppError> {
     Repository::open(path).map_err(to_git)
 }
 
+/// 读取 blob 并判定首行是否为加密信封 magic（复用 domain 纯函数，只认首行）。
+pub(crate) fn blob_is_envelope(repo: &Repository, oid: git2::Oid) -> Result<bool, AppError> {
+    let blob = repo.find_blob(oid).map_err(to_git)?;
+    Ok(crate::domain::vault::is_envelope(
+        &String::from_utf8_lossy(blob.content()),
+    ))
+}
+
 /// 提交签名：优先读仓库 config，缺省回退到应用内置身份。
 pub(crate) fn signature(repo: &Repository) -> Result<Signature<'static>, AppError> {
     let cfg = repo.config().map_err(to_git)?;
@@ -211,6 +219,10 @@ impl GitBackend for Git2Backend {
 
     fn restore_file(&self, path: &str, file: &str, commit_id: &str) -> Result<(), AppError> {
         git2_history::restore_file(path, file, commit_id)
+    }
+
+    fn history_contains_envelope(&self, path: &str, file: &str) -> Result<bool, AppError> {
+        git2_history::history_contains_envelope(path, file)
     }
 }
 

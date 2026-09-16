@@ -10,22 +10,31 @@ type MarkdownContextMenu = ReturnType<typeof useMarkdownContextMenu>;
 interface MarkdownContextMenuProps {
   menu: MarkdownContextMenu;
   noteTheme: NoteTheme;
+  /** 加密笔记：不渲染 AI 菜单项（决策③，含解锁态，不提供入口） */
+  aiBlocked?: boolean;
 }
 
 /** Markdown 右键菜单：先给剪贴板和高频格式，再进入完整 AI 写作面板 */
-export function MarkdownContextMenu({ menu, noteTheme }: MarkdownContextMenuProps) {
+export function MarkdownContextMenu({ menu, noteTheme, aiBlocked = false }: MarkdownContextMenuProps) {
   const { t } = useTranslation();
   const items: ContextMenuItem[] = [
     ...clipboardItems(menu, t),
     { kind: "separator", key: "clipboard-separator" },
     ...formatItems(menu, Boolean(menu.position?.hasSelection), t),
-    { kind: "separator", key: "format-separator" },
-    { key: "ai", icon: Sparkles, label: t("ai.actionTitle"), onSelect: menu.openAi },
+    ...aiItems(menu, t, aiBlocked),
   ];
   return <EditorContextMenu position={menu.position} label={t("editor.contextMenu")} items={items} noteTheme={noteTheme} onClose={menu.close} />;
 }
 
 type ContextMenuTranslator = ReturnType<typeof useTranslation>["t"];
+
+function aiItems(menu: MarkdownContextMenu, t: ContextMenuTranslator, aiBlocked: boolean): ContextMenuItem[] {
+  if (aiBlocked) return [];
+  return [
+    { kind: "separator", key: "format-separator" },
+    { key: "ai", icon: Sparkles, label: t("ai.actionTitle"), onSelect: menu.openAi },
+  ];
+}
 
 function clipboardItems(menu: MarkdownContextMenu, t: ContextMenuTranslator): ContextMenuItem[] {
   return [

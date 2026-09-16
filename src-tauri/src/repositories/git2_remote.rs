@@ -8,10 +8,12 @@ use git2::{
 use crate::domain::error::AppError;
 use crate::domain::remote::RemoteCredential;
 use crate::domain::sync::ConflictFile;
+use crate::domain::vault::is_envelope;
 use crate::repositories::note_files::validate_rel_path;
+use crate::repositories::vault_files;
 
 use super::ca_bundle;
-use super::git2_backend::{current_branch, open, signature, to_git};
+use super::git2_backend::{blob_is_envelope, current_branch, open, signature, to_git};
 use super::git2_error::to_sync;
 
 fn callbacks(cred: &RemoteCredential) -> RemoteCallbacks<'static> {
@@ -175,11 +177,57 @@ pub fn resolve_conflict_file(path: &str, rel: &str, content: &str) -> Result<boo
         .workdir()
         .ok_or_else(|| AppError::Repo("no workdir".into()))?
         .join(&rel);
+    reject_plaintext_over_envelope(&repo, &rel, &file_path, content)?;
     std::fs::write(&file_path, content)?;
     let mut index = repo.index().map_err(to_git)?;
     index.add_path(&rel).map_err(to_git)?;
     index.write().map_err(to_git)?;
     Ok(!index.has_conflicts())
+}
+
+/// 加密笔记冲突兜底（§6：只允许保留本地/远端二选一）。命令层可被直接 invoke，
+/// 不能信任前端已隐藏三栏合并——落盘前必须判定：
+/// content 本身是信封 → 放行（EncryptedMergePane 把某一侧原字节写回的正常路径）；
+/// 否则目标「当前是或冲突方曾是」信封时拒绝写入明文，防止密文被静默覆盖成明文。
+fn reject_plaintext_over_envelope(
+    repo: &Repository,
+    rel: &Path,
+    file_path: &Path,
+    content: &str,
+) -> Result<(), AppError> {
+    if is_envelope(content) || !path_is_encrypted(repo, rel, file_path)? {
+        return Ok(());
+    }
+    Err(AppError::VaultInvalid(format!(
+        "{} 是加密笔记，冲突解决只允许保留本地/远端的信封原文，拒绝写入明文",
+        rel.to_string_lossy()
+    )))
+}
+
+/// 目标路径「当前是或曾是」加密信封：工作区首行判定 + 冲突三方（base/本地/远端）blob 判定。
+fn path_is_encrypted(repo: &Repository, rel: &Path, file_path: &Path) -> Result<bool, AppError> {
+    if vault_files::is_envelope_file(file_path) {
+        return Ok(true);
+    }
+    conflict_sides_contain_envelope(repo, rel)
+}
+
+fn conflict_sides_contain_envelope(repo: &Repository, rel: &Path) -> Result<bool, AppError> {
+    let rel = rel.to_string_lossy();
+    let index = repo.index().map_err(to_git)?;
+    for conflict in index.conflicts().map_err(to_git)? {
+        let entry = conflict.map_err(to_git)?;
+        let sides = [entry.ancestor, entry.our, entry.their];
+        if !sides.iter().flatten().any(|e| e.path == rel.as_bytes()) {
+            continue;
+        }
+        for side in sides.iter().flatten() {
+            if blob_is_envelope(repo, side.id)? {
+                return Ok(true);
+            }
+        }
+    }
+    Ok(false)
 }
 
 /// index 已无冲突时完成 merge commit（复用 commit_merge，P1-3）。

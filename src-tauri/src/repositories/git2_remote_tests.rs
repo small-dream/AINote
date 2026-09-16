@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use super::{clone_repo, pull, push};
+use super::{clone_repo, pull, push, resolve_conflict_file};
 use crate::domain::error::AppError;
 use crate::domain::remote::RemoteCredential;
 
@@ -145,5 +145,92 @@ fn fast_forward_keeps_local_modification_instead_of_overwriting_it() {
         repo.head().unwrap().peel_to_commit().unwrap().message().unwrap(),
         "seed",
         "检出失败时分支引用保持原状，不留下半完成状态"
+    );
+}
+
+const ENVELOPE_BASE: &str = "AINOTE-ENC-v1\nQkFTRQo=\n";
+const ENVELOPE_OURS: &str = "AINOTE-ENC-v1\nT1VSUwo=\n";
+const ENVELOPE_THEIRS: &str = "AINOTE-ENC-v1\nVEhFSVJTCg==\n";
+
+/// 夹具：base/本地/远端三侧内容各不相同，merge 必然在 note.md 上产生冲突。
+/// 返回时仓库处于合并中状态，工作区 note.md 为冲突标记文本。
+fn merge_conflict_repo(base: &str, ours: &str, theirs: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+    let tmp = tempfile::tempdir().unwrap();
+    let dir = tmp.path().join("repo");
+    std::fs::create_dir_all(&dir).unwrap();
+    let repo = git2::Repository::init(&dir).unwrap();
+    commit_file(&repo, "note.md", base, "base");
+    let head_ref = repo.head().unwrap().name().unwrap().to_string();
+    let base_commit = repo.head().unwrap().peel_to_commit().unwrap();
+    repo.branch("side", &base_commit, false).unwrap();
+    commit_file(&repo, "note.md", ours, "ours");
+    repo.set_head("refs/heads/side").unwrap();
+    repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))
+        .unwrap();
+    commit_file(&repo, "note.md", theirs, "theirs");
+    // commit_file 只写对象库不动工作区/索引；merge 前把两者重置到 HEAD（theirs）保持干净。
+    repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))
+        .unwrap();
+    let ours_oid = repo.refname_to_id(&head_ref).unwrap();
+    let annotated = repo.find_annotated_commit(ours_oid).unwrap();
+    let mut checkout = git2::build::CheckoutBuilder::new();
+    checkout.force();
+    repo.merge(&[&annotated], None, Some(&mut checkout)).unwrap();
+    assert!(repo.index().unwrap().has_conflicts(), "夹具必须制造冲突");
+    (tmp, dir)
+}
+
+#[test]
+fn resolve_conflict_allows_envelope_over_envelope() {
+    // EncryptedMergePane 的正常路径：把某一侧的信封原字节写回。
+    let (_tmp, dir) = merge_conflict_repo(ENVELOPE_BASE, ENVELOPE_OURS, ENVELOPE_THEIRS);
+    resolve_conflict_file(dir.to_str().unwrap(), "note.md", ENVELOPE_OURS).unwrap();
+    assert_eq!(
+        std::fs::read_to_string(dir.join("note.md")).unwrap(),
+        ENVELOPE_OURS
+    );
+}
+
+#[test]
+fn resolve_conflict_rejects_plaintext_over_envelope_sides() {
+    // M2：冲突三方是信封（工作区为冲突标记），命令层直接 invoke 传入合并明文 → 拒绝。
+    let (_tmp, dir) = merge_conflict_repo(ENVELOPE_BASE, ENVELOPE_OURS, ENVELOPE_THEIRS);
+    let before = std::fs::read_to_string(dir.join("note.md")).unwrap();
+    let err = resolve_conflict_file(dir.to_str().unwrap(), "note.md", "# 合并出的明文\n").unwrap_err();
+    assert!(matches!(err, AppError::VaultInvalid(_)), "应返回 VAULT_9004");
+    assert!(err.to_string().contains("加密笔记"));
+    assert_eq!(
+        std::fs::read_to_string(dir.join("note.md")).unwrap(),
+        before,
+        "拒绝时工作区不得被改写"
+    );
+}
+
+#[test]
+fn resolve_conflict_rejects_plaintext_over_envelope_worktree() {
+    // 冲突侧是明文、但工作区文件当前是信封：同样拒绝（工作区判定路径）。
+    let (_tmp, dir) = merge_conflict_repo("base\n", "ours\n", "theirs\n");
+    std::fs::write(dir.join("note.md"), ENVELOPE_OURS).unwrap();
+    let err = resolve_conflict_file(dir.to_str().unwrap(), "note.md", "plain merged\n").unwrap_err();
+    assert!(matches!(err, AppError::VaultInvalid(_)));
+}
+
+#[test]
+fn resolve_conflict_keeps_plaintext_flow_untouched() {
+    // 明文笔记冲突：保持现状放行，合并结果正常落盘。
+    let (_tmp, dir) = merge_conflict_repo("base\n", "ours\n", "theirs\n");
+    resolve_conflict_file(dir.to_str().unwrap(), "note.md", "merged\n").unwrap();
+    assert_eq!(std::fs::read_to_string(dir.join("note.md")).unwrap(), "merged\n");
+}
+
+#[test]
+fn resolve_conflict_allows_envelope_when_worktree_file_missing() {
+    // 冲突中一侧新建的加密笔记场景：目标在工作区不存在，content 是信封 → 允许。
+    let (_tmp, dir) = merge_conflict_repo("base\n", "ours\n", "theirs\n");
+    std::fs::remove_file(dir.join("note.md")).unwrap();
+    resolve_conflict_file(dir.to_str().unwrap(), "note.md", ENVELOPE_OURS).unwrap();
+    assert_eq!(
+        std::fs::read_to_string(dir.join("note.md")).unwrap(),
+        ENVELOPE_OURS
     );
 }

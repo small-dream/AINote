@@ -15,7 +15,7 @@ pub fn file_history<B: GitBackend>(
     file: &str,
 ) -> Result<Vec<CommitInfo>, AppError> {
     let file = validate_file(file)?;
-    reject_encrypted(repo_path, &file)?;
+    reject_encrypted(backend, repo_path, &file)?;
     backend.file_history(&repo_path.to_string_lossy(), &file, DEFAULT_LIMIT)
 }
 
@@ -28,7 +28,7 @@ pub fn file_diff<B: GitBackend>(
 ) -> Result<FileDiff, AppError> {
     let file = validate_file(file)?;
     validate_commit(commit_id)?;
-    reject_encrypted(repo_path, &file)?;
+    reject_encrypted(backend, repo_path, &file)?;
     backend.file_diff(&repo_path.to_string_lossy(), &file, commit_id)
 }
 
@@ -50,19 +50,26 @@ pub fn restore_file<B: GitBackend>(
 ) -> Result<(), AppError> {
     let file = validate_file(file)?;
     validate_commit(commit_id)?;
-    reject_encrypted(repo_path, &file)?;
+    reject_encrypted(backend, repo_path, &file)?;
     backend.restore_file(&repo_path.to_string_lossy(), &file, commit_id)
 }
 
 /// 加密笔记不提供版本历史（决策 ④）：不做历史 blob 解密，也不给回滚入口。
-/// 判定基于当前工作区文件是否为信封——历史版本可能是明文（加密前提交的），因此一律拒绝。
-fn reject_encrypted(repo_path: &Path, file: &str) -> Result<(), AppError> {
+/// 工作区文件是信封时直接拒绝；未命中（已删除/重命名，或当前是明文）时兜底查历史——
+/// 任一历史版本的 blob 是信封同样拒绝，防止把加密前的明文版本 restore 回工作区（§6）。
+/// 历史里从未出现信封（纯明文笔记）时放行，不误伤正当的历史功能。
+fn reject_encrypted<B: GitBackend>(backend: &B, repo_path: &Path, file: &str) -> Result<(), AppError> {
     if vault_files::is_envelope_file(&repo_path.join(file)) {
-        return Err(AppError::VaultHistoryUnavailable(format!(
-            "{file} 已加密，不提供版本历史"
-        )));
+        return Err(history_unavailable(file));
+    }
+    if backend.history_contains_envelope(&repo_path.to_string_lossy(), file)? {
+        return Err(history_unavailable(file));
     }
     Ok(())
+}
+
+fn history_unavailable(file: &str) -> AppError {
+    AppError::VaultHistoryUnavailable(format!("{file} 已加密，不提供版本历史"))
 }
 
 /// 相对路径校验（拒绝穿越与隐藏段），返回规范化的字符串路径。
@@ -98,7 +105,10 @@ mod tests {
         let mock = MockGitBackend::default();
         let history = file_history(&mock, &root(), "daily/a.md").unwrap();
         assert_eq!(history.len(), 1);
-        assert_eq!(mock.recorded(), vec!["history:daily/a.md"]);
+        assert_eq!(
+            mock.recorded(),
+            vec!["history_envelope:daily/a.md", "history:daily/a.md"]
+        );
     }
 
     #[test]
@@ -132,7 +142,12 @@ mod tests {
         restore_file(&mock, &root(), "a.md", "abc1234").unwrap();
         assert_eq!(
             mock.recorded(),
-            vec!["diff:a.md@abc1234", "restore:a.md@abc1234"]
+            vec![
+                "history_envelope:a.md",
+                "diff:a.md@abc1234",
+                "history_envelope:a.md",
+                "restore:a.md@abc1234"
+            ]
         );
     }
 
@@ -156,6 +171,71 @@ mod tests {
             Err(AppError::VaultHistoryUnavailable(_))
         ));
         assert!(mock.recorded().is_empty(), "加密笔记不得触达 Git 历史层");
+    }
+
+    #[test]
+    fn deleted_encrypted_note_history_is_still_rejected() {
+        // M1：加密笔记被软删除/重命名后工作区路径不存在，is_envelope_file 失效；
+        // 历史里出现过信封 blob → 三个历史命令一律拒绝，不得触达 Git 历史层。
+        let tmp = tempfile::tempdir().unwrap();
+        let mock = MockGitBackend {
+            history_envelope: true,
+            ..Default::default()
+        };
+
+        assert!(matches!(
+            file_history(&mock, tmp.path(), "gone.md"),
+            Err(AppError::VaultHistoryUnavailable(_))
+        ));
+        assert!(matches!(
+            file_diff(&mock, tmp.path(), "gone.md", "abc1234"),
+            Err(AppError::VaultHistoryUnavailable(_))
+        ));
+        assert!(matches!(
+            restore_file(&mock, tmp.path(), "gone.md", "abc1234"),
+            Err(AppError::VaultHistoryUnavailable(_))
+        ));
+        assert!(
+            mock.recorded()
+                .iter()
+                .all(|call| call.starts_with("history_envelope:")),
+            "只做信封探测，不得读取历史/回滚: {:?}",
+            mock.recorded()
+        );
+    }
+
+    #[test]
+    fn deleted_plaintext_note_history_still_works() {
+        // 回归红线：纯明文笔记删除后查历史必须放行（历史里从未出现信封）。
+        let tmp = tempfile::tempdir().unwrap();
+        let mock = MockGitBackend::default();
+        file_history(&mock, tmp.path(), "old.md").unwrap();
+        restore_file(&mock, tmp.path(), "old.md", "abc1234").unwrap();
+        assert_eq!(
+            mock.recorded(),
+            vec![
+                "history_envelope:old.md",
+                "history:old.md",
+                "history_envelope:old.md",
+                "restore:old.md@abc1234"
+            ]
+        );
+    }
+
+    #[test]
+    fn plaintext_worktree_with_envelope_in_history_is_rejected() {
+        // 曾加密、当前工作区已解密回明文：历史含信封 blob → 仍拒绝。
+        let tmp = tempfile::tempdir().unwrap();
+        std::fs::write(tmp.path().join("note.md"), "# 明文\n").unwrap();
+        let mock = MockGitBackend {
+            history_envelope: true,
+            ..Default::default()
+        };
+        assert!(matches!(
+            file_history(&mock, tmp.path(), "note.md"),
+            Err(AppError::VaultHistoryUnavailable(_))
+        ));
+        assert_eq!(mock.recorded(), vec!["history_envelope:note.md"]);
     }
 
     #[test]

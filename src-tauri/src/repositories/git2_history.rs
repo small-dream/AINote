@@ -6,7 +6,7 @@ use git2::{Repository, Sort};
 use crate::domain::error::AppError;
 use crate::domain::history::{CommitInfo, DiffLine, DiffLineKind, FileDiff};
 
-use super::git2_backend::{open, to_git};
+use super::git2_backend::{blob_is_envelope, open, to_git};
 
 /// 指定文件（相对仓库根）的提交历史：仅含修改过该文件的提交，按时间倒序。
 pub fn file_history(repo_path: &str, file: &str, limit: usize) -> Result<Vec<CommitInfo>, AppError> {
@@ -65,6 +65,36 @@ pub fn restore_file(repo_path: &str, file: &str, commit_id: &str) -> Result<(), 
         .map_err(to_git)?;
     let dest = PathBuf::from(repo_path).join(file);
     Ok(std::fs::write(dest, blob.content())?)
+}
+
+/// 探测指定路径的任一历史版本 blob 是否为加密信封（决策④ 的兜底：工作区文件被删除/
+/// 重命名后，工作区判定失效，必须查历史，防止把加密前的明文版本 restore 回工作区）。
+/// 沿 revwalk 只在路径 blob 发生变化时读内容，找到第一个信封即提前退出；
+/// 空仓库或路径从未出现在历史中时返回 false（放行明文笔记的正当历史功能）。
+pub fn history_contains_envelope(repo_path: &str, file: &str) -> Result<bool, AppError> {
+    let repo = open(repo_path)?;
+    let mut walk = repo.revwalk().map_err(to_git)?;
+    walk.set_sorting(Sort::TIME | Sort::TOPOLOGICAL).map_err(to_git)?;
+    if walk.push_head().is_err() {
+        return Ok(false); // unborn HEAD：无历史即无信封
+    }
+    let mut last: Option<git2::Oid> = None;
+    for oid in walk {
+        let commit = repo.find_commit(oid.map_err(to_git)?).map_err(to_git)?;
+        let entry = commit.tree().map_err(to_git)?.get_path(Path::new(file)).ok();
+        let blob_id = entry
+            .filter(|e| e.kind() == Some(git2::ObjectType::Blob))
+            .map(|e| e.id());
+        if blob_id == last {
+            continue; // 该版本 blob 未变化，复用上次判定
+        }
+        last = blob_id;
+        match blob_id {
+            Some(id) if blob_is_envelope(&repo, id)? => return Ok(true),
+            _ => {}
+        }
+    }
+    Ok(false)
 }
 
 fn find_commit<'a>(repo: &'a Repository, commit_id: &str) -> Result<git2::Commit<'a>, AppError> {

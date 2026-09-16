@@ -47,6 +47,9 @@ pub trait GitBackend: Send + Sync {
     fn file_diff(&self, path: &str, file: &str, commit_id: &str) -> Result<FileDiff, AppError>;
     /// 把文件恢复到指定提交的版本（写入工作区，不提交）
     fn restore_file(&self, path: &str, file: &str, commit_id: &str) -> Result<(), AppError>;
+    /// 探测指定路径的任一历史版本 blob 是否为加密信封（工作区判定未命中时的兜底，决策④）。
+    /// 路径从未出现在历史或仓库为空时返回 false（放行，保持现有语义）。
+    fn history_contains_envelope(&self, path: &str, file: &str) -> Result<bool, AppError>;
 }
 
 /// 测试用 Mock：通过字段编排行为，calls 记录调用序列。
@@ -68,6 +71,8 @@ pub struct MockGitBackend {
     pub pull_network_failures: std::sync::Mutex<u32>,
     pub conflicts: Vec<ConflictFile>,
     pub all_resolved_after_file: bool,
+    /// 历史信封探测的编排结果（M1：加密笔记删除/重命名后历史命令仍拒绝）
+    pub history_envelope: bool,
     pub calls: std::sync::Mutex<Vec<String>>,
     /// 每次远端操作收到的凭证（用于断言平台用户名 / 令牌透传）
     pub credentials: std::sync::Mutex<Vec<RemoteCredential>>,
@@ -237,5 +242,10 @@ impl GitBackend for MockGitBackend {
     fn restore_file(&self, _path: &str, file: &str, commit_id: &str) -> Result<(), AppError> {
         self.record(format!("restore:{file}@{commit_id}"));
         Ok(())
+    }
+
+    fn history_contains_envelope(&self, _path: &str, file: &str) -> Result<bool, AppError> {
+        self.record(format!("history_envelope:{file}"));
+        Ok(self.history_envelope)
     }
 }
