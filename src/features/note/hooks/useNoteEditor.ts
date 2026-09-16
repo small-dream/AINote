@@ -27,7 +27,7 @@ export function useNoteEditor(repoPath: string | null, notePath: string | null, 
     setDraft(content);
     setDirty(false);
   }, []);
-  const isLoaded = useNoteReload({ notePath, data: contentQuery.data, reloadToken, applyContent });
+  const isLoaded = useNoteReload({ notePath, data: contentQuery.data, reloadToken, dirty, applyContent });
   const kind = contentQuery.data?.kind ?? (notePath ? noteKindOfPath(notePath) : "markdown");
   /** 加密笔记在锁定态：正文不参与编辑，界面改由解锁面板接管（后端连明文都不返回）。 */
   const locked = contentQuery.data?.locked === true;

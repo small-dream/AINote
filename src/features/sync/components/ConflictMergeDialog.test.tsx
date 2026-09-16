@@ -87,6 +87,9 @@ describe("ConflictMergeDialog", () => {
     expect(container.firstChild).toBeNull();
   });
 
+});
+
+describe("ConflictMergeDialog 导出兜底", () => {
   it("提供「导出冲突文件」兜底并回显保存位置", async () => {
     syncApiMock.conflicts.mockResolvedValue([FILE]);
     syncApiMock.exportConflicts.mockResolvedValue({

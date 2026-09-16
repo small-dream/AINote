@@ -1,5 +1,5 @@
 use std::fs;
-use std::io::{BufRead, BufReader};
+use std::io::{BufRead, BufReader, Write};
 use std::path::Path;
 
 use crate::domain::error::AppError;
@@ -35,7 +35,9 @@ pub fn load(root: &Path) -> Result<Option<VaultFile>, AppError> {
     Ok(Some(file))
 }
 
-/// Repository 边界：原子写入仓库密钥文件（临时文件 + rename，避免半写状态）。
+/// Repository 边界：原子写入仓库密钥文件。
+/// vault.json 是主密钥唯一封装载体，崩溃窗口内丢失/回退 = 全部加密笔记不可恢复，
+/// 因此按四步持久化：写临时文件 → sync_all 落盘 → rename 替换 → 父目录 fsync 持久化 rename 本身。
 pub fn save(root: &Path, file: &VaultFile) -> Result<(), AppError> {
     file.validate()?;
     let path = root.join(VAULT_FILE);
@@ -47,10 +49,48 @@ pub fn save(root: &Path, file: &VaultFile) -> Result<(), AppError> {
     let mut serialized = serde_json::to_vec_pretty(file)
         .map_err(|error| AppError::VaultInvalid(format!("序列化仓库密钥文件失败: {error}")))?;
     serialized.push(b'\n');
-    fs::write(&temporary, serialized)
-        .map_err(|err| AppError::io_context("写入仓库密钥文件失败", &temporary, err))?;
-    fs::rename(&temporary, &path)
-        .map_err(|err| AppError::io_context("替换仓库密钥文件失败", &path, err))
+    {
+        let mut tmp = fs::File::create(&temporary)
+            .map_err(|err| AppError::io_context("写入仓库密钥文件失败", &temporary, err))?;
+        tmp.write_all(&serialized)
+            .and_then(|()| tmp.sync_all())
+            .map_err(|err| AppError::io_context("落盘仓库密钥文件失败", &temporary, err))?;
+    }
+    replace_file(&temporary, &path)?;
+    // 目录 fsync 持久化 rename；部分平台不支持对目录句柄 sync（如 Windows），忽略错误。
+    if let Some(parent) = path.parent() {
+        if let Ok(dir) = fs::File::open(parent) {
+            let _ = dir.sync_all();
+        }
+    }
+    Ok(())
+}
+
+/// rename 替换目标文件。macOS/Linux 的 rename 原子覆盖已存在目标；Windows 的 `fs::rename`
+/// 在目标已存在时直接失败，退化为「移走旧文件 → rename → 清理备份」，
+/// 第二步失败时尽力还原旧文件（失去原子性，但优于 change_passphrase 二次保存直接报错）。
+fn replace_file(temporary: &Path, path: &Path) -> Result<(), AppError> {
+    match fs::rename(temporary, path) {
+        Ok(()) => Ok(()),
+        Err(err) if !path.exists() => {
+            Err(AppError::io_context("替换仓库密钥文件失败", path, err))
+        }
+        Err(_) => {
+            let backup = path.with_extension("bak");
+            fs::rename(path, &backup)
+                .map_err(|err| AppError::io_context("备份旧仓库密钥文件失败", path, err))?;
+            match fs::rename(temporary, path) {
+                Ok(()) => {
+                    let _ = fs::remove_file(&backup);
+                    Ok(())
+                }
+                Err(err) => {
+                    let _ = fs::rename(&backup, path);
+                    Err(AppError::io_context("替换仓库密钥文件失败", path, err))
+                }
+            }
+        }
+    }
 }
 
 #[cfg(test)]
@@ -90,6 +130,32 @@ mod tests {
         assert_eq!(load(tmp.path()).unwrap().unwrap(), sample());
         // 临时文件不残留
         assert!(!tmp.path().join(".ainote/vault.tmp").exists());
+    }
+
+    #[test]
+    fn save_overwrites_existing_file_round_trips() {
+        // change_passphrase 只重新封装 wrap 后二次保存：必须覆盖已有 vault.json。
+        // Windows 的 fs::rename 不覆盖已存在目标，本用例在该平台走 replace_file 的备份替换路径。
+        let tmp = tempfile::tempdir().unwrap();
+        save(tmp.path(), &sample()).unwrap();
+        let mut rewrapped = sample();
+        rewrapped.wrap.nonce = "bm9uY2VyZXdyYXA=".to_string();
+        rewrapped.wrap.ciphertext = "Y2lwaGVycmV3cmFw".to_string();
+        save(tmp.path(), &rewrapped).unwrap();
+        assert_eq!(load(tmp.path()).unwrap().unwrap(), rewrapped);
+        assert!(!tmp.path().join(".ainote/vault.tmp").exists(), "临时文件不残留");
+        assert!(!tmp.path().join(".ainote/vault.bak").exists(), "备份文件不残留");
+    }
+
+    #[test]
+    fn crash_between_write_and_rename_keeps_previous_file() {
+        // 模拟崩溃窗口：临时文件已写、rename 前进程死亡。
+        // 残留的 .tmp 不得影响已有 vault.json（旧封装仍可读，加密笔记不丢）。
+        // rename 后、目录 fsync 前的崩溃由 rename 本身的原子性兜底，无法在单测中模拟。
+        let tmp = tempfile::tempdir().unwrap();
+        save(tmp.path(), &sample()).unwrap();
+        fs::write(tmp.path().join(".ainote/vault.tmp"), "{ partial").unwrap();
+        assert_eq!(load(tmp.path()).unwrap().unwrap(), sample());
     }
 
     #[test]
