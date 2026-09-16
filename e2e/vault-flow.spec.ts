@@ -61,7 +61,7 @@ test.describe("加密笔记（E2）", () => {
 
     // 口令过短：给出原因并禁用提交
     await page.getByLabel("仓库口令").fill("short");
-    await expect(page.getByText("口令至少需要 12 个字符")).toBeVisible();
+    await expect(page.getByText("口令至少需要 6 个字符")).toBeVisible();
     await expect(page.getByRole("button", { name: "启用加密" })).toBeDisabled();
 
     await enableVault(page);
