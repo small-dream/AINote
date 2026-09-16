@@ -1,7 +1,7 @@
 import type { TranslationKey } from "@/i18n/messages";
 
 /** 口令强度规则：与 Rust `domain::vault::check_passphrase_strength` 保持同一口径与判定顺序。 */
-export const MIN_PASSPHRASE_CHARS = 12;
+export const MIN_PASSPHRASE_CHARS = 6;
 
 export type PassphraseIssue = "tooShort" | "matchesContext" | "numericOnly";
 

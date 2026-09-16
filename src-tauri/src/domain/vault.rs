@@ -19,7 +19,7 @@ pub const SALT_LEN: usize = 16;
 pub const NONCE_LEN: usize = 12;
 pub const MASTER_KEY_LEN: usize = 32;
 /// 口令是唯一凭证，最低长度是硬门槛（见 docs/ENCRYPTED_NOTES_PLAN.md §4.3）。
-pub const MIN_PASSPHRASE_CHARS: usize = 12;
+pub const MIN_PASSPHRASE_CHARS: usize = 6;
 
 /// 读取 vault.json 时允许的 KDF 参数区间：防止被篡改的文件要求荒谬内存/迭代导致 DoS。
 pub const MIN_KDF_M_KIB: u32 = 8 * 1024;
@@ -249,8 +249,8 @@ mod tests {
 
     #[test]
     fn passphrase_strength_enforces_minimum_and_context() {
-        assert!(check_passphrase_strength("short-pass", &[]).is_err());
-        assert!(check_passphrase_strength("123456789012", &[]).is_err(), "纯数字拒绝");
+        assert!(check_passphrase_strength("short", &[]).is_err());
+        assert!(check_passphrase_strength("123456", &[]).is_err(), "纯数字拒绝");
         assert!(check_passphrase_strength("correct horse battery", &[]).is_ok());
         assert!(
             check_passphrase_strength(

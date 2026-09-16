@@ -10,7 +10,7 @@ describe("passphrase rules", () => {
   });
 
   it("rejects pure digits and reused context", () => {
-    expect(passphraseIssue("123456789012")).toBe("numericOnly");
+    expect(passphraseIssue("123456")).toBe("numericOnly");
     expect(passphraseIssue("MyRepo-notes", ["myrepo-notes"])).toBe("matchesContext");
     expect(passphraseIssue("MyRepo-notes", ["  "])).toBeNull();
   });

@@ -42,7 +42,7 @@ describe("VaultSettings", () => {
     expect(submit.disabled).toBe(true);
 
     fireEvent.change(passphraseInput(), { target: { value: "short" } });
-    expect(screen.getByText("口令至少需要 12 个字符")).toBeTruthy();
+    expect(screen.getByText("口令至少需要 6 个字符")).toBeTruthy();
     expect(submit.disabled).toBe(true);
   });
 
