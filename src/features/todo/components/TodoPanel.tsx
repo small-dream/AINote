@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { CreateTaskInput } from "@/api";
 import { useTranslation } from "@/i18n";
 import { useTaskBoardQuery } from "@/queries/task.queries";
+import { useUiStore } from "@/stores/ui.store";
 import { useTaskMutations } from "../hooks/useTaskMutations";
 import { TaskCreateDialog } from "./TaskCreateDialog";
 import { TaskEditor } from "./TaskEditor";
@@ -17,6 +18,15 @@ export function TodoPanel({ repoPath }: { repoPath: string | null }) {
   const [creating, setCreating] = useState(false);
   const [editingTaskId, setEditingTaskId] = useState<string | null>(null);
   const tasks = board?.tasks ?? [];
+  const focusedTaskId = useUiStore((state) => state.focusedTaskId);
+  const clearFocusedTask = useUiStore((state) => state.clearFocusedTask);
+  // 提醒卡片的「查看任务」优先于上一次展开的编辑卡片
+  const activeTaskId = focusedTaskId ?? editingTaskId;
+
+  function editTask(taskId: string | null): void {
+    clearFocusedTask();
+    setEditingTaskId(taskId);
+  }
 
   function createTask(draft: CreateTaskInput): void {
     mutations.create.mutate(draft, { onSuccess: () => setCreating(false) });
@@ -34,21 +44,21 @@ export function TodoPanel({ repoPath }: { repoPath: string | null }) {
       ) : (
         <TodoTaskList
           tasks={tasks}
-          renderTask={(task) => task.id === editingTaskId ? (
+          renderTask={(task) => task.id === activeTaskId ? (
             <TaskEditor
               key={`${task.id}:${task.updatedAt}`}
               task={task}
               busy={mutations.busy}
               onSave={(draft) => mutations.update.mutate({ taskId: task.id, ...draft })}
-              onDelete={() => { mutations.remove.mutate(task.id); setEditingTaskId(null); }}
-              onClose={() => setEditingTaskId(null)}
+              onDelete={() => { mutations.remove.mutate(task.id); editTask(null); }}
+              onClose={() => editTask(null)}
             />
           ) : (
             <TaskRow
               key={task.id}
               task={task}
               onToggle={() => mutations.toggle.mutate(task.id)}
-              onOpenEditor={() => setEditingTaskId((current) => (current === task.id ? null : task.id))}
+              onOpenEditor={() => editTask(editingTaskId === task.id && !focusedTaskId ? null : task.id)}
             />
           )}
         />

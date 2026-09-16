@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { CreateTaskInput } from "@/api";
 import { useTranslation } from "@/i18n";
 import { useTaskBoardQuery } from "@/queries/task.queries";
+import { useUiStore } from "@/stores/ui.store";
 import { useTaskMutations } from "../hooks/useTaskMutations";
 import { TaskCreateDialog } from "./TaskCreateDialog";
 import { TaskDetailPane } from "./TaskDetailPane";
@@ -18,7 +19,12 @@ export function TodoWorkspace({ repoPath }: { repoPath: string | null }) {
   const [selectedTaskId, setSelectedTaskId] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const tasks = board?.tasks ?? [];
-  const selectedTask = tasks.find((task) => task.id === selectedTaskId) ?? null;
+  const focusedTaskId = useUiStore((state) => state.focusedTaskId);
+  const clearFocusedTask = useUiStore((state) => state.clearFocusedTask);
+  // 提醒卡片的「查看任务」优先于用户上一次选中：直接落到被提醒的那条任务
+  const selectedTask = tasks.find((task) => task.id === (focusedTaskId ?? selectedTaskId)) ?? null;
+
+  const selectTask = (taskId: string | null): void => { clearFocusedTask(); setSelectedTaskId(taskId); };
 
   return (
     <div className="workspace-todo flex h-full min-h-0 flex-1 overflow-hidden bg-bg-primary">
@@ -38,7 +44,7 @@ export function TodoWorkspace({ repoPath }: { repoPath: string | null }) {
                 key={task.id}
                 task={task}
                 onToggle={() => mutations.toggle.mutate(task.id)}
-                onOpenEditor={() => setSelectedTaskId(task.id)}
+                onOpenEditor={() => selectTask(task.id)}
               />
             )}
           />
@@ -50,11 +56,11 @@ export function TodoWorkspace({ repoPath }: { repoPath: string | null }) {
             task={selectedTask}
             busy={mutations.busy}
             onSave={(draft) => mutations.update.mutate({ taskId: selectedTask.id, ...draft })}
-            onDelete={() => { mutations.remove.mutate(selectedTask.id); setSelectedTaskId(null); }}
-            onClose={() => setSelectedTaskId(null)}
+            onDelete={() => { mutations.remove.mutate(selectedTask.id); selectTask(null); }}
+            onClose={() => selectTask(null)}
           />
         ) : (
-          <TodoOverviewPane tasks={tasks} onSelectTask={setSelectedTaskId} />
+          <TodoOverviewPane tasks={tasks} onSelectTask={selectTask} />
         )}
       </section>
       {creating ? (

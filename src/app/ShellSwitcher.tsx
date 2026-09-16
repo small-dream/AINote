@@ -4,6 +4,7 @@ import { MoveNoteDialog } from "@/features/note/components/MoveNoteDialog";
 import { RenameNoteDialog } from "@/features/note/components/RenameNoteDialog";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { CommandPalette } from "@/features/search/components/CommandPalette";
+import { ReminderAlertStack } from "@/features/todo/components/ReminderAlertStack";
 import { WorkspaceLayout } from "@/pages/workspace/WorkspaceLayout";
 import type { WorkspaceActions } from "@/pages/workspace/useWorkspaceActions";
 import { useUiStore } from "@/stores/ui.store";
@@ -34,6 +35,8 @@ export function WorkspaceShellSwitcher({ repoPath, startupSyncing, currentNotePa
   return (
     <div className={`workspace-shell flex h-dvh min-h-0 overflow-hidden bg-bg-tertiary ${noteThemeScope === "workspace" ? "workspace-theme-linked" : ""}`} data-note-theme={noteThemeScope === "workspace" ? noteTheme : undefined}>
       {isMobile ? <MobileWorkspaceContent {...content} /> : <WorkspaceLayout {...content} startupSyncing={startupSyncing} />}
+      {/* 待办提醒卡片：桌面与移动共用，桌面端没有系统调度时的主要提示通道 */}
+      <ReminderAlertStack repoPath={repoPath} />
       <WorkspaceDialogs repoPath={repoPath} actions={actions} onMoved={onMoved} />
       <WorkspaceOverlays repoPath={repoPath} actions={actions} editorRef={editorRef} onOpenNote={onSelect} />
     </div>

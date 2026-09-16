@@ -149,6 +149,8 @@ interface UiState {
   sidebarWidth: number;
   sidebarTab: SidebarTab;
   focusedTag: string | null;
+  /** 提醒卡片「查看任务」请求定位的任务；待办面板消费后清空 */
+  focusedTaskId: string | null;
   recentNotes: Record<string, RecentNoteEntry[]>;
   askAiOpen: boolean;
   settingsOpen: boolean;
@@ -162,6 +164,8 @@ interface UiState {
   persistSidebarWidth: () => void;
   setSidebarTab: (tab: SidebarTab) => void;
   openTagIndex: (tag: string) => void;
+  focusTask: (taskId: string) => void;
+  clearFocusedTask: () => void;
   recordRecentNote: (repoPath: string, path: string) => void;
   clearRecentNotes: (repoPath: string) => void;
   openAskAi: () => void;
@@ -175,11 +179,33 @@ interface UiState {
   setLocale: (locale: Locale) => void;
 }
 
+/** 记录最近打开的笔记：同一路径去重后置顶，每个仓库最多 100 条，并同步落盘 */
+function withRecentNote(state: UiState, repoPath: string, path: string): Partial<UiState> {
+  const entry: RecentNoteEntry = { path, openedAt: Date.now() };
+  const previous = state.recentNotes[repoPath] ?? [];
+  const recentNotes = {
+    ...state.recentNotes,
+    [repoPath]: [entry, ...previous.filter((item) => item.path !== path)].slice(0, 100),
+  };
+  writeStoredRecentNotes(recentNotes);
+  return { recentNotes };
+}
+
+/** 清空某个仓库的最近打开记录（只影响本机 UI 偏好） */
+function withoutRecentNotes(state: UiState, repoPath: string): Partial<UiState> {
+  const recentNotes = Object.fromEntries(
+    Object.entries(state.recentNotes).filter(([key]) => key !== repoPath),
+  ) as Record<string, RecentNoteEntry[]>;
+  writeStoredRecentNotes(recentNotes);
+  return { recentNotes };
+}
+
 export const useUiStore = create<UiState>((set) => ({
   sidebarCollapsed: false,
   sidebarWidth: readStoredSidebarWidth(),
   sidebarTab: "tree",
   focusedTag: null,
+  focusedTaskId: null,
   recentNotes: readStoredRecentNotes(),
   askAiOpen: false,
   settingsOpen: false,
@@ -196,23 +222,10 @@ export const useUiStore = create<UiState>((set) => ({
   }),
   setSidebarTab: (sidebarTab) => set({ sidebarTab }),
   openTagIndex: (tag) => set({ sidebarTab: "tags", focusedTag: tag }),
-  recordRecentNote: (repoPath, path) => set((state) => {
-    const previous = state.recentNotes[repoPath] ?? [];
-    const entry = { path, openedAt: Date.now() };
-    const recentNotes = {
-      ...state.recentNotes,
-      [repoPath]: [entry, ...previous.filter((item) => item.path !== path)].slice(0, 100),
-    };
-    writeStoredRecentNotes(recentNotes);
-    return { recentNotes };
-  }),
-  clearRecentNotes: (repoPath) => set((state) => {
-    const recentNotes = Object.fromEntries(
-      Object.entries(state.recentNotes).filter(([key]) => key !== repoPath),
-    ) as Record<string, RecentNoteEntry[]>;
-    writeStoredRecentNotes(recentNotes);
-    return { recentNotes };
-  }),
+  focusTask: (taskId) => set({ focusedTaskId: taskId }),
+  clearFocusedTask: () => set({ focusedTaskId: null }),
+  recordRecentNote: (repoPath, path) => set((state) => withRecentNote(state, repoPath, path)),
+  clearRecentNotes: (repoPath) => set((state) => withoutRecentNotes(state, repoPath)),
   openAskAi: () => set({ askAiOpen: true }),
   closeAskAi: () => set({ askAiOpen: false }),
   openSettings: (tab) => set((s) => ({ settingsOpen: true, settingsTab: tab ?? s.settingsTab })),

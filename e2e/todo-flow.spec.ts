@@ -6,6 +6,32 @@ function baseState(): E2eState {
   return { repoPath: "/mock-repo", notes: [{ path: "first.md", content: "# 第一篇" }] };
 }
 
+/** 预置一条「刚刚到点」的提醒任务：用于验证应用内提醒卡片（桌面 / 移动共用） */
+function reminderState(): E2eState {
+  const today = new Date();
+  const day = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
+  const remindAt = new Date(Date.now() - 60_000).toISOString();
+  return {
+    ...baseState(),
+    taskBoard: {
+      schemaVersion: 3,
+      tasks: [{
+        id: "task-1",
+        title: "交周报",
+        description: "整理成本周进展三条",
+        done: false,
+        priority: "high",
+        dueAt: `${day}T18:00`,
+        remindAt,
+        sortOrder: 0,
+        createdAt: remindAt,
+        updatedAt: remindAt,
+        completedAt: null,
+      }],
+    },
+  };
+}
+
 /** 读取元素的计算背景色（统一由浏览器归一化，避免手写色值）。 */
 async function background(page: Page, selector: string): Promise<string> {
   return page.locator(selector).first().evaluate((node) => getComputedStyle(node).backgroundColor);
@@ -226,6 +252,33 @@ test.describe("Todo 待办（桌面壳）", () => {
     const created = recorded.find((entry) => entry.cmd === "task_create");
     expect(String(created?.args.dueAt)).toMatch(/^\d{4}-\d{2}-\d{2}T18:00$/);
   });
+
+  test("到点提醒：桌面端弹出应用内提醒卡片，可稍后 10 分钟", async ({ page }) => {
+    await openWorkspace(page, reminderState());
+
+    const card = page.getByRole("alert").filter({ hasText: "交周报" });
+    await expect(card).toBeVisible();
+    await expect(card).toContainText("截止 今天 18:00");
+    await expect(card).toContainText("高");
+    await expect(card).toContainText("整理成本周进展三条");
+
+    await card.getByRole("button", { name: "稍后 10 分钟" }).click();
+    await expect(card).toBeHidden();
+
+    const update = (await calls(page)).find((entry) => entry.cmd === "task_update");
+    const lead = Date.parse(String(update?.args.remindAt)) - Date.now();
+    expect(lead).toBeGreaterThan(9 * 60_000);
+    expect(lead).toBeLessThanOrEqual(10 * 60_000);
+  });
+
+  test("到点提醒：点「查看任务」回到待办并定位到该任务", async ({ page }) => {
+    await openWorkspace(page, reminderState());
+
+    await page.getByRole("alert").filter({ hasText: "交周报" }).getByRole("button", { name: "查看任务" }).click();
+
+    await expect(page.locator(".workspace-todo-list")).toBeVisible();
+    await expect(page.getByLabel("任务标题")).toHaveValue("交周报");
+  });
 });
 
 test.describe("Todo 待办（移动壳）", () => {
@@ -262,6 +315,17 @@ test.describe("Todo 待办（移动壳）", () => {
     // 删除入口与 chips 同在卡片底部这一行
     expect(Math.abs(remove.y - meta.y)).toBeLessThanOrEqual(8);
     expect(remove.x).toBeGreaterThan(meta.x + meta.width);
+  });
+
+  test("到点提醒卡片在移动壳同样可见，点「查看任务」展开该任务", async ({ page }) => {
+    await openWorkspace(page, reminderState());
+
+    const card = page.getByRole("alert").filter({ hasText: "交周报" });
+    await expect(card).toBeVisible();
+    await card.getByRole("button", { name: "查看任务" }).click();
+
+    await expect(page.locator(".mobile-list-tabs").getByRole("tab", { name: "待办" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByLabel("任务标题")).toHaveValue("交周报");
   });
 });
 
