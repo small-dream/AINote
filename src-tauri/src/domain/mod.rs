@@ -8,6 +8,7 @@ pub mod diagnostics;
 pub mod error;
 pub mod favorite;
 pub mod history;
+pub mod history_reset;
 pub mod hosting;
 pub mod maintenance;
 pub mod metrics;

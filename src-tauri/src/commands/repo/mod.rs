@@ -6,6 +6,7 @@ pub mod list;
 pub mod path;
 pub mod remove;
 pub mod rename;
+pub mod reset_history;
 pub mod restore;
 pub mod size;
 pub mod switch;

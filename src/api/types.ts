@@ -57,6 +57,20 @@ export interface SyncStatus {
 /** 工作区待提交变更的状态（git_status_files 返回，与 Rust domain/sync.rs 一致） */
 export type ChangedFileStatus = "added" | "modified" | "deleted";
 
+/** reset_repo_history 返回的重置结果（与 Rust domain/history_reset.rs 一致） */
+export interface HistoryResetReport {
+  commitId: string;
+  branch: string;
+  /** 被清除的提交数 */
+  erasedCommits: number;
+  /** 唯一那次提交包含的文件数 */
+  fileCount: number;
+  /** 是否已强制推送到远端（本地仓库为 false） */
+  pushed: boolean;
+  /** 旧仓库目录清理失败：仓库同级目录仍留有 .ainote-git-backup-* */
+  backupCleanupFailed: boolean;
+}
+
 /** 工作区待提交变更文件（增/改/删，相对仓库根目录） */
 export interface ChangedFile {
   path: string;

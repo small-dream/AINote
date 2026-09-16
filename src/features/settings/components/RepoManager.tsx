@@ -12,6 +12,7 @@ import { RepoSizeCard } from "./RepoSizeCard";
 import { RepoIntegrityCard } from "./RepoIntegrityCard";
 import { RepoBackupCard } from "./RepoBackupCard";
 import { RepoRestoreCard } from "./RepoRestoreCard";
+import { RepoResetHistoryCard } from "./RepoResetHistoryCard";
 import { useTranslation } from "@/i18n";
 
 /** 平台展示名（品牌名不翻译）；未知 id 原样展示，后端新增平台时不会留空。 */
@@ -21,6 +22,7 @@ const PROVIDER_LABELS: Record<string, string> = { github: "GitHub", gitee: "Gite
 export function RepoManager() {
   const { repos, rename, remove, activate, handleAdded } = useRepoManager();
   const activePath = useSessionStore((s) => s.repoPath);
+  const activeRepo = repos.find((repo) => repo.path === activePath) ?? null;
   const [addOpen, setAddOpen] = useState(false);
   const [renaming, setRenaming] = useState<RepoInfo | null>(null);
   const [removing, setRemoving] = useState<RepoInfo | null>(null);
@@ -30,6 +32,9 @@ export function RepoManager() {
       {activePath && <RepoIntegrityCard key={`${activePath}-integrity`} />}
       {activePath && <RepoBackupCard key={`${activePath}-backup`} />}
       <RepoRestoreCard />
+      {activePath && (
+        <RepoResetHistoryCard key={`${activePath}-reset`} repoName={activeRepo?.name ?? ""} />
+      )}
       <ul className="space-y-2">
         {repos.length === 0 ? (
           <EmptyRepos />

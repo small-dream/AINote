@@ -3,6 +3,7 @@ import { call } from "./client";
 import type {
   BackupExportDto,
   BackupProgress,
+  HistoryResetReport,
   IntegrityReport,
   RepoInfo,
   RepoPathDto,
@@ -25,6 +26,8 @@ export const repoApi = {
   size: () => call<RepoSizeDto>("get_repo_size"),
   /** 只读检查当前活动仓库的完整性 */
   integrity: () => call<IntegrityReport>("check_repo_integrity"),
+  /** 破坏性：把当前活动仓库重置为「工作区现状 = 唯一一次提交」，并强制推送覆盖远端历史 */
+  resetHistory: (message: string) => call<HistoryResetReport>("reset_repo_history", { message }),
   /** 导出整库备份；用户取消保存或中途取消时返回 null */
   exportBackup: (excludeAssets: boolean, onProgress: (progress: BackupProgress) => void) => {
     const channel = new Channel<BackupProgress>();

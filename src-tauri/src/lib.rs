@@ -135,6 +135,7 @@ pub fn run() {
             commands::repo::list::list_repos,
             commands::repo::rename::rename_repo,
             commands::repo::remove::remove_repo,
+            commands::repo::reset_history::reset_repo_history,
             commands::repo::size::get_repo_size,
             commands::repo::switch::switch_repo,
             commands::repo::validate::validate_repo,

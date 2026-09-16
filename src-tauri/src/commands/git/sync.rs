@@ -21,7 +21,8 @@ pub struct SyncRetryState(Mutex<HashMap<String, Arc<AtomicBool>>>);
 
 impl SyncRetryState {
     /// 抢占指定仓库的同步槽位并返回其取消标志；已有进行中同步时报「同步进行中」。
-    fn acquire(&self, repo: &str) -> Result<Arc<AtomicBool>, AppError> {
+    /// 供 sync_now 与破坏性的仓库重建（reset_repo_history）共用，避免同一仓库并发写入。
+    pub(crate) fn acquire(&self, repo: &str) -> Result<Arc<AtomicBool>, AppError> {
         let mut guard = self
             .0
             .lock()
@@ -35,7 +36,7 @@ impl SyncRetryState {
     }
 
     /// 任务结束释放槽位：只有槽位里仍是自己的 flag 才清理，避免误清后来的同步。
-    fn release(&self, repo: &str, flag: &Arc<AtomicBool>) {
+    pub(crate) fn release(&self, repo: &str, flag: &Arc<AtomicBool>) {
         if let Ok(mut guard) = self.0.lock() {
             if guard.get(repo).is_some_and(|current| Arc::ptr_eq(current, flag)) {
                 guard.remove(repo);

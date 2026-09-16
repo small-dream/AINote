@@ -8,6 +8,7 @@ pub(crate) mod conflict_export_service;
 pub(crate) mod diagnostics_service;
 pub mod hosting;
 pub mod history_service;
+pub mod history_reset_service;
 pub mod maintenance_service;
 pub mod metrics_service;
 pub mod note_service;

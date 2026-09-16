@@ -71,6 +71,31 @@ pub fn push(path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
     remote.push(&[refspec], Some(&mut po)).map_err(to_sync)
 }
 
+/// 强制推送当前分支（`+` refspec 覆盖远端）：历史被重写后唯一可行的推送方式。
+///
+/// 普通 push 只用于快进同步（`push`），此处单独成函数，避免 force 语义被误用。
+/// 推送成功后远端该分支即本地 HEAD，直接刷新远端跟踪引用，避免随后 `ahead_behind`
+/// 把已推送的提交误报成「待推送」。
+pub fn force_push(path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
+    ca_bundle::configure_ssl_certificates()?;
+    let repo = open(path)?;
+    let branch = current_branch(&repo)?;
+    let head = repo.head().map_err(to_git)?.peel_to_commit().map_err(to_git)?.id();
+    let refspec = format!("+refs/heads/{branch}:refs/heads/{branch}");
+    let mut po = PushOptions::new();
+    po.remote_callbacks(callbacks(cred));
+    let mut remote = repo.find_remote("origin").map_err(to_git)?;
+    remote.push(&[refspec], Some(&mut po)).map_err(to_sync)?;
+    repo.reference(
+        &format!("refs/remotes/origin/{branch}"),
+        head,
+        true,
+        "reset history: force push",
+    )
+    .map_err(to_git)
+    .map(|_| ())
+}
+
 pub fn pull(path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
     fetch(path, cred)?;
     let repo = open(path)?;
