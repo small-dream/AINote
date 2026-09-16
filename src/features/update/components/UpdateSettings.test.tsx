@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useUiStore } from "@/stores/ui.store";
 import type { UpdateInstallEvent, UpdateProgress } from "@/api/update.api";
 import { UpdateSettings } from "./UpdateSettings";
+import { INITIAL_DESKTOP_UPDATE_STATE, useDesktopUpdateStore } from "../stores/desktop-update.store";
 
 const updateApiMock = vi.hoisted(() => ({
   getCurrentVersion: vi.fn(),
@@ -24,6 +25,11 @@ describe("UpdateSettings 检查更新", () => {
     vi.resetAllMocks();
     useUiStore.setState({ locale: "zh-CN" });
     updateApiMock.getCurrentVersion.mockResolvedValue("0.14.2");
+    useDesktopUpdateStore.setState({
+      ...INITIAL_DESKTOP_UPDATE_STATE,
+      dismissedVersion: null,
+      snoozedVersion: null,
+    });
   });
 
   it("展示当前版本并检查更新", async () => {
@@ -55,6 +61,11 @@ describe("UpdateSettings 安装更新", () => {
     vi.resetAllMocks();
     useUiStore.setState({ locale: "zh-CN" });
     updateApiMock.getCurrentVersion.mockResolvedValue("0.14.2");
+    useDesktopUpdateStore.setState({
+      ...INITIAL_DESKTOP_UPDATE_STATE,
+      dismissedVersion: null,
+      snoozedVersion: null,
+    });
   });
 
   it("下载中显示确定进度并禁用操作", async () => {

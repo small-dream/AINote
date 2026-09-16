@@ -5,6 +5,7 @@ import type { WorkspaceActions } from "./useWorkspaceActions";
 import { WorkspaceColumns } from "./WorkspaceColumns";
 import { useSync } from "@/features/sync/hooks/useSync";
 import { SyncNotice } from "@/features/sync/components/SyncNotice";
+import { DesktopUpdateDialog } from "@/features/update/components/DesktopUpdateDialog";
 
 export interface WorkspaceContentProps {
   repoPath: string | null;
@@ -47,6 +48,7 @@ export function WorkspaceLayout({ repoPath, startupSyncing, currentNotePath, edi
           />
         </div>
       </main>
+      <DesktopUpdateDialog />
     </>
   );
 }
