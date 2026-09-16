@@ -5,7 +5,7 @@ import { openNote, openWorkspace } from "./helpers";
 function baseState(): E2eState {
   return {
     repoPath: "/mock-repo",
-    appVersion: "0.39.0",
+    appVersion: "0.40.0",
     notes: [{ path: "a.md", content: "# 笔记\n\n正文" }],
   };
 }
