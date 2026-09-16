@@ -2,11 +2,11 @@ use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{AppHandle, Manager};
 
-use crate::domain::error::{AppError, AppErrorDto};
+use crate::domain::error::AppErrorDto;
 
-/// 退出确认守卫：`confirm_close` 后放行一次窗口关闭请求。
-/// 未确认的关闭请求若存在待保存变更（Git 未提交或未落盘草稿），
-/// 由 on_window_event 拦截并通知前端弹确认框。
+/// 退出确认守卫：`confirm_close` 后放行一次退出请求。
+/// 未确认的退出请求若存在待保存变更（Git 未提交或未落盘草稿），
+/// 由 `platform::tray` 的窗口 / 退出事件拦下并通知前端弹确认框。
 #[derive(Default)]
 pub struct CloseGuard(AtomicBool);
 
@@ -46,6 +46,24 @@ pub fn should_intercept(allow_close: bool, has_pending_changes: bool) -> bool {
     !allow_close && has_pending_changes
 }
 
+/// 是否存在待保存变更：Git 工作区未提交，或编辑器里仍有未落盘草稿。
+/// 未落盘草稿还没写进工作区，`git status` 看不到，因此需叠加前端的 `set_draft_dirty` 上报。
+#[cfg(desktop)]
+pub fn has_pending_changes(app: &AppHandle) -> bool {
+    use crate::repositories::git_backend::GitBackend;
+
+    let has_uncommitted = crate::config::load_repo_path(app)
+        .ok()
+        .flatten()
+        .and_then(|path| {
+            crate::repositories::git2_backend::Git2Backend
+                .has_uncommitted(&path)
+                .ok()
+        })
+        .unwrap_or(false);
+    has_uncommitted || app.state::<DraftState>().get()
+}
+
 /// Controller：上报编辑器是否存在未落盘草稿（前端在 dirty 变化时调用）。
 #[tauri::command]
 pub fn set_draft_dirty(app: AppHandle, dirty: bool) -> Result<(), AppErrorDto> {
@@ -53,15 +71,11 @@ pub fn set_draft_dirty(app: AppHandle, dirty: bool) -> Result<(), AppErrorDto> {
     Ok(())
 }
 
-/// Controller：用户确认退出 —— 放行关闭并请求关闭主窗口。
+/// Controller：用户确认退出 —— 放行退出并请求退出应用（窗口此时是隐藏到托盘的，不再走关闭窗口）。
 #[tauri::command]
 pub async fn confirm_close(app: AppHandle) -> Result<(), AppErrorDto> {
     app.state::<CloseGuard>().allow();
-    if let Some(window) = app.get_webview_window("main") {
-        window
-            .close()
-            .map_err(|error| AppErrorDto::from(AppError::Io(format!("关闭窗口失败: {error}"))))?;
-    }
+    app.exit(0);
     Ok(())
 }
 

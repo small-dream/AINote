@@ -37,6 +37,8 @@ pub fn run() {
             )
             .build(),
     );
+    #[cfg(desktop)]
+    let builder = builder.manage(platform::tray::TrayState::default());
     builder
         .manage(commands::repo::backup::BackupState::default())
         .manage(commands::update::UpdateDownloadState::default())
@@ -46,33 +48,7 @@ pub fn run() {
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 #[cfg(desktop)]
-                {
-                    use tauri::{Emitter, Manager};
-                    let app = window.app_handle();
-                    if app
-                        .state::<commands::close_guard::CloseGuard>()
-                        .take_allow()
-                    {
-                        return;
-                    }
-                    let has_uncommitted = config::load_repo_path(app)
-                        .ok()
-                        .flatten()
-                        .and_then(|path| {
-                            use repositories::git_backend::GitBackend;
-                            repositories::git2_backend::Git2Backend
-                                .has_uncommitted(&path)
-                                .ok()
-                        })
-                        .unwrap_or(false);
-                    // 未落盘草稿尚未写进工作区，git status 看不到，需由前端上报（见 set_draft_dirty）。
-                    let draft_dirty = app.state::<commands::close_guard::DraftState>().get();
-                    let pending = has_uncommitted || draft_dirty;
-                    if commands::close_guard::should_intercept(false, pending) {
-                        api.prevent_close();
-                        let _ = window.emit("app:close-requested", ());
-                    }
-                }
+                platform::tray::handle_close_requested(window, api);
                 #[cfg(not(desktop))]
                 let _ = (window, api);
             }
@@ -89,6 +65,13 @@ pub fn run() {
                 _app.handle().plugin(tauri_plugin_process::init())?;
                 _app.handle()
                     .plugin(tauri_plugin_updater::Builder::new().build())?;
+                // 托盘是「关闭即最小化」的前提；创建失败只降级、不阻断启动。
+                if let Err(error) = platform::tray::setup(_app.handle()) {
+                    log::warn!(
+                        target: "ainote::tray",
+                        "托盘初始化失败，关闭按钮保持退出行为: {error}"
+                    );
+                }
             }
             #[cfg(target_os = "android")]
             {
@@ -187,8 +170,14 @@ pub fn run() {
             commands::update::cancel_update_download,
             commands::update::install_update,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running AINote");
+        .build(tauri::generate_context!())
+        .expect("error while building AINote")
+        .run(|app, event| {
+            #[cfg(desktop)]
+            platform::tray::handle_run_event(app, &event);
+            #[cfg(not(desktop))]
+            let _ = (app, event);
+        });
 }
 
 /// 启动时应用用户保存的日志开关；读取失败保持默认开启。

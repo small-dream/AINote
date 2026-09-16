@@ -10,7 +10,7 @@ export async function printPage(): Promise<void> {
   await call("print_current_page");
 }
 
-/** 确认退出：放行窗口关闭（桌面退出确认后由 Rust 关闭主窗口）。 */
+/** 确认退出：放行退出守卫（前端落盘草稿后调用，由 Rust 结束进程）。 */
 export async function confirmClose(): Promise<void> {
   await call("confirm_close");
 }
