@@ -90,7 +90,7 @@ dependencies = [
 
 [[package]]
 name = "ainote-core"
-version = "0.42.0"
+version = "0.43.0"
 dependencies = [
  "aes-gcm",
  "aes-siv",
