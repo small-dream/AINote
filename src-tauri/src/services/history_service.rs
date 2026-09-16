@@ -4,6 +4,7 @@ use crate::domain::error::AppError;
 use crate::domain::history::{CommitInfo, FileDiff, RepoCommit};
 use crate::repositories::git_backend::GitBackend;
 use crate::repositories::note_files;
+use crate::repositories::vault_files;
 
 const DEFAULT_LIMIT: usize = 100;
 
@@ -14,6 +15,7 @@ pub fn file_history<B: GitBackend>(
     file: &str,
 ) -> Result<Vec<CommitInfo>, AppError> {
     let file = validate_file(file)?;
+    reject_encrypted(repo_path, &file)?;
     backend.file_history(&repo_path.to_string_lossy(), &file, DEFAULT_LIMIT)
 }
 
@@ -26,6 +28,7 @@ pub fn file_diff<B: GitBackend>(
 ) -> Result<FileDiff, AppError> {
     let file = validate_file(file)?;
     validate_commit(commit_id)?;
+    reject_encrypted(repo_path, &file)?;
     backend.file_diff(&repo_path.to_string_lossy(), &file, commit_id)
 }
 
@@ -47,7 +50,19 @@ pub fn restore_file<B: GitBackend>(
 ) -> Result<(), AppError> {
     let file = validate_file(file)?;
     validate_commit(commit_id)?;
+    reject_encrypted(repo_path, &file)?;
     backend.restore_file(&repo_path.to_string_lossy(), &file, commit_id)
+}
+
+/// 加密笔记不提供版本历史（决策 ④）：不做历史 blob 解密，也不给回滚入口。
+/// 判定基于当前工作区文件是否为信封——历史版本可能是明文（加密前提交的），因此一律拒绝。
+fn reject_encrypted(repo_path: &Path, file: &str) -> Result<(), AppError> {
+    if vault_files::is_envelope_file(&repo_path.join(file)) {
+        return Err(AppError::VaultHistoryUnavailable(format!(
+            "{file} 已加密，不提供版本历史"
+        )));
+    }
+    Ok(())
 }
 
 /// 相对路径校验（拒绝穿越与隐藏段），返回规范化的字符串路径。
@@ -118,6 +133,39 @@ mod tests {
         assert_eq!(
             mock.recorded(),
             vec!["diff:a.md@abc1234", "restore:a.md@abc1234"]
+        );
+    }
+
+    #[test]
+    fn encrypted_notes_have_no_version_history() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        std::fs::write(root.join("secret.md"), "AINOTE-ENC-v1\nQUJD\n").unwrap();
+        let mock = MockGitBackend::default();
+
+        assert!(matches!(
+            file_history(&mock, root, "secret.md"),
+            Err(AppError::VaultHistoryUnavailable(_))
+        ));
+        assert!(matches!(
+            file_diff(&mock, root, "secret.md", "abc1234"),
+            Err(AppError::VaultHistoryUnavailable(_))
+        ));
+        assert!(matches!(
+            restore_file(&mock, root, "secret.md", "abc1234"),
+            Err(AppError::VaultHistoryUnavailable(_))
+        ));
+        assert!(mock.recorded().is_empty(), "加密笔记不得触达 Git 历史层");
+    }
+
+    #[test]
+    fn repo_history_still_lists_encrypted_notes_commits() {
+        let mock = MockGitBackend::default();
+        repo_history(&mock, &root(), 10).unwrap();
+        assert_eq!(
+            mock.recorded(),
+            vec!["repo_history"],
+            "全仓历史是元数据，不受加密影响"
         );
     }
 }

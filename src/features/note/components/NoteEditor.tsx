@@ -24,7 +24,7 @@ import { EditorView } from "@codemirror/view";
 import { usePdfExport } from "@/features/export/hooks/usePdfExport";
 import { useMarkdownDiagnostics } from "@/features/diagnostics/hooks/useMarkdownDiagnostics";
 import type { DiagnosticIssue } from "@/features/diagnostics/utils/diagnostics";
-import { EditorState, isEditorUnavailable, NoteEditorContent, selectOutline, useEditorAi, useHistoryRequest } from "./NoteEditorSupport";
+import { editorPlaceholder, NoteEditorContent, selectOutline, useEditorAi, useHistoryRequest } from "./NoteEditorSupport";
 import { reportToastError, useToastStore } from "@/stores/toast.store";
 import { useTranslation } from "@/i18n";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
@@ -50,7 +50,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const history = useNoteHistory();
     const [outlineOpen, setOutlineOpen] = useState(false);
     const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
-    const { draft, kind, onChange, flush, saving, dirty, loadError, saveError } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
+    const { draft, kind, onChange, flush, saving, dirty, loadError, saveError, locked, encrypted } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
     const preferences = useEditorPreferences(repoPath, notePath);
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const wiki = useEditorWiki(repoPath, onOpenNote);
@@ -73,7 +73,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     useEditorScrollPersistence(readyView, previewRef, mode, { editorScrollTop, previewScrollTop, setEditorScrollTop, setPreviewScrollTop });
     useKeyboardCaretIntoView(readyView, isCompact);
     useSyncScroll(readyView, previewRef, mode);
-    useHistoryRequest(historyRequestPath, notePath, onHistoryRequestHandled, history.openHistory);
+    useHistoryRequest(historyRequestPath, notePath, onHistoryRequestHandled, history.openHistory, encrypted);
     useImperativeHandle(ref, () => ({ flush, setMode, openHistory: history.openHistory, insertCallout: () => { if (viewRef.current) dispatchFormat(viewRef.current, insertCallout); viewRef.current?.focus(); } }), [flush, setMode, history.openHistory, viewRef]);
     const diagnostics = useMarkdownDiagnostics(repoPath, draft);
     const handleDiagnosticsSelect = (issue: DiagnosticIssue) => {
@@ -91,9 +91,10 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
         .catch(reportToastError);
     };
 
-    if (isEditorUnavailable(notePath, loadError)) return <EditorState notePath={notePath} error={loadError?.message ?? null} />;
+    const placeholder = editorPlaceholder(notePath, loadError, locked);
+    if (placeholder !== null) return placeholder;
     const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, onContextMenu: markdownMenu.handleContextMenu, onLongPress: handleLongPress, contextMenu: <MarkdownContextMenu menu={markdownMenu} noteTheme={noteTheme} />, previewContextMenu: { onContextMenu: previewMenu.handleContextMenu, onLongPress: previewMenu.openAt }, softRender: softRenderEnabled };
-    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} previewMenu={previewMenu} noteTheme={noteTheme} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} />;
+    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} previewMenu={previewMenu} noteTheme={noteTheme} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} encrypted={encrypted} />;
   },
 );
 

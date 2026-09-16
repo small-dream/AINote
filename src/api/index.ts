@@ -25,6 +25,7 @@ export type {
 export { trashApi } from "./trash.api";
 export { taskApi } from "./task.api";
 export type { CreateTaskInput, UpdateTaskInput } from "./task.api";
+export { vaultApi } from "./vault.api";
 export { openExternal, printPage } from "./app.api";
 export { supportApi } from "./support.api";
 export type { FrontendLogLevel } from "./support.api";

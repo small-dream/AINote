@@ -72,6 +72,19 @@ export function useConflictMerge(repoPath: string | null, open: boolean, onDone:
     resolveFile.mutate({ path: edits.file.path, content: edits.merged });
   }, [edits, resolveFile]);
 
+  /**
+   * 加密笔记专用：密文没有可比对的行结构，直接以选定一侧的原始内容解决该文件（E5）。
+   * 不能复用 keepLocal/keepRemote + saveMerge 的组合——setState 是异步的，保存会读到旧值。
+   */
+  const resolveWithSide = useCallback(
+    (side: "local" | "remote") => {
+      const file = edits.file;
+      if (!file) return;
+      resolveFile.mutate({ path: file.path, content: side === "local" ? file.local : file.remote });
+    },
+    [edits.file, resolveFile]
+  );
+
   const keepAll = useCallback(
     (useLocal: boolean) => {
       resolveAll.mutate(useLocal, { onSuccess: onDone });
@@ -91,6 +104,7 @@ export function useConflictMerge(repoPath: string | null, open: boolean, onDone:
     keepLocal: edits.keepLocal,
     keepRemote: edits.keepRemote,
     saveMerge,
+    resolveWithSide,
     keepAll,
     resolving: resolveFile.isPending || pushing,
   };

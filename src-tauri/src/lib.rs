@@ -14,6 +14,9 @@ mod perf_baseline;
 #[cfg(test)]
 mod recovery_drill;
 
+#[cfg(test)]
+mod encrypted_notes_drill;
+
 pub use services::auth_store::AuthStore;
 pub use domain::hosting::HostingProvider;
 
@@ -169,6 +172,12 @@ pub fn run() {
             commands::update::download_update,
             commands::update::cancel_update_download,
             commands::update::install_update,
+            commands::vault::status::vault_status,
+            commands::vault::create::vault_create,
+            commands::vault::unlock::vault_unlock,
+            commands::vault::lock::vault_lock,
+            commands::vault::change_passphrase::vault_change_passphrase,
+            commands::vault::set_note_encryption::vault_set_note_encryption,
         ])
         .build(tauri::generate_context!())
         .expect("error while building AINote")

@@ -6,12 +6,19 @@ use crate::domain::note::{extract_title, NoteKind};
 use crate::domain::rich_text;
 use crate::domain::wiki::{NoteWiki, WikiLinkContext};
 use crate::repositories::file_storage;
+use crate::services::note_content;
 
 /// 用例：扫描仓库全部笔记的标签与双链（P1-5）。一次全仓扫描，前端本地聚合反链/标签云。
 pub fn wiki_index(repo_path: &Path) -> Result<Vec<NoteWiki>, AppError> {
     let mut notes = Vec::new();
     for file in file_storage::collect_note_files(repo_path)? {
-        let content = std::fs::read_to_string(&file)?;
+        // 锁定的加密笔记不参与标签/双链索引（解锁后后端会重扫）。
+        let Ok(read) = note_content::read_file(repo_path, &file) else {
+            continue;
+        };
+        let Some(content) = read.text else {
+            continue;
+        };
         let rel = file
             .strip_prefix(repo_path)
             .map_err(|e| AppError::Io(e.to_string()))?;

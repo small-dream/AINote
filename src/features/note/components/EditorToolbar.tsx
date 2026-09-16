@@ -32,6 +32,13 @@ interface EditorToolbarProps {
   onExportPdf?: () => void;
   onExportMarkdown?: (() => void) | undefined;
   onAi?: () => void;
+  /** 加密笔记：AI 入口禁用并说明原因（决策③） */
+  aiBlocked: boolean;
+  /** 加密笔记：版本历史入口禁用并说明原因（决策④） */
+  historyBlocked: boolean;
+  /** 逐篇加密开关（E4）；不传表示当前不可用 */
+  onToggleEncryption?: (() => void) | undefined;
+  encryptionAction: "encrypt" | "decrypt";
   isNewNote?: boolean;
   draft?: string;
   onTitleChange?: (content: string) => void;
@@ -57,8 +64,7 @@ const COMPACT_MODE_TABS: ModeTab[] = [
 const MODE_ICONS: Record<ViewMode, LucideIcon> = { edit: SquarePen, source: Code, split: Split, preview: Eye };
 
 /** 笔记操作栏：左侧标题锚点，右侧按「高频视图 → 中频工具 → 低频文件操作」分层分组。 */
-export function EditorToolbar({ path, mode, compact = false, richText = false, saving = false, dirty = false, saveError, saveErrorCode, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onAi, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
-  const { t } = useTranslation();
+export function EditorToolbar({ path, mode, compact = false, richText = false, saving = false, dirty = false, saveError, saveErrorCode, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onAi, aiBlocked, historyBlocked, onToggleEncryption, encryptionAction, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
   return (
     <div
       data-tauri-drag-region="deep"
@@ -70,31 +76,82 @@ export function EditorToolbar({ path, mode, compact = false, richText = false, s
       </div>
 
       <div className="flex shrink-0 items-center gap-4">
-        <div className="flex items-center gap-1">
-          {!richText ? (
-            <>
-              <ModeTabs mode={mode} compact={compact} onChange={onModeChange} />
-              <ToolbarDivider />
-              <NoteThemePicker />
-            </>
-          ) : null}
-          <ToolbarIconButton icon={History} label={t("history.title")} onClick={onHistory} />
-          <ToolbarIconButton icon={Tags} label={t("wiki.title")} onClick={onWiki} />
-          {onAi ? <AiToolbarButton onOpen={onAi} /> : null}
-          <ToolbarDivider />
-          <ToolbarOverflowMenu
-            richText={richText}
-            hasConvert={Boolean(onConvertToRichText)}
-            isPdfAvailable={Boolean(onExportPdf)}
-            onExportPdf={onExportPdf}
-            onExportMarkdown={onExportMarkdown}
-            onConvert={onConvertToRichText}
-            onConvertToMarkdown={onConvertToMarkdown}
-            onMove={onMove}
-          />
-        </div>
+        <ToolbarActions
+          mode={mode}
+          compact={compact}
+          richText={richText}
+          aiBlocked={aiBlocked}
+          historyBlocked={historyBlocked}
+          encryptionAction={encryptionAction}
+          onModeChange={onModeChange}
+          onHistory={onHistory}
+          onWiki={onWiki}
+          onAi={onAi}
+          onConvertToRichText={onConvertToRichText}
+          onConvertToMarkdown={onConvertToMarkdown}
+          onExportPdf={onExportPdf}
+          onExportMarkdown={onExportMarkdown}
+          onMove={onMove}
+          onToggleEncryption={onToggleEncryption}
+        />
         <SaveErrorMessage message={saveError} code={saveErrorCode} onRetry={onSave} />
       </div>
+    </div>
+  );
+}
+
+interface ToolbarActionsProps {
+  mode: ViewMode;
+  compact: boolean;
+  richText: boolean;
+  aiBlocked: boolean;
+  historyBlocked: boolean;
+  encryptionAction: "encrypt" | "decrypt";
+  onModeChange: (mode: ViewMode) => void;
+  onHistory: () => void;
+  onWiki: () => void;
+  onAi?: (() => void) | undefined;
+  onConvertToRichText?: (() => void) | undefined;
+  onConvertToMarkdown?: (() => void) | undefined;
+  onExportPdf?: (() => void) | undefined;
+  onExportMarkdown?: (() => void) | undefined;
+  onMove: () => void;
+  onToggleEncryption?: (() => void) | undefined;
+}
+
+/** 右侧操作分组：高频视图 → 中频工具（AI / 双链 / 历史） → 低频文件操作。 */
+function ToolbarActions({ mode, compact, richText, aiBlocked, historyBlocked, encryptionAction, onModeChange, onHistory, onWiki, onAi, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onMove, onToggleEncryption }: ToolbarActionsProps) {
+  const { t } = useTranslation();
+  return (
+    <div className="flex items-center gap-1">
+      {!richText ? (
+        <>
+          <ModeTabs mode={mode} compact={compact} onChange={onModeChange} />
+          <ToolbarDivider />
+          <NoteThemePicker />
+        </>
+      ) : null}
+      <ToolbarIconButton
+        icon={History}
+        label={historyBlocked ? t("vault.historyDisabled") : t("history.title")}
+        onClick={historyBlocked ? () => undefined : onHistory}
+        disabled={historyBlocked}
+      />
+      <ToolbarIconButton icon={Tags} label={t("wiki.title")} onClick={onWiki} />
+      {onAi ? <AiToolbarButton onOpen={onAi} disabled={aiBlocked} disabledReason={t("vault.aiDisabled")} /> : null}
+      <ToolbarDivider />
+      <ToolbarOverflowMenu
+        richText={richText}
+        hasConvert={Boolean(onConvertToRichText)}
+        isPdfAvailable={Boolean(onExportPdf)}
+        onExportPdf={onExportPdf}
+        onExportMarkdown={onExportMarkdown}
+        onConvert={onConvertToRichText}
+        onConvertToMarkdown={onConvertToMarkdown}
+        onMove={onMove}
+        onToggleEncryption={onToggleEncryption}
+        encryptionAction={encryptionAction}
+      />
     </div>
   );
 }
@@ -114,8 +171,8 @@ function SaveStatus({ saving, dirty }: { saving: boolean; dirty: boolean }) {
 /**
  * 工具条图标按钮：统一直观尺寸，整套图标选用近似笔画/占位深度的字形，观感一致。
  */
-function ToolbarIconButton({ icon, label, onClick }: { icon: LucideIcon; label: string; onClick: () => void }) {
-  return <IconButton icon={icon} label={label} tooltipPlacement="bottom" onClick={onClick} />;
+function ToolbarIconButton({ icon, label, onClick, disabled = false }: { icon: LucideIcon; label: string; onClick: () => void; disabled?: boolean }) {
+  return <IconButton icon={icon} label={label} tooltipPlacement="bottom" onClick={onClick} disabled={disabled} />;
 }
 
 function ToolbarDivider() {

@@ -17,6 +17,11 @@ const syncApiMock = vi.hoisted(() => ({
 vi.mock("@/api", () => ({ syncApi: syncApiMock }));
 
 const FILE = { path: "daily/a.md", local: "本地行1\n本地行2", remote: "远端行1" };
+const ENCRYPTED_FILE = {
+  path: "daily/secret.md",
+  local: "AINOTE-ENC-v1\nTE9DQUw=\n",
+  remote: "AINOTE-ENC-v1\nUkVNT1RF\n",
+};
 
 function renderDialog() {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
@@ -30,6 +35,21 @@ function renderDialog() {
 }
 
 describe("ConflictMergeDialog", () => {
+  it("加密笔记不渲染三栏，改为二选一并原样写回选定的一侧（E5）", async () => {
+    syncApiMock.conflicts.mockResolvedValue([ENCRYPTED_FILE]);
+    syncApiMock.resolveFile.mockResolvedValue({ ahead: 0, behind: 0, hasUncommitted: false, conflicted: false });
+    renderDialog();
+
+    expect(await screen.findByText("这篇笔记已加密")).toBeTruthy();
+    expect(screen.queryByLabelText("合并结果")).toBeNull();
+    expect(screen.queryByText("本地行1")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: "保留远端" }));
+    await waitFor(() => {
+      expect(syncApiMock.resolveFile).toHaveBeenCalledWith("daily/secret.md", ENCRYPTED_FILE.remote);
+    });
+  });
+
   it("展示本地/远端/合并三栏与文件 tab", async () => {
     syncApiMock.conflicts.mockResolvedValue([FILE]);
     renderDialog();

@@ -5,7 +5,8 @@ use crate::domain::error::AppError;
 use crate::domain::note::{NoteContent, NoteKind, NoteMeta};
 use crate::domain::rich_text;
 use crate::domain::sync::TreeNode;
-use crate::repositories::{file_storage, file_tree, note_files, trash_files};
+use crate::repositories::{file_storage, file_tree, note_files, trash_files, vault_files};
+use crate::services::note_content;
 
 const NEW_NOTE_TEMPLATE: &str = "# 未命名\n";
 
@@ -34,7 +35,7 @@ pub fn create_note(
         .join(note_files::validate_rel_path(rel)?)
         .is_file()
     {
-        note_files::write_note(repo_path, rel, &content)?;
+        note_content::write_text(repo_path, rel, &content)?;
     }
     to_meta(repo_path, &repo_path.join(rel))
 }
@@ -54,23 +55,70 @@ pub fn import_note(
     content: &str,
 ) -> Result<NoteMeta, AppError> {
     let rel = note_files::unique_note_path(repo_path, dir, file_name)?;
-    note_files::write_note(repo_path, &rel, content)?;
+    note_content::write_text(repo_path, &rel, content)?;
     to_meta(repo_path, &repo_path.join(&rel))
 }
 
-/// 用例：读取笔记完整内容
+/// 用例：读取笔记完整内容。加密笔记在锁定态返回 `locked: true` 与空内容（前端渲染解锁遮罩）。
 pub fn read_note(repo_path: &Path, rel: &str) -> Result<NoteContent, AppError> {
     let path = note_files::validate_rel_path(rel)?;
+    let read = note_content::read_file(repo_path, &repo_path.join(&path))?;
+    let locked = read.is_locked();
     Ok(NoteContent {
         path: rel.to_string(),
         kind: NoteKind::of_path(&path).unwrap_or(NoteKind::Markdown),
-        content: note_files::read_note(repo_path, rel)?,
+        content: read.text.unwrap_or_default(),
+        locked,
+        encrypted: read.encrypted,
     })
 }
 
-/// 用例：更新笔记内容
+/// 用例：把一篇已有笔记切换为加密态 / 明文态（E4 逐篇开关）。
+/// 已处于目标状态时是幂等的，只返回最新元数据、不改写文件。
+pub fn set_note_encryption(
+    repo_path: &Path,
+    rel: &str,
+    encrypted: bool,
+) -> Result<NoteMeta, AppError> {
+    let path = note_files::validate_rel_path(rel)?;
+    let file = repo_path.join(&path);
+    if !file.is_file() {
+        return Err(AppError::NoteNotFound(rel.to_string()));
+    }
+    ensure_vault_ready(repo_path, encrypted)?;
+    if note_content::is_encrypted_file(&file) != encrypted {
+        let plain = plaintext_of(repo_path, &file)?;
+        let payload = if encrypted {
+            note_content::encrypt_text(repo_path, &plain)?
+        } else {
+            plain
+        };
+        note_files::write_note(repo_path, rel, &payload)?;
+    }
+    to_meta(repo_path, &file)
+}
+
+/// 加密前仓库必须已建库：否则用户要先在设置里创建（给出可操作提示而不是「需要解锁」）。
+fn ensure_vault_ready(repo_path: &Path, encrypted: bool) -> Result<(), AppError> {
+    if encrypted && vault_files::load(repo_path)?.is_none() {
+        return Err(AppError::VaultInvalid(
+            "该仓库尚未启用加密笔记，请先在设置中启用".to_string(),
+        ));
+    }
+    Ok(())
+}
+
+/// 取笔记明文；加密笔记在锁定态会在此被拦截（`VAULT_9001`）。
+fn plaintext_of(repo_path: &Path, file: &Path) -> Result<String, AppError> {
+    let read = note_content::read_file(repo_path, file)?;
+    read.text.ok_or_else(|| {
+        AppError::VaultLocked("加密笔记需要先解锁仓库密钥".to_string())
+    })
+}
+
+/// 用例：更新笔记内容（加密笔记继续以密文落盘）
 pub fn update_note(repo_path: &Path, rel: &str, content: &str) -> Result<(), AppError> {
-    note_files::write_note(repo_path, rel, content)
+    note_content::write_text(repo_path, rel, content)
 }
 
 /// 用例：删除笔记（软删除：移入回收站 `.trash`，可恢复，P2）
@@ -95,7 +143,14 @@ pub fn convert_note_kind(
     to: &str,
     content: &str,
 ) -> Result<(), AppError> {
-    note_files::convert_note(repo_path, from, to, content)
+    // 源笔记是加密态时，转换后的新笔记必须保持密文，否则类型转换会把内容悄悄降级为明文。
+    let source = repo_path.join(note_files::validate_rel_path(from)?);
+    let payload = if note_content::is_encrypted_file(&source) {
+        note_content::encrypt_text(repo_path, content)?
+    } else {
+        content.to_string()
+    };
+    note_files::convert_note(repo_path, from, to, &payload)
 }
 
 /// 用例：列出笔记文件树
@@ -113,17 +168,19 @@ fn to_meta(root: &Path, file: &Path) -> Result<NoteMeta, AppError> {
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
         .unwrap_or_default();
-    let content = match std::fs::read_to_string(file) {
-        Ok(content) => content,
+    let read = match note_content::read_file(root, file) {
+        Ok(read) => read,
         Err(err) => {
             log::warn!(
                 target: "ainote::note",
                 "读取笔记内容失败 path={} error={err}",
                 crate::config::logging::redact(&file.to_string_lossy())
             );
-            String::new()
+            note_content::NoteRead::unreadable()
         }
     };
+    // 锁定态或密文损坏时明文为空，标题自然回退为文件名（列表不因单篇失败中断）。
+    let content = read.text.unwrap_or_default();
     let kind = NoteKind::of_path(file).unwrap_or(NoteKind::Markdown);
     let title = match kind {
         NoteKind::Markdown => extract_title(&content, &fallback),
@@ -140,6 +197,7 @@ fn to_meta(root: &Path, file: &Path) -> Result<NoteMeta, AppError> {
         kind,
         title,
         updated_at,
+        encrypted: read.encrypted,
     })
 }
 
@@ -273,5 +331,61 @@ mod tests {
         // 非法目录拒绝（路径穿越 / 隐藏段）
         assert!(import_note(root, "../evil", "x.md", "y").is_err());
         assert!(import_note(root, ".hidden", "x.md", "y").is_err());
+    }
+
+    #[test]
+    fn set_note_encryption_toggles_and_is_idempotent() {
+        let _serial = crate::services::vault_service::test_guard();
+        let tmp = setup();
+        let root = tmp.path();
+        crate::services::vault_service::create(root, "correct horse battery").unwrap();
+        update_note(root, "a.md", "# 机密\n正文").unwrap();
+
+        assert!(set_note_encryption(root, "a.md", true).unwrap().encrypted);
+        let on_disk = std::fs::read_to_string(root.join("a.md")).unwrap();
+        assert!(on_disk.starts_with("AINOTE-ENC-v1"));
+        assert!(!on_disk.contains("机密"));
+
+        // 幂等：已是加密态时再次加密不改写文件
+        assert!(set_note_encryption(root, "a.md", true).unwrap().encrypted);
+        assert_eq!(std::fs::read_to_string(root.join("a.md")).unwrap(), on_disk);
+
+        // 解密回到明文，且不再是锁定态
+        assert!(!set_note_encryption(root, "a.md", false).unwrap().encrypted);
+        let read = read_note(root, "a.md").unwrap();
+        assert_eq!(read.content, "# 机密\n正文");
+        assert!(!read.locked);
+        assert!(!read.encrypted);
+        crate::services::vault_service::lock(root).unwrap();
+    }
+
+    #[test]
+    fn set_note_encryption_requires_vault_then_unlock() {
+        let _serial = crate::services::vault_service::test_guard();
+        let tmp = setup();
+        let root = tmp.path();
+        update_note(root, "a.md", "# 明文").unwrap();
+
+        // 未建库：给出「先去设置启用」的可操作错误，而不是含糊的锁定错误
+        assert!(matches!(
+            set_note_encryption(root, "a.md", true),
+            Err(AppError::VaultInvalid(_))
+        ));
+        assert_eq!(read_note(root, "a.md").unwrap().content, "# 明文");
+
+        crate::services::vault_service::create(root, "correct horse battery").unwrap();
+        set_note_encryption(root, "a.md", true).unwrap();
+        crate::services::vault_service::lock(root).unwrap();
+
+        // 锁定态既不能解密也不能加密新笔记
+        assert!(matches!(
+            set_note_encryption(root, "a.md", false),
+            Err(AppError::VaultLocked(_))
+        ));
+        assert!(read_note(root, "a.md").unwrap().locked);
+        assert!(matches!(
+            set_note_encryption(root, "missing.md", false),
+            Err(AppError::NoteNotFound(_))
+        ));
     }
 }

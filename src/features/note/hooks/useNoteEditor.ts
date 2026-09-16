@@ -29,6 +29,10 @@ export function useNoteEditor(repoPath: string | null, notePath: string | null, 
   }, []);
   const isLoaded = useNoteReload({ notePath, data: contentQuery.data, reloadToken, applyContent });
   const kind = contentQuery.data?.kind ?? (notePath ? noteKindOfPath(notePath) : "markdown");
+  /** 加密笔记在锁定态：正文不参与编辑，界面改由解锁面板接管（后端连明文都不返回）。 */
+  const locked = contentQuery.data?.locked === true;
+  /** 是否为加密笔记（解锁后仍为 true）：用于关闭 AI 与版本历史入口。 */
+  const encrypted = contentQuery.data?.encrypted === true;
 
   const { flush, reset, saving, saveError } = useNoteSaveQueue({ repoPath, notePath, draft, dirty, setDirty, isLoaded, debounceMs: AUTOSAVE_DEBOUNCE_MS });
 
@@ -79,5 +83,7 @@ export function useNoteEditor(repoPath: string | null, notePath: string | null, 
     dirty,
     loadError: contentQuery.error as AppError | null,
     saveError,
+    locked,
+    encrypted,
   };
 }

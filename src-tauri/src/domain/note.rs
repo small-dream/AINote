@@ -38,6 +38,8 @@ pub struct NoteMeta {
     pub kind: NoteKind,
     pub title: String,
     pub updated_at: u64,
+    /// 是否处于加密态（锁定态下列表只展示文件名，不解密正文）
+    pub encrypted: bool,
 }
 
 /// 笔记完整内容（read_note 返回）
@@ -46,7 +48,12 @@ pub struct NoteMeta {
 pub struct NoteContent {
     pub path: String,
     pub kind: NoteKind,
+    /// 明文内容；加密笔记在锁定态返回空串
     pub content: String,
+    /// 加密笔记且当前会话未解锁（或密文损坏）：前端据此渲染解锁遮罩
+    pub locked: bool,
+    /// 是否为加密笔记：解锁后仍为 true，前端据此关闭 AI 与版本历史（决策③④）
+    pub encrypted: bool,
 }
 
 /// 纯函数：取 Markdown 展示标题。优先使用 frontmatter 里的显式 `title`；

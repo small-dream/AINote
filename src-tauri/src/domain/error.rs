@@ -61,6 +61,21 @@ pub enum AppError {
     /// 任务字段校验失败（空标题、提醒时间缺少截止日期等）
     #[error("invalid task: {0}")]
     TaskInvalid(String),
+    /// 加密笔记：仓库已建库但当前会话未解锁（或该笔记为加密态）
+    #[error("vault locked: {0}")]
+    VaultLocked(String),
+    /// 加密笔记：口令错误，或仓库密钥文件无法解封（两者对外不可区分）
+    #[error("vault unlock failed: {0}")]
+    VaultUnlockFailed(String),
+    /// 加密笔记不提供版本历史（Diff 与恢复此版本均不可用）
+    #[error("vault history unavailable: {0}")]
+    VaultHistoryUnavailable(String),
+    /// 加密笔记输入/配置非法：口令强度不足、vault.json 格式非法、信封格式非法
+    #[error("invalid vault input: {0}")]
+    VaultInvalid(String),
+    /// 密文校验失败：文件已损坏或被人为篡改
+    #[error("vault corrupt: {0}")]
+    VaultCorrupt(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -138,6 +153,11 @@ impl From<AppError> for AppErrorDto {
             AppError::UpdateInstall(_) => ("UPDATE_7003", ErrorKind::Unknown, false),
             AppError::TaskNotFound(_) => ("TASK_8001", ErrorKind::NotFound, false),
             AppError::TaskInvalid(_) => ("TASK_8003", ErrorKind::Unknown, false),
+            AppError::VaultLocked(_) => ("VAULT_9001", ErrorKind::Permission, false),
+            AppError::VaultUnlockFailed(_) => ("VAULT_9002", ErrorKind::Auth, false),
+            AppError::VaultHistoryUnavailable(_) => ("VAULT_9003", ErrorKind::Unknown, false),
+            AppError::VaultInvalid(_) => ("VAULT_9004", ErrorKind::Unknown, false),
+            AppError::VaultCorrupt(_) => ("VAULT_9005", ErrorKind::Unknown, false),
         };
         let provider = match &err {
             AppError::AuthLoginRequired { provider, .. } => Some(provider.clone()),
@@ -236,6 +256,35 @@ mod tests {
         assert_eq!(dto(AppError::UpdateInstall("bridge".into())).code, "UPDATE_7003");
         assert_eq!(dto(AppError::TaskNotFound("t".into())).code, "TASK_8001");
         assert_eq!(dto(AppError::TaskInvalid("bad".into())).code, "TASK_8003");
+        assert_eq!(dto(AppError::VaultLocked("locked".into())).code, "VAULT_9001");
+        assert_eq!(
+            dto(AppError::VaultUnlockFailed("bad passphrase".into())).code,
+            "VAULT_9002"
+        );
+        assert_eq!(
+            dto(AppError::VaultHistoryUnavailable("encrypted".into())).code,
+            "VAULT_9003"
+        );
+        assert_eq!(dto(AppError::VaultInvalid("weak".into())).code, "VAULT_9004");
+        assert_eq!(dto(AppError::VaultCorrupt("tampered".into())).code, "VAULT_9005");
+    }
+
+    #[test]
+    fn vault_errors_are_not_retriable_and_keep_expected_kind() {
+        let locked = dto(AppError::VaultLocked("locked".into()));
+        assert_eq!(locked.kind, ErrorKind::Permission);
+        assert!(!locked.retriable);
+
+        let unlock = dto(AppError::VaultUnlockFailed("bad".into()));
+        assert_eq!(unlock.kind, ErrorKind::Auth);
+        assert!(!unlock.retriable);
+
+        let history = dto(AppError::VaultHistoryUnavailable("encrypted".into()));
+        assert_eq!(history.kind, ErrorKind::Unknown);
+        assert!(!history.retriable);
+
+        assert!(!dto(AppError::VaultInvalid("weak".into())).retriable);
+        assert!(!dto(AppError::VaultCorrupt("tampered".into())).retriable);
     }
 
     #[test]

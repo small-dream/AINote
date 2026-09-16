@@ -14,3 +14,4 @@ pub mod support;
 pub mod task;
 pub mod trash;
 pub mod update;
+pub mod vault;

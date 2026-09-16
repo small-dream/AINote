@@ -46,7 +46,7 @@ function displayName(path: string): string {
 }
 
 function metaOf(path: string, note: { content: string; kind: string }) {
-  return { path, kind: note.kind, title: titleOf(note.content, displayName(path)), updatedAt: Math.floor(Date.now() / 1000) };
+  return { path, kind: note.kind, title: titleOf(note.content, displayName(path)), updatedAt: Math.floor(Date.now() / 1000), encrypted: false };
 }
 
 interface E2eTreeNode {

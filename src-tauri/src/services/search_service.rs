@@ -5,6 +5,7 @@ use crate::domain::note::{extract_title, NoteKind};
 use crate::domain::rich_text;
 use crate::domain::search::SearchResult;
 use crate::repositories::file_storage;
+use crate::services::note_content;
 
 const MAX_RESULTS: usize = 30;
 const MAX_QUERY_CHARS: usize = 100;
@@ -19,7 +20,13 @@ pub fn search_notes(repo_path: &Path, query: &str) -> Result<Vec<SearchResult>, 
     }
     let mut results = Vec::new();
     for file in file_storage::collect_note_files(repo_path)? {
-        let content = std::fs::read_to_string(&file)?;
+        // 加密笔记在锁定态（或密文损坏）静默跳过：既不能把密文当正文匹配，也不该中断整仓搜索。
+        let Ok(read) = note_content::read_file(repo_path, &file) else {
+            continue;
+        };
+        let Some(content) = read.text else {
+            continue;
+        };
         let rel = file
             .strip_prefix(repo_path)
             .map_err(|e| AppError::Io(e.to_string()))?;

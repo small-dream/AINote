@@ -14,8 +14,8 @@ const NOTES = [
 ];
 
 const NOTE_METAS = [
-  { path: "b.md", kind: "markdown", title: "B 笔记", updatedAt: 1 },
-  { path: "a.md", kind: "markdown", title: "A 笔记", updatedAt: 2 },
+  { path: "b.md", kind: "markdown", title: "B 笔记", updatedAt: 1, encrypted: false },
+  { path: "a.md", kind: "markdown", title: "A 笔记", updatedAt: 2, encrypted: false },
 ];
 
 function renderIndex() {

@@ -1,8 +1,9 @@
 import type { ComponentType } from "react";
-import { CircleUser, FolderGit2, Languages, LifeBuoy, Palette, RefreshCw, Sparkles } from "lucide-react";
+import { CircleUser, FolderGit2, Languages, LifeBuoy, Lock, Palette, RefreshCw, Sparkles } from "lucide-react";
 import type { TranslationKey } from "@/i18n/messages";
 import type { SettingsTab } from "@/stores/ui.store";
 import { UpdateSettings } from "@/features/update/components/UpdateSettings";
+import { VaultSettings } from "@/features/vault/components/VaultSettings";
 import { AccountSettings } from "./components/AccountSettings";
 import { AiSettings } from "./components/AiSettings";
 import { LanguageSettings } from "./components/LanguageSettings";
@@ -21,6 +22,7 @@ export interface SettingsSectionMeta {
 /** 设置分类注册表：左侧导航与右侧内容区共用同一份定义（策略表）。 */
 export const SETTINGS_SECTIONS: ReadonlyArray<SettingsSectionMeta> = [
   { id: "repositories", labelKey: "settings.sectionRepositories", descriptionKey: "settings.repositoriesDescription", icon: FolderGit2, component: RepoManager },
+  { id: "vault", labelKey: "settings.sectionVault", descriptionKey: "settings.vaultDescription", icon: Lock, component: VaultSettings },
   { id: "appearance", labelKey: "settings.appearance", descriptionKey: "settings.appearanceDescription", icon: Palette, component: ThemeSettings },
   { id: "language", labelKey: "settings.language", descriptionKey: "settings.languageDescription", icon: Languages, component: LanguageSettings },
   { id: "ai", labelKey: "ai.settings", descriptionKey: "settings.aiDescription", icon: Sparkles, component: AiSettings },

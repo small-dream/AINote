@@ -4,8 +4,9 @@ import { markWorkspaceDirty } from "./dirty";
 import { E2E_PROVIDERS, E2E_REPOS } from "./fixtures";
 import { needNote, noteCommandHandlers } from "./notes";
 import { taskCommandHandlers, type TaskStore } from "./tasks";
+import { vaultCommandHandlers, type VaultStore } from "./vault";
 
-interface MockStore extends TaskStore {
+interface MockStore extends TaskStore, VaultStore {
   notes: Map<string, { content: string; kind: string }>;
   conflicted: boolean;
   conflicts: E2eConflictSeed[];
@@ -58,6 +59,7 @@ function createStore(state: E2eState): MockStore {
     changedFiles: state.changedFiles ?? [],
     taskBoard: state.taskBoard ?? { schemaVersion: 3, tasks: [] },
     taskSeq: 1,
+    vaultState: "absent",
   };
 }
 
@@ -237,6 +239,7 @@ const commandHandlers: Record<string, CommandHandler> = {
   "plugin:event|emit": () => null,
   "plugin:event|emit_to": () => null,
   ...taskCommandHandlers,
+  ...vaultCommandHandlers,
 };
 
 let session: E2eCommandContext | null = null;

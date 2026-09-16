@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect, useState } from "react";
-import type { Dispatch, RefObject, SetStateAction } from "react";
+import type { Dispatch, ReactNode, RefObject, SetStateAction } from "react";
 import { EditorView } from "@codemirror/view";
 import { EditorToolbar, type ViewMode } from "./EditorToolbar";
 import { ConvertNoteDialog } from "@/features/richtext/components/ConvertNoteDialog";
@@ -18,6 +18,10 @@ import type { OutlineItem } from "../utils/outline";
 import type { useEditorWiki } from "@/features/wiki/hooks/useEditorWiki";
 import type { useNoteHistory } from "@/features/history/hooks/useNoteHistory";
 import type { usePdfExport } from "@/features/export/hooks/usePdfExport";
+import type { AppError } from "@/api";
+import { VaultLockedNote } from "@/features/vault/components/VaultLockedNote";
+import { useNoteEncryption } from "@/features/vault/hooks/useNoteEncryption";
+import { useToastStore } from "@/stores/toast.store";
 import type { usePreviewContextMenu } from "../hooks/usePreviewContextMenu";
 import { PreviewContextMenu } from "./PreviewContextMenu";
 import { useTranslation } from "@/i18n";
@@ -63,15 +67,18 @@ export interface NoteEditorContentProps {
   closeAskAi: () => void;
   insertAnswer: (text: string) => void;
   pdf: ReturnType<typeof usePdfExport>;
+  /** 是否为加密笔记：关闭 AI 与版本历史入口，并提供逐篇加密开关 */
+  encrypted: boolean;
 }
 
-export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, previewMenu, noteTheme, richTextDialog, onRequestConvertToRichText, onConfirmConvertToRichText, onCancelConvertToRichText, onConvertToMarkdown, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf }: NoteEditorContentProps) {
+export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, previewMenu, noteTheme, richTextDialog, onRequestConvertToRichText, onConfirmConvertToRichText, onCancelConvertToRichText, onConvertToMarkdown, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf, encrypted }: NoteEditorContentProps) {
   const richText = kind === "richText";
+  const encryption = useNoteEncryption(repoPath, notePath, encrypted);
   // 首次打开后才挂载（触发懒加载分块），之后保持挂载以保留问答历史。
   const [askAiMounted, setAskAiMounted] = useState(askAiOpen);
   if (askAiOpen && !askAiMounted) setAskAiMounted(true);
   return <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-    <EditorToolbar path={notePath} mode={mode} compact={compact} richText={richText} saving={saving} dirty={dirty} saveError={saveError} saveErrorCode={saveErrorCode} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={onRequestConvertToRichText} onConvertToMarkdown={onConvertToMarkdown} onExportPdf={() => void pdf.request()} onExportMarkdown={onExportMarkdown} {...(richText ? {} : { onAi: ai.openMenu })} isNewNote={notePath === createdPath} draft={draft} onTitleChange={onChange} onFlush={flush} onRenamed={onOpenNote} />
+    <EditorToolbar path={notePath} mode={mode} compact={compact} richText={richText} saving={saving} dirty={dirty} saveError={saveError} saveErrorCode={saveErrorCode} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={onRequestConvertToRichText} onConvertToMarkdown={onConvertToMarkdown} onExportPdf={() => void pdf.request()} onExportMarkdown={onExportMarkdown} {...(richText ? {} : { onAi: ai.openMenu })} aiBlocked={encrypted} historyBlocked={encrypted} onToggleEncryption={encryption.available ? encryption.toggle : undefined} encryptionAction={encryption.action} isNewNote={notePath === createdPath} draft={draft} onTitleChange={onChange} onFlush={flush} onRenamed={onOpenNote} />
     <ConvertNoteDialog open={richTextDialog.open} losses={richTextDialog.losses} converting={richTextDialog.converting} onCancel={onCancelConvertToRichText} onConfirm={onConfirmConvertToRichText} />
     <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
     <PreviewContextMenu menu={previewMenu} noteTheme={noteTheme} />
@@ -96,12 +103,15 @@ function EditorLoading() {
   return <div className="flex min-h-0 flex-1 items-center justify-center bg-bg-primary" aria-busy="true" />;
 }
 
-export function useHistoryRequest(requestPath: string | null, notePath: string | null, onHandled: (() => void) | undefined, openHistory: () => void) {
+export function useHistoryRequest(requestPath: string | null, notePath: string | null, onHandled: (() => void) | undefined, openHistory: () => void, blocked = false) {
+  const { t } = useTranslation();
   useEffect(() => {
     if (requestPath !== notePath || !notePath) return;
-    openHistory();
+    // 加密笔记不提供版本历史（决策④）：给出原因而不是打开空面板
+    if (blocked) useToastStore.getState().push(t("vault.historyDisabled"), "info");
+    else openHistory();
     onHandled?.();
-  }, [requestPath, notePath, onHandled, openHistory]);
+  }, [requestPath, notePath, onHandled, openHistory, blocked, t]);
 }
 
 export function useEditorAi(viewRef: RefObject<EditorView | null>, notePath: string | null, draft: string, onChange: (value: string) => void) {
@@ -155,4 +165,10 @@ export function EditorState({ notePath, error }: { notePath: string | null; erro
 
 export function isEditorUnavailable(notePath: string | null, error: unknown): boolean {
   return notePath === null || error !== null;
+}
+
+/** 编辑区占位（空态 / 加载失败 / 加密笔记未解锁）；无需占位时返回 null。 */
+export function editorPlaceholder(notePath: string | null, error: AppError | null, locked: boolean): ReactNode {
+  if (isEditorUnavailable(notePath, error)) return <EditorState notePath={notePath} error={error?.message ?? null} />;
+  return locked ? <VaultLockedNote notePath={notePath as string} /> : null;
 }

@@ -13,6 +13,7 @@ const NOTE = (path: string, title: string, updatedAt: number) => ({
   kind: "markdown" as const,
   title,
   updatedAt,
+  encrypted: false,
 });
 const NOTES = [
   NOTE("today.md", "Today", NOW),

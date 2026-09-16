@@ -1,4 +1,4 @@
-import { ArrowLeftRight, Download, Ellipsis, FolderInput, Printer } from "lucide-react";
+import { ArrowLeftRight, Download, Ellipsis, FolderInput, Printer, ShieldCheck, ShieldOff } from "lucide-react";
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { IconButton } from "@/components/atoms/IconButton";
 import { useTranslation } from "@/i18n";
@@ -14,6 +14,9 @@ interface ToolbarOverflowMenuProps {
   /** 富文本 → Markdown（可逆转换，无需确认对话框） */
   onConvertToMarkdown?: (() => void) | undefined;
   onMove: () => void;
+  /** 逐篇加密开关（E4）；null 表示当前不可用（未建库或已锁定） */
+  onToggleEncryption?: (() => void) | undefined;
+  encryptionAction?: "encrypt" | "decrypt";
 }
 
 interface MenuItem {
@@ -26,8 +29,14 @@ interface MenuItem {
 /** 菜单与视口边缘的最小留白，避免贴边或被裁切。 */
 const MENU_VIEWPORT_MARGIN = 8;
 
+/** 加密开关菜单项：文案与图标随「加密 / 解密」方向切换（分支集中在纯函数里）。 */
+function encryptionItem(action: "encrypt" | "decrypt", run: () => void, t: ReturnType<typeof useTranslation>["t"]): MenuItem {
+  const decrypting = action === "decrypt";
+  return { key: "encryption", icon: decrypting ? ShieldOff : ShieldCheck, label: t(decrypting ? "note.decrypt" : "note.encrypt"), run };
+}
+
 /** 低频文件操作溢出菜单：把不常用的导出 / 转换 / 移动收进「⋯」，避免常驻顶栏造成噪音。 */
-export function ToolbarOverflowMenu({ richText, hasConvert, isPdfAvailable, onExportPdf, onExportMarkdown, onConvert, onConvertToMarkdown, onMove }: ToolbarOverflowMenuProps) {
+export function ToolbarOverflowMenu({ richText, hasConvert, isPdfAvailable, onExportPdf, onExportMarkdown, onConvert, onConvertToMarkdown, onMove, onToggleEncryption, encryptionAction = "encrypt" }: ToolbarOverflowMenuProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
   const rootRef = useRef<HTMLDivElement | null>(null);
@@ -46,6 +55,9 @@ export function ToolbarOverflowMenu({ richText, hasConvert, isPdfAvailable, onEx
       : []),
     ...(richText && onConvertToMarkdown
       ? [{ key: "convertToMarkdown", icon: ArrowLeftRight, label: t("richtext.convertToMarkdown"), run: onConvertToMarkdown }]
+      : []),
+    ...(onToggleEncryption
+      ? [encryptionItem(encryptionAction, onToggleEncryption, t)]
       : []),
     { key: "move", icon: FolderInput, label: t("note.moving"), run: onMove },
   ];

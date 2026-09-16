@@ -15,6 +15,9 @@ function renderToolbar(overrides: Partial<Parameters<typeof EditorToolbar>[0]> =
     onConvertToRichText: vi.fn(),
     onExportPdf: vi.fn(),
     onAi: vi.fn(),
+    aiBlocked: false,
+    historyBlocked: false,
+    encryptionAction: "encrypt",
     ...overrides,
   };
   const queryClient = new QueryClient();
@@ -133,5 +136,33 @@ describe("EditorToolbar / 更多菜单", () => {
     fireEvent.click(screen.getByRole("button", { name: "更多" }));
     expect(screen.queryByRole("menuitem", { name: "转换为富文本" })).toBeNull();
     expect(screen.getByRole("menuitem", { name: "移动笔记" })).toBeTruthy();
+  });
+
+  it("加密笔记：版本历史入口禁用并说明原因（决策④）", () => {
+    renderToolbar({ historyBlocked: true });
+    expect(screen.queryByRole("button", { name: "版本历史" })).toBeNull();
+    expect(screen.getByRole("button", { name: "加密笔记不提供版本历史" })).toBeTruthy();
+  });
+
+  it("加密笔记：AI 入口禁用并说明原因（决策③）", () => {
+    renderToolbar({ aiBlocked: true });
+    expect(screen.getByRole("button", { name: "加密笔记不支持 AI 功能" })).toBeTruthy();
+    // 双链与标签不受影响
+    expect(screen.getByRole("button", { name: "双链与标签" })).toBeTruthy();
+  });
+
+  it("解锁态提供「加密此笔记」入口", () => {
+    const onToggleEncryption = vi.fn();
+    renderToolbar({ onToggleEncryption });
+    fireEvent.click(screen.getByRole("button", { name: "更多" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "加密此笔记" }));
+    expect(onToggleEncryption).toHaveBeenCalledTimes(1);
+  });
+
+  it("加密态提供「解密此笔记」入口", () => {
+    const onToggleEncryption = vi.fn();
+    renderToolbar({ onToggleEncryption, encryptionAction: "decrypt" });
+    fireEvent.click(screen.getByRole("button", { name: "更多" }));
+    expect(screen.getByRole("menuitem", { name: "解密此笔记" })).toBeTruthy();
   });
 });

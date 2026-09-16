@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { favoritePathsOf, favoriteDisplayName } from "./favorites";
 
-const note = { path: "daily/a.md", kind: "markdown" as const, title: "First", updatedAt: 1 };
+const note = { path: "daily/a.md", kind: "markdown" as const, title: "First", updatedAt: 1, encrypted: false };
 
 describe("favorites utils", () => {
   it("collects favorite paths", () => {

@@ -12,7 +12,7 @@ const SECONDS_BY_PATH: Record<string, number> = {
 };
 
 function note(path: string, title: string, secondsAgo: number): NoteMeta {
-  return { path, kind: "markdown", title, updatedAt: NOW - secondsAgo };
+  return { path, kind: "markdown", title, updatedAt: NOW - secondsAgo, encrypted: false };
 }
 
 const baseNotes: NoteMeta[] = [

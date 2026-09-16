@@ -11,6 +11,7 @@ use crate::domain::error::AppError;
 use crate::repositories::llm::{LlmClient, OpenAiCompatClient};
 
 use super::ai_store::AiStore;
+use super::note_content;
 use super::search_service;
 
 const MAX_CONTEXT_RESULTS: usize = 5;
@@ -201,8 +202,16 @@ pub fn retrieve_context(root: &Path, query: &str, top_k: usize) -> Result<String
     let results = search_service::search_notes(root, query)?;
     let mut blocks = Vec::new();
     for result in results.into_iter().take(top_k) {
-        let rel = Path::new(&result.path);
-        let content = std::fs::read_to_string(root.join(rel))?;
+        let Ok(read) = note_content::read_file(root, &root.join(&result.path)) else {
+            continue;
+        };
+        // 加密笔记永不进入 AI 上下文（解锁态也不进）：决策③ 的 Rust 侧兜底。
+        if read.encrypted {
+            continue;
+        }
+        let Some(content) = read.text else {
+            continue;
+        };
         let para = paragraph_around(&content, result.line, MAX_PARAGRAPH_CHARS);
         blocks.push(format!("【笔记：{}】\n{}", result.path, para));
     }

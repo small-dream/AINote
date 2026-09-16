@@ -45,7 +45,7 @@ describe("useUpdateNoteMutation", () => {
   it("[notes]/[wiki] 只标记过期（refetchType none），[sync] 即时刷新，并回写 note-content 缓存", async () => {
     const { client, wrapper } = createHarness();
     noteApiMock.update.mockResolvedValue(null);
-    client.setQueryData(noteKeys.content("/repo", "a.md"), { path: "a.md", kind: "markdown", content: "旧内容" });
+    client.setQueryData(noteKeys.content("/repo", "a.md"), { path: "a.md", kind: "markdown", content: "旧内容", locked: false, encrypted: false });
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
     const versionBefore = useWorkspaceActivityStore.getState().version;
     const { result } = renderHook(() => useUpdateNoteMutation("/repo"), { wrapper });
@@ -61,6 +61,8 @@ describe("useUpdateNoteMutation", () => {
       path: "a.md",
       kind: "markdown",
       content: "新内容",
+      locked: false,
+      encrypted: false,
     });
     expect(useWorkspaceActivityStore.getState().version).toBe(versionBefore + 1);
   });
@@ -102,8 +104,8 @@ describe("useUpdateNoteMutation", () => {
 describe("useCreateNoteMutation", () => {
   it("创建成功刷新 [notes]/[tree]/[wiki]/[sync] 并移除 note-content 缓存", async () => {
     const { client, wrapper } = createHarness();
-    noteApiMock.create.mockResolvedValue({ path: "new.md", kind: "markdown", title: "new", updatedAt: 1 });
-    client.setQueryData(noteKeys.content("/repo", "old.md"), { path: "old.md", kind: "markdown", content: "旧" });
+    noteApiMock.create.mockResolvedValue({ path: "new.md", kind: "markdown", title: "new", updatedAt: 1, encrypted: false });
+    client.setQueryData(noteKeys.content("/repo", "old.md"), { path: "old.md", kind: "markdown", content: "旧", locked: false, encrypted: false });
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
     const removeSpy = vi.spyOn(client, "removeQueries");
     const { result } = renderHook(() => useCreateNoteMutation(), { wrapper });
@@ -125,7 +127,7 @@ describe("useCreateNoteMutation", () => {
 describe("useImportNoteMutation", () => {
   it("导入成功刷新 [notes]/[tree]/[sync] 并标记工作区活动", async () => {
     const { client, wrapper } = createHarness();
-    noteApiMock.importFromMarkdown.mockResolvedValue({ path: "导入.md", kind: "markdown", title: "导入", updatedAt: 1 });
+    noteApiMock.importFromMarkdown.mockResolvedValue({ path: "导入.md", kind: "markdown", title: "导入", updatedAt: 1, encrypted: false });
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
     const versionBefore = useWorkspaceActivityStore.getState().version;
     const { result } = renderHook(() => useImportNoteMutation(), { wrapper });

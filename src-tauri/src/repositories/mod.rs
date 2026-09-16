@@ -20,3 +20,4 @@ pub mod repo_maintenance;
 pub(crate) mod restore_files;
 pub mod task_files;
 pub mod trash_files;
+pub(crate) mod vault_files;

@@ -10,13 +10,29 @@ export interface NoteMeta {
   kind: NoteKind;
   title: string;
   updatedAt: number;
+  /** 是否处于加密态：锁定态下列表只以文件名兜底标题 */
+  encrypted: boolean;
 }
 
 /** read_note 返回的完整笔记内容 */
 export interface NoteContent {
   path: string;
   kind: NoteKind;
+  /** 明文内容；加密笔记在锁定态为空串 */
   content: string;
+  /** 加密笔记且当前会话未解锁：编辑器渲染解锁遮罩（不弹错误提示） */
+  locked: boolean;
+  /** 是否为加密笔记：解锁后仍为 true，前端据此关闭 AI 与版本历史入口 */
+  encrypted: boolean;
+}
+
+/** 仓库加密状态（vault_status 返回，与 Rust domain/vault.rs 一致） */
+export type VaultState = "absent" | "locked" | "unlocked";
+
+export interface VaultStatus {
+  state: VaultState;
+  /** 仓库内处于加密态的笔记数量 */
+  encryptedNotes: number;
 }
 
 /** note_tree 的节点类型：目录 / 文件 */
