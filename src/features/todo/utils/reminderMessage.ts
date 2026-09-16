@@ -38,7 +38,12 @@ export function reminderExcerpt(description: string): string | null {
 /** 截止时间的一行描述：今天 18:00 / 明天 / 09-20 18:00；无截止时间为 null */
 export function reminderDueLabel(task: TaskItemDto, locale: Locale, now: Date): string | null {
   if (!task.dueAt) return null;
-  const dayLabel = dueDateLabel(task.dueAt, translate(locale, "todo.dateToday"), translate(locale, "todo.dateTomorrow"));
+  const dayLabel = dueDateLabel(
+    task.dueAt,
+    translate(locale, "todo.dateToday"),
+    translate(locale, "todo.dateTomorrow"),
+    now
+  );
   const offset = dueDayOffset(task.dueAt, now);
   const day = offset === 2 ? translate(locale, "todo.dateDayAfter") : offset >= 3 ? dueDay(task.dueAt).slice(5) : dayLabel;
   const time = dueTime(task.dueAt);

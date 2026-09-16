@@ -62,14 +62,15 @@ interface NativeDueDateChipProps {
 export function NativeDueDateChip({ value, onChange }: NativeDueDateChipProps) {
   const { t } = useTranslation();
   const time = value ? dueTime(value) : "";
-  const offset = value ? dueDayOffset(value, new Date()) : null;
+  const now = new Date();
+  const offset = value ? dueDayOffset(value, now) : null;
   const toneClass = offset !== null && offset < 0 ? "text-danger" : offset === 0 ? "text-accent" : undefined;
 
   return (
     <NativeChipShell
       kind="date"
       icon={Calendar}
-      label={value ? dueDateLabel(value, t("todo.dateToday"), t("todo.dateTomorrow")) : t("todo.dueDate")}
+      label={value ? dueDateLabel(value, t("todo.dateToday"), t("todo.dateTomorrow"), now) : t("todo.dueDate")}
       ariaLabel={t("todo.setDueDate")}
       active={value !== null}
       toneClass={toneClass}

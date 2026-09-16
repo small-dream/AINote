@@ -38,13 +38,14 @@ export function DueDateChip({ value, onChange }: DueDateChipProps) {
 /** 桌面截止日期 chip：只选到哪天。具体时刻由旁边的「时间」chip 单独设置。 */
 function DesktopDueDateChip({ value, onChange }: DueDateChipProps) {
   const { t } = useTranslation();
-  const offset = value ? dueDayOffset(value, new Date()) : null;
+  const now = new Date();
+  const offset = value ? dueDayOffset(value, now) : null;
   const toneClass = offset !== null && offset < 0 ? "text-danger" : offset === 0 ? "text-accent" : undefined;
 
   return (
     <Chip
       icon={Calendar}
-      label={value ? dueDateLabel(value, t("todo.dateToday"), t("todo.dateTomorrow")) : t("todo.dueDate")}
+      label={value ? dueDateLabel(value, t("todo.dateToday"), t("todo.dateTomorrow"), now) : t("todo.dueDate")}
       menuLabel={t("todo.setDueDate")}
       tooltip={t("todo.setDueDate")}
       active={value !== null}

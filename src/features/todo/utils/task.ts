@@ -56,9 +56,18 @@ export function dueDayOffset(dueAt: string, today: Date): number {
   return Math.round((due.getTime() - base.getTime()) / 86400000);
 }
 
-/** 截止日期展示文案：今天 / 明天 / MM-DD（今天与明天的文案由调用方按语言传入） */
-export function dueDateLabel(dueAt: string, todayLabel: string, tomorrowLabel: string): string {
-  const offset = dueDayOffset(dueAt, new Date());
+/**
+ * 截止日期展示文案：今天 / 明天 / MM-DD（今天与明天的文案由调用方按语言传入）。
+ * `now` 与 `dueDayOffset` 同源由调用方注入：提醒通知里两者必须用同一个时刻，
+ * 否则跨过午夜（或测试注入固定时刻）时「相对文案」与「偏移天数」会互相打架。
+ */
+export function dueDateLabel(
+  dueAt: string,
+  todayLabel: string,
+  tomorrowLabel: string,
+  now: Date
+): string {
+  const offset = dueDayOffset(dueAt, now);
   if (offset === 0) return todayLabel;
   if (offset === 1) return tomorrowLabel;
   return dueDay(dueAt).slice(5);
