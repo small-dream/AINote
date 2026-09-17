@@ -23,7 +23,7 @@ describe("TreeSearchInput", () => {
 });
 
 describe("TreeSearchResults", () => {
-  const result = { path: "daily/foo.md", title: "Foo", snippet: "hello", line: 1, updatedAt: 1 };
+  const result = { path: "daily/foo.md", title: "Foo", snippet: "hello", line: 1, updatedAt: 1, encrypted: false };
 
   it("命中时渲染列表并点击打开笔记", () => {
     const onSelect = vi.fn();
@@ -48,5 +48,10 @@ describe("TreeSearchResults", () => {
   it("搜索失败时展示错误信息", () => {
     render(<TreeSearchResults query="bar" results={[]} isSearching={false} error="IPC 不可用" onSelect={vi.fn()} />);
     expect(screen.getByText(/搜索失败：IPC 不可用/)).toBeTruthy();
+  });
+
+  it("加密命中展示锁徽标", () => {
+    render(<TreeSearchResults query="foo" results={[{ ...result, encrypted: true }]} isSearching={false} error={null} onSelect={vi.fn()} />);
+    expect(screen.getByRole("img", { name: "已加密" })).toBeTruthy();
   });
 });

@@ -43,6 +43,8 @@ export interface TreeNode {
   name: string;
   path: string;
   nodeType: NodeKind;
+  /** 是否为加密笔记：锁定态也由首行信封判定，不解密正文 */
+  encrypted: boolean;
   children: TreeNode[];
 }
 
@@ -187,6 +189,8 @@ export interface SearchResult {
   /** 首个命中所在行号（1 起） */
   line: number;
   updatedAt: number;
+  /** 是否为加密笔记：锁定态的加密笔记会被搜索静默跳过，返回的均为可读结果 */
+  encrypted: boolean;
 }
 
 /** git_file_history 返回的单条提交（与 Rust domain/history.rs 一致） */

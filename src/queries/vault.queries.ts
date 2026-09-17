@@ -62,7 +62,7 @@ export function useNoteEncryptionMutation() {
   return useMutation({
     mutationFn: ({ path, encrypted }: NoteEncryptionInput) => vaultApi.setNoteEncryption(path, encrypted),
     onSuccess: (_meta: NoteMeta) => {
-      for (const key of [["vault"], ["note-content"], ["notes"], ["wiki"], ["search"], ["sync"]]) {
+      for (const key of [["vault"], ["tree"], ["note-content"], ["notes"], ["wiki"], ["search"], ["sync"]]) {
         void queryClient.invalidateQueries({ queryKey: key });
       }
     },

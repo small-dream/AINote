@@ -78,6 +78,17 @@ describe("TagIndex", () => {
     expect(await screen.findByText("C 笔记")).toBeTruthy();
   });
 
+  it("标签下加密笔记展示锁徽标", async () => {
+    apiMock.wikiApi.index.mockResolvedValue(NOTES);
+    apiMock.noteApi.list.mockResolvedValue(
+      NOTE_METAS.map((meta) => (meta.path === "b.md" ? { ...meta, encrypted: true } : meta)),
+    );
+    renderIndex();
+
+    fireEvent.click(await screen.findByText("x"));
+    expect(screen.getByRole("img", { name: "已加密" })).toBeTruthy();
+  });
+
   it("无标签时展示空态", async () => {
     apiMock.wikiApi.index.mockResolvedValue([]);
     apiMock.noteApi.list.mockResolvedValue([]);

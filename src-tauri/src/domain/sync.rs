@@ -85,5 +85,7 @@ pub struct TreeNode {
     pub name: String,
     pub path: String,
     pub node_type: NodeKind,
+    /// 是否为加密笔记（信封文件）：锁定态也由首行信封判定，不解密正文
+    pub encrypted: bool,
     pub children: Vec<TreeNode>,
 }

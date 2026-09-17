@@ -14,9 +14,10 @@ const noteTreeQuery = vi.hoisted(() => ({
     name: "root",
     path: "",
     nodeType: "dir",
+    encrypted: false,
     children: [
-      { name: "daily", path: "daily", nodeType: "dir", children: [] },
-      { name: "projects", path: "projects", nodeType: "dir", children: [] },
+      { name: "daily", path: "daily", nodeType: "dir", encrypted: false, children: [] },
+      { name: "projects", path: "projects", nodeType: "dir", encrypted: false, children: [] },
     ],
   },
   isLoading: false,

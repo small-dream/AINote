@@ -76,11 +76,12 @@ interface E2eTreeNode {
   name: string;
   path: string;
   nodeType: "file" | "dir";
+  encrypted: boolean;
   children: E2eTreeNode[];
 }
 
 function treeOf(notes: E2eNoteMap): E2eTreeNode {
-  const root: E2eTreeNode = { name: "", path: "", nodeType: "dir", children: [] };
+  const root: E2eTreeNode = { name: "", path: "", nodeType: "dir", encrypted: false, children: [] };
   for (const path of notes.keys()) {
     const segments = path.split("/");
     let folder = root.children;
@@ -89,8 +90,8 @@ function treeOf(notes: E2eNoteMap): E2eTreeNode {
       const existing = folder.find((item) => item.name === segment);
       if (existing) { folder = existing.children; return; }
       const node: E2eTreeNode = isFile
-        ? { name: segment, path, nodeType: "file", children: [] }
-        : { name: segment, path: segments.slice(0, index + 1).join("/"), nodeType: "dir", children: [] };
+        ? { name: segment, path, nodeType: "file", encrypted: isEnvelopeText(notes.get(path)?.content ?? ""), children: [] }
+        : { name: segment, path: segments.slice(0, index + 1).join("/"), nodeType: "dir", encrypted: false, children: [] };
       folder.push(node);
       folder = node.children;
     });

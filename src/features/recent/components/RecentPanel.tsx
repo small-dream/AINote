@@ -6,6 +6,7 @@ import { useNoteListQuery } from "@/queries/note.queries";
 import { useSessionStore } from "@/stores/session.store";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
+import { NoteLockBadge } from "@/features/vault/components/NoteLockBadge";
 import { filterRecentNotes, groupRecentNotes, sortRecentNotes } from "../utils/recent";
 
 interface RecentPanelProps {
@@ -122,6 +123,7 @@ function RecentNoteRow({ note, active, onSelect }: { note: RecentNote; active: b
         <span className="block truncate">{note.title || note.path.split("/").pop()}</span>
         <span className="mt-0.5 block truncate text-[11px] text-text-tertiary">{note.path}</span>
       </span>
+      {note.encrypted ? <NoteLockBadge active={active} /> : null}
       <time dateTime={new Date(note.openedAt).toISOString()} className="shrink-0 text-[11px] text-text-tertiary">
         {formatOpenedAt(note.openedAt, locale)}
       </time>

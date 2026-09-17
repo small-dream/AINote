@@ -2,6 +2,7 @@ import { Star } from "lucide-react";
 import { useFavoriteNotesQuery } from "@/queries/favorite.queries";
 import { useTranslation } from "@/i18n";
 import { favoriteDisplayName } from "../utils/favorites";
+import { NoteLockBadge } from "@/features/vault/components/NoteLockBadge";
 
 interface FavoritePanelProps {
   repoPath: string | null;
@@ -43,6 +44,7 @@ export function FavoritePanel({ repoPath, onSelect }: FavoritePanelProps) {
                 <span className="block truncate">{favoriteDisplayName(note)}</span>
                 <span className="mt-0.5 block truncate text-[11px] text-text-tertiary">{note.path}</span>
               </span>
+              {note.encrypted ? <NoteLockBadge /> : null}
             </button>
           ))}
         </div>

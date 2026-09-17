@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { CornerDownLeft, Search } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { useBackHandler } from "@/platform/back-navigation";
+import { NoteLockBadge } from "@/features/vault/components/NoteLockBadge";
 import { useCommandPalette } from "../hooks/useCommandPalette";
 import { usePaletteShortcut } from "../hooks/usePaletteShortcut";
 import type { CommandPaletteActions } from "../types";
@@ -102,7 +103,10 @@ function PaletteItem({ command, selected, onRun }: PaletteItemProps) {
         onClick={onRun}
         className={`flex w-full items-center justify-between gap-3 px-4 py-2 text-left text-sm ${selected ? "bg-bg-tertiary text-text-primary" : "text-text-secondary"}`}
       >
-        <span className="min-w-0 truncate">{command.label}</span>
+        <span className="flex min-w-0 items-center gap-1.5">
+          <span className="truncate">{command.label}</span>
+          {command.encrypted ? <NoteLockBadge /> : null}
+        </span>
         {command.hint && (
           <span className="flex shrink-0 items-center gap-1 text-xs text-text-tertiary">
             <CornerDownLeft size={12} aria-hidden="true" />

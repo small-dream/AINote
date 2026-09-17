@@ -6,6 +6,7 @@ import { useNoteListQuery } from "@/queries/note.queries";
 import type { NoteWikiDto } from "@/api/types";
 import { buildTagCloud, buildTagNotes, filterTagCloud, type TagCloudItem } from "../utils/wiki";
 import { useUiStore } from "@/stores/ui.store";
+import { NoteLockBadge } from "@/features/vault/components/NoteLockBadge";
 
 interface TagIndexProps {
   repoPath: string | null;
@@ -30,6 +31,7 @@ export function TagIndex({ repoPath, onSelect }: TagIndexProps) {
     return <div className="p-4 text-sm text-text-secondary">{t("common.loading")}</div>;
   }
   const updatedAtByPath = new Map(noteMetas.map((note) => [note.path, note.updatedAt]));
+  const encryptedByPath = new Map(noteMetas.map((note) => [note.path, note.encrypted]));
   const tags = filterTagCloud(buildTagCloud(notes), query);
   if (tags.length === 0) {
     return <TagEmptyState isLoading={isLoading} hasTags={buildTagCloud(notes).length > 0} />;
@@ -48,6 +50,7 @@ export function TagIndex({ repoPath, onSelect }: TagIndexProps) {
             tag={tag}
             notes={notes}
             updatedAtByPath={updatedAtByPath}
+            encryptedByPath={encryptedByPath}
             expanded={selected === tag.name}
             focused={focusedTag === tag.name}
             onToggle={() => setSelected(selected === tag.name ? null : tag.name)}
@@ -63,13 +66,14 @@ interface TagRowProps {
   tag: TagCloudItem;
   notes: NoteWikiDto[];
   updatedAtByPath: Map<string, number>;
+  encryptedByPath: Map<string, boolean>;
   expanded: boolean;
   focused: boolean;
   onToggle: () => void;
   onSelect: (path: string) => void;
 }
 
-function TagRow({ tag, notes, updatedAtByPath, expanded, focused, onToggle, onSelect }: TagRowProps) {
+function TagRow({ tag, notes, updatedAtByPath, encryptedByPath, expanded, focused, onToggle, onSelect }: TagRowProps) {
   const taggedNotes = buildTagNotes(notes, tag.name, updatedAtByPath);
   return (
     <div>
@@ -90,9 +94,10 @@ function TagRow({ tag, notes, updatedAtByPath, expanded, focused, onToggle, onSe
               key={note.path}
               type="button"
               onClick={() => onSelect(note.path)}
-              className="block w-full truncate px-2 py-1 text-left text-sm text-text-secondary transition-colors hover:text-text-primary"
+              className="flex w-full min-w-0 items-center gap-1.5 px-2 py-1 text-left text-sm text-text-secondary transition-colors hover:text-text-primary"
             >
-              {note.title}
+              <span className="truncate">{note.title}</span>
+              {encryptedByPath.get(note.path) ? <NoteLockBadge /> : null}
             </button>
           ))}
         </div>

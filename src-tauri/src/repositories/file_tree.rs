@@ -4,7 +4,7 @@ use std::path::Path;
 use crate::domain::error::AppError;
 use crate::domain::sync::{NodeKind, TreeNode};
 
-use super::file_storage::is_hidden;
+use super::{file_storage::is_hidden, vault_files};
 use crate::domain::note::is_note_file;
 
 /// 用例支撑：列出仓库的笔记文件树（目录优先、按名称排序，跳过隐藏项）。
@@ -36,6 +36,7 @@ fn build_node(root: &Path, dir: &Path) -> Result<TreeNode, AppError> {
         name: file_name(dir),
         path: rel_path(root, dir),
         node_type: NodeKind::Dir,
+        encrypted: false,
         children,
     })
 }
@@ -45,6 +46,7 @@ fn leaf(root: &Path, path: &Path) -> TreeNode {
         name: file_name(path),
         path: rel_path(root, path),
         node_type: NodeKind::File,
+        encrypted: vault_files::is_envelope_file(path),
         children: vec![],
     }
 }
@@ -64,6 +66,8 @@ fn rel_path(root: &Path, path: &Path) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::vault::ENVELOPE_MAGIC;
+    use std::fs;
     use std::fs::{create_dir_all, File};
 
     #[test]
@@ -77,6 +81,7 @@ mod tests {
         File::create(root.join("daily/c.ainote")).unwrap();
         File::create(root.join(".git/x.md")).unwrap();
         File::create(root.join("note.txt")).unwrap();
+        fs::write(root.join("daily/secret.md"), format!("{ENVELOPE_MAGIC}\nQUJD\n")).unwrap();
 
         let tree = list_tree(root).unwrap();
         assert_eq!(tree.node_type, NodeKind::Dir);
@@ -84,7 +89,11 @@ mod tests {
         assert_eq!(tree.children[0].name, "daily");
         assert_eq!(tree.children[0].node_type, NodeKind::Dir);
         assert_eq!(tree.children[0].children[0].path, "daily/a.md");
+        assert!(!tree.children[0].children[0].encrypted);
         assert_eq!(tree.children[0].children[1].path, "daily/c.ainote");
+        assert_eq!(tree.children[0].children[2].path, "daily/secret.md");
+        assert!(tree.children[0].children[2].encrypted, "信封文件必须标记为加密");
         assert_eq!(tree.children[1].name, "b.md");
+        assert!(!tree.children[1].encrypted);
     }
 }

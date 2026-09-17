@@ -3,11 +3,12 @@ import { describe, expect, it, vi } from "vitest";
 import type { TreeNode } from "@/api/types";
 import { TreeNodes } from "./TreeNodes";
 
-const note: TreeNode = { name: "b.md", path: "b.md", nodeType: "file", children: [] };
+const note: TreeNode = { name: "b.md", path: "b.md", nodeType: "file", encrypted: false, children: [] };
 const root: TreeNode = {
   name: "noterepo",
   path: "",
   nodeType: "dir",
+  encrypted: false,
   children: [note],
 };
 
@@ -47,9 +48,16 @@ describe("TreeNodes", () => {
       name: "daily",
       path: "daily",
       nodeType: "dir",
+      encrypted: false,
       children: [note],
     };
     renderTree(folder, new Set(["daily"]));
     expect(screen.getByText("daily")).toBeTruthy();
+  });
+
+  it("加密笔记展示锁徽标", () => {
+    const encryptedNote: TreeNode = { name: "secret.md", path: "secret.md", nodeType: "file", encrypted: true, children: [] };
+    renderTree({ ...root, children: [encryptedNote] }, new Set([""]));
+    expect(screen.getByRole("img", { name: "已加密" })).toBeTruthy();
   });
 });

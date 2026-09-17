@@ -12,4 +12,6 @@ pub struct SearchResult {
     /// 首个命中所在行号（1 起）
     pub line: u32,
     pub updated_at: u64,
+    /// 是否为加密笔记：锁定态的加密笔记会被搜索静默跳过，返回的均为可读结果
+    pub encrypted: bool,
 }

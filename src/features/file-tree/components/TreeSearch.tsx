@@ -2,6 +2,7 @@ import { FilePenLine, Search, X } from "lucide-react";
 import type { SearchResult } from "@/api/types";
 import { Tooltip } from "@/components/atoms/Tooltip";
 import { noteKindOfPath } from "@/features/note/utils/noteKind";
+import { NoteLockBadge } from "@/features/vault/components/NoteLockBadge";
 import { useTranslation } from "@/i18n";
 
 interface TreeSearchInputProps {
@@ -84,6 +85,7 @@ function SearchResultItem({ result, onSelect }: { result: SearchResult; onSelect
         <span className="block truncate">{result.title}</span>
         <span className="block truncate text-xs text-text-tertiary">{result.path}</span>
       </span>
+      {result.encrypted ? <NoteLockBadge /> : null}
     </button>
   );
 }

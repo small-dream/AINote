@@ -6,15 +6,17 @@ const tree: TreeNode = {
   name: "root",
   path: "",
   nodeType: "dir",
+  encrypted: false,
   children: [
-    { name: "z.md", path: "z.md", nodeType: "file", children: [] },
+    { name: "z.md", path: "z.md", nodeType: "file", encrypted: false, children: [] },
     {
       name: "daily",
       path: "daily",
       nodeType: "dir",
-      children: [{ name: "archive", path: "daily/archive", nodeType: "dir", children: [] }],
+      encrypted: false,
+      children: [{ name: "archive", path: "daily/archive", nodeType: "dir", encrypted: false, children: [] }],
     },
-    { name: "projects", path: "projects", nodeType: "dir", children: [] },
+    { name: "projects", path: "projects", nodeType: "dir", encrypted: false, children: [] },
   ],
 };
 

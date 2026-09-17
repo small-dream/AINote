@@ -28,6 +28,7 @@ const RESULT = {
   snippet: "hello rust world",
   line: 1,
   updatedAt: 1,
+  encrypted: false,
 };
 
 function renderPalette(actions: CommandPaletteActions) {
@@ -80,5 +81,16 @@ describe("CommandPalette", () => {
 
     fireEvent.click(await screen.findByText("新建笔记"));
     expect(onNewNote).toHaveBeenCalled();
+  });
+
+  it("加密搜索结果展示锁徽标", async () => {
+    searchApiMock.search.mockResolvedValue([{ ...RESULT, encrypted: true }]);
+    renderPalette({ onOpenNote: vi.fn(), onNewNote: vi.fn(), onNewFolder: vi.fn() });
+    useCommandPaletteStore.setState({ open: true });
+
+    fireEvent.change(await screen.findByPlaceholderText("输入命令或搜索笔记…"), {
+      target: { value: "rust" },
+    });
+    expect(await screen.findByRole("img", { name: "已加密" })).toBeTruthy();
   });
 });

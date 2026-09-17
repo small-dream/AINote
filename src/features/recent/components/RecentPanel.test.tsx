@@ -68,4 +68,11 @@ describe("RecentPanel", () => {
     fireEvent.click(await screen.findByRole("button", { name: "清空" }));
     expect(useUiStore.getState().recentNotes["/repo"]).toBeUndefined();
   });
+
+  it("加密笔记展示锁徽标", async () => {
+    apiMock.noteApi.list.mockResolvedValue([{ ...NOTE("secret.md", "Secret", NOW), encrypted: true }]);
+    renderPanel();
+
+    expect(await screen.findByRole("img", { name: "已加密" })).toBeTruthy();
+  });
 });

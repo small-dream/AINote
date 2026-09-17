@@ -3,6 +3,7 @@ import { FilePenLine } from "lucide-react";
 import type { NoteKind, TreeNode } from "@/api/types";
 import { noteDisplayName } from "@/features/note/utils/displayName";
 import { noteKindOfPath } from "@/features/note/utils/noteKind";
+import { NoteLockBadge } from "@/features/vault/components/NoteLockBadge";
 import { useTranslation } from "@/i18n";
 import { CreateMenu } from "./CreateMenu";
 
@@ -41,6 +42,7 @@ function FileNode({ node, depth, currentNotePath, onSelect, onContextMenu }: Tre
         <span className={`tree-file flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border text-[9px] font-semibold ${active ? "border-accent/40 text-accent" : "border-text-tertiary text-text-tertiary"}`} aria-hidden="true">M</span>
       )}
       <span className="truncate">{noteDisplayName(node.name)}</span>
+      {node.encrypted ? <NoteLockBadge active={active} /> : null}
     </button>
   );
 }

@@ -51,6 +51,7 @@ pub fn search_notes(repo_path: &Path, query: &str) -> Result<Vec<SearchResult>, 
                 .duration_since(std::time::UNIX_EPOCH)
                 .map(|d| d.as_secs())
                 .unwrap_or(0);
+            result.encrypted = read.encrypted;
             results.push(result);
         }
     }
@@ -83,6 +84,7 @@ pub fn match_note(path: &str, title: &str, content: &str, query: &str) -> Option
         snippet,
         line,
         updated_at: 0,
+        encrypted: false,
     })
 }
 
@@ -109,7 +111,11 @@ fn sort_by_title_then_path(results: &mut [SearchResult], query: &str) {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::services::vault_service;
+    use std::collections::HashMap;
     use std::fs;
+
+    const PASSPHRASE: &str = "correct horse battery";
 
     fn setup() -> tempfile::TempDir {
         tempfile::tempdir().unwrap()
@@ -203,6 +209,25 @@ mod tests {
         assert_eq!(results.len(), 1);
         assert_eq!(results[0].path, "r.ainote");
         assert!(results[0].snippet.contains("RustLang"));
+    }
+
+    #[test]
+    fn search_marks_encrypted_results() {
+        let _serial = vault_service::test_guard();
+        let tmp = setup();
+        let root = tmp.path();
+        vault_service::create(root, PASSPHRASE).unwrap();
+        fs::write(root.join("secret.md"), note_content::encrypt_text(root, "机密 token abc").unwrap()).unwrap();
+        fs::write(root.join("plain.md"), "明文 token abc").unwrap();
+
+        let results = search_notes(root, "abc").unwrap();
+        let encrypted_by_path: HashMap<&str, bool> = results
+            .iter()
+            .map(|r| (r.path.as_str(), r.encrypted))
+            .collect();
+        assert_eq!(encrypted_by_path.get("secret.md"), Some(&true), "解锁态加密笔记需标记加密");
+        assert_eq!(encrypted_by_path.get("plain.md"), Some(&false));
+        vault_service::lock(root).unwrap();
     }
 
 }

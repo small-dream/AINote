@@ -22,12 +22,13 @@ describe("collectDirPaths", () => {
     name: "root",
     path: "",
     nodeType: "dir",
+    encrypted: false,
     children: [
-      { name: "daily", path: "daily", nodeType: "dir", children: [
-        { name: "2026", path: "daily/2026", nodeType: "dir", children: [] },
-        { name: "a.md", path: "daily/a.md", nodeType: "file", children: [] },
+      { name: "daily", path: "daily", nodeType: "dir", encrypted: false, children: [
+        { name: "2026", path: "daily/2026", nodeType: "dir", encrypted: false, children: [] },
+        { name: "a.md", path: "daily/a.md", nodeType: "file", encrypted: false, children: [] },
       ] },
-      { name: "b.md", path: "b.md", nodeType: "file", children: [] },
+      { name: "b.md", path: "b.md", nodeType: "file", encrypted: false, children: [] },
     ],
   };
 
@@ -36,7 +37,7 @@ describe("collectDirPaths", () => {
   });
 
   it("空树返回空数组", () => {
-    expect(collectDirPaths({ name: "root", path: "", nodeType: "dir", children: [] })).toEqual([]);
+    expect(collectDirPaths({ name: "root", path: "", nodeType: "dir", encrypted: false, children: [] })).toEqual([]);
   });
 });
 

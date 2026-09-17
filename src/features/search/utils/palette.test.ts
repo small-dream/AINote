@@ -47,12 +47,13 @@ describe("searchResultToCommand", () => {
     const onOpenNote = vi.fn();
     const close = vi.fn();
     const cmd = searchResultToCommand(
-      { path: "daily/a.md", title: "A", snippet: "ctx", line: 1, updatedAt: 1 },
+      { path: "daily/a.md", title: "A", snippet: "ctx", line: 1, updatedAt: 1, encrypted: true },
       onOpenNote,
       close,
     );
     expect(cmd.label).toBe("A");
     expect(cmd.hint).toBe("daily/a.md");
+    expect(cmd.encrypted).toBe(true);
     cmd.run();
     expect(onOpenNote).toHaveBeenCalledWith("daily/a.md");
     expect(close).toHaveBeenCalled();
