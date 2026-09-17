@@ -53,6 +53,7 @@ export function TodoWorkspace({ repoPath }: { repoPath: string | null }) {
       <section className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary" aria-label={t("todo.details")}>
         {selectedTask ? (
           <TaskDetailPane
+            key={selectedTask.id}
             task={selectedTask}
             busy={mutations.busy}
             onSave={(draft) => mutations.update.mutate({ taskId: selectedTask.id, ...draft })}
