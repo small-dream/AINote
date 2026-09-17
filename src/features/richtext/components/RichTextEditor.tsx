@@ -15,6 +15,7 @@ import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
 import { AiWriteControls } from "@/features/ai/components/AiWriteControls";
 import { AiToolbarButton } from "@/features/ai/components/AiToolbarButton";
 import { getTipTapSelection, applyToTipTapEditor, applyToTipTapDocument } from "@/features/ai/utils/editorAdapters";
+import { useNoteEncryption } from "@/features/vault/hooks/useNoteEncryption";
 
 interface RichTextEditorProps {
   /** TipTap JSON 字符串（.ainote 文件内容） */
@@ -27,6 +28,8 @@ interface RichTextEditorProps {
   onOpenWiki?: (name: string) => void;
   /** 当前笔记仓库相对路径（用于提取 AI 续写标题） */
   notePath: string;
+  /** 是否为加密笔记（决策③⑤：加密笔记不提供 AI；解锁态同样禁用） */
+  encrypted?: boolean;
   /** 是否保持大纲浮层展开 */
   outlineOpen?: boolean;
   onOutlineToggle?: () => void;
@@ -35,9 +38,10 @@ interface RichTextEditorProps {
 /** 真富文本所见即所得编辑器：TipTap 读写 TipTap JSON。
  * 支持图片/表格/任务列表、斜杠命令、双链与标签 mark。
  * 通过父组件 key 重挂载以切换笔记；异步加载的 content 会由 hook 同步到编辑器。 */
-export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, outlineOpen = false, onOutlineToggle = () => undefined }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, encrypted = false, outlineOpen = false, onOutlineToggle = () => undefined }: RichTextEditorProps) {
   const { editor, handleFiles, status } = useRichTextEditor({ content, onChange, repoPath });
   const contextMenu = useRichTextContextMenu();
+  const encryption = useNoteEncryption(repoPath, notePath, encrypted);
   const outline = useRichTextOutline(content);
   const openTagIndex = useUiStore((s) => s.openTagIndex);
   const noteTheme = useUiStore((s) => s.noteTheme);
@@ -52,7 +56,7 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
     <div data-note-theme={noteTheme} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" {...longPressProps} onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)} onContextMenu={(event) => contextMenu.handleContextMenu(event, editor)}>
       <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} trailing={<AiToolbarButton onOpen={ai.openMenu} compact />} />
       <RichTextBubbleMenu editor={editor} />
-      <RichTextContextMenu position={contextMenu.position} editor={editor} hasSelection={contextMenu.hasSelection} onOpenAi={() => { contextMenu.close(); ai.openMenu(); }} onClose={contextMenu.close} noteTheme={noteTheme} />
+      <RichTextContextMenu position={contextMenu.position} editor={editor} hasSelection={contextMenu.hasSelection} onOpenAi={() => { contextMenu.close(); ai.openMenu(); }} onClose={contextMenu.close} noteTheme={noteTheme} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />
       <AiWriteControls ai={ai} />
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
         <NoteOutlineFloating items={outline} open={outlineOpen} onToggle={onOutlineToggle} onSelect={(item) => scrollToOutline(editor, item)} />

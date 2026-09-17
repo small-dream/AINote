@@ -184,6 +184,8 @@ interface UiState {
   askAiOpen: boolean;
   /** 全局「解锁加密笔记」弹层（导航轨 / 命令面板 / 移动端入口共用） */
   vaultDialogOpen: boolean;
+  /** 解锁成功后自动执行的动作（锁定态点击「加密/解密」时挂载，解锁后执行） */
+  vaultUnlockCallback: (() => void) | null;
   vaultAutoLock: VaultAutoLockMinutes;
   settingsOpen: boolean;
   settingsTab: SettingsTab;
@@ -202,7 +204,7 @@ interface UiState {
   clearRecentNotes: (repoPath: string) => void;
   openAskAi: () => void;
   closeAskAi: () => void;
-  openVaultDialog: () => void;
+  openVaultDialog: (callback?: () => void) => void;
   closeVaultDialog: () => void;
   setVaultAutoLock: (minutes: VaultAutoLockMinutes) => void;
   openSettings: (tab?: SettingsTab) => void;
@@ -244,6 +246,7 @@ export const useUiStore = create<UiState>((set) => ({
   recentNotes: readStoredRecentNotes(),
   askAiOpen: false,
   vaultDialogOpen: false,
+  vaultUnlockCallback: null,
   vaultAutoLock: readStoredVaultAutoLock(),
   settingsOpen: false,
   settingsTab: "repositories",
@@ -265,8 +268,8 @@ export const useUiStore = create<UiState>((set) => ({
   clearRecentNotes: (repoPath) => set((state) => withoutRecentNotes(state, repoPath)),
   openAskAi: () => set({ askAiOpen: true }),
   closeAskAi: () => set({ askAiOpen: false }),
-  openVaultDialog: () => set({ vaultDialogOpen: true }),
-  closeVaultDialog: () => set({ vaultDialogOpen: false }),
+  openVaultDialog: (callback) => set({ vaultDialogOpen: true, vaultUnlockCallback: callback ?? null }),
+  closeVaultDialog: () => set({ vaultDialogOpen: false, vaultUnlockCallback: null }),
   setVaultAutoLock: (vaultAutoLock) => {
     writeStoredVaultAutoLock(vaultAutoLock);
     set({ vaultAutoLock });

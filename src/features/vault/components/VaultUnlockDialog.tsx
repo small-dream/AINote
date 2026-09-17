@@ -9,6 +9,7 @@ import { VaultUnlockCard } from "./VaultUnlockCard";
 export function VaultUnlockDialog() {
   const { t } = useTranslation();
   const open = useUiStore((state) => state.vaultDialogOpen);
+  const runAfterUnlock = useUiStore((state) => state.vaultUnlockCallback);
   const close = useUiStore((state) => state.closeVaultDialog);
   useBackHandler(open, close);
 
@@ -43,7 +44,12 @@ export function VaultUnlockDialog() {
           </button>
         </div>
         <div className="mt-3">
-          <VaultUnlockCard onUnlocked={close} />
+          <VaultUnlockCard
+            onUnlocked={() => {
+              runAfterUnlock?.();
+              close();
+            }}
+          />
         </div>
       </div>
     </div>

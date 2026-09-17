@@ -5,18 +5,22 @@ import { useTranslation } from "@/i18n";
 import type { NoteTheme } from "@/stores/ui.store";
 import { WIKI_PROTOCOL } from "@/features/wiki/utils/wiki";
 import type { usePreviewContextMenu } from "../hooks/usePreviewContextMenu";
+import type { NoteEncryptionMenuAction } from "@/features/vault/hooks/useNoteEncryption";
+import { encryptionMenuItems } from "@/features/vault/utils/encryptionMenuItem";
 
 type PreviewMenu = ReturnType<typeof usePreviewContextMenu>;
 
 interface PreviewContextMenuProps {
   menu: PreviewMenu;
   noteTheme: NoteTheme;
+  /** 逐篇加密/解密入口（仓库已建库时传入） */
+  encryption?: NoteEncryptionMenuAction;
 }
 
 /** 预览右键菜单：只保留阅读上下文中的复制、链接与双链操作。 */
-export function PreviewContextMenu({ menu, noteTheme }: PreviewContextMenuProps) {
+export function PreviewContextMenu({ menu, noteTheme, encryption }: PreviewContextMenuProps) {
   const { t } = useTranslation();
-  const items = createItems(menu, t);
+  const items = [...createItems(menu, t), ...encryptionMenuItems(encryption, t)];
   return <EditorContextMenu position={menu.position} label={t("editor.contextMenu")} items={items} noteTheme={noteTheme} onClose={menu.close} />;
 }
 

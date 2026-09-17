@@ -5,6 +5,8 @@ import type { Editor } from "@tiptap/core";
 import { useTranslation } from "@/i18n";
 import { requestLinkInput } from "../utils/linkUrl";
 import type { NoteTheme } from "@/stores/ui.store";
+import type { NoteEncryptionMenuAction } from "@/features/vault/hooks/useNoteEncryption";
+import { encryptionMenuItems } from "@/features/vault/utils/encryptionMenuItem";
 
 interface RichTextContextMenuProps {
   position: { x: number; y: number } | null;
@@ -13,10 +15,12 @@ interface RichTextContextMenuProps {
   onOpenAi: () => void;
   onClose: () => void;
   noteTheme: NoteTheme;
+  /** 逐篇加密/解密入口（仓库已建库时传入） */
+  encryption?: NoteEncryptionMenuAction;
 }
 
 /** 富文本右键菜单：与 Markdown 共用信息层级，动作换成 TipTap 语义 */
-export function RichTextContextMenu({ position, editor, hasSelection, onOpenAi, onClose, noteTheme }: RichTextContextMenuProps) {
+export function RichTextContextMenu({ position, editor, hasSelection, onOpenAi, onClose, noteTheme, encryption }: RichTextContextMenuProps) {
   const { t } = useTranslation();
   if (!editor) return null;
   const items: ContextMenuItem[] = [
@@ -33,6 +37,7 @@ export function RichTextContextMenu({ position, editor, hasSelection, onOpenAi, 
     action("clear", Eraser, t("editor.clearFormatting"), () => void editor.chain().focus().unsetAllMarks().clearNodes().run()),
     { kind: "separator", key: "format-separator" },
     { key: "ai", icon: Sparkles, label: t("ai.actionTitle"), onSelect: onOpenAi },
+    ...encryptionMenuItems(encryption, t),
   ];
   return <EditorContextMenu position={position} label={t("editor.contextMenu")} items={items} noteTheme={noteTheme} onClose={onClose} />;
 }

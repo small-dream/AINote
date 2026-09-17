@@ -4,6 +4,8 @@ import { EditorContextMenu } from "@/components/molecules/EditorContextMenu";
 import { useTranslation } from "@/i18n";
 import type { NoteTheme } from "@/stores/ui.store";
 import type { useMarkdownContextMenu } from "../hooks/useMarkdownContextMenu";
+import type { NoteEncryptionMenuAction } from "@/features/vault/hooks/useNoteEncryption";
+import { encryptionMenuItems } from "@/features/vault/utils/encryptionMenuItem";
 
 type MarkdownContextMenu = ReturnType<typeof useMarkdownContextMenu>;
 
@@ -12,16 +14,19 @@ interface MarkdownContextMenuProps {
   noteTheme: NoteTheme;
   /** 加密笔记：不渲染 AI 菜单项（决策③，含解锁态，不提供入口） */
   aiBlocked?: boolean;
+  /** 逐篇加密/解密入口（仓库已建库时传入） */
+  encryption?: NoteEncryptionMenuAction;
 }
 
 /** Markdown 右键菜单：先给剪贴板和高频格式，再进入完整 AI 写作面板 */
-export function MarkdownContextMenu({ menu, noteTheme, aiBlocked = false }: MarkdownContextMenuProps) {
+export function MarkdownContextMenu({ menu, noteTheme, aiBlocked = false, encryption }: MarkdownContextMenuProps) {
   const { t } = useTranslation();
   const items: ContextMenuItem[] = [
     ...clipboardItems(menu, t),
     { kind: "separator", key: "clipboard-separator" },
     ...formatItems(menu, Boolean(menu.position?.hasSelection), t),
     ...aiItems(menu, t, aiBlocked),
+    ...encryptionMenuItems(encryption, t),
   ];
   return <EditorContextMenu position={menu.position} label={t("editor.contextMenu")} items={items} noteTheme={noteTheme} onClose={menu.close} />;
 }

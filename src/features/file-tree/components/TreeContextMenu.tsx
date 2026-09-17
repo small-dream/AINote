@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import type { ReactElement } from "react";
-import { ChevronDown, ChevronRight, Copy, FilePlus2, FileText, FolderPlus, History, Move, Pencil, Star, StarOff, Trash2 } from "lucide-react";
+import { ChevronDown, ChevronRight, Copy, FilePlus2, FileText, FolderPlus, History, Move, Pencil, ShieldCheck, ShieldOff, Star, StarOff, Trash2 } from "lucide-react";
 import type { TreeNode } from "@/api/types";
 import type { TreeContextMenuState } from "../hooks/useTreeContextMenu";
 import { useTranslation } from "@/i18n";
@@ -19,6 +19,8 @@ interface Props {
   onDelete: (path: string) => void;
   onDeleteFolder: (path: string) => void;
   onCopy: (path: string) => void;
+  onToggleEncryption?: (path: string, encrypted: boolean) => void;
+  encryptionPending?: boolean;
   favoritePaths: Set<string>;
   onToggleFavorite: (path: string) => void;
 }
@@ -28,14 +30,15 @@ interface MenuActionProps {
   label: string;
   onClick: () => void;
   danger?: boolean;
+  disabled?: boolean;
 }
 
-export function TreeContextMenu({ menu, copied, onClose, onToggle, onSelect, onRequestNew, onRequestFolder, onRequestMove, onRequestRename, onRequestHistory, onDelete, onDeleteFolder, onCopy, favoritePaths, onToggleFavorite }: Props) {
+export function TreeContextMenu({ menu, copied, onClose, onToggle, onSelect, onRequestNew, onRequestFolder, onRequestMove, onRequestRename, onRequestHistory, onDelete, onDeleteFolder, onCopy, onToggleEncryption, encryptionPending = false, favoritePaths, onToggleFavorite }: Props) {
   const { t } = useTranslation();
   const { node } = menu;
   const displayName = contextMenuDisplayName(node, t);
-  const command = ({ icon: Icon, label, onClick, danger = false }: MenuActionProps) => (
-    <button type="button" role="menuitem" className={`tree-menu-item ${danger ? "tree-menu-danger" : ""}`} onClick={(event) => { event.stopPropagation(); onClick(); onClose(); }}>
+  const command = ({ icon: Icon, label, onClick, danger = false, disabled = false }: MenuActionProps) => (
+    <button type="button" role="menuitem" className={`tree-menu-item ${danger ? "tree-menu-danger" : ""}`} disabled={disabled} onClick={(event) => { event.stopPropagation(); onClick(); onClose(); }}>
       <Icon size={15} strokeWidth={1.8} aria-hidden="true" />
       <span>{label}</span>
     </button>
@@ -47,7 +50,7 @@ export function TreeContextMenu({ menu, copied, onClose, onToggle, onSelect, onR
         <span className="tree-menu-heading-type">{node.nodeType === "dir" ? t("tree.folderType") : t("tree.noteType")}</span>
         <span className="tree-menu-heading-name">{displayName}</span>
       </div>
-      {node.nodeType === "dir" ? <FolderActions node={node} copied={copied} command={command} onToggle={onToggle} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onDeleteFolder={onDeleteFolder} onCopy={onCopy} /> : <NoteActions node={node} copied={copied} command={command} isFavorite={favoritePaths.has(node.path)} onToggleFavorite={onToggleFavorite} onSelect={onSelect} onRequestMove={onRequestMove} onRequestRename={onRequestRename} onRequestHistory={onRequestHistory} onDelete={onDelete} onCopy={onCopy} />}
+      {node.nodeType === "dir" ? <FolderActions node={node} copied={copied} command={command} onToggle={onToggle} onRequestNew={onRequestNew} onRequestFolder={onRequestFolder} onDeleteFolder={onDeleteFolder} onCopy={onCopy} /> : <NoteActions node={node} copied={copied} command={command} isFavorite={favoritePaths.has(node.path)} onToggleFavorite={onToggleFavorite} onSelect={onSelect} onRequestMove={onRequestMove} onRequestRename={onRequestRename} onRequestHistory={onRequestHistory} onDelete={onDelete} onCopy={onCopy} onToggleEncryption={onToggleEncryption} encryptionPending={encryptionPending} />}
     </div>
   );
 }
@@ -72,7 +75,7 @@ function FolderActions({ node, copied, command, onToggle, onRequestNew, onReques
   </>;
 }
 
-function NoteActions({ node, copied, command, onSelect, onRequestMove, onRequestRename, onRequestHistory, onDelete, onCopy, isFavorite, onToggleFavorite }: ActionGroupProps & { onSelect: (path: string) => void; onRequestMove: (path: string) => void; onRequestRename: (path: string) => void; onRequestHistory: (path: string) => void; onDelete: (path: string) => void; isFavorite: boolean; onToggleFavorite: (path: string) => void }) {
+function NoteActions({ node, copied, command, onSelect, onRequestMove, onRequestRename, onRequestHistory, onDelete, onCopy, onToggleEncryption, encryptionPending, isFavorite, onToggleFavorite }: ActionGroupProps & { onSelect: (path: string) => void; onRequestMove: (path: string) => void; onRequestRename: (path: string) => void; onRequestHistory: (path: string) => void; onDelete: (path: string) => void; isFavorite: boolean; onToggleFavorite: (path: string) => void; onToggleEncryption?: ((path: string, encrypted: boolean) => void) | undefined; encryptionPending: boolean }) {
   const { t } = useTranslation();
   return <>
     {command({ icon: FileText, label: t("tree.openNote"), onClick: () => onSelect(node.path) })}
@@ -80,6 +83,7 @@ function NoteActions({ node, copied, command, onSelect, onRequestMove, onRequest
     {command({ icon: Pencil, label: t("tree.renameNote"), onClick: () => onRequestRename(node.path) })}
     {command({ icon: Move, label: t("tree.moveNote"), onClick: () => onRequestMove(node.path) })}
     {command({ icon: History, label: t("tree.viewHistory"), onClick: () => onRequestHistory(node.path) })}
+    {onToggleEncryption ? command({ icon: node.encrypted ? ShieldOff : ShieldCheck, label: t(node.encrypted ? "note.decrypt" : "note.encrypt"), disabled: encryptionPending, onClick: () => onToggleEncryption(node.path, node.encrypted) }) : null}
     {command({ icon: Copy, label: copied ? t("tree.pathCopied") : t("tree.copyPath"), onClick: () => onCopy(node.path) })}
     <div className="tree-menu-divider" />
     {command({ icon: Trash2, label: t("tree.deleteNote"), onClick: () => onDelete(node.path), danger: true })}
