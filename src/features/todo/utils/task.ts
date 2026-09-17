@@ -35,6 +35,18 @@ export function dueTime(dueAt: string): string {
   return dueAt.includes("T") ? dueAt.slice(11, 16) : "";
 }
 
+/** 创建时间的本地展示文案：`M/D HH:mm`（按当前 locale 格式化）；无法解析时回退空串。 */
+export function createdAtLabel(createdAt: string, locale: string): string {
+  const date = new Date(createdAt);
+  if (Number.isNaN(date.getTime())) return "";
+  return new Intl.DateTimeFormat(locale, {
+    month: "numeric",
+    day: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
+}
+
 /** 组装截止时间：没有时刻时只保留日期，语义为「当天结束前」 */
 export function buildDueAt(date: string, time: string): string {
   return time ? `${date}T${time}` : date;

@@ -44,4 +44,12 @@ describe("TaskRow 完成态复选框", () => {
     screen.getByRole("checkbox", { name: "写周报" }).click();
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
+
+  it("显示创建时间，原始时间戳挂在 title 提示上", () => {
+    const createdAt = new Date(2026, 8, 15, 16, 0).toISOString();
+    render(<TaskRow task={task({ createdAt })} onToggle={vi.fn()} onOpenEditor={vi.fn()} />);
+    const created = screen.getByTitle(createdAt);
+    expect(created).not.toBeNull();
+    expect(created.textContent).toMatch(/9\/15/);
+  });
 });
