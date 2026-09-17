@@ -127,8 +127,15 @@
   .graph-panel-body > section { width: 100% !important; max-height: 30dvh; border-right: 0; border-left: 0; border-bottom: 1px solid var(--border); }
   .graph-panel-body > section:last-child { max-height: none; border-bottom: 0; }
 
-  .conflict-panel-body { grid-template-columns: 1fr; grid-template-rows: minmax(0, 1fr) minmax(0, 1.4fr) minmax(0, 1fr); overflow-y: auto; }
-  .conflict-panel-body > section { border-right: 0; }
+  /* 冲突面板：桌面三栏并排在手机宽度下不可读，移动端改为分页签单栏 + 底部操作条。
+     操作条要自己让出系统导航栏安全区（弹窗挂在移动壳内，沿用壳上的 --safe-bottom）。 */
+  .conflict-mobile-body .conflict-mobile-actions {
+    padding-bottom: calc(0.5rem + var(--safe-bottom, env(safe-area-inset-bottom, 0px)));
+  }
+  /* 分页签已经标出当前栏，合并结果栏不必再重复一次标题 */
+  .conflict-mobile-body .conflict-merge-header { display: none; }
+  .conflict-file-tabs { scrollbar-width: none; }
+  .conflict-file-tabs::-webkit-scrollbar { display: none; }
 
   /* iOS/WebKit 在聚焦字号小于 16px 的可编辑控件时会把整个 WebView 自动放大（并按失焦后
      不还原的缩放状态保留），移动壳因此左右两侧被裁切。移动端统一抬高可编辑控件的字号下限，

@@ -73,6 +73,7 @@ const zhCN = {
   "note.encrypt": "加密此笔记", "note.decrypt": "解密此笔记", "note.encrypted": "已加密这篇笔记：仓库里只保留密文", "note.decrypted": "已解密这篇笔记：正文恢复为明文存储",
   "vault.aiDisabled": "加密笔记不支持 AI 功能", "vault.historyDisabled": "加密笔记不提供版本历史",
   "sync.encryptedConflictTitle": "这篇笔记已加密", "sync.encryptedConflictDescription": "加密笔记无法逐行合并（密文之间没有可比较的行结构），请选择保留哪一侧的版本。",
+  "sync.appendAll": "整段追加", "sync.appendAllHint": "把这一侧的全部内容追加到合并结果", "sync.conflictPanes": "冲突内容面板", "sync.resolveFailedTitle": "冲突处理失败", "sync.conflictLoadFailed": "读取冲突文件失败", "sync.conflictLoadFailedHint": "请重试；若持续失败，请在「设置 → 诊断与反馈」导出诊断包", "sync.conflictEmpty": "没有待处理的冲突文件", "sync.finishMerge": "完成合并并推送", "sync.finishMergeHint": "冲突文件都已处理完，只差收尾提交与推送。",
 } as const;
 const enUS: Record<keyof typeof zhCN, string> = {
 
@@ -148,6 +149,7 @@ const enUS: Record<keyof typeof zhCN, string> = {
   "note.encrypt": "Encrypt this note", "note.decrypt": "Decrypt this note", "note.encrypted": "This note is now encrypted: only ciphertext stays in the repo", "note.decrypted": "This note is stored as plain text again",
   "vault.aiDisabled": "AI is unavailable for encrypted notes", "vault.historyDisabled": "Encrypted notes have no version history",
   "sync.encryptedConflictTitle": "This note is encrypted", "sync.encryptedConflictDescription": "Encrypted notes cannot be merged line by line (ciphertext has no comparable structure). Choose which side to keep.",
+  "sync.appendAll": "Append all", "sync.appendAllHint": "Append this whole side to the merged result", "sync.conflictPanes": "Conflict panes", "sync.resolveFailedTitle": "Resolving the conflict failed", "sync.conflictLoadFailed": "Could not read conflict files", "sync.conflictLoadFailedHint": "Retry; if it keeps failing, export a diagnostics bundle from Settings → Diagnostics.", "sync.conflictEmpty": "No conflict files left", "sync.finishMerge": "Finish merge and push", "sync.finishMergeHint": "Every conflict file is handled; only the final commit and push are left.",
 };
 
 export type TranslationKey = keyof typeof zhCN;

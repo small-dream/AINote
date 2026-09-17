@@ -1,0 +1,6 @@
+/* 冲突面板专用样式（随对话框懒加载）。
+   全局 `button, input, textarea { font: inherit }` 是未分层规则，会盖掉 utilities 层的
+   font-mono，而合并编辑器必须与两侧原文用同一等宽字体，逐行比对才对得齐。 */
+.conflict-merge-textarea {
+  font-family: var(--font-mono);
+}

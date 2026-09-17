@@ -63,6 +63,8 @@ export function useResolveConflictMutation() {
     mutationFn: (useLocal: boolean) => syncApi.resolveConflict(useLocal),
     onSuccess: () => {
       invalidateSync(queryClient);
+      // 批量解决会清空冲突列表；不失效缓存会让面板继续显示已解决的文件
+      void queryClient.invalidateQueries({ queryKey: ["conflicts"] });
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
     },
   });
