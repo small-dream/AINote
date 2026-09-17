@@ -3,16 +3,19 @@ import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SyncStatus } from "@/api/types";
 import { useSyncStatusQuery } from "./sync.queries";
-import { useTaskCreateMutation, useTaskToggleMutation } from "./task.queries";
+import { useSyncNowMutation } from "./sync.queries";
+import { useTaskBoardQuery, useTaskCreateMutation, useTaskToggleMutation } from "./task.queries";
 
 const apiMock = vi.hoisted(() => ({
   syncStatus: vi.fn(),
+  syncNow: vi.fn(),
   taskCreate: vi.fn(),
   taskToggle: vi.fn(),
+  taskBoard: vi.fn(),
 }));
 vi.mock("@/api", () => ({
-  syncApi: { status: apiMock.syncStatus },
-  taskApi: { create: apiMock.taskCreate, toggle: apiMock.taskToggle },
+  syncApi: { status: apiMock.syncStatus, syncNow: apiMock.syncNow },
+  taskApi: { create: apiMock.taskCreate, toggle: apiMock.taskToggle, board: apiMock.taskBoard },
 }));
 
 const CLEAN: SyncStatus = { ahead: 0, behind: 0, hasUncommitted: false, conflicted: false };
@@ -65,5 +68,22 @@ describe("待办写入后的同步状态", () => {
     act(() => result.current.toggle.mutate("task-1"));
 
     await waitFor(() => expect(result.current.status.data).toEqual(DIRTY));
+  });
+
+  it("一键同步成功后主动重取待办看板，远端 todos.json 改动即时上屏", async () => {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    apiMock.taskBoard.mockResolvedValue({ schemaVersion: 3, tasks: [TASK] });
+    apiMock.syncNow.mockResolvedValue(CLEAN);
+    const { result } = renderHook(
+      () => ({ board: useTaskBoardQuery("/mock-repo"), syncNow: useSyncNowMutation() }),
+      { wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider> },
+    );
+
+    await waitFor(() => expect(result.current.board.data?.tasks).toEqual([TASK]));
+    expect(apiMock.taskBoard).toHaveBeenCalledTimes(1);
+
+    act(() => result.current.syncNow.mutate());
+
+    await waitFor(() => expect(apiMock.taskBoard).toHaveBeenCalledTimes(2));
   });
 });

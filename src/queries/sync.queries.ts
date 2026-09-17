@@ -52,6 +52,8 @@ export function useSyncNowMutation(options: { onProgress?: (progress: SyncProgre
     onSuccess: () => {
       invalidateSync(queryClient);
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
+      // todos.json 随仓库 Git 同步：pull 可能带回落盘改动，待办看板必须重新拉取。
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 }
@@ -66,6 +68,7 @@ export function useResolveConflictMutation() {
       // 批量解决会清空冲突列表；不失效缓存会让面板继续显示已解决的文件
       void queryClient.invalidateQueries({ queryKey: ["conflicts"] });
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 }
@@ -89,6 +92,7 @@ export function useResolveFileMutation() {
       syncApi.resolveFile(path, content),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["conflicts"] });
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
       invalidateSync(queryClient);
     },
   });
@@ -102,6 +106,7 @@ export function usePushMutation() {
     onSuccess: () => {
       invalidateSync(queryClient);
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 }

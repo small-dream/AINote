@@ -18,6 +18,8 @@ export function useStartupSync(repoPath: string | null) {
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      // 启动同步的 pull 可能带回落盘内的 todos.json，待办看板需要主动重取。
+      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
     },
   });
 
