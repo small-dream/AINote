@@ -1,6 +1,5 @@
 import { useEffect } from "react";
-import { ArrowLeft, X } from "lucide-react";
-import { Tooltip } from "@/components/atoms/Tooltip";
+import { ArrowLeft } from "lucide-react";
 import { useUiStore } from "@/stores/ui.store";
 import { useBackHandler } from "@/platform/back-navigation";
 import { SETTINGS_SECTIONS } from "../settingsSections";
@@ -8,7 +7,8 @@ import { SettingsNav } from "./SettingsNav";
 import { useTranslation } from "@/i18n";
 import "../settings.css";
 
-/** 全屏设置视图：左侧分类导航 + 右侧内容区，取代旧设置弹窗（参考 Obsidian / VS Code）。 */
+/** 全屏设置视图：左侧分类导航 + 右侧内容区，取代旧设置弹窗（参考 Obsidian / VS Code）。
+ * 头部只保留「返回工作区」一个退出入口；Esc 与系统返回键同样可关闭，不再重复放关闭按钮。 */
 export function SettingsView() {
   const { t } = useTranslation();
   const open = useUiStore((s) => s.settingsOpen);
@@ -65,16 +65,6 @@ function SettingsHeader({ onClose }: { onClose: () => void }) {
         {t("settings.back")}
       </button>
       <h1 id="settings-title" className="min-w-0 truncate text-sm font-semibold text-text-primary">{t("settings.title")}</h1>
-      <Tooltip content={t("common.close")}>
-        <button
-          type="button"
-          onClick={onClose}
-          aria-label={t("common.close")}
-          className="settings-close-button ml-auto grid h-8 w-8 shrink-0 place-items-center rounded-md text-text-secondary transition-colors hover:bg-bg-tertiary hover:text-text-primary"
-        >
-          <X size={18} />
-        </button>
-      </Tooltip>
     </header>
   );
 }

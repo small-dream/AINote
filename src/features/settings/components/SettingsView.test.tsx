@@ -69,6 +69,10 @@ async function expectSettingsNavigation() {
   expect(screen.getByText("账户")).toBeTruthy();
   expect(screen.getByText("返回工作区")).toBeTruthy();
   expect(document.querySelector('[data-tauri-drag-region]')).toBeTruthy();
+  // 头部只留一个退出入口：返回工作区；关闭动作不再重复渲染第二个按钮
+  const header = screen.getByRole("heading", { name: "设置" }).closest("header");
+  expect(header).not.toBeNull();
+  expect(within(header as HTMLElement).getAllByRole("button")).toHaveLength(1);
 }
 
 describe("SettingsView 全屏设置视图", () => {
