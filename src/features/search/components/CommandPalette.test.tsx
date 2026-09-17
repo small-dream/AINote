@@ -14,10 +14,12 @@ const syncApiMock = vi.hoisted(() => ({
   syncNow: vi.fn(),
   resolveConflict: vi.fn(),
 }));
+const vaultApiMock = vi.hoisted(() => ({ status: vi.fn() }));
 
 vi.mock("@/api", () => ({
   searchApi: searchApiMock,
   syncApi: syncApiMock,
+  vaultApi: vaultApiMock,
   isAppError: () => false,
   messageOf: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
@@ -43,13 +45,14 @@ function renderPalette(actions: CommandPaletteActions) {
 describe("CommandPalette", () => {
   beforeEach(() => {
     vi.resetAllMocks();
-    useCommandPaletteStore.setState({ open: false });
+    useCommandPaletteStore.setState({ open: false, query: "" });
     syncApiMock.status.mockResolvedValue({
       ahead: 0,
       behind: 0,
       hasUncommitted: false,
       conflicted: false,
     });
+    vaultApiMock.status.mockResolvedValue({ state: "absent", encryptedNotes: 0 });
   });
 
   it("Cmd+K 打开面板并聚焦搜索框", () => {

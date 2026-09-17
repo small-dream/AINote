@@ -13,6 +13,10 @@ export interface RecentNoteEntry {
 /** 设置页左侧分类导航的激活项 */
 export type SettingsTab = "repositories" | "vault" | "appearance" | "language" | "ai" | "updates" | "support" | "account";
 
+/** 空闲自动锁定时长（分钟）；0 = 从不自动锁定 */
+export type VaultAutoLockMinutes = 0 | 1 | 5 | 15 | 30;
+export const DEFAULT_VAULT_AUTO_LOCK: VaultAutoLockMinutes = 5;
+
 /** 主题偏好持久化键（localStorage，纯前端全局 UI 态） */
 export const THEME_STORAGE_KEY = "ainote.theme";
 export const LOCALE_STORAGE_KEY = "ainote.locale";
@@ -20,6 +24,7 @@ export const NOTE_THEME_STORAGE_KEY = "ainote.note-theme";
 export const NOTE_THEME_SCOPE_STORAGE_KEY = "ainote.note-theme-scope";
 export const SIDEBAR_WIDTH_STORAGE_KEY = "ainote.sidebar-width";
 export const RECENT_NOTES_STORAGE_KEY = "ainote.recent-notes";
+export const VAULT_AUTO_LOCK_STORAGE_KEY = "ainote.vault-auto-lock";
 export const SIDEBAR_MIN_WIDTH = 200;
 export const SIDEBAR_MAX_WIDTH = 480;
 export const SIDEBAR_DEFAULT_WIDTH = 248;
@@ -54,6 +59,20 @@ export function clampSidebarWidth(width: number): number {
 export function parseSidebarWidth(value: string | null): number {
   const width = Number.parseInt(value ?? "", 10);
   return Number.isFinite(width) ? clampSidebarWidth(width) : SIDEBAR_DEFAULT_WIDTH;
+}
+
+/** 解析空闲自动锁定时长；非法值一律回退默认 5 分钟 */
+export function parseVaultAutoLock(value: string | null): VaultAutoLockMinutes {
+  switch (value) {
+    case "0":
+    case "1":
+    case "5":
+    case "15":
+    case "30":
+      return Number(value) as VaultAutoLockMinutes;
+    default:
+      return DEFAULT_VAULT_AUTO_LOCK;
+  }
 }
 
 /** 探测 localStorage 是否真正可用（Node 26+ 实验性 localStorage 会定义但无法使用） */
@@ -144,6 +163,16 @@ export function writeStoredRecentNotes(recentNotes: Record<string, RecentNoteEnt
   localStorage.setItem(RECENT_NOTES_STORAGE_KEY, JSON.stringify(recentNotes));
 }
 
+export function readStoredVaultAutoLock(): VaultAutoLockMinutes {
+  if (!localStorageAvailable) return DEFAULT_VAULT_AUTO_LOCK;
+  return parseVaultAutoLock(localStorage.getItem(VAULT_AUTO_LOCK_STORAGE_KEY));
+}
+
+export function writeStoredVaultAutoLock(minutes: VaultAutoLockMinutes): void {
+  if (!localStorageAvailable) return;
+  localStorage.setItem(VAULT_AUTO_LOCK_STORAGE_KEY, String(minutes));
+}
+
 interface UiState {
   sidebarCollapsed: boolean;
   sidebarWidth: number;
@@ -153,6 +182,9 @@ interface UiState {
   focusedTaskId: string | null;
   recentNotes: Record<string, RecentNoteEntry[]>;
   askAiOpen: boolean;
+  /** 全局「解锁加密笔记」弹层（导航轨 / 命令面板 / 移动端入口共用） */
+  vaultDialogOpen: boolean;
+  vaultAutoLock: VaultAutoLockMinutes;
   settingsOpen: boolean;
   settingsTab: SettingsTab;
   theme: Theme;
@@ -170,6 +202,9 @@ interface UiState {
   clearRecentNotes: (repoPath: string) => void;
   openAskAi: () => void;
   closeAskAi: () => void;
+  openVaultDialog: () => void;
+  closeVaultDialog: () => void;
+  setVaultAutoLock: (minutes: VaultAutoLockMinutes) => void;
   openSettings: (tab?: SettingsTab) => void;
   closeSettings: () => void;
   setSettingsTab: (tab: SettingsTab) => void;
@@ -208,6 +243,8 @@ export const useUiStore = create<UiState>((set) => ({
   focusedTaskId: null,
   recentNotes: readStoredRecentNotes(),
   askAiOpen: false,
+  vaultDialogOpen: false,
+  vaultAutoLock: readStoredVaultAutoLock(),
   settingsOpen: false,
   settingsTab: "repositories",
   theme: readStoredTheme(),
@@ -228,6 +265,12 @@ export const useUiStore = create<UiState>((set) => ({
   clearRecentNotes: (repoPath) => set((state) => withoutRecentNotes(state, repoPath)),
   openAskAi: () => set({ askAiOpen: true }),
   closeAskAi: () => set({ askAiOpen: false }),
+  openVaultDialog: () => set({ vaultDialogOpen: true }),
+  closeVaultDialog: () => set({ vaultDialogOpen: false }),
+  setVaultAutoLock: (vaultAutoLock) => {
+    writeStoredVaultAutoLock(vaultAutoLock);
+    set({ vaultAutoLock });
+  },
   openSettings: (tab) => set((s) => ({ settingsOpen: true, settingsTab: tab ?? s.settingsTab })),
   closeSettings: () => set({ settingsOpen: false }),
   setSettingsTab: (settingsTab) => set({ settingsTab }),

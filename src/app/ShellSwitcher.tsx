@@ -9,6 +9,8 @@ import { WorkspaceLayout } from "@/pages/workspace/WorkspaceLayout";
 import type { WorkspaceActions } from "@/pages/workspace/useWorkspaceActions";
 import { useUiStore } from "@/stores/ui.store";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
+import { useVaultAutoLock } from "@/features/vault/hooks/useVaultAutoLock";
+import { VaultUnlockDialog } from "@/features/vault/components/VaultUnlockDialog";
 import { MobileWorkspaceContent } from "./MobileWorkspaceContent";
 
 const LazySettingsView = lazy(() => import("@/features/settings/components/SettingsView").then(({ SettingsView }) => ({ default: SettingsView })));
@@ -27,6 +29,7 @@ export interface WorkspaceShellProps {
 
 /** 壳切换：组装层唯一的双壳交汇点，按视口选择桌面三栏壳或移动单栏壳（双壳互不 import）。 */
 export function WorkspaceShellSwitcher({ repoPath, startupSyncing, currentNotePath, editorRef, actions, onSelect, onMoved }: WorkspaceShellProps) {
+  useVaultAutoLock(repoPath);
   const [historyRequestPath, setHistoryRequestPath] = useState<string | null>(null);
   const noteTheme = useUiStore((state) => state.noteTheme);
   const noteThemeScope = useUiStore((state) => state.noteThemeScope);
@@ -37,6 +40,7 @@ export function WorkspaceShellSwitcher({ repoPath, startupSyncing, currentNotePa
       {isMobile ? <MobileWorkspaceContent {...content} /> : <WorkspaceLayout {...content} startupSyncing={startupSyncing} />}
       {/* 待办提醒卡片：桌面与移动共用，桌面端没有系统调度时的主要提示通道 */}
       <ReminderAlertStack repoPath={repoPath} />
+      <VaultUnlockDialog />
       <WorkspaceDialogs repoPath={repoPath} actions={actions} onMoved={onMoved} />
       <WorkspaceOverlays repoPath={repoPath} actions={actions} editorRef={editorRef} onOpenNote={onSelect} />
     </div>

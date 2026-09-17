@@ -1,8 +1,10 @@
 import { lazy, Suspense, useState } from "react";
-import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, GitCommitHorizontal, GitGraph, ListTodo, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
+import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, GitCommitHorizontal, GitGraph, ListTodo, Lock, LockOpen, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
 import { Tooltip } from "@/components/atoms/Tooltip";
 import type { SyncController } from "@/features/sync/hooks/useSync";
 import { deriveSyncFailure, deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
+import { useVaultLock } from "@/features/vault/hooks/useVaultLock";
+import { useVaultStatusQuery } from "@/queries/vault.queries";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 
@@ -41,6 +43,7 @@ export function WorkspaceNavRail({ repoPath, startupSyncing, sync }: WorkspaceNa
       <CommitNavButton repoPath={repoPath} sync={sync} />
       <GraphNavButton repoPath={repoPath} />
       <TrashNavButton />
+      <VaultNavButton repoPath={repoPath} />
       <SettingsNavButton />
     </nav>
   );
@@ -75,6 +78,31 @@ function TrashNavButton() {
     <Tooltip content={t("trash.title")} placement="right" className="mt-auto">
       <button type="button" aria-label={t("trash.title")} aria-current={active ? "page" : undefined} onClick={() => useUiStore.getState().setSidebarTab("trash")} className={`${NAV_BUTTON_CLASS} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}>
         <Trash2 size={18} strokeWidth={active ? 2.3 : 1.9} />
+      </button>
+    </Tooltip>
+  );
+}
+
+/** 加密笔记状态入口（贴近系统区）：未建库不显示；已锁定点开全局解锁弹层，已解锁一键锁定。 */
+function VaultNavButton({ repoPath }: { repoPath: string | null }) {
+  const { t } = useTranslation();
+  const status = useVaultStatusQuery(repoPath);
+  const { lockNow, pending } = useVaultLock();
+  const state = status.data?.state;
+  if (state === "absent" || state === undefined) return null;
+  const unlocked = state === "unlocked";
+  const Icon = unlocked ? LockOpen : Lock;
+  const label = unlocked ? t("vault.navUnlocked") : t("vault.navLocked");
+  return (
+    <Tooltip content={label} placement="right">
+      <button
+        type="button"
+        aria-label={label}
+        disabled={pending}
+        onClick={() => (unlocked ? lockNow() : useUiStore.getState().openVaultDialog())}
+        className={`${NAV_BUTTON_CLASS} ${unlocked ? "text-accent" : "text-amber-500"}`}
+      >
+        <Icon size={18} strokeWidth={unlocked ? 2.3 : 1.9} />
       </button>
     </Tooltip>
   );

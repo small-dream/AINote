@@ -1,4 +1,5 @@
 import type { RefObject } from "react";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MobileWorkspaceShell } from "./MobileWorkspaceShell";
@@ -8,6 +9,9 @@ import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useUiStore } from "@/stores/ui.store";
 
 const useSyncMock = vi.fn();
+const vaultApiMock = vi.hoisted(() => ({
+  status: vi.fn().mockResolvedValue({ state: "absent", encryptedNotes: 0 }),
+}));
 
 vi.mock("@/features/sync/hooks/useSync", () => ({
   useSync: (...args: Parameters<typeof import("@/features/sync/hooks/useSync")["useSync"]>) => useSyncMock(...args),
@@ -16,6 +20,7 @@ vi.mock("@/features/sync/hooks/useSync", () => ({
 vi.mock("@/features/sync/components/ConflictMergeDialog", () => ({
   ConflictMergeDialog: ({ open }: { open: boolean }) => (open ? <div>mobile-conflict-dialog</div> : null),
 }));
+vi.mock("@/api", () => ({ vaultApi: vaultApiMock }));
 
 useSyncMock.mockReturnValue({
     online: true,
@@ -30,41 +35,45 @@ const editorRef = { current: { flush, setMode: vi.fn(), openHistory: vi.fn(), in
 
   function renderShell({ currentNotePath = null, openEditorSignal = 0 }: { currentNotePath?: string | null; openEditorSignal?: number } = {}) {
   return render(
-    <MobileWorkspaceShell
-      repoPath="/mock-repo"
-      currentNotePath={currentNotePath}
-      editorRef={editorRef}
-      openEditorSignal={openEditorSignal}
-      sidebar={<div>mobile-list</div>}
-      editor={<div>mobile-editor</div>}
-      onBackToList={() => undefined}
-    />,
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <MobileWorkspaceShell
+        repoPath="/mock-repo"
+        currentNotePath={currentNotePath}
+        editorRef={editorRef}
+        openEditorSignal={openEditorSignal}
+        sidebar={<div>mobile-list</div>}
+        editor={<div>mobile-editor</div>}
+        onBackToList={() => undefined}
+      />
+    </QueryClientProvider>,
   );
 }
 
-describe("MobileWorkspaceShell", () => {
-  beforeEach(() => {
-    useSessionStore.setState({ repoPath: "/mock-repo", currentNotePath: null });
-    useUiStore.setState({ sidebarTab: "tree" });
-    useCommandPaletteStore.setState({ open: false, query: "", selected: 0 });
-    window.history.replaceState({}, "");
-    vi.clearAllMocks();
-  });
+beforeEach(() => {
+  useSessionStore.setState({ repoPath: "/mock-repo", currentNotePath: null });
+  useUiStore.setState({ sidebarTab: "tree" });
+  useCommandPaletteStore.setState({ open: false, query: "", selected: 0 });
+  window.history.replaceState({}, "");
+  vi.clearAllMocks();
+});
 
+describe("MobileWorkspaceShell", () => {
   it("opens the editor when a note is selected", () => {
     const { rerender } = renderShell();
     expect(screen.getByText("mobile-list")).toBeTruthy();
     expect(screen.queryByText("mobile-editor")).toBeNull();
     rerender(
-      <MobileWorkspaceShell
-        repoPath="/mock-repo"
-        currentNotePath="Product/note.md"
-        editorRef={editorRef}
-        openEditorSignal={1}
-        sidebar={<div>mobile-list</div>}
-        editor={<div>mobile-editor</div>}
-        onBackToList={vi.fn()}
-      />,
+      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+        <MobileWorkspaceShell
+          repoPath="/mock-repo"
+          currentNotePath="Product/note.md"
+          editorRef={editorRef}
+          openEditorSignal={1}
+          sidebar={<div>mobile-list</div>}
+          editor={<div>mobile-editor</div>}
+          onBackToList={vi.fn()}
+        />
+      </QueryClientProvider>,
     );
     expect(screen.getByText("mobile-editor")).toBeTruthy();
     expect(screen.queryByText("mobile-list")).toBeNull();

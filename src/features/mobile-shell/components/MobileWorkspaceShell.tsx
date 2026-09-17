@@ -13,6 +13,7 @@ import { useMobileEditorView } from "../hooks/useMobileEditorView";
 import { useMobileKeyboardInsets } from "../hooks/useMobileKeyboardInsets";
 import type { SidebarTab } from "@/stores/ui.store";
 import type { TranslationKey } from "@/i18n/messages";
+import { MobileVaultButton } from "./MobileVaultButton";
 
 const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
 const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
@@ -51,6 +52,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
   return (
     <div className="mobile-workspace-shell flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-bg-primary">
       <MobileHeader
+        repoPath={repoPath}
         showEditor={showEditor}
         title={title}
         online={online}
@@ -147,7 +149,7 @@ function MobileWorkspaceDialogs({ repoPath, conflictOpen, commitOpen, graphOpen,
   );
 }
 
-function MobileHeader({ showEditor, title, online, label, tone, isSyncing, conflicted, hasUncommitted, onBack, onSync, onOpenCommit, onOpenConflict }: { showEditor: boolean; title: string; online: boolean; label: string; tone: string; isSyncing: boolean; conflicted: boolean; hasUncommitted: boolean; onBack: () => void; onSync: () => void; onOpenCommit: () => void; onOpenConflict: () => void }) {
+function MobileHeader({ repoPath, showEditor, title, online, label, tone, isSyncing, conflicted, hasUncommitted, onBack, onSync, onOpenCommit, onOpenConflict }: { repoPath: string | null; showEditor: boolean; title: string; online: boolean; label: string; tone: string; isSyncing: boolean; conflicted: boolean; hasUncommitted: boolean; onBack: () => void; onSync: () => void; onOpenCommit: () => void; onOpenConflict: () => void }) {
   const { t } = useTranslation();
   return (
     <header className="mobile-workspace-header flex min-h-14 shrink-0 items-center gap-2 border-b border-border bg-bg-primary px-3 pt-[env(safe-area-inset-top)]">
@@ -165,6 +167,7 @@ function MobileHeader({ showEditor, title, online, label, tone, isSyncing, confl
         </span>
       )}
       {hasUncommitted ? <MobileIconButton label={t("commit.title")} icon={GitCommitHorizontal} onClick={onOpenCommit} /> : null}
+      <MobileVaultButton repoPath={repoPath} />
       <MobileIconButton label={t("sync.now")} icon={RefreshCw} onClick={onSync} disabled={!online || isSyncing} spinning={isSyncing} />
       {!showEditor ? <MobileSearchButton /> : null}
     </header>

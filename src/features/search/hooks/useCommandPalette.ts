@@ -13,7 +13,7 @@ export function useCommandPalette(repoPath: string | null, actions: CommandPalet
   const setQuery = useCommandPaletteStore((state) => state.setQuery);
   const moveSelection = useCommandPaletteStore((state) => state.moveSelection);
   const closePalette = useCommandPaletteStore((state) => state.closePalette);
-  const actionCommands = usePaletteCommands(actions);
+  const actionCommands = usePaletteCommands(actions, repoPath);
   const { results, isSearching } = usePaletteSearch(open, repoPath);
 
   const commands = useMemo<PaletteCommand[]>(() => {

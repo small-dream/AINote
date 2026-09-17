@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
+  DEFAULT_VAULT_AUTO_LOCK,
   LOCALE_STORAGE_KEY,
   NOTE_THEME_STORAGE_KEY,
   NOTE_THEME_SCOPE_STORAGE_KEY,
@@ -7,20 +8,23 @@ import {
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_WIDTH_STORAGE_KEY,
   THEME_STORAGE_KEY,
+  VAULT_AUTO_LOCK_STORAGE_KEY,
   parseLocale,
   parseNoteTheme,
   parseNoteThemeScope,
   parseSidebarWidth,
   parseTheme,
+  parseVaultAutoLock,
   readStoredLocale,
-  readStoredSidebarWidth,
   readStoredRecentNotes,
+  readStoredSidebarWidth,
   readStoredTheme,
+  readStoredVaultAutoLock,
   resolveTheme,
   useUiStore,
 } from "./ui.store";
 
-afterEach(() => useUiStore.setState({ theme: "light", noteTheme: "classic", noteThemeScope: "workspace", locale: "zh-CN", sidebarWidth: SIDEBAR_DEFAULT_WIDTH, sidebarTab: "tree", focusedTag: null }));
+afterEach(() => useUiStore.setState({ theme: "light", noteTheme: "classic", noteThemeScope: "workspace", locale: "zh-CN", sidebarWidth: SIDEBAR_DEFAULT_WIDTH, sidebarTab: "tree", focusedTag: null, vaultAutoLock: DEFAULT_VAULT_AUTO_LOCK, vaultDialogOpen: false }));
 
 describe("ui.store 主题解析与持久化", () => {
   beforeEach(() => localStorage.clear());
@@ -64,6 +68,23 @@ describe("ui.store 主题解析与持久化", () => {
     expect(parseNoteTheme("unknown")).toBe("classic");
     useUiStore.getState().setNoteTheme("midnight");
     expect(localStorage.getItem(NOTE_THEME_STORAGE_KEY)).toBe("midnight");
+  });
+
+  it("解析并持久化空闲自动锁定时长", () => {
+    expect(parseVaultAutoLock("1")).toBe(1);
+    expect(parseVaultAutoLock("30")).toBe(30);
+    expect(parseVaultAutoLock("unknown")).toBe(DEFAULT_VAULT_AUTO_LOCK);
+    useUiStore.getState().setVaultAutoLock(15);
+    expect(localStorage.getItem(VAULT_AUTO_LOCK_STORAGE_KEY)).toBe("15");
+    expect(readStoredVaultAutoLock()).toBe(15);
+  });
+
+  it("全局解锁弹层开关", () => {
+    expect(useUiStore.getState().vaultDialogOpen).toBe(false);
+    useUiStore.getState().openVaultDialog();
+    expect(useUiStore.getState().vaultDialogOpen).toBe(true);
+    useUiStore.getState().closeVaultDialog();
+    expect(useUiStore.getState().vaultDialogOpen).toBe(false);
   });
 
   it("解析并持久化阅读主题作用范围", () => {

@@ -6,6 +6,7 @@ import { VaultPolicyNotes } from "./VaultPolicyNotes";
 import { VaultStatusHeader } from "./VaultStatusHeader";
 import { VaultUnlockedCard } from "./VaultUnlockedCard";
 import { VaultUnlockCard } from "./VaultUnlockCard";
+import { VaultAutoLockSettings } from "./VaultAutoLockSettings";
 
 /** 设置页「加密笔记」内容区：状态 + 建库/解锁/锁定/改口令（标题由设置视图统一提供）。 */
 export function VaultSettings() {
@@ -30,6 +31,7 @@ export function VaultSettings() {
       {state === "absent" && <VaultCreateCard />}
       {state === "locked" && <VaultUnlockCard />}
       {state === "unlocked" && <VaultUnlockedCard />}
+      {state !== "absent" && <VaultAutoLockSettings />}
       <VaultPolicyNotes />
     </div>
   );

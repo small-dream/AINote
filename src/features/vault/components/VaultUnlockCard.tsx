@@ -5,15 +5,25 @@ import { useVaultSettings } from "../hooks/useVaultSettings";
 import { vaultErrorText } from "../utils/errorText";
 import { VaultField, VaultPassphraseInput } from "./VaultField";
 
+interface VaultUnlockCardProps {
+  /** 解锁成功后回调（全局解锁弹层用于自动关闭）；设置页内嵌场景不传。 */
+  onUnlocked?: () => void;
+}
+
 /** 解锁表单：口令只透传给 Rust，成功后清空输入框（前端不留任何口令痕迹）。 */
-export function VaultUnlockCard() {
+export function VaultUnlockCard({ onUnlocked }: VaultUnlockCardProps = {}) {
   const { t } = useTranslation();
   const { unlock } = useVaultSettings();
   const [passphrase, setPassphrase] = useState("");
 
   const submit = () => {
     if (passphrase === "" || unlock.isPending) return;
-    unlock.mutate(passphrase, { onSuccess: () => setPassphrase("") });
+    unlock.mutate(passphrase, {
+      onSuccess: () => {
+        setPassphrase("");
+        onUnlocked?.();
+      },
+    });
   };
 
   return (

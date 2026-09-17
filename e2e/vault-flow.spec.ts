@@ -50,9 +50,9 @@ test.describe("加密笔记（E2）", () => {
     await openVaultSettings(page);
     await enableVault(page);
 
-    await page.getByRole("button", { name: "立即锁定" }).click();
-    await expect(page.getByText("已锁定")).toBeVisible();
-    await expect(page.getByRole("button", { name: "解锁" })).toBeVisible();
+    await page.getByRole("button", { name: "立即锁定", exact: true }).click();
+    await expect(page.getByText("已锁定", { exact: true })).toBeVisible();
+    await expect(page.getByRole("button", { name: "解锁", exact: true })).toBeVisible();
   });
 
   test("口令不达标时禁用提交，口令错误时给出可读提示且保持锁定", async ({ page }) => {
@@ -65,13 +65,13 @@ test.describe("加密笔记（E2）", () => {
     await expect(page.getByRole("button", { name: "启用加密" })).toBeDisabled();
 
     await enableVault(page);
-    await page.getByRole("button", { name: "立即锁定" }).click();
+    await page.getByRole("button", { name: "立即锁定", exact: true }).click();
 
     // 错误口令：解锁失败但保持锁定，用户可以重试
     await page.getByLabel("仓库口令").fill("wrong passphrase here");
-    await page.getByRole("button", { name: "解锁" }).click();
+    await page.getByRole("button", { name: "解锁", exact: true }).click();
     await expect(page.getByText("口令错误，或仓库密钥文件已损坏。")).toBeVisible();
-    await expect(page.getByText("已锁定")).toBeVisible();
+    await expect(page.getByText("已锁定", { exact: true })).toBeVisible();
   });
 
   test("边界说明在建库前就可见：不记住口令、无恢复码、不支持 AI 与版本历史", async ({ page }) => {
@@ -95,8 +95,8 @@ test.describe("加密笔记（E2）", () => {
     await toggleEncryption(page, "加密此笔记", "已加密这篇笔记：仓库里只保留密文");
     await openVaultTab(page);
     await expect(page.getByText("仓库中已有 1 篇加密笔记")).toBeVisible();
-    await page.getByRole("button", { name: "立即锁定" }).click();
-    await expect(page.getByText("已锁定")).toBeVisible();
+    await page.getByRole("button", { name: "立即锁定", exact: true }).click();
+    await expect(page.getByText("已锁定", { exact: true })).toBeVisible();
     await closeSettings(page);
 
     // 锁定态：编辑区被解锁遮罩接管，正文与编辑器都不可见
@@ -105,11 +105,8 @@ test.describe("加密笔记（E2）", () => {
     await expect(page.locator(".cm-content")).toBeHidden();
 
     // 解锁后：note-content 失效重取，编辑器重新装载出明文（回归「解锁后编辑器重装载」）
-    await page.getByRole("button", { name: "前往解锁" }).click();
     await page.getByLabel("仓库口令").fill("correct horse battery");
     await page.getByRole("button", { name: "解锁", exact: true }).click();
-    await expect(page.getByText("加密笔记已解锁")).toBeVisible();
-    await closeSettings(page);
     await expect(page.locator(".cm-content").first()).toContainText("正文", { timeout: 15_000 });
   });
 
