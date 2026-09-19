@@ -2,7 +2,7 @@
 
 use std::path::Path;
 
-use super::{clone_repo, pull, push, resolve_conflict_file};
+use super::{clone_repo, pull, push, resolve_conflict_file, resolve_conflicts};
 use crate::domain::error::AppError;
 use crate::domain::remote::RemoteCredential;
 
@@ -233,4 +233,60 @@ fn resolve_conflict_allows_envelope_when_worktree_file_missing() {
         std::fs::read_to_string(dir.join("note.md")).unwrap(),
         ENVELOPE_OURS
     );
+}
+
+// 注意夹具 merge 方向：HEAD 在 side 分支（第三个参数），merge 进 master（第二个参数）。
+// 因此 resolve_conflicts 视角下 本地 ours = 第三个参数，远端 theirs = 第二个参数。
+
+#[test]
+fn resolve_conflicts_rejects_plaintext_local_over_envelope_remote() {
+    // 本地明文 / 远端信封 + 保留本地 → 整批拒绝：不产生 merge commit，冲突保持未解决。
+    let (_tmp, dir) = merge_conflict_repo(ENVELOPE_BASE, ENVELOPE_THEIRS, "local plain\n");
+    let err = resolve_conflicts(dir.to_str().unwrap(), true).unwrap_err();
+    assert!(matches!(err, AppError::VaultInvalid(_)), "应返回 VAULT_9004");
+    assert!(err.to_string().contains("note.md"), "错误消息须列出违规文件");
+    let repo = git2::Repository::open(&dir).unwrap();
+    assert_eq!(
+        repo.head().unwrap().peel_to_commit().unwrap().message().unwrap(),
+        "theirs",
+        "拒绝时不得产生 merge commit"
+    );
+    assert!(repo.path().join("MERGE_HEAD").exists(), "拒绝时合并状态必须保留");
+    assert!(repo.index().unwrap().has_conflicts(), "拒绝时冲突必须保持未解决");
+}
+
+#[test]
+fn resolve_conflicts_rejects_plaintext_remote_over_envelope_local() {
+    // 本地信封 / 远端明文 + 保留远端 → 同样拒绝（对称方向）。
+    let (_tmp, dir) = merge_conflict_repo(ENVELOPE_BASE, "remote plain\n", ENVELOPE_OURS);
+    let err = resolve_conflicts(dir.to_str().unwrap(), false).unwrap_err();
+    assert!(matches!(err, AppError::VaultInvalid(_)));
+    assert!(err.to_string().contains("note.md"));
+    let repo = git2::Repository::open(&dir).unwrap();
+    assert!(repo.index().unwrap().has_conflicts(), "拒绝时冲突必须保持未解决");
+}
+
+#[test]
+fn resolve_conflicts_allows_envelope_over_envelope() {
+    // 两侧都是信封：行为不变，保留本地侧信封并完成 merge commit。
+    let (_tmp, dir) = merge_conflict_repo(ENVELOPE_BASE, ENVELOPE_OURS, ENVELOPE_THEIRS);
+    resolve_conflicts(dir.to_str().unwrap(), true).unwrap();
+    assert_eq!(
+        std::fs::read_to_string(dir.join("note.md")).unwrap(),
+        ENVELOPE_THEIRS
+    );
+    let repo = git2::Repository::open(&dir).unwrap();
+    let head = repo.head().unwrap().peel_to_commit().unwrap();
+    assert_eq!(head.parent_count(), 2, "必须产生双父 merge commit");
+    assert!(!repo.index().unwrap().has_conflicts());
+}
+
+#[test]
+fn resolve_conflicts_keeps_plaintext_flow_untouched() {
+    // 回归：两侧都明文时行为不变，保留本地侧并正常落盘提交。
+    let (_tmp, dir) = merge_conflict_repo("base\n", "remote\n", "local\n");
+    resolve_conflicts(dir.to_str().unwrap(), true).unwrap();
+    assert_eq!(std::fs::read_to_string(dir.join("note.md")).unwrap(), "local\n");
+    let repo = git2::Repository::open(&dir).unwrap();
+    assert_eq!(repo.head().unwrap().peel_to_commit().unwrap().parent_count(), 2);
 }

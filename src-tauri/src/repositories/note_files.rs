@@ -20,8 +20,32 @@ pub fn validate_rel_path(rel: &str) -> Result<PathBuf, AppError> {
     Ok(PathBuf::from(rel))
 }
 
+/// 符号链接防御（R1）：词法校验之上，对目标路径已存在的最近祖先做 canonicalize，
+/// 断言解析结果仍以 canonical 化的仓库 root 为前缀，阻止经符号链接读写仓库外文件。
+/// 目标本身可能不存在（新建笔记），此时逐段回退到已存在的祖先再拼接剩余路径段。
+/// 校验通过后返回 `root.join(rel)` 原样路径（解析结果只用于前缀断言，保持调用方路径语义不变）。
+pub(crate) fn resolve_within_root(root: &Path, rel: &Path) -> Result<PathBuf, AppError> {
+    let invalid = || AppError::InvalidPath(rel.to_string_lossy().into_owned());
+    let root_canon = fs::canonicalize(root)
+        .map_err(|err| AppError::io_context("解析仓库根目录失败", root, err))?;
+    let mut ancestor = root.join(rel);
+    loop {
+        match fs::canonicalize(&ancestor) {
+            Ok(canon) => {
+                if !canon.starts_with(&root_canon) {
+                    return Err(invalid());
+                }
+                return Ok(root.join(rel));
+            }
+            // 目标或中间段尚不存在：回退到父目录再试，root 本身必存在故循环必然终止
+            Err(_) if ancestor.pop() => {}
+            Err(_) => return Err(invalid()),
+        }
+    }
+}
+
 pub fn read_note(root: &Path, rel: &str) -> Result<String, AppError> {
-    let path = root.join(validate_rel_path(rel)?);
+    let path = resolve_within_root(root, &validate_rel_path(rel)?)?;
     if !path.is_file() {
         return Err(AppError::NoteNotFound(rel.to_string()));
     }
@@ -30,7 +54,7 @@ pub fn read_note(root: &Path, rel: &str) -> Result<String, AppError> {
 
 /// 写入笔记，自动创建父目录。
 pub fn write_note(root: &Path, rel: &str, content: &str) -> Result<(), AppError> {
-    let path = root.join(validate_rel_path(rel)?);
+    let path = resolve_within_root(root, &validate_rel_path(rel)?)?;
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent).map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
     }
@@ -61,8 +85,8 @@ pub fn unique_note_path(root: &Path, dir: &str, file_name: &str) -> Result<Strin
 }
 
 pub fn move_note(root: &Path, from: &str, to: &str) -> Result<(), AppError> {
-    let src = root.join(validate_rel_path(from)?);
-    let dst = root.join(validate_rel_path(to)?);
+    let src = resolve_within_root(root, &validate_rel_path(from)?)?;
+    let dst = resolve_within_root(root, &validate_rel_path(to)?)?;
     if !src.is_file() {
         return Err(AppError::NoteNotFound(from.to_string()));
     }
@@ -75,8 +99,8 @@ pub fn move_note(root: &Path, from: &str, to: &str) -> Result<(), AppError> {
 /// 转换笔记类型：写入新扩展名文件后，原文件软删除移入回收站（可恢复，P0 数据安全），
 /// 不再直接 `remove_file`（内容已由前端转换好）。
 pub fn convert_note(root: &Path, from: &str, to: &str, content: &str) -> Result<(), AppError> {
-    let src = root.join(validate_rel_path(from)?);
-    let dst = root.join(validate_rel_path(to)?);
+    let src = resolve_within_root(root, &validate_rel_path(from)?)?;
+    let dst = resolve_within_root(root, &validate_rel_path(to)?)?;
     if !src.is_file() {
         return Err(AppError::NoteNotFound(from.to_string()));
     }
@@ -192,5 +216,52 @@ mod tests {
         // 非法文件名 / 目录拒绝
         assert!(unique_note_path(&root, "../evil", "x.md").is_err());
         assert!(unique_note_path(&root, ".hidden", "x.md").is_err());
+    }
+
+    /// R1：指向仓库外文件的符号链接笔记不得被读出（返回 AppError 而非跟随链接）。
+    #[cfg(unix)]
+    #[test]
+    fn read_rejects_symlink_escaping_root() {
+        let (_t, root) = setup();
+        let outside = tempfile::NamedTempFile::new().unwrap();
+        fs::write(outside.path(), "secret").unwrap();
+        std::os::unix::fs::symlink(outside.path(), root.join("leak.md")).unwrap();
+        assert!(matches!(
+            read_note(&root, "leak.md"),
+            Err(AppError::InvalidPath(_))
+        ));
+    }
+
+    /// R1：经指向仓库外目录的符号链接写入 / 移动，必须拒绝且不产生任何外部文件。
+    #[cfg(unix)]
+    #[test]
+    fn write_and_move_reject_symlinked_dir_escaping_root() {
+        let (_t, root) = setup();
+        let outside = tempfile::tempdir().unwrap();
+        std::os::unix::fs::symlink(outside.path(), root.join("out")).unwrap();
+
+        assert!(matches!(
+            write_note(&root, "out/x.md", "payload"),
+            Err(AppError::InvalidPath(_))
+        ));
+        assert!(!outside.path().join("x.md").exists(), "不得写到仓库外");
+
+        write_note(&root, "a.md", "x").unwrap();
+        assert!(matches!(
+            move_note(&root, "a.md", "out/a.md"),
+            Err(AppError::InvalidPath(_))
+        ));
+        assert!(read_note(&root, "a.md").is_ok(), "源笔记不得被动");
+        assert!(!outside.path().join("a.md").exists());
+    }
+
+    /// R1：仓库内部的符号链接（解析后仍在 root 内）不受影响。
+    #[cfg(unix)]
+    #[test]
+    fn symlink_staying_inside_root_is_allowed() {
+        let (_t, root) = setup();
+        write_note(&root, "real/a.md", "# 内部").unwrap();
+        std::os::unix::fs::symlink(root.join("real"), root.join("alias")).unwrap();
+        assert_eq!(read_note(&root, "alias/a.md").unwrap(), "# 内部");
     }
 }

@@ -8,7 +8,7 @@ use crate::domain::rich_text;
 use crate::domain::trash::TrashItem;
 
 use super::file_storage::is_hidden;
-use super::note_files::validate_rel_path;
+use super::note_files::{resolve_within_root, validate_rel_path};
 
 /// 回收站目录（隐藏 → 搜索/wiki/文件树自动忽略，Git 版本化随仓库同步）
 pub const TRASH_DIR: &str = ".trash";
@@ -41,7 +41,7 @@ pub fn list(root: &Path) -> Result<Vec<TrashItem>, AppError> {
 /// 软删除单篇笔记：正文移入 `.trash/<id>.md`，原路径记入 manifest，再移除原文件。
 pub fn soft_delete_note(root: &Path, rel: &str) -> Result<TrashItem, AppError> {
     let rel = validate_rel_path(rel)?;
-    let src = root.join(&rel);
+    let src = resolve_within_root(root, &rel)?;
     if !src.is_file() {
         return Err(AppError::NoteNotFound(rel.to_string_lossy().into_owned()));
     }
@@ -73,9 +73,17 @@ pub fn soft_delete_note(root: &Path, rel: &str) -> Result<TrashItem, AppError> {
     Ok(item)
 }
 
-/// 软删除目录：递归移入其内全部笔记到回收站，随后移除该目录。
+/// 软删除目录：仅当目录内全部为笔记文件（隐藏项除外）时执行——
+/// 递归移入全部笔记到回收站后移除目录；存在非笔记文件则整体拒绝，避免不可恢复的数据丢失（R7）。
 pub fn soft_delete_folder(root: &Path, rel: &str) -> Result<Vec<TrashItem>, AppError> {
-    let files = collect_note_files(root, rel)?;
+    let dir = resolve_within_root(root, &validate_rel_path(rel)?)?;
+    if !dir.is_dir() {
+        return Err(AppError::Io(format!("folder not found: {rel}")));
+    }
+    ensure_only_note_files(&dir)?;
+    let mut files = Vec::new();
+    walk_notes(&dir, &mut files)?;
+    files.sort();
     let mut items = Vec::new();
     for file in &files {
         let file_rel = file
@@ -85,11 +93,56 @@ pub fn soft_delete_folder(root: &Path, rel: &str) -> Result<Vec<TrashItem>, AppE
             .into_owned();
         items.push(soft_delete_note(root, &file_rel)?);
     }
-    let dir = root.join(validate_rel_path(rel)?);
-    if dir.is_dir() {
-        fs::remove_dir_all(&dir).map_err(|err| AppError::io_context("删除目录失败", &dir, err))?;
-    }
+    fs::remove_dir_all(&dir).map_err(|err| AppError::io_context("删除目录失败", &dir, err))?;
     Ok(items)
+}
+
+/// R7 数据安全：目录（含子目录）内存在「非笔记且非隐藏」条目（含符号链接）时拒绝删除，
+/// 错误消息最多列出前几个文件名；隐藏文件（如 `.DS_Store`）除外，避免 macOS 误伤。
+fn ensure_only_note_files(dir: &Path) -> Result<(), AppError> {
+    const MAX_LISTED: usize = 3;
+    let mut offenders: Vec<String> = Vec::new();
+    collect_non_note_files(dir, dir, &mut offenders, MAX_LISTED)?;
+    if offenders.is_empty() {
+        return Ok(());
+    }
+    Err(AppError::FolderHasNonNoteFiles(format!(
+        "目录包含非笔记文件，已取消删除（请先移出）：{}",
+        offenders.join("、")
+    )))
+}
+
+fn collect_non_note_files(
+    base: &Path,
+    dir: &Path,
+    out: &mut Vec<String>,
+    max: usize,
+) -> Result<(), AppError> {
+    if out.len() >= max {
+        return Ok(());
+    }
+    let entries = fs::read_dir(dir).map_err(|err| AppError::io_context("列目录失败", dir, err))?;
+    for entry in entries {
+        let entry = entry.map_err(|err| AppError::io_context("列目录失败", dir, err))?;
+        let file_type = entry
+            .file_type()
+            .map_err(|err| AppError::io_context("读取文件类型失败", dir, err))?;
+        let path = entry.path();
+        if is_hidden(&path) {
+            continue;
+        }
+        // 符号链接（含指向祖先的目录链接）不跟随，按非笔记条目计入，拒绝删除以防误删
+        if file_type.is_symlink() || (file_type.is_file() && !is_note_file(&path)) {
+            let shown = path.strip_prefix(base).unwrap_or(&path);
+            out.push(shown.to_string_lossy().into_owned());
+        } else if file_type.is_dir() {
+            collect_non_note_files(base, &path, out, max)?;
+        }
+        if out.len() >= max {
+            return Ok(());
+        }
+    }
+    Ok(())
 }
 
 /// 恢复指定条目到原路径；原路径已被占用时自动追加 `-1`、`-2`…。
@@ -114,7 +167,7 @@ pub fn restore(root: &Path, id: &str) -> Result<String, AppError> {
         let dir = root.join(parent);
         fs::create_dir_all(&dir).map_err(|err| AppError::io_context("创建目录失败", &dir, err))?;
     }
-    let dest = root.join(&target);
+    let dest = resolve_within_root(root, &target)?;
     fs::write(&dest, content).map_err(|err| AppError::io_context("写入失败", &dest, err))?;
     fs::remove_file(&src).map_err(|err| AppError::io_context("删除失败", &src, err))?;
     write_manifest(root, &items)?;
@@ -147,30 +200,22 @@ pub fn empty(root: &Path) -> Result<(), AppError> {
     Ok(())
 }
 
-/// 递归收集目录内的笔记文件（跳过隐藏项），供目录软删除。
-fn collect_note_files(root: &Path, rel: &str) -> Result<Vec<PathBuf>, AppError> {
-    let dir = root.join(validate_rel_path(rel)?);
-    if !dir.is_dir() {
-        return Err(AppError::Io(format!("folder not found: {rel}")));
-    }
-    let mut files = Vec::new();
-    walk_notes(&dir, &mut files)?;
-    files.sort();
-    Ok(files)
-}
-
+/// 递归收集目录内的笔记文件（跳过隐藏项与符号链接），供目录软删除。
+/// `file_type()` 不跟随符号链接（R1）：链接条目一律跳过，避免经链接删除/收集仓库外文件或无限递归。
 fn walk_notes(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AppError> {
     let entries = fs::read_dir(dir).map_err(|err| AppError::io_context("列目录失败", dir, err))?;
     for entry in entries {
-        let path = entry
-            .map_err(|err| AppError::io_context("列目录失败", dir, err))?
-            .path();
-        if is_hidden(&path) {
+        let entry = entry.map_err(|err| AppError::io_context("列目录失败", dir, err))?;
+        let file_type = entry
+            .file_type()
+            .map_err(|err| AppError::io_context("读取文件类型失败", dir, err))?;
+        let path = entry.path();
+        if is_hidden(&path) || file_type.is_symlink() {
             continue;
         }
-        if path.is_dir() {
+        if file_type.is_dir() {
             walk_notes(&path, out)?;
-        } else if is_note_file(&path) {
+        } else if file_type.is_file() && is_note_file(&path) {
             out.push(path);
         }
     }
@@ -228,97 +273,5 @@ fn fnv1a(text: &str) -> u64 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use std::fs;
-
-    fn setup() -> (tempfile::TempDir, PathBuf) {
-        let tmp = tempfile::tempdir().unwrap();
-        let root = tmp.path().to_path_buf();
-        (tmp, root)
-    }
-
-    fn seed_note(root: &Path, rel: &str, content: &str) {
-        let path = root.join(rel);
-        fs::create_dir_all(path.parent().unwrap()).unwrap();
-        fs::write(path, content).unwrap();
-    }
-
-    #[test]
-    fn soft_delete_moves_note_into_trash_and_records_original() {
-        let (_tmp, root) = setup();
-        seed_note(&root, "daily/a.md", "---\ntitle: 标题A\n---\n正文");
-        let item = soft_delete_note(&root, "daily/a.md").unwrap();
-        assert_eq!(item.path, "daily/a.md");
-        assert_eq!(item.title, "标题A");
-        assert!(!root.join("daily/a.md").exists());
-        assert!(root.join(".trash").join(format!("{}.md", item.id)).is_file());
-        let listed = list(&root).unwrap();
-        assert_eq!(listed.len(), 1);
-        assert_eq!(listed[0].path, "daily/a.md");
-    }
-
-    #[test]
-    fn restore_puts_note_back_at_original_path() {
-        let (_tmp, root) = setup();
-        seed_note(&root, "a.md", "# 标题A\n正文");
-        let item = soft_delete_note(&root, "a.md").unwrap();
-        let restored = restore(&root, &item.id).unwrap();
-        assert_eq!(restored, "a.md");
-        assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "# 标题A\n正文");
-        assert!(list(&root).unwrap().is_empty());
-    }
-
-    #[test]
-    fn restore_avoids_collision_with_existing_file() {
-        let (_tmp, root) = setup();
-        seed_note(&root, "a.md", "旧内容");
-        let item = soft_delete_note(&root, "a.md").unwrap();
-        seed_note(&root, "a.md", "新内容");
-        let restored = restore(&root, &item.id).unwrap();
-        assert_eq!(restored, "a-1.md");
-        assert_eq!(fs::read_to_string(root.join("a-1.md")).unwrap(), "旧内容");
-    }
-
-    #[test]
-    fn permanent_delete_removes_file_and_manifest_entry() {
-        let (_tmp, root) = setup();
-        seed_note(&root, "a.md", "x");
-        let item = soft_delete_note(&root, "a.md").unwrap();
-        permanent_delete(&root, &item.id).unwrap();
-        assert!(!root.join(".trash").join(format!("{}.md", item.id)).exists());
-        assert!(list(&root).unwrap().is_empty());
-    }
-
-    #[test]
-    fn empty_clears_all_items() {
-        let (_tmp, root) = setup();
-        seed_note(&root, "a.md", "x");
-        seed_note(&root, "b/c.md", "y");
-        soft_delete_note(&root, "a.md").unwrap();
-        soft_delete_note(&root, "b/c.md").unwrap();
-        empty(&root).unwrap();
-        assert!(list(&root).unwrap().is_empty());
-        assert!(!root.join(".trash/manifest.json").exists());
-    }
-
-    #[test]
-    fn soft_delete_folder_recurses_and_removes_dir() {
-        let (_tmp, root) = setup();
-        seed_note(&root, "f/a.md", "A");
-        seed_note(&root, "f/sub/b.md", "B");
-        let items = soft_delete_folder(&root, "f").unwrap();
-        assert_eq!(items.len(), 2);
-        assert!(!root.join("f").exists());
-        assert_eq!(list(&root).unwrap().len(), 2);
-    }
-
-    #[test]
-    fn missing_note_returns_not_found() {
-        let (_tmp, root) = setup();
-        assert!(matches!(
-            soft_delete_note(&root, "nope.md"),
-            Err(AppError::NoteNotFound(_))
-        ));
-    }
-}
+#[path = "trash_files_tests.rs"]
+mod tests;

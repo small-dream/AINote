@@ -23,6 +23,9 @@ pub enum AppError {
     AuthNetwork(String),
     #[error("repo error: {0}")]
     Repo(String),
+    /// 目录内存在非笔记文件（图片等），拒绝删除以避免不可恢复的数据丢失（消息列出前几个文件名）
+    #[error("{0}")]
+    FolderHasNonNoteFiles(String),
     #[error("conflict: {0}")]
     Conflict(String),
     #[error("git error: {0}")]
@@ -139,6 +142,7 @@ impl From<AppError> for AppErrorDto {
             AppError::AuthLoginRequired { .. } => ("AUTH_2001", ErrorKind::Auth, false),
             AppError::AuthNetwork(_) => ("AUTH_2002", ErrorKind::Auth, true),
             AppError::Repo(_) => ("REPO_3001", ErrorKind::Unknown, false),
+            AppError::FolderHasNonNoteFiles(_) => ("REPO_3002", ErrorKind::Unknown, false),
             AppError::Conflict(_) => ("SYNC_4001", ErrorKind::Conflict, false),
             AppError::Git(_) => ("GIT_4001", ErrorKind::Unknown, false),
             AppError::SyncNetwork(_) => ("SYNC_4002", ErrorKind::Network, true),
@@ -242,6 +246,9 @@ mod tests {
         );
         assert_eq!(dto(AppError::AuthNetwork("down".into())).code, "AUTH_2002");
         assert_eq!(dto(AppError::Repo("x".into())).code, "REPO_3001");
+        let folder_err = dto(AppError::FolderHasNonNoteFiles("pic.png".into()));
+        assert_eq!(folder_err.code, "REPO_3002");
+        assert!(!folder_err.retriable, "数据安全拒绝不可自动重试");
         assert_eq!(dto(AppError::Conflict("c".into())).code, "SYNC_4001");
         assert_eq!(dto(AppError::Git("g".into())).code, "GIT_4001");
         assert_eq!(dto(AppError::SyncNetwork("net".into())).code, "SYNC_4002");

@@ -18,16 +18,20 @@ pub fn list_tree(root: &Path) -> Result<TreeNode, AppError> {
     build_node(root, root)
 }
 
+/// 递归构建不跟随符号链接（R1）：符号链接条目一律跳过，
+/// 避免树中包含仓库外文件或因指向祖先的目录链接无限递归。
 fn build_node(root: &Path, dir: &Path) -> Result<TreeNode, AppError> {
     let mut children = Vec::new();
     for entry in fs::read_dir(dir)? {
-        let path = entry?.path();
-        if is_hidden(&path) {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let path = entry.path();
+        if is_hidden(&path) || file_type.is_symlink() {
             continue;
         }
-        if path.is_dir() {
+        if file_type.is_dir() {
             children.push(build_node(root, &path)?);
-        } else if is_note_file(&path) {
+        } else if file_type.is_file() && is_note_file(&path) {
             children.push(leaf(root, &path));
         }
     }
@@ -95,5 +99,26 @@ mod tests {
         assert!(tree.children[0].children[2].encrypted, "信封文件必须标记为加密");
         assert_eq!(tree.children[1].name, "b.md");
         assert!(!tree.children[1].encrypted);
+    }
+
+    /// R1：符号链接笔记与目录不进文件树；指向祖先目录的链接不得造成无限递归。
+    #[cfg(unix)]
+    #[test]
+    fn skips_symlinks_and_ancestor_loops() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        create_dir_all(root.join("sub")).unwrap();
+        File::create(root.join("a.md")).unwrap();
+        File::create(root.join("sub/b.md")).unwrap();
+        std::os::unix::fs::symlink("/etc/hosts", root.join("leak.md")).unwrap();
+        std::os::unix::fs::symlink(root, root.join("sub/loop")).unwrap();
+
+        let tree = list_tree(root).unwrap();
+        assert_eq!(tree.children.len(), 2, "符号链接条目必须全部跳过");
+        assert!(tree.children.iter().all(|n| n.name != "leak.md"));
+        let sub = &tree.children[0];
+        assert_eq!(sub.name, "sub");
+        assert_eq!(sub.children.len(), 1);
+        assert_eq!(sub.children[0].path, "sub/b.md");
     }
 }

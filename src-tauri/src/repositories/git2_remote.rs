@@ -141,6 +141,15 @@ fn merge_or_conflict(repo: &Repository, their: &AnnotatedCommit) -> Result<(), A
 /// 冲突解决：use_ours=true 保留本地侧，否则采用远端侧；随后完成 merge commit。
 pub fn resolve_conflicts(path: &str, use_ours: bool) -> Result<(), AppError> {
     let repo = open(path)?;
+    // 信封守卫与 resolve_conflict_file 同一威胁模型：命令层可被直接 invoke，
+    // 先校验全部冲突文件再写入——任一违规则整批拒绝，不做部分 checkout/add/commit。
+    let violations = envelope_violations(&repo, use_ours)?;
+    if !violations.is_empty() {
+        return Err(AppError::VaultInvalid(format!(
+            "{} 是加密笔记，选中侧为明文会把信封降级，已取消整个批量冲突解决",
+            violations.join("、")
+        )));
+    }
     let mut index = repo.index().map_err(to_git)?;
     let conflicted = conflict_paths(&repo)?;
     for rel in conflicted {
@@ -157,6 +166,33 @@ pub fn resolve_conflicts(path: &str, use_ours: bool) -> Result<(), AppError> {
     }
     index.write().map_err(to_git)?;
     commit_merge(&repo, "note: resolve conflict")
+}
+
+/// 批量解决的信封判定：冲突的本地/远端两侧既有版本任一是信封、而用户选中侧不是信封时，
+/// 该文件违规（拒绝把密文静默降级为明文）。两侧都是/都不是信封时行为不变。
+fn envelope_violations(repo: &Repository, use_ours: bool) -> Result<Vec<String>, AppError> {
+    let mut violations = Vec::new();
+    for conflict in repo.index().map_err(to_git)?.conflicts().map_err(to_git)? {
+        let entry = conflict.map_err(to_git)?;
+        let rel = entry
+            .our
+            .as_ref()
+            .or(entry.their.as_ref())
+            .map(|e| String::from_utf8_lossy(&e.path).into_owned());
+        let side_is_envelope = |side: Option<git2::IndexEntry>| {
+            side.map(|e| blob_is_envelope(repo, e.id)).transpose()
+        };
+        let our_env = side_is_envelope(entry.our)?.unwrap_or(false);
+        let their_env = side_is_envelope(entry.their)?.unwrap_or(false);
+        let selected_env = if use_ours { our_env } else { their_env };
+        if (our_env || their_env) && !selected_env {
+            if let Some(rel) = rel {
+                violations.push(rel);
+            }
+        }
+    }
+    violations.sort();
+    Ok(violations)
 }
 
 /// 读取当前合并冲突文件（path + 本地 stage2 / 远端 stage3 内容），供三栏合并（P1-3）。

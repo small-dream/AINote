@@ -19,15 +19,19 @@ pub fn collect_note_files(root: &Path) -> Result<Vec<PathBuf>, AppError> {
     Ok(files)
 }
 
+/// 递归遍历不跟随符号链接（R1）：`file_type()` 来自 dirent 不解析链接，
+/// 符号链接条目一律跳过，避免读出仓库外文件或因指向祖先的目录链接无限递归。
 fn walk(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AppError> {
     for entry in fs::read_dir(dir)? {
-        let path = entry?.path();
-        if is_hidden(&path) {
+        let entry = entry?;
+        let file_type = entry.file_type()?;
+        let path = entry.path();
+        if is_hidden(&path) || file_type.is_symlink() {
             continue;
         }
-        if path.is_dir() {
+        if file_type.is_dir() {
             walk(&path, out)?;
-        } else if is_note_file(&path) {
+        } else if file_type.is_file() && is_note_file(&path) {
             out.push(path);
         }
     }
@@ -64,5 +68,24 @@ mod tests {
     fn rejects_non_directory() {
         let err = collect_note_files(Path::new("/nonexistent/path")).unwrap_err();
         assert!(matches!(err, AppError::Repo(_)));
+    }
+
+    /// R1：符号链接笔记与目录一律跳过；指向祖先目录的链接不得造成无限递归。
+    #[cfg(unix)]
+    #[test]
+    fn skips_symlinks_and_ancestor_loops() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        create_dir_all(root.join("sub")).unwrap();
+        File::create(root.join("a.md")).unwrap();
+        File::create(root.join("sub/b.md")).unwrap();
+        // 指向仓库外文件的链接（伪装成笔记）
+        std::os::unix::fs::symlink("/etc/hosts", root.join("leak.md")).unwrap();
+        // 指向祖先目录的链接：若跟随链接会无限递归
+        std::os::unix::fs::symlink(root, root.join("sub/loop")).unwrap();
+
+        let files = collect_note_files(root).unwrap();
+        assert_eq!(files.len(), 2, "符号链接条目必须全部跳过");
+        assert!(files.iter().all(|p| !p.ends_with("leak.md")));
     }
 }
