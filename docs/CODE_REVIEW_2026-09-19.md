@@ -5,7 +5,7 @@
 > 审查方法：12 路并行分区审查（api/queries、note、settings/update、todo/wiki、richtext/ai、sync/file-tree/vault、小 feature 合集、壳与地基、Rust commands/services、Rust repositories/domain、安全专项、架构合规专项）+ 自动化门禁实测
 > 结论：**整体工程质量高，防腐指标出色（`any`/`@ts-ignore`/TODO 零出现，分层铁律零违规）**。发现 **10 项 🔴、40+ 项 🟡**。主要风险集中在两类：①「远端/后台写盘后与编辑器陈旧草稿互相覆盖」的数据丢失链路（多处复发）；②「仓库内容不可信」威胁模型在符号链接、回收站、批量冲突解决上的缺口。
 >
-> **修复进展（2026-09-19）**：✅ R1（符号链接穿越）、R6（批量冲突信封守卫）、R7（删文件夹丢非笔记文件，改为拒绝删除并报 `REPO_3002`）已修复并配回归测试，已提交（`2359019`）。✅ R2（写盘后草稿覆盖家族：同步/冲突解决/恢复前 flush + 统一失效面 + 无脏草稿时编辑器重载信号）、R3（自动保存停摆：保存后 dirty 仍为 true 时重新武装防抖）、R4（移动/重命名前先 flush，flush 支持显式内容消除 rAF 时序赌博）已修复并配回归测试，`pnpm build/test/lint` 与 25 条相关 e2e 全绿。其余 🟡 待处理。
+> **修复进展（2026-09-19）**：✅ R1（符号链接穿越）、R6（批量冲突信封守卫）、R7（删文件夹丢非笔记文件，改为拒绝删除并报 `REPO_3002`）已修复并配回归测试，已提交（`2359019`）。✅ R2（写盘后草稿覆盖家族：同步/冲突解决/恢复前 flush + 统一失效面 + 无脏草稿时编辑器重载信号）、R3（自动保存停摆：保存后 dirty 仍为 true 时重新武装防抖）、R4（移动/重命名前先 flush，flush 支持显式内容消除 rAF 时序赌博）已修复并配回归测试，`pnpm build/test/lint` 与 25 条相关 e2e 全绿。✅ R8（ESLint glob 改 `@tauri-apps/**` 并显式豁免 src/platform/，reminderRuntime 通知调用下沉至 platform 层）、R9（close-guard confirmClose 失败后 finally 复位可重试）、R10（全部 Git 写命令统一 RepoWriteLock 互斥；更新下载/备份改 acquire/release 语义，新增 UPDATE_7004/REPO_3003）已修复并配回归测试，`cargo test` 391 passed。至此 10 项 🔴 全部修复，其余 🟡 待处理。
 
 ## 0. 结论速览（🔴 严重问题）
 
