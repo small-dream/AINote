@@ -10,12 +10,14 @@ interface UseNoteReloadOptions {
   applyContent: (content: string) => void;
 }
 
-/** 笔记内容装载编排：路径切换时装载一次；reloadToken 变化时允许重载（如 Git 历史恢复）；
+/** 笔记内容装载编排：路径切换时装载一次；reloadToken 变化时允许重载（如 Git 历史恢复、同步落盘）；
  * 同一路径 locked → unlocked 翻转时重载一次（锁定占位必须被明文替换，否则空草稿会被自动保存覆盖原文）。 */
 export function useNoteReload({ notePath, data, reloadToken, dirty, applyContent }: UseNoteReloadOptions) {
   const loadedForRef = useRef<string | null>(null);
   /** 当前 draft 是否来自锁定占位（锁定态 content 为空串且编辑器被遮罩替换，用户不可编辑）。 */
   const loadedLockedRef = useRef(false);
+  /** reloadToken 触发的强制重载待定：等下一次数据到达时在脏草稿守卫下应用。 */
+  const pendingReloadRef = useRef(false);
   const dirtyRef = useRef(dirty);
   const previousReload = useRef(reloadToken);
 
@@ -27,6 +29,15 @@ export function useNoteReload({ notePath, data, reloadToken, dirty, applyContent
     if (!data) return;
     if (loadedForRef.current !== notePath) {
       loadedForRef.current = notePath;
+      loadedLockedRef.current = data.locked;
+      pendingReloadRef.current = false;
+      applyContent(data.content);
+      return;
+    }
+    // 强制重载（同路径磁盘被外部改写）：有脏草稿时保留用户输入，既不丢弃也不覆盖。
+    if (pendingReloadRef.current) {
+      pendingReloadRef.current = false;
+      if (dirtyRef.current) return;
       loadedLockedRef.current = data.locked;
       applyContent(data.content);
       return;
@@ -45,8 +56,7 @@ export function useNoteReload({ notePath, data, reloadToken, dirty, applyContent
   useEffect(() => {
     if (reloadToken !== previousReload.current) {
       previousReload.current = reloadToken;
-      loadedForRef.current = null;
-      loadedLockedRef.current = false;
+      pendingReloadRef.current = true;
     }
   }, [reloadToken]);
 

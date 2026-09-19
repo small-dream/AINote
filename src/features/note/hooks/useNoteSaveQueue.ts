@@ -23,12 +23,13 @@ export function useNoteSaveQueue({ repoPath, notePath, draft, dirty, setDirty, i
 
   useEffect(() => { reset(); }, [notePath, repoPath, reset]);
 
-  const saveDraft = useCallback(async (): Promise<void> => {
+  const saveDraft = useCallback(async (contentOverride?: string): Promise<void> => {
     if (inFlight.current) await inFlight.current;
     const current = latest.current;
-    if (!current.notePath || !current.dirty || !isLoaded()) return;
+    // 显式传入内容时视为脏（调用方刚 onChange，React 状态可能尚未落盘到 latest）
+    if (!current.notePath || (!current.dirty && contentOverride === undefined) || !isLoaded()) return;
     const path = current.notePath;
-    const content = current.draft;
+    const content = contentOverride ?? current.draft;
     setSaving(true);
     const request = current.save
       .mutateAsync({ path, content })
@@ -39,10 +40,12 @@ export function useNoteSaveQueue({ repoPath, notePath, draft, dirty, setDirty, i
   }, [isLoaded, setDirty]);
 
   useEffect(() => {
-    if (!dirty || !isLoaded() || !notePath) return;
+    // saving 纳入依赖：保存完成后 dirty 仍为 true（in-flight 期间 draft 继续前进）时，
+    // saving 翻转让本 effect 重跑、重新武装防抖；saving 期间不武装，避免与在途保存重叠。
+    if (!dirty || saving || !isLoaded() || !notePath) return;
     const handle = setTimeout(() => void saveDraft().catch(() => undefined), debounceMs);
     return () => clearTimeout(handle);
-  }, [debounceMs, dirty, isLoaded, notePath, saveDraft]);
+  }, [debounceMs, dirty, saving, isLoaded, notePath, saveDraft]);
 
   return { saving, saveError: save.error as AppError | null, flush: saveDraft, reset };
 }

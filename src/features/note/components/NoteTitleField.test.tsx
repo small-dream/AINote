@@ -31,6 +31,9 @@ describe("NoteTitleField", () => {
 
     await waitFor(() => expect(mutateAsync).toHaveBeenCalledWith({ from: "未命名.md", to: "VPN.md" }));
     expect(onChange).toHaveBeenCalledWith("# VPN\n\n");
+    // flush 显式携带新草稿：不再赌 React 状态落盘时序，且先于改名落盘
+    expect(flush).toHaveBeenCalledWith("# VPN\n\n");
+    expect(flush.mock.invocationCallOrder[0] ?? 0).toBeLessThan(mutateAsync.mock.invocationCallOrder[0] ?? 0);
     expect(onRenamed).toHaveBeenCalledWith("VPN.md");
   });
 

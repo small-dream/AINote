@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppError } from "@/api";
 import { useNoteContentQuery } from "@/queries/note.queries";
+import { useNoteReloadStore } from "@/stores/note-reload.store";
 import { useNoteReload } from "./useNoteReload";
 import { useNoteSaveQueue } from "./useNoteSaveQueue";
 import { noteKindOfPath } from "../utils/noteKind";
@@ -10,8 +11,8 @@ import { publishDraftState, registerDraft } from "../utils/draftRegistry";
 export const AUTOSAVE_DEBOUNCE_MS = 3_000;
 
 export interface NoteEditorHandle {
-  /** 立即保存未保存的草稿（切换笔记前调用） */
-  flush: () => Promise<void>;
+  /** 立即保存未保存的草稿（切换笔记前调用）；可显式传入待保存内容，避免赌 React 状态落盘时序 */
+  flush: (content?: string) => Promise<void>;
   setMode: (mode: "edit" | "split" | "preview") => void;
   insertCallout: () => void;
   openHistory: () => void;
@@ -27,7 +28,9 @@ export function useNoteEditor(repoPath: string | null, notePath: string | null, 
     setDraft(content);
     setDirty(false);
   }, []);
-  const isLoaded = useNoteReload({ notePath, data: contentQuery.data, reloadToken, dirty, applyContent });
+  // 工作区级重载信号（同步 / 冲突解决 / Git Graph 恢复）与历史面板纪元合并为一个递增令牌
+  const workspaceReloadEpoch = useNoteReloadStore((state) => state.epoch);
+  const isLoaded = useNoteReload({ notePath, data: contentQuery.data, reloadToken: reloadToken + workspaceReloadEpoch, dirty, applyContent });
   const kind = contentQuery.data?.kind ?? (notePath ? noteKindOfPath(notePath) : "markdown");
   /** 加密笔记在锁定态：正文不参与编辑，界面改由解锁面板接管（后端连明文都不返回）。 */
   const locked = contentQuery.data?.locked === true;

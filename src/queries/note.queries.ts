@@ -123,12 +123,16 @@ export function useMoveNoteMutation() {
   const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
   return useMutation({
     mutationFn: ({ from, to }: { from: string; to: string }) => noteApi.move(from, to),
-    onSuccess: () => {
+    onSuccess: (_data, { from }) => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });
       void queryClient.invalidateQueries({ queryKey: ["wiki"] });
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       markActivity();
+      // 旧路径的 note-content 缓存已失效：文件被移走，留着会让旧路径读到幽灵内容
+      queryClient.removeQueries({
+        predicate: (query) => query.queryKey[0] === "note-content" && query.queryKey[2] === from,
+      });
     },
   });
 }

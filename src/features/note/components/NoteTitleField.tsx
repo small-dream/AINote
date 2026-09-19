@@ -7,7 +7,7 @@ interface NoteTitleFieldProps {
   isNewNote: boolean;
   draft: string;
   onChange: (value: string) => void;
-  flush: () => Promise<void>;
+  flush: (content?: string) => Promise<void>;
   onRenamed: (path: string) => void;
 }
 

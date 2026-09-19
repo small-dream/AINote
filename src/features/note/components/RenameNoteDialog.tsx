@@ -7,6 +7,7 @@ import { getDirectoryPath } from "@/features/file-tree/utils/path";
 import { noteDisplayName } from "../utils/displayName";
 import { joinNotePath, normalizeNotePath } from "../utils/path";
 import { noteKindOfPath } from "../utils/noteKind";
+import { flushPendingDrafts } from "../utils/draftRegistry";
 import { useTranslation } from "@/i18n";
 
 interface Props { path: string | null; onClose: () => void; onRenamed: (to: string) => void; }
@@ -19,11 +20,18 @@ export function RenameNoteDialog({ path, onClose, onRenamed }: Props) {
   const [error, setError] = useState<string | null>(null);
   const kind = path ? noteKindOfPath(path) : "markdown";
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     const result = buildRenameTarget(path, name, kind);
     if (result.error) { setError(t("note.nameRequired")); return; }
     if (result.to === path) { onClose(); return; }
+    // 先落盘草稿再改名：改名后旧路径已不存在，事后 flush 会把草稿写回旧路径、复活文件
+    try {
+      await flushPendingDrafts();
+    } catch (err) {
+      setError(messageOf(err));
+      return;
+    }
     move.mutate({ from: path as string, to: result.to as string }, { onSuccess: () => { onRenamed(result.to as string); onClose(); } });
   }
 

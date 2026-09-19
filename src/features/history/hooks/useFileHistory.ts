@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { useFileDiffQuery, useFileHistoryQuery, useRestoreFileMutation } from "@/queries/history.queries";
+import { flushPendingDrafts } from "@/features/note/utils/draftRegistry";
+import { reportToastError } from "@/stores/toast.store";
 
 interface UseFileHistoryOptions {
   repoPath: string | null;
@@ -21,8 +23,15 @@ export function useFileHistory({ repoPath, path, open, onClose, onRestored }: Us
   const diffQuery = useFileDiffQuery(repoPath, path, activeId);
   const restore = useRestoreFileMutation();
 
-  function handleRestore() {
+  async function handleRestore() {
     if (!activeId || !path || restore.isPending) return;
+    // 恢复直接改写工作区文件：先把未落盘草稿写入磁盘（对齐关窗/绑仓范式），失败则中止
+    try {
+      await flushPendingDrafts();
+    } catch (error) {
+      reportToastError(error);
+      return;
+    }
     restore.mutate(
       { file: path, commitId: activeId },
       {

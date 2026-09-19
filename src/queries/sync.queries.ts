@@ -3,6 +3,8 @@ import { syncApi } from "@/api";
 import type { SyncStatus } from "@/api/types";
 import type { SyncProgress } from "@/api/types";
 import { reportSyncProgress, useSyncRetryStore } from "@/stores/sync-retry.store";
+import { flushPendingDrafts } from "@/features/note/utils/draftRegistry";
+import { invalidateWorkspaceQueries, requestEditorReloadIfClean } from "./workspace";
 
 /** 同步状态（纯本地查询，启动/切换/操作后自动重取） */
 export function useSyncStatusQuery(repoPath: string | null, enabled = true) {
@@ -47,13 +49,16 @@ export function useCommitPendingMutation() {
 export function useSyncNowMutation(options: { onProgress?: (progress: SyncProgress) => void } = {}) {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => syncApi.syncNow(options.onProgress ?? reportSyncProgress),
+    mutationFn: async () => {
+      // 同步内部 commit→pull→push 会改写工作区：先把未落盘草稿写入磁盘，减少分叉
+      await flushPendingDrafts();
+      return syncApi.syncNow(options.onProgress ?? reportSyncProgress);
+    },
     onSettled: () => useSyncRetryStore.getState().clear(),
     onSuccess: () => {
-      invalidateSync(queryClient);
-      void queryClient.invalidateQueries({ queryKey: ["notes"] });
-      // todos.json 随仓库 Git 同步：pull 可能带回落盘改动，待办看板必须重新拉取。
-      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      // pull 可能改写任意文件：失效整个工作区读取面，并让干净的编辑器重载当前笔记
+      invalidateWorkspaceQueries(queryClient);
+      requestEditorReloadIfClean();
     },
   });
 }
@@ -64,11 +69,10 @@ export function useResolveConflictMutation() {
   return useMutation({
     mutationFn: (useLocal: boolean) => syncApi.resolveConflict(useLocal),
     onSuccess: () => {
-      invalidateSync(queryClient);
       // 批量解决会清空冲突列表；不失效缓存会让面板继续显示已解决的文件
       void queryClient.invalidateQueries({ queryKey: ["conflicts"] });
-      void queryClient.invalidateQueries({ queryKey: ["notes"] });
-      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
+      invalidateWorkspaceQueries(queryClient);
+      requestEditorReloadIfClean();
     },
   });
 }
@@ -92,8 +96,8 @@ export function useResolveFileMutation() {
       syncApi.resolveFile(path, content),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["conflicts"] });
-      void queryClient.invalidateQueries({ queryKey: ["tasks"] });
-      invalidateSync(queryClient);
+      invalidateWorkspaceQueries(queryClient);
+      requestEditorReloadIfClean();
     },
   });
 }

@@ -172,9 +172,11 @@ describe("useDeleteNoteMutation", () => {
 });
 
 describe("useMoveNoteMutation", () => {
-  it("移动成功刷新 [notes]/[tree]/[wiki]/[sync] 并标记工作区活动", async () => {
+  it("移动成功刷新 [notes]/[tree]/[wiki]/[sync]、清理旧路径 note-content 缓存并标记工作区活动", async () => {
     const { client, wrapper } = createHarness();
     noteApiMock.move.mockResolvedValue(null);
+    client.setQueryData(noteKeys.content("/repo", "a.md"), { path: "a.md", kind: "markdown", content: "旧内容", locked: false, encrypted: false });
+    client.setQueryData(noteKeys.content("/repo", "b.md"), { path: "b.md", kind: "markdown", content: "无关笔记", locked: false, encrypted: false });
     const invalidateSpy = vi.spyOn(client, "invalidateQueries");
     const versionBefore = useWorkspaceActivityStore.getState().version;
     const { result } = renderHook(() => useMoveNoteMutation(), { wrapper });
@@ -188,6 +190,11 @@ describe("useMoveNoteMutation", () => {
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["tree"] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["wiki"] });
     expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["sync"] });
+    // 旧路径缓存被移除（文件已移走），其他笔记缓存不受影响
+    expect(client.getQueryData(noteKeys.content("/repo", "a.md"))).toBeUndefined();
+    expect(client.getQueryData(noteKeys.content("/repo", "b.md"))).toEqual(
+      expect.objectContaining({ path: "b.md", content: "无关笔记" }),
+    );
     expect(useWorkspaceActivityStore.getState().version).toBe(versionBefore + 1);
   });
 });

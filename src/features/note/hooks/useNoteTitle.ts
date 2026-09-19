@@ -14,7 +14,8 @@ interface UseNoteTitleOptions {
   isNewNote: boolean;
   draft: string;
   onChange: (value: string) => void;
-  flush: () => Promise<void>;
+  /** 可显式传入待保存内容，避免赌 React 状态落盘时序 */
+  flush: (content?: string) => Promise<void>;
   onRenamed: (path: string) => void;
 }
 
@@ -38,12 +39,13 @@ export function useNoteTitle({ notePath, isNewNote, draft, onChange, flush, onRe
     }
     const nextPath = joinNotePath(getDirectoryPath(notePath), fileName);
     if (nextPath === notePath) return;
-    onChange(noteKindOfPath(notePath) === "richText"
+    const nextDraft = noteKindOfPath(notePath) === "richText"
       ? applyRichTextTitle(draft, title)
-      : applyMarkdownTitle(draft, title));
+      : applyMarkdownTitle(draft, title);
+    onChange(nextDraft);
     try {
-      await new Promise((resolve) => requestAnimationFrame(resolve));
-      await flush();
+      // 显式把新草稿交给 flush：并发渲染下 onChange 的状态未必已落盘，不能再赌一帧时序
+      await flush(nextDraft);
       await rename.mutateAsync({ from: notePath, to: nextPath });
       onRenamed(nextPath);
       setError(null);

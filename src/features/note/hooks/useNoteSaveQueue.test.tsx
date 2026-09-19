@@ -79,26 +79,28 @@ describe("useNoteSaveQueue", () => {
   });
 });
 
+/** 连续输入场景共用：draft 可变、isLoaded 与真实调用方一致为稳定引用 */
+function renderContinuousDraft(setDirty: (dirty: boolean) => void, initialDraft: string) {
+  return renderHook(
+    ({ draft }: { draft: string }) =>
+      useNoteSaveQueue({
+        repoPath: "/repo",
+        notePath: "note.md",
+        draft,
+        dirty: true,
+        setDirty,
+        isLoaded: stableLoaded,
+        debounceMs: 3_000,
+      }),
+    { initialProps: { draft: initialDraft } },
+  );
+}
+
 describe("useNoteSaveQueue 落盘时机", () => {
   it("连续输入不重置计时器：按首次变更起算 3 秒落盘（最长 3 秒延迟）", async () => {
     vi.useFakeTimers();
     try {
-      // 真实调用方（useNoteEditor → useNoteReload）的 isLoaded 是稳定引用；这里同样保持稳定，
-      // 否则 effect 依赖变化会掩盖「连续输入不重置计时器」这一行为。
-      const setDirty = vi.fn();
-      const { rerender } = renderHook(
-        ({ draft }: { draft: string }) =>
-          useNoteSaveQueue({
-            repoPath: "/repo",
-            notePath: "note.md",
-            draft,
-            dirty: true,
-            setDirty,
-            isLoaded: stableLoaded,
-            debounceMs: 3_000,
-          }),
-        { initialProps: { draft: "# 第一段" } },
-      );
+      const { rerender } = renderContinuousDraft(vi.fn(), "# 第一段");
 
       await act(async () => { vi.advanceTimersByTime(2_000); });
       rerender({ draft: "# 第一段第二段" });
@@ -107,6 +109,35 @@ describe("useNoteSaveQueue 落盘时机", () => {
 
       await act(async () => { vi.advanceTimersByTime(1); });
       expect(mutateAsync).toHaveBeenCalledWith({ path: "note.md", content: "# 第一段第二段" });
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
+describe("useNoteSaveQueue 保存后重新武装", () => {
+  it("保存 in-flight 期间 draft 继续前进时，完成后重新武装防抖并再次保存", async () => {
+    vi.useFakeTimers();
+    try {
+      let resolveSave: (value: null) => void = () => undefined;
+      mutateAsync
+        .mockImplementationOnce(() => new Promise<null>((resolve) => { resolveSave = resolve; }))
+        .mockResolvedValue(null);
+      const setDirty = vi.fn();
+      const { rerender } = renderContinuousDraft(setDirty, "# 第一版");
+
+      // 首次防抖触发保存，保存挂起期间用户继续输入
+      await act(async () => { vi.advanceTimersByTime(3_000); });
+      expect(mutateAsync).toHaveBeenCalledWith({ path: "note.md", content: "# 第一版" });
+      rerender({ draft: "# 第一版加新内容" });
+
+      // 保存完成：draft 已前进 → 不清 dirty，并重新武装下一轮防抖
+      await act(async () => { resolveSave(null); });
+      expect(setDirty).not.toHaveBeenCalledWith(false);
+      await act(async () => { vi.advanceTimersByTime(2_999); });
+      expect(mutateAsync).toHaveBeenCalledTimes(1);
+      await act(async () => { vi.advanceTimersByTime(1); });
+      expect(mutateAsync).toHaveBeenCalledWith({ path: "note.md", content: "# 第一版加新内容" });
     } finally {
       vi.useRealTimers();
     }

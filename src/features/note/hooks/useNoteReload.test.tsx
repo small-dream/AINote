@@ -83,3 +83,38 @@ describe("useNoteReload", () => {
     expect(applyContent).toHaveBeenCalledWith("# B");
   });
 });
+
+describe("useNoteReload reloadToken 强制重载", () => {
+
+  it("reloadToken 变化后，同路径新数据到达时重载（无脏草稿）", () => {
+    const applyContent = vi.fn();
+    const { rerender } = renderHook(
+      ({ data, reloadToken, dirty }: Props & { reloadToken: number }) =>
+        useNoteReload({ notePath: "secret.md", data, reloadToken, dirty, applyContent }),
+      { initialProps: { data: noteContent({ content: "# 旧内容" }), reloadToken: 0, dirty: false } },
+    );
+    expect(applyContent).toHaveBeenCalledWith("# 旧内容");
+
+    // 同步落盘后：先 bump 令牌，query 重取到新内容 → 同路径也重载
+    applyContent.mockClear();
+    rerender({ data: noteContent({ content: "# 旧内容" }), reloadToken: 1, dirty: false });
+    rerender({ data: noteContent({ content: "# 同步后的新内容" }), reloadToken: 1, dirty: false });
+    expect(applyContent).toHaveBeenCalledTimes(1);
+    expect(applyContent).toHaveBeenCalledWith("# 同步后的新内容");
+  });
+
+  it("reloadToken 触发的重载遇到脏草稿时保留草稿（不丢弃也不覆盖）", () => {
+    const applyContent = vi.fn();
+    const { rerender } = renderHook(
+      ({ data, reloadToken, dirty }: Props & { reloadToken: number }) =>
+        useNoteReload({ notePath: "secret.md", data, reloadToken, dirty, applyContent }),
+      { initialProps: { data: noteContent({ content: "# 旧内容" }), reloadToken: 0, dirty: false } },
+    );
+    applyContent.mockClear();
+
+    // 令牌 bump 后用户又敲了键：新数据到达时 dirty → 跳过重载，草稿保留
+    rerender({ data: noteContent({ content: "# 旧内容" }), reloadToken: 1, dirty: true });
+    rerender({ data: noteContent({ content: "# 同步后的新内容" }), reloadToken: 1, dirty: true });
+    expect(applyContent).not.toHaveBeenCalled();
+  });
+});

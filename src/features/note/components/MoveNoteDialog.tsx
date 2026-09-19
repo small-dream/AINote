@@ -6,6 +6,7 @@ import { Modal } from "@/components/molecules/Modal";
 import { useMoveNoteMutation } from "@/queries/note.queries";
 import { collectDirectoryOptions, type DirectoryOption } from "../utils/directoryTree";
 import { getNoteFileName, joinNotePath } from "../utils/path";
+import { flushPendingDrafts } from "../utils/draftRegistry";
 import { useTranslation } from "@/i18n";
 import { getDirectoryPath } from "@/features/file-tree/utils/path";
 import { MoveDirectoryTree } from "./MoveDirectoryTree";
@@ -24,8 +25,9 @@ export function MoveNoteDialog({ repoPath, path, onClose, onMoved }: MoveNoteDia
   const { data: tree, isLoading } = useNoteTreeQuery(repoPath);
   const directories = collectDirectoryOptions(tree ?? null);
   const [targetDir, setTargetDir] = useState(getDirectoryPath(path ?? ""));
+  const [flushError, setFlushError] = useState<string | null>(null);
 
-  function submit(event: FormEvent) {
+  async function submit(event: FormEvent) {
     event.preventDefault();
     if (!path) return;
     const to = joinNotePath(targetDir, getNoteFileName(path));
@@ -33,10 +35,18 @@ export function MoveNoteDialog({ repoPath, path, onClose, onMoved }: MoveNoteDia
       onClose();
       return;
     }
+    // 先落盘草稿再移动：移动后旧路径已不存在，事后 flush 会把草稿写回旧路径、复活已移走的文件
+    setFlushError(null);
+    try {
+      await flushPendingDrafts();
+    } catch (error) {
+      setFlushError(messageOf(error));
+      return;
+    }
     move.mutate({ from: path, to }, { onSuccess: () => { onMoved(to); onClose(); } });
   }
 
-  const mutateMessage = move.isError ? messageOf(move.error) : null;
+  const mutateMessage = move.isError ? messageOf(move.error) : flushError;
 
   return (
     <Modal open={path !== null} title={t("note.moveTitle")} onClose={onClose}>
