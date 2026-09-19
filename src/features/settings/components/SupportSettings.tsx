@@ -4,6 +4,7 @@ import { Copy, ExternalLink, ShieldCheck, Trash2 } from "lucide-react";
 import { openExternal, type SupportInfoDto } from "@/api";
 import { Button } from "@/components/atoms/Button";
 import { Tooltip } from "@/components/atoms/Tooltip";
+import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { useTranslation } from "@/i18n";
 import { ExportDiagnosticsButton } from "@/features/support/components/ExportDiagnosticsButton";
 import { useClearLogs, useSetLoggingEnabled, useSupportInfo } from "../hooks/useSupportInfo";
@@ -20,6 +21,7 @@ export function SupportSettings() {
   const setLogging = useSetLoggingEnabled();
   const clearLogs = useClearLogs();
   const [status, setStatus] = useState("");
+  const [confirmingClear, setConfirmingClear] = useState(false);
 
   function toggleLogging(enabled: boolean): void {
     setLogging.mutate(enabled, {
@@ -29,7 +31,7 @@ export function SupportSettings() {
   }
 
   function runClear(): void {
-    if (!window.confirm(t("support.clearLogsConfirm"))) return;
+    setConfirmingClear(false);
     clearLogs.mutate(undefined, {
       onSuccess: (freed) => setStatus(t("support.clearedLogs", { size: formatRepoSize(freed) })),
       onError: () => setStatus(t("support.clearLogsFailed")),
@@ -46,11 +48,20 @@ export function SupportSettings() {
         loggingBusy={setLogging.isPending}
         clearing={clearLogs.isPending}
         onToggle={toggleLogging}
-        onClear={runClear}
+        onClear={() => setConfirmingClear(true)}
         onStatus={setStatus}
       />
       <PrivacyCard />
       <MetricsCard onStatus={setStatus} />
+      <ConfirmDialog
+        open={confirmingClear}
+        title={t("support.clearLogs")}
+        busy={clearLogs.isPending}
+        onConfirm={runClear}
+        onClose={() => setConfirmingClear(false)}
+      >
+        {t("support.clearLogsConfirm")}
+      </ConfirmDialog>
     </div>
   );
 }

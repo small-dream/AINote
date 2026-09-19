@@ -1,7 +1,7 @@
 import { useEffect, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useBackHandler } from "@/platform/back-navigation";
-import { hasOpenFloatingLayer } from "@/hooks/floatingLayer";
+import { hasOpenFloatingLayer, markModalOpen } from "@/hooks/floatingLayer";
 
 interface ModalProps {
   open: boolean;
@@ -17,6 +17,12 @@ interface ModalProps {
 /** 通用模态框：ESC / 系统返回键 / 遮罩点击关闭 + dialog 语义（P2 可访问性） */
 export function Modal({ open, title, onClose, children, className = "", noteTheme, mobileSheet = true }: ModalProps) {
   useBackHandler(open, onClose);
+
+  // 登记模态框层级：Esc / 系统返回键先交给最上层的弹窗，外层（如设置页）据此避让
+  useEffect(() => {
+    if (!open) return;
+    return markModalOpen();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;

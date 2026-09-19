@@ -39,7 +39,7 @@ export function RenameRepoDialog({ repo, onClose, onSubmit }: RenameRepoDialogPr
     <Modal open={repo !== null} title={t("repo.renameTitle")} onClose={onClose}>
       <input autoFocus value={name} placeholder={t("repo.name")} className={INPUT_CLASS}
         onChange={(e) => { setName(e.target.value); setError(null); }}
-        onKeyDown={(e) => { if (e.key === "Enter") void submit(); }} />
+        onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) void submit(); }} />
       {error && <p className="mb-3 text-xs text-danger">{error}</p>}
       <div className="flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose}>{t("common.cancel")}</Button>

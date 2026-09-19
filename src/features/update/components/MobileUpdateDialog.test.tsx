@@ -87,6 +87,15 @@ describe("MobileUpdateDialog", () => {
     expect(api.downloadUpdate).not.toHaveBeenCalled();
   });
 
+  it("有 APK 但缺 sha256 校验文件时同样降级为跳转下载页", async () => {
+    api.fetchLatestRelease.mockResolvedValue({ ...RELEASE, apkSha256Url: null });
+    render(<MobileUpdateDialog />);
+    fireEvent.click(await screen.findByRole("button", { name: "前往 Release 页面下载" }));
+
+    expect(api.openExternal).toHaveBeenCalledWith(RELEASE.htmlUrl);
+    expect(api.downloadUpdate).not.toHaveBeenCalled();
+  });
+
   it("忽略后不再提示该版本", async () => {
     render(<MobileUpdateDialog />);
     fireEvent.click(await screen.findByRole("button", { name: "忽略此版本" }));

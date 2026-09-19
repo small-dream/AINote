@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useUiStore } from "@/stores/ui.store";
+import { markModalOpen } from "@/hooks/floatingLayer";
 import { SettingsView } from "./SettingsView";
 
 const repoApiMock = vi.hoisted(() => ({ list: vi.fn(), rename: vi.fn(), remove: vi.fn(), switchRepo: vi.fn() }));
@@ -109,6 +110,17 @@ describe("SettingsView 全屏设置视图", () => {
 
   it("按 Esc 关闭设置视图", () => {
     renderSettings();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(useUiStore.getState().settingsOpen).toBe(false);
+  });
+
+  it("有弹窗打开时 Esc 先交给弹窗，不连关设置视图", () => {
+    renderSettings();
+    const unmark = markModalOpen();
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(useUiStore.getState().settingsOpen).toBe(true);
+
+    unmark();
     fireEvent.keyDown(document, { key: "Escape" });
     expect(useUiStore.getState().settingsOpen).toBe(false);
   });

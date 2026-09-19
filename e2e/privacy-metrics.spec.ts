@@ -54,8 +54,9 @@ test.describe("隐私与度量（E5-T2）", () => {
       .poll(async () => (await calls(page)).filter((call) => call.cmd === "metrics_set_enabled").length)
       .toBe(1);
 
-    page.on("dialog", (dialog) => void dialog.accept());
     await page.getByRole("button", { name: "清空本机计数" }).click();
+    const confirmDialog = page.getByRole("dialog", { name: "清空本机计数" });
+    await confirmDialog.getByRole("button", { name: "确认" }).click();
     await expect(page.getByText("已清空本机计数")).toBeVisible();
     await expect(page.getByText("本机已记录 0 次事件")).toBeVisible();
   });

@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
 import { useUiStore } from "@/stores/ui.store";
 import { useBackHandler } from "@/platform/back-navigation";
+import { hasOpenFloatingLayer, hasOpenModal } from "@/hooks/floatingLayer";
 import { SETTINGS_SECTIONS } from "../settingsSections";
 import { SettingsNav } from "./SettingsNav";
 import { useTranslation } from "@/i18n";
@@ -20,7 +21,8 @@ export function SettingsView() {
   useEffect(() => {
     if (!open) return;
     function onKeyDown(event: KeyboardEvent) {
-      if (event.key === "Escape") close();
+      // 弹窗或其内部浮层打开时，Esc 先交给上层关闭，避免连带关掉设置页
+      if (event.key === "Escape" && !hasOpenModal() && !hasOpenFloatingLayer()) close();
     }
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);

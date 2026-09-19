@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { SupportSettings } from "./SupportSettings";
 
@@ -99,22 +99,27 @@ describe("SupportSettings 清理与隐私", () => {
   });
 
   it("清理日志需二次确认并提示释放空间", async () => {
-    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
     renderSettings();
     await screen.findByText("1.5 KB");
 
     fireEvent.click(screen.getByText("清理日志"));
-    expect(confirmSpy).toHaveBeenCalled();
+    const dialog = screen.getByRole("dialog", { name: "清理日志" });
+    expect(dialog.textContent).toContain("该操作不可撤销");
+    fireEvent.click(within(dialog).getByRole("button", { name: "确认" }));
+
     await waitFor(() => expect(supportApiMock.clearLogs).toHaveBeenCalledTimes(1));
     expect(await screen.findByText("已清理 1.5 KB 日志")).toBeTruthy();
   });
 
   it("用户取消确认时不清理日志", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(false);
     renderSettings();
     await screen.findByText("1.5 KB");
 
     fireEvent.click(screen.getByText("清理日志"));
+    const dialog = screen.getByRole("dialog", { name: "清理日志" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(supportApiMock.clearLogs).not.toHaveBeenCalled();
   });
 

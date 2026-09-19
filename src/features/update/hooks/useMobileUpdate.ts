@@ -25,7 +25,12 @@ async function checkLatestRelease(): Promise<void> {
   } catch (error) {
     // 无网络或接口异常一律静默降级，不打扰用户；原因写入本地日志便于诊断
     reportFrontendError(error, "mobile-update-check");
-    useMobileUpdateStore.getState().report({ phase: "failed", currentVersion: null, release: null });
+    // 保留已知版本号：检查失败不代表版本信息失效，避免设置页闪现「—」
+    useMobileUpdateStore.getState().report({
+      phase: "failed",
+      currentVersion: useMobileUpdateStore.getState().currentVersion,
+      release: null,
+    });
   }
 }
 

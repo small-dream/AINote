@@ -1,6 +1,8 @@
+import { useState } from "react";
 import { Download, Trash2 } from "lucide-react";
 import type { MetricsExportFormat } from "@/api";
 import { Button } from "@/components/atoms/Button";
+import { ConfirmDialog } from "@/components/molecules/ConfirmDialog";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 import { useClearMetrics, useExportMetrics } from "../hooks/useMetrics";
@@ -22,10 +24,11 @@ export function MetricsActions({ recorded, toggling, onStatus }: MetricsActionsP
   const { t } = useTranslation();
   const clear = useClearMetrics();
   const exportMetrics = useExportMetrics();
+  const [confirmingClear, setConfirmingClear] = useState(false);
   const pendingFormat = exportMetrics.isPending ? exportMetrics.variables : undefined;
 
   function runClear(): void {
-    if (!window.confirm(t("support.metricsClearConfirm"))) return;
+    setConfirmingClear(false);
     clear.mutate(undefined, {
       onSuccess: () => onStatus(t("support.metricsCleared")),
       onError: () => onStatus(t("support.metricsClearFailed")),
@@ -60,7 +63,7 @@ export function MetricsActions({ recorded, toggling, onStatus }: MetricsActionsP
         variant="ghost"
         className="inline-flex items-center gap-1.5 text-xs"
         disabled={clear.isPending || toggling}
-        onClick={runClear}
+        onClick={() => setConfirmingClear(true)}
       >
         <Trash2 size={14} />
         {clear.isPending ? t("support.metricsClearing") : t("support.metricsClear")}
@@ -68,6 +71,15 @@ export function MetricsActions({ recorded, toggling, onStatus }: MetricsActionsP
       <span className="text-xs text-text-tertiary">
         {t("support.metricsRecorded", { count: recorded })}
       </span>
+      <ConfirmDialog
+        open={confirmingClear}
+        title={t("support.metricsClear")}
+        busy={clear.isPending}
+        onConfirm={runClear}
+        onClose={() => setConfirmingClear(false)}
+      >
+        {t("support.metricsClearConfirm")}
+      </ConfirmDialog>
     </div>
   );
 }

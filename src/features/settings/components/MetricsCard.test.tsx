@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const metricsApiMock = vi.hoisted(() => ({
@@ -88,22 +88,28 @@ describe("MetricsCard", () => {
 
   it("确认后清空本机计数并提示结果", async () => {
     localStorage.setItem(NOTICE_KEY, "1");
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     const { onStatus } = renderCard();
     await screen.findByText("本机已记录 3 次事件");
 
     fireEvent.click(screen.getByRole("button", { name: "清空本机计数" }));
+    const dialog = screen.getByRole("dialog", { name: "清空本机计数" });
+    expect(dialog.textContent).toContain("此操作不可撤销");
+    fireEvent.click(within(dialog).getByRole("button", { name: "确认" }));
+
     await waitFor(() => expect(metricsApiMock.clear).toHaveBeenCalledTimes(1));
     await waitFor(() => expect(onStatus).toHaveBeenCalledWith("已清空本机计数"));
   });
 
   it("取消确认时不清空", async () => {
     localStorage.setItem(NOTICE_KEY, "1");
-    vi.spyOn(window, "confirm").mockReturnValue(false);
     renderCard();
     await screen.findByText("本机已记录 3 次事件");
 
     fireEvent.click(screen.getByRole("button", { name: "清空本机计数" }));
+    const dialog = screen.getByRole("dialog", { name: "清空本机计数" });
+    fireEvent.click(within(dialog).getByRole("button", { name: "取消" }));
+
+    expect(screen.queryByRole("dialog")).toBeNull();
     expect(metricsApiMock.clear).not.toHaveBeenCalled();
   });
 });

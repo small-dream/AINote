@@ -104,6 +104,17 @@ describe("useMobileUpdate 检查", () => {
     expect(result.current.release).toBeNull();
   });
 
+  it("检查失败后保留已知版本号，不抹成空", async () => {
+    const { result } = renderHook(() => useMobileUpdate());
+    await waitFor(() => expect(result.current.phase).toBe("available"));
+    expect(result.current.currentVersion).toBe("0.24.12");
+
+    state.offline = true;
+    await result.current.check();
+    await waitFor(() => expect(result.current.phase).toBe("failed"));
+    expect(result.current.currentVersion).toBe("0.24.12");
+  });
+
   it("非 Android 环境不自动检查", async () => {
     state.android = false;
     const { result } = renderHook(() => useMobileUpdate());

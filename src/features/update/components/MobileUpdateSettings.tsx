@@ -1,6 +1,7 @@
 import { Download, ExternalLink, LoaderCircle, RefreshCw, ShieldCheck, TriangleAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { openExternal } from "@/api";
+import type { ReleaseInfo } from "@/api/release.api";
 import { Button } from "@/components/atoms/Button";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
@@ -62,8 +63,7 @@ export function MobileUpdateSettings() {
           </Button>
           <UpdateAction
             phase={phase}
-            apkUrl={release?.apkUrl ?? null}
-            htmlUrl={release?.htmlUrl ?? null}
+            release={release}
             onDownload={() => void download()}
             onCancel={cancelDownload}
             onReopen={() => void reopenInstaller()}
@@ -78,7 +78,7 @@ export function MobileUpdateSettings() {
   );
 }
 
-function UpdateAction({ phase, apkUrl, htmlUrl, onDownload, onCancel, onReopen }: { phase: MobileUpdatePhase; apkUrl: string | null; htmlUrl: string | null; onDownload: () => void; onCancel: () => void; onReopen: () => void }) {
+function UpdateAction({ phase, release, onDownload, onCancel, onReopen }: { phase: MobileUpdatePhase; release: ReleaseInfo | null; onDownload: () => void; onCancel: () => void; onReopen: () => void }) {
   const { t } = useTranslation();
   if (phase === "downloading") {
     return (
@@ -108,7 +108,8 @@ function UpdateAction({ phase, apkUrl, htmlUrl, onDownload, onCancel, onReopen }
       </Button>
     );
   }
-  if (phase === "available" && apkUrl) {
+  // 与 useMobileUpdate 的下载前置条件对齐：APK 与 sha256 校验文件缺一不可，否则降级跳转下载页
+  if (phase === "available" && release?.apkUrl && release.apkSha256Url) {
     return (
       <Button variant="primary" className="inline-flex items-center gap-1.5 px-3 text-xs" onClick={onDownload}>
         <Download size={13} aria-hidden="true" />
@@ -116,9 +117,9 @@ function UpdateAction({ phase, apkUrl, htmlUrl, onDownload, onCancel, onReopen }
       </Button>
     );
   }
-  if (phase === "available" && htmlUrl) {
+  if (phase === "available" && release?.htmlUrl) {
     return (
-      <Button variant="primary" className="inline-flex items-center gap-1.5 px-3 text-xs" onClick={() => void openExternal(htmlUrl)}>
+      <Button variant="primary" className="inline-flex items-center gap-1.5 px-3 text-xs" onClick={() => void openExternal(release.htmlUrl)}>
         <ExternalLink size={13} aria-hidden="true" />
         {t("update.mobileOpenRelease")}
       </Button>

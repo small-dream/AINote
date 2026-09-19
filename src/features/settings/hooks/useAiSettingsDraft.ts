@@ -2,6 +2,7 @@ import { useCallback, useState, type FormEvent } from "react";
 import { messageOf } from "@/api";
 import type { AiSettings, AiSettingsDto } from "@/api";
 import { useSaveAiConfig } from "@/features/ai/hooks/useAiConfig";
+import { useTranslation } from "@/i18n";
 
 export type AiKeyDrafts = Record<string, string>;
 type Update = (updater: (current: AiSettings) => AiSettings) => void;
@@ -71,11 +72,12 @@ function useModelActions(update: Update, setKeyDrafts: React.Dispatch<React.SetS
 }
 
 function useSaveDraft(settings: AiSettings, keyDrafts: AiKeyDrafts, setKeyDrafts: React.Dispatch<React.SetStateAction<AiKeyDrafts>>) {
+  const { t } = useTranslation();
   const save = useSaveAiConfig();
   const submit = useCallback((event: FormEvent) => {
     event.preventDefault();
     const apiKeys = Object.entries(keyDrafts).map(([providerId, key]) => ({ providerId, key }));
     save.mutate({ settings, apiKeys }, { onSuccess: () => setKeyDrafts({}) });
   }, [keyDrafts, save, setKeyDrafts, settings]);
-  return { submit, saving: save.isPending, error: save.isError ? `保存失败：${messageOf(save.error)}` : null };
+  return { submit, saving: save.isPending, error: save.isError ? t("ai.saveFailed", { message: messageOf(save.error) }) : null };
 }

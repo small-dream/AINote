@@ -67,6 +67,7 @@ export function MobileUpdateDialog() {
       ) : (
         <AvailableBody
           apkUrl={release.apkUrl}
+          apkSha256Url={release.apkSha256Url}
           htmlUrl={release.htmlUrl}
           onDownload={() => void state.download()}
           onLater={snooze}
@@ -77,13 +78,15 @@ export function MobileUpdateDialog() {
   );
 }
 
-function AvailableBody({ apkUrl, htmlUrl, onDownload, onLater, onDismiss }: { apkUrl: string | null; htmlUrl: string; onDownload: () => void; onLater: () => void; onDismiss: () => void }) {
+function AvailableBody({ apkUrl, apkSha256Url, htmlUrl, onDownload, onLater, onDismiss }: { apkUrl: string | null; apkSha256Url: string | null; htmlUrl: string; onDownload: () => void; onLater: () => void; onDismiss: () => void }) {
   const { t } = useTranslation();
+  // 与 useMobileUpdate 的下载前置条件对齐：APK 与 sha256 校验文件缺一不可，否则降级跳转下载页
+  const canDownloadInApp = Boolean(apkUrl && apkSha256Url);
   return (
     <>
       <p className="mb-5 text-sm text-text-secondary">{t("update.mobileManualHint")}</p>
       <div className="flex flex-col gap-2">
-        {apkUrl ? (
+        {canDownloadInApp ? (
           <Button variant="primary" className="inline-flex items-center justify-center gap-1.5" onClick={onDownload}>
             <Download size={15} aria-hidden="true" />
             {t("update.mobileInstallNow")}
