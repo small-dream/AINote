@@ -13,17 +13,34 @@ use crate::platform;
 use crate::services::update_service;
 
 /// 当前进行中的下载取消标志；同时只允许一个下载任务（与 BackupState 同模式）。
+/// 必须走 acquire/release：无条件覆盖会让并发下载共享同一 updates 目录时互相
+/// 删 .part 文件、并清掉对方的取消标志。
 #[derive(Default)]
 pub struct UpdateDownloadState(Mutex<Option<Arc<AtomicBool>>>);
 
 impl UpdateDownloadState {
-    fn set(&self, flag: Option<Arc<AtomicBool>>) -> Result<(), AppError> {
+    /// 抢占下载槽位并返回取消标志；已有下载进行中时拒绝重入（UPDATE_7004）。
+    fn acquire(&self) -> Result<Arc<AtomicBool>, AppError> {
         let mut guard = self
             .0
             .lock()
             .map_err(|_| AppError::Io("更新下载状态锁不可用".into()))?;
-        *guard = flag;
-        Ok(())
+        if guard.is_some() {
+            return Err(AppError::UpdateBusy("已有下载任务进行中，请稍后再试".into()));
+        }
+        let flag = Arc::new(AtomicBool::new(false));
+        *guard = Some(flag.clone());
+        Ok(flag)
+    }
+
+    /// 任务结束释放槽位：只有槽位里仍是自己的 flag 才清理，
+    /// 避免先完成者把仍在下载任务的取消标志清掉。
+    fn release(&self, flag: &Arc<AtomicBool>) {
+        if let Ok(mut guard) = self.0.lock() {
+            if guard.as_ref().is_some_and(|current| Arc::ptr_eq(current, flag)) {
+                *guard = None;
+            }
+        }
     }
 
     fn current(&self) -> Option<Arc<AtomicBool>> {
@@ -46,10 +63,11 @@ pub async fn download_update(
         .map_err(|err| AppError::Io(err.to_string()))?
         .join("updates");
 
-    let cancel = Arc::new(AtomicBool::new(false));
-    app.state::<UpdateDownloadState>()
-        .set(Some(cancel.clone()))
+    let cancel = app
+        .state::<UpdateDownloadState>()
+        .acquire()
         .map_err(AppErrorDto::from)?;
+    let slot = cancel.clone();
 
     let result = blocking::run(move || {
         update_service::download_apk(&url, &sha256_url, &version, &dir, &cancel, |progress| {
@@ -59,7 +77,7 @@ pub async fn download_update(
     .await
     .map_err(AppErrorDto::from);
 
-    let _ = app.state::<UpdateDownloadState>().set(None);
+    app.state::<UpdateDownloadState>().release(&slot);
     result.map(|done| {
         done.map(|path| ApkDownloadDto {
             path: path.to_string_lossy().into_owned(),
@@ -97,5 +115,35 @@ pub fn install_update(app: AppHandle, path: String) -> Result<InstallApkDto, App
         Ok(InstallApkDto {
             needs_permission: true,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn acquire_rejects_reentry_and_release_frees_slot() {
+        let state = UpdateDownloadState::default();
+        let first = state.acquire().unwrap();
+        let err = state.acquire().unwrap_err();
+        assert!(matches!(err, AppError::UpdateBusy(_)), "下载中重入被拒");
+        let dto = AppErrorDto::from(err);
+        assert_eq!(dto.code, "UPDATE_7004");
+        state.release(&first);
+        assert!(state.acquire().is_ok(), "释放后可再次下载");
+    }
+
+    #[test]
+    fn release_only_clears_own_flag() {
+        let state = UpdateDownloadState::default();
+        let current = state.acquire().unwrap();
+        let stale = Arc::new(AtomicBool::new(false));
+        state.release(&stale);
+        assert!(state.acquire().is_err(), "别人的 flag 不得清理槽位");
+        assert!(state.current().is_some_and(|f| Arc::ptr_eq(&f, &current)),
+            "取消标志仍归属当前任务");
+        state.release(&current);
+        assert!(state.current().is_none());
     }
 }

@@ -1,13 +1,12 @@
 use tauri::AppHandle;
 
 use crate::commands::blocking;
-use crate::commands::git::sync::SyncRetryState;
+use crate::commands::git::repo_lock::RepoWriteGuard;
 use crate::config;
 use crate::domain::error::AppErrorDto;
 use crate::domain::history_reset::HistoryResetReport;
 use crate::repositories::git2_rewrite::Git2Rewrite;
 use crate::services::{auth_service, history_reset_service};
-use tauri::Manager;
 
 /// Controller：把当前活动仓库重置为「工作区现状 = 唯一一次提交」。
 ///
@@ -22,14 +21,12 @@ pub async fn reset_repo_history(
     let root = config::require_repo_path(&app)?;
     let remote = config::active_remote_url(&app)?;
     let cred = auth_service::credential_for_url(&app, remote.as_deref()).ok();
-    // 与一键同步共用同一把仓库级互斥锁：同步进行中直接拒绝，避免同一仓库并发写入
-    let state = app.state::<SyncRetryState>();
-    let repo_key = root.to_string_lossy().to_string();
-    let slot = state.acquire(&repo_key).map_err(AppErrorDto::from)?;
+    // 与一键同步及其它写命令共用仓库写锁：有写操作进行中直接拒绝（SYNC_4005）
+    let _guard = RepoWriteGuard::acquire(&app, root.to_string_lossy().into_owned())
+        .map_err(AppErrorDto::from)?;
     let result = blocking::run(move || {
         history_reset_service::reset(&Git2Rewrite, &root, cred.as_ref(), &message)
     })
     .await;
-    state.release(&repo_key, &slot);
     result.map_err(AppErrorDto::from)
 }

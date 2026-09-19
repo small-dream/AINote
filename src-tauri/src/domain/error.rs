@@ -39,8 +39,9 @@ pub enum AppError {
     /// 同步被远端拒绝：权限不足、分支保护、非快进推送（不可自动重试）
     #[error("sync rejected: {0}")]
     SyncRejected(String),
-    /// 同一仓库已有同步进行中：防重入，用户稍后重试即可
-    #[error("sync busy: {0}")]
+    /// 同一仓库已有同步/写操作进行中：防重入，用户稍后重试即可。
+    /// 消息直接进全局 toast，故不带英文前缀（同 FolderHasNonNoteFiles 先例）。
+    #[error("{0}")]
     SyncBusy(String),
     #[error("io error: {0}")]
     Io(String),
@@ -59,6 +60,12 @@ pub enum AppError {
     /// 应用内安装不可用（非 Android 平台或系统桥调用失败）
     #[error("update install unavailable: {0}")]
     UpdateInstall(String),
+    /// 已有更新下载进行中：防重入，稍后重试即可（消息直接进全局 toast）
+    #[error("{0}")]
+    UpdateBusy(String),
+    /// 已有备份导出进行中：防重入，稍后重试即可（消息直接进全局 toast）
+    #[error("{0}")]
+    BackupBusy(String),
     #[error("task not found: {0}")]
     TaskNotFound(String),
     /// 任务字段校验失败（空标题、提醒时间缺少截止日期等）
@@ -155,6 +162,8 @@ impl From<AppError> for AppErrorDto {
             AppError::UpdateDownload(_) => ("UPDATE_7001", ErrorKind::Network, true),
             AppError::UpdateChecksum(_) => ("UPDATE_7002", ErrorKind::Unknown, false),
             AppError::UpdateInstall(_) => ("UPDATE_7003", ErrorKind::Unknown, false),
+            AppError::UpdateBusy(_) => ("UPDATE_7004", ErrorKind::Conflict, true),
+            AppError::BackupBusy(_) => ("REPO_3003", ErrorKind::Conflict, true),
             AppError::TaskNotFound(_) => ("TASK_8001", ErrorKind::NotFound, false),
             AppError::TaskInvalid(_) => ("TASK_8003", ErrorKind::Unknown, false),
             AppError::VaultLocked(_) => ("VAULT_9001", ErrorKind::Permission, false),
@@ -261,6 +270,14 @@ mod tests {
         assert_eq!(dto(AppError::UpdateDownload("net".into())).code, "UPDATE_7001");
         assert_eq!(dto(AppError::UpdateChecksum("bad".into())).code, "UPDATE_7002");
         assert_eq!(dto(AppError::UpdateInstall("bridge".into())).code, "UPDATE_7003");
+        let update_busy = dto(AppError::UpdateBusy("下载中".into()));
+        assert_eq!(update_busy.code, "UPDATE_7004");
+        assert!(update_busy.retriable, "防重入错误稍后重试即可");
+        assert_eq!(update_busy.message, "下载中", "Busy 消息不带英文前缀");
+        let backup_busy = dto(AppError::BackupBusy("备份中".into()));
+        assert_eq!(backup_busy.code, "REPO_3003");
+        assert!(backup_busy.retriable);
+        assert_eq!(backup_busy.message, "备份中");
         assert_eq!(dto(AppError::TaskNotFound("t".into())).code, "TASK_8001");
         assert_eq!(dto(AppError::TaskInvalid("bad".into())).code, "TASK_8003");
         assert_eq!(dto(AppError::VaultLocked("locked".into())).code, "VAULT_9001");

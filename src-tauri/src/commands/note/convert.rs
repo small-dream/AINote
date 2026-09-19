@@ -1,6 +1,7 @@
 use tauri::AppHandle;
 
 use crate::commands::blocking;
+use crate::commands::git::repo_lock::RepoWriteGuard;
 use crate::config;
 use crate::domain::error::AppErrorDto;
 use crate::repositories::git2_backend::Git2Backend;
@@ -10,6 +11,7 @@ use crate::services::{note_service, sync_service};
 /// 后端把旧文件替换为新扩展名文件（原子性由单命令内的写+回收站软删除保证），
 /// 原文件移入回收站可恢复；成功后自动生成一次 `note: convert <from> -> <to>` 提交，
 /// 提交失败不阻塞转换（工作区仍有未提交变更，可由手动提交/同步兜底）。
+/// 写工作区 + index/refs，与其它写命令互斥（SYNC_4005）。
 #[tauri::command]
 pub async fn convert_note(
     app: AppHandle,
@@ -18,6 +20,8 @@ pub async fn convert_note(
     content: String,
 ) -> Result<(), AppErrorDto> {
     let root = config::require_repo_path(&app)?;
+    let _guard = RepoWriteGuard::acquire(&app, root.to_string_lossy().into_owned())
+        .map_err(AppErrorDto::from)?;
     blocking::run(move || {
         note_service::convert_note_kind(&root, &from, &to, &content)?;
         let message = format!("note: convert {from} -> {to}");

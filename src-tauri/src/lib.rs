@@ -45,7 +45,7 @@ pub fn run() {
     builder
         .manage(commands::repo::backup::BackupState::default())
         .manage(commands::update::UpdateDownloadState::default())
-        .manage(commands::git::sync::SyncRetryState::default())
+        .manage(commands::git::repo_lock::RepoWriteLock::default())
         .manage(commands::close_guard::CloseGuard::default())
         .manage(commands::close_guard::DraftState::default())
         .on_window_event(|window, event| {
