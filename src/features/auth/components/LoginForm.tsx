@@ -95,7 +95,7 @@ function LoginFormFields({ t, providerName, token, login, error, onTokenChange, 
         placeholder={t("auth.tokenPlaceholder", { provider: providerName })}
         value={token}
         onChange={(e) => onTokenChange(e.target.value)}
-        onKeyDown={(e) => { if (e.key === "Enter") onEnter(); }}
+        onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) onEnter(); }}
       />
       {error && <p className="mb-3 text-xs text-danger">{error}</p>}
       {login && <div className="mb-4 rounded-md bg-bg-secondary p-3 text-sm">{t("auth.validated", { login: "" })}<span className="font-medium">{login}</span></div>}

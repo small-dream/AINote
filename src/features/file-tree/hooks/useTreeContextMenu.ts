@@ -23,7 +23,12 @@ export function useTreeContextMenu() {
     setMenu({ node, x, y });
   };
   const copy = async (path: string) => {
-    if (navigator.clipboard) await navigator.clipboard.writeText(path);
+    if (!navigator.clipboard) return;
+    try {
+      await navigator.clipboard.writeText(path);
+    } catch {
+      return;
+    }
     setCopied(true); window.setTimeout(() => setCopied(false), 1200);
   };
   return { menu, copied, open, close: () => setMenu(null), copy };

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { AppError } from "@/api/error";
 import type { SyncStatus } from "@/api/types";
-import { deriveSyncFailure, deriveSyncLabel, syncStageOf } from "./status";
+import { deriveSyncFailure, deriveSyncHeader, deriveSyncLabel, syncStageOf } from "./status";
 
 function status(partial: Partial<SyncStatus>): SyncStatus {
   return { ahead: 0, behind: 0, hasUncommitted: false, conflicted: false, ...partial };
@@ -31,6 +31,33 @@ describe("deriveSyncLabel", () => {
 
   it("已同步", () => {
     expect(deriveSyncLabel(status({}), true)).toEqual({ text: "已同步", tone: "synced" });
+  });
+});
+
+describe("deriveSyncHeader", () => {
+  it("无操作时按钮为「立即同步」且不忙碌", () => {
+    expect(deriveSyncHeader(status({}), true, null)).toEqual({
+      text: "已同步",
+      tone: "synced",
+      buttonLabel: "立即同步",
+      busy: false,
+    });
+  });
+
+  it("冲突处理中按钮文案用「处理中…」而非「同步中…」", () => {
+    const header = deriveSyncHeader(status({ conflicted: true }), true, "resolving");
+    expect(header.text).toBe("处理中…");
+    expect(header.buttonLabel).toBe("处理中…");
+    expect(header.busy).toBe(true);
+  });
+
+  it("启动与同步各自映射文案", () => {
+    expect(deriveSyncHeader(status({}), true, "startup").buttonLabel).toBe("初始化同步中…");
+    expect(deriveSyncHeader(status({}), true, "syncing").buttonLabel).toBe("同步中…");
+  });
+
+  it("英文 locale 同样按操作映射", () => {
+    expect(deriveSyncHeader(status({}), true, "resolving", "en-US").buttonLabel).toBe("Resolving…");
   });
 });
 

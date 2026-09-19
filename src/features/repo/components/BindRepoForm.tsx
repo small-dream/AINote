@@ -53,7 +53,7 @@ export function BindRepoForm({ onBound, onNeedLogin, initialUrl }: BindRepoFormP
     <div>
       <h2 className="mb-2 text-lg font-semibold">{t("repo.bindTitle")}</h2>
       <p className="mb-4 text-sm text-text-secondary">{t("repo.bindDescription")}</p>
-      <input autoFocus className="mb-4 w-full rounded-md border border-bg-secondary bg-bg-primary px-3 py-2 text-sm outline-none focus:border-accent" placeholder="https://github.com/user/my-notes.git" value={url} onChange={(e) => onUrlChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
+      <input autoFocus className="mb-4 w-full rounded-md border border-bg-secondary bg-bg-primary px-3 py-2 text-sm outline-none focus:border-accent" placeholder="https://github.com/user/my-notes.git" value={url} onChange={(e) => onUrlChange(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) submit(); }} />
       {error && <p className="mb-3 text-xs text-danger">{error}</p>}
       {loginProviderId &&
         (onNeedLogin ? (

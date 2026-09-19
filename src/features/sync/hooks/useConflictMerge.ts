@@ -65,11 +65,19 @@ function useMergeEdits(conflicts: ConflictFile[], current: number) {
     [file]
   );
 
+  /** 解决成功后清掉该文件的编辑残留，避免同会话再次冲突时带出旧合并文本 */
+  const clearEdit = useCallback((path: string) => {
+    setEdits((prev) => {
+      if (!(path in prev)) return prev;
+      return Object.fromEntries(Object.entries(prev).filter(([key]) => key !== path));
+    });
+  }, []);
+
   const setMerged = useCallback((value: string) => update(() => value), [update]);
   const addLine = useCallback((line: string) => update((prev) => appendLine(prev, line)), [update]);
   const appendAll = useCallback((lines: string[]) => update((prev) => lines.reduce(appendLine, prev)), [update]);
 
-  return { file, merged, setMerged, addLine, appendAll };
+  return { file, merged, setMerged, addLine, appendAll, clearEdit };
 }
 
 type MergeEdits = ReturnType<typeof useMergeEdits>;
@@ -86,9 +94,9 @@ function useConflictRunner(edits: MergeEdits, push: PushMutation, onDone: () => 
     (action: ConflictAction, path: string, content: string) => {
       last.current = { kind: "file", action, path, content };
       setPending(action);
-      resolveFile.mutate({ path, content }, { onSettled: () => setPending(null) });
+      resolveFile.mutate({ path, content }, { onSettled: () => setPending(null), onSuccess: () => edits.clearEdit(path) });
     },
-    [resolveFile]
+    [resolveFile, edits]
   );
 
   const runBulk = useCallback(
@@ -152,7 +160,9 @@ export function useConflictMerge(repoPath: string | null, open: boolean, onDone:
   const query = useConflictsQuery(repoPath, open);
   const conflicts = query.data ?? [];
   const push = useFinishPush(open, conflicts, onDone);
-  const [current, setCurrent] = useState(0);
+  /** 选中下标可能超出缩短后的列表：渲染期钳位，保证页签高亮始终落在当前文件上 */
+  const [selected, setSelected] = useState(0);
+  const current = Math.min(selected, Math.max(conflicts.length - 1, 0));
   const edits = useMergeEdits(conflicts, current);
   const runner = useConflictRunner(edits, push, onDone);
 
@@ -182,7 +192,7 @@ export function useConflictMerge(repoPath: string | null, open: boolean, onDone:
     pending: runner.pending,
     file: edits.file,
     current,
-    setCurrent,
+    setCurrent: setSelected,
     merged: edits.merged,
     setMerged: edits.setMerged,
     addLine: edits.addLine,

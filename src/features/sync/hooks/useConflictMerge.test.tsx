@@ -73,6 +73,35 @@ describe("useConflictMerge", () => {
       expect(onDone).toHaveBeenCalled();
     });
   });
+
+  it("解决列表末项后 current 钳位，页签高亮不丢失", async () => {
+    const OTHER = { path: "daily/b.md", local: "B 本地", remote: "B 远端" };
+    syncApiMock.conflicts.mockResolvedValueOnce([FILE, OTHER]).mockResolvedValue([FILE]);
+    syncApiMock.resolveFile.mockResolvedValue(STATUS);
+    const { result } = renderMerge(true, vi.fn());
+
+    await waitFor(() => expect(result.current.file?.path).toBe("daily/a.md"));
+    act(() => result.current.setCurrent(1));
+    expect(result.current.file?.path).toBe("daily/b.md");
+
+    act(() => result.current.resolveWithSide("local"));
+    await waitFor(() => expect(result.current.current).toBe(0));
+    expect(result.current.file?.path).toBe("daily/a.md");
+  });
+
+  it("解决成功后清空该文件的合并编辑残留", async () => {
+    syncApiMock.conflicts.mockResolvedValue([FILE]);
+    syncApiMock.resolveFile.mockResolvedValue(STATUS);
+    const { result } = renderMerge(true, vi.fn());
+
+    await waitFor(() => expect(result.current.merged).toBe("本地1\n本地2"));
+    act(() => result.current.setMerged("手动合并结果"));
+    expect(result.current.merged).toBe("手动合并结果");
+
+    act(() => result.current.saveMerge());
+    await waitFor(() => expect(syncApiMock.resolveFile).toHaveBeenCalledWith("daily/a.md", "手动合并结果"));
+    await waitFor(() => expect(result.current.merged).toBe("本地1\n本地2"));
+  });
 });
 
 describe("useConflictMerge 批量与失败路径", () => {

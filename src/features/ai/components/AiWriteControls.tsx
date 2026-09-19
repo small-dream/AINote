@@ -20,7 +20,7 @@ interface AiWriteControlsProps {
 export function AiWriteControls({ ai, canSummarize = false, canSuggest = false, suggest }: AiWriteControlsProps): ReactElement {
   return (
     <>
-      <AiWriteMenu open={ai.menuOpen} hasSelection={ai.hasSelection} canSummarize={canSummarize} canSuggest={canSuggest} onPick={ai.run} {...(suggest ? { onTitleSuggest: suggest.startTitle, onOutlineSuggest: suggest.startOutline } : {})} onAsk={() => useUiStore.getState().openAskAi()} onClose={ai.closeMenu} />
+      <AiWriteMenu open={ai.menuOpen} hasSelection={ai.hasSelection} canSummarize={canSummarize} canSuggest={canSuggest} onPick={ai.run} {...(suggest ? { onTitleSuggest: suggest.startTitle, onOutlineSuggest: suggest.startOutline } : {})} onAsk={() => { ai.closeMenu(); useUiStore.getState().openAskAi(); }} onClose={ai.closeMenu} />
       <AiPreviewDialog
         open={ai.open}
         text={ai.preview ?? ""}

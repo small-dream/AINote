@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useWikiIndexQuery } from "@/queries/wiki.queries";
 import { useCreateNoteMutation } from "@/queries/note.queries";
+import { reportToastError } from "@/stores/toast.store";
 import type { NoteKind } from "@/api/types";
 import {
   buildTagSuggestions,
@@ -35,7 +36,11 @@ export function useWikiPanel(repoPath: string | null, path: string | null, draft
   );
 
   const handleCreate = async (name: string) => {
-    await createNote.mutateAsync({ path: wikiCreatePath(name), kind: "markdown", content: `# ${name}\n` });
+    try {
+      await createNote.mutateAsync({ path: wikiCreatePath(name), kind: "markdown", content: `# ${name}\n` });
+    } catch (error) {
+      reportToastError(error);
+    }
   };
 
   return { notes, nameIndex, tags, suggestions, outgoing, backlinks, creating: createNote.isPending, handleCreate };

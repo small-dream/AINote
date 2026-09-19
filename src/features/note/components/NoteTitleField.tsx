@@ -17,7 +17,7 @@ export function NoteTitleField({ notePath, isNewNote, draft, onChange, flush, on
   const { value, error, pending, setValue, reset, commit } = useNoteTitle({ notePath, isNewNote, draft, onChange, flush, onRenamed });
 
   function handleKeyDown(event: KeyboardEvent<HTMLInputElement>) {
-    if (event.key === "Enter") {
+    if (event.key === "Enter" && !event.nativeEvent.isComposing) {
       event.preventDefault();
       void commit();
     }

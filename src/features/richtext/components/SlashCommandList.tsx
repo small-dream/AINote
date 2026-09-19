@@ -28,7 +28,7 @@ const CommandList = forwardRef<CommandListRef, CommandListProps>(({ items, comma
     onKeyDown: ({ event }) => {
       if (event.key === "ArrowUp") { setSelectedIndex((i) => (i + items.length - 1) % items.length); return true; }
       if (event.key === "ArrowDown") { setSelectedIndex((i) => (i + 1) % items.length); return true; }
-      if (event.key === "Enter") { selectItem(selectedIndex); return true; }
+      if (event.key === "Enter" && !event.isComposing) { selectItem(selectedIndex); return true; }
       return false;
     },
   }));

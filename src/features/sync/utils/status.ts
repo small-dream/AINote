@@ -62,6 +62,13 @@ const STAGE_KEY: Record<SyncFailureStage, TranslationKey> = {
   sync: "sync.stageSync",
 };
 
+/** 进行中的同步操作各自映射文案：启动 / 同步 / 冲突处理（按钮与状态行一致） */
+const OPERATION_KEY: Record<NonNullable<SyncOperation>, TranslationKey> = {
+  startup: "sync.starting",
+  syncing: "sync.syncing",
+  resolving: "sync.resolving",
+};
+
 /**
  * 由错误码推断失败阶段：`commit → pull → push` 中只有 push 会产生「远端拒绝」，
  * 网络/凭证错误发生在网络阶段（拉取或推送），本地错误则落在提交阶段。
@@ -124,11 +131,11 @@ export function deriveSyncHeader(status: SyncStatus, online: boolean, operation:
     };
   }
 
-  const operationText = operation === "startup" ? translate(locale, "sync.starting") : operation === "syncing" ? translate(locale, "sync.syncing") : translate(locale, "sync.resolving");
+  const operationText = translate(locale, OPERATION_KEY[operation]);
   return {
     text: operationText,
     tone: "pending",
-    buttonLabel: operation === "startup" ? translate(locale, "sync.starting") : translate(locale, "sync.syncing"),
+    buttonLabel: operationText,
     busy: true,
   };
 }

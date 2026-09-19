@@ -38,7 +38,7 @@ export function VaultUnlockCard({ onUnlocked }: VaultUnlockCardProps = {}) {
             value={passphrase}
             onChange={(event) => setPassphrase(event.target.value)}
             onKeyDown={(event) => {
-              if (event.key === "Enter") submit();
+              if (event.key === "Enter" && !event.nativeEvent.isComposing) submit();
             }}
           />
         </VaultField>

@@ -118,6 +118,7 @@ function buildRow(cells: string[], modelRow: number, state: TableEditState, shel
 
 function cellKey(event: KeyboardEvent, state: TableEditState, shell: HTMLElement, row: number, col: number): void {
   if (event.key === "Enter") {
+    if (event.isComposing) return;
     event.preventDefault();
     const nextRow = Math.min(row + 1, state.data.rows.length - 1);
     commit(state, shell, { row: nextRow, col });

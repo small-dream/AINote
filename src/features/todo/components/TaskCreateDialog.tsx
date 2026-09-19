@@ -49,8 +49,8 @@ export function TaskCreateDialog({ busy, onClose, onCreate }: TaskCreateDialogPr
         onDueAtChange={draft.changeDueAt}
         onPriorityChange={draft.setPriority}
         onRemindAtChange={draft.setRemindAt}
-        onTitleKeyDown={(event) => { if (event.key === "Enter") submit(); }}
-        onDescriptionKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key === "Enter") submit(); }}
+        onTitleKeyDown={(event) => { if (event.key === "Enter" && !event.nativeEvent.isComposing) submit(); }}
+        onDescriptionKeyDown={(event) => { if ((event.metaKey || event.ctrlKey) && event.key === "Enter" && !event.nativeEvent.isComposing) submit(); }}
       />
       <div className="mt-4 flex justify-end gap-2">
         <Button variant="ghost" onClick={onClose} disabled={busy}>{t("common.cancel")}</Button>

@@ -128,7 +128,7 @@ function LinkUrlPopover({ anchorRef, link }: { anchorRef: React.RefObject<HTMLBu
         value={link.value}
         onChange={(event) => link.setValue(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key === "Enter") {
+          if (event.key === "Enter" && !event.nativeEvent.isComposing) {
             event.preventDefault();
             link.submit();
           }

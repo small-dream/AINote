@@ -1,10 +1,12 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { useToastStore } from "@/stores/toast.store";
 import { WikiPanel } from "./WikiPanel";
 
 const wikiApiMock = vi.hoisted(() => ({ index: vi.fn() }));
-vi.mock("@/api", () => ({ wikiApi: wikiApiMock }));
+const noteApiMock = vi.hoisted(() => ({ create: vi.fn() }));
+vi.mock("@/api", () => ({ wikiApi: wikiApiMock, noteApi: noteApiMock }));
 
 const NOTES = [
   { path: "a.md", title: "A 笔记", tags: ["x", "y"], links: ["B 笔记", "missing"] },
@@ -33,6 +35,11 @@ function renderPanel(open = true) {
 }
 
 describe("WikiPanel", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useToastStore.getState().clear();
+  });
+
   it("展示当前笔记标签 / 引用 / 反向链接", async () => {
     wikiApiMock.index.mockResolvedValue(NOTES);
     renderPanel();
@@ -52,6 +59,35 @@ describe("WikiPanel", () => {
     fireEvent.keyDown(input, { key: "Enter" });
 
     expect(props.onChange).toHaveBeenCalledWith("# A 笔记\n\n#x #y\n\n#新标签");
+  });
+
+  it("IME 组合中按 Enter 不提交标签", async () => {
+    wikiApiMock.index.mockResolvedValue(NOTES);
+    const props = renderPanel();
+
+    const input = await screen.findByLabelText("添加标签（可用逗号分隔）");
+    fireEvent.change(input, { target: { value: "新" } });
+    fireEvent.keyDown(input, { key: "Enter", isComposing: true });
+
+    expect(props.onChange).not.toHaveBeenCalled();
+  });
+
+  it("创建未存在的引用笔记失败时推送错误提示", async () => {
+    wikiApiMock.index.mockResolvedValue(NOTES);
+    noteApiMock.create.mockRejectedValue(new Error("disk full"));
+    renderPanel();
+
+    fireEvent.click(await screen.findByText("创建笔记"));
+
+    await waitFor(() => {
+      expect(useToastStore.getState().items.some((item) => item.message.includes("disk full"))).toBe(true);
+    });
+  });
+});
+
+describe("WikiPanel 导航与关闭", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
   });
 
   it("点击已创建引用打开目标笔记", async () => {

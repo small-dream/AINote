@@ -40,6 +40,7 @@ export function TaskEditor({ task, busy, onSave, onDelete, onClose }: TaskEditor
         onPriorityChange={editor.commitPriority}
         onRemindAtChange={editor.commitReminder}
         onTitleKeyDown={(event) => {
+          if (event.nativeEvent.isComposing) return;
           if (event.key === "Enter" || event.key === "Escape") editor.close();
         }}
         metaTrailing={

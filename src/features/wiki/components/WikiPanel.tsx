@@ -103,7 +103,7 @@ function TagInput({ suggestions, value, onChange, onSubmit }: { suggestions: str
         value={value}
         onChange={(event) => onChange(event.target.value)}
         onKeyDown={(event) => {
-          if (event.key !== "Enter") return;
+          if (event.key !== "Enter" || event.nativeEvent.isComposing) return;
           event.preventDefault();
           const tag = value.trim().replace(/^#/, "").toLocaleLowerCase();
           if (tag) onSubmit(tag);

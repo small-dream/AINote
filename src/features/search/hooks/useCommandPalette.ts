@@ -33,7 +33,7 @@ export function useCommandPalette(repoPath: string | null, actions: CommandPalet
     } else if (event.key === "ArrowUp") {
       event.preventDefault();
       moveSelection(-1, commands.length);
-    } else if (event.key === "Enter") {
+    } else if (event.key === "Enter" && !event.nativeEvent.isComposing) {
       event.preventDefault();
       commands[safeSelected]?.run();
     } else if (event.key === "Escape") {

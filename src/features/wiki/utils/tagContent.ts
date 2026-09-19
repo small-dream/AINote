@@ -28,10 +28,19 @@ export function removeTagFromContent(content: string, tag: string, kind: NoteKin
   return kind === "markdown" ? removeTagFromMarkdown(content, tag) : removeTagFromRichText(content, tag);
 }
 
-/** 从 Markdown 中移除一个标签（保留其余正文）。 */
+/** 从 Markdown 中移除一个标签（保留其余正文）；前置边界与 contentHasTag 对齐，`##tag` 与行内代码中的 `#tag` 不会被误删。 */
 function removeTagFromMarkdown(content: string, tag: string): string {
-  const pattern = new RegExp(`[\\t ]?#${escapeRegExp(tag)}(?=$|[\\s，。、；])`, "gu");
-  return content.replace(pattern, "");
+  return stripTag(content, tag, "gu");
+}
+
+/** 标签匹配的完整边界：前置行首/空白/中文标点 + `#tag` + 后置结尾/空白/中文标点（与 extractInlineTags / contentHasTag 对齐）。 */
+function tagPattern(tag: string, flags: string): RegExp {
+  return new RegExp(`(^|[\\s，。、；])[\\t ]*#${escapeRegExp(tag)}(?=$|[\\s，。、；])`, flags);
+}
+
+/** 删除匹配到的标签：前置边界是空格/制表符时一并吞掉避免留下双空格，其余边界（换行、中文标点）保留。 */
+function stripTag(text: string, tag: string, flags: string): string {
+  return text.replace(tagPattern(tag, flags), (_match, boundary: string) => (/^[\t ]$/.test(boundary) ? "" : boundary));
 }
 
 function appendTagToMarkdown(content: string, tag: string): string {
@@ -88,7 +97,7 @@ function collectTags(nodes: RichTextNode[], tags: Set<string>): void {
 function richTextHasTag(nodes: RichTextNode[], tag: string): boolean {
   return nodes.some((node) =>
     node.type === "text" && typeof node.text === "string"
-      ? node.text.toLocaleLowerCase().includes(`#${tag}`)
+      ? tagPattern(tag, "iu").test(node.text)
       : richTextHasTag(node.content ?? [], tag),
   );
 }
@@ -104,11 +113,10 @@ function removeTagFromRichText(content: string, tag: string): string {
 
 function removeTagNodes(nodes: RichTextNode[], tag: string): RichTextNode[] {
   return nodes.flatMap((node) => {
-    if (node.type === "text" && typeof node.text === "string" && node.text.toLocaleLowerCase().includes(`#${tag}`)) {
-      const next = node.text.replace(new RegExp(`[\\t ]?#${escapeRegExp(tag)}(?=$|[\\s，。、；])`, "igu"), "");
+    if (node.type === "text" && typeof node.text === "string" && tagPattern(tag, "iu").test(node.text)) {
+      const next = stripTag(node.text, tag, "giu");
       return next.trim().length === 0 ? [] : [{ ...node, text: next }];
     }
-    if (!node.content) return [node];
     if (!node.content) return [node];
     return [{ ...node, content: removeTagNodes(node.content, tag) }];
   }).filter((node) => node.type !== "paragraph" || (node.content?.length ?? 0) > 0);

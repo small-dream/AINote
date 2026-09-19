@@ -170,7 +170,7 @@ function AskAiComposer({ input, loading, onChange, onSend }: { input: string; lo
         rows={3}
         className="resize-none rounded-md border border-border bg-bg-primary p-2 text-sm focus:border-accent focus:outline-none"
         onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.shiftKey) {
+          if (event.key === "Enter" && !event.shiftKey && !event.nativeEvent.isComposing) {
             event.preventDefault();
             onSend();
           }

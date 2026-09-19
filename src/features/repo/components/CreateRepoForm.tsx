@@ -48,7 +48,7 @@ export function CreateRepoForm({ onBound, onNeedLogin }: CreateRepoFormProps) {
           onNeedLogin={onNeedLogin}
         />
       )}
-      <input autoFocus className="mb-3 w-full rounded-md border border-bg-secondary bg-bg-primary px-3 py-2 text-sm outline-none focus:border-accent" placeholder={t("repo.namePlaceholder")} value={name} onChange={(e) => { setName(e.target.value); setError(null); }} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} />
+      <input autoFocus className="mb-3 w-full rounded-md border border-bg-secondary bg-bg-primary px-3 py-2 text-sm outline-none focus:border-accent" placeholder={t("repo.namePlaceholder")} value={name} onChange={(e) => { setName(e.target.value); setError(null); }} onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) submit(); }} />
       <label className="mb-4 flex items-center gap-2 text-sm text-text-secondary">
         <input type="checkbox" checked={isPrivate} onChange={(e) => setIsPrivate(e.target.checked)} />
         {t("repo.private")}
