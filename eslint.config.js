@@ -24,10 +24,10 @@ export default tseslint.config(
         caughtErrorsIgnorePattern: "^_",
         ignoreRestSiblings: true,
       }],
-      // dependency boundary: Tauri IPC only inside src/api/
+      // dependency boundary: Tauri IPC only inside src/api/（glob 用 ** 才能拦截 @tauri-apps/api/core 等子路径）
       "no-restricted-imports": ["error", {
         patterns: [
-          { group: ["@tauri-apps/api*"], message: "Tauri IPC only allowed inside src/api/" },
+          { group: ["@tauri-apps/**"], message: "Tauri IPC only allowed inside src/api/" },
         ],
       }],
     },
@@ -37,11 +37,18 @@ export default tseslint.config(
     rules: { "no-restricted-imports": "off" },
   },
   {
+    // src/platform/ 是架构约定的平台差异收敛点（docs/ARCHITECTURE.md：平台差异只能收敛到
+    // src/platform/ 或 src-tauri/src/platform/）：窗口注意、系统通知等平台能力在此封装，
+    // 因此与 src/api/ 一样豁免 Tauri import；feature / 组件只调用这里暴露的平台中立 API。
+    files: ["src/platform/**/*.ts"],
+    rules: { "no-restricted-imports": "off" },
+  },
+  {
     files: ["src/components/**/*.{ts,tsx}"],
     rules: {
       "no-restricted-imports": ["error", {
         patterns: [
-          { group: ["@tauri-apps/api*"], message: "Tauri IPC only allowed inside src/api/" },
+          { group: ["@tauri-apps/**"], message: "Tauri IPC only allowed inside src/api/" },
           { group: ["@/features/**"], message: "components/ must not import features/ (dependency direction)" },
         ],
       }],
@@ -59,7 +66,7 @@ export default tseslint.config(
     rules: {
       "no-restricted-imports": ["error", {
         patterns: [
-          { group: ["@tauri-apps/api*"], message: "Tauri IPC only allowed inside src/api/" },
+          { group: ["@tauri-apps/**"], message: "Tauri IPC only allowed inside src/api/" },
           { group: ["@/features/mobile-shell/**"], message: "desktop shell must not import the mobile shell (shell selection lives in src/app/)" },
         ],
       }],
@@ -70,7 +77,7 @@ export default tseslint.config(
     rules: {
       "no-restricted-imports": ["error", {
         patterns: [
-          { group: ["@tauri-apps/api*"], message: "Tauri IPC only allowed inside src/api/" },
+          { group: ["@tauri-apps/**"], message: "Tauri IPC only allowed inside src/api/" },
           { group: ["@/pages/workspace/**"], message: "mobile shell must not import the desktop shell (shell selection lives in src/app/)" },
         ],
       }],

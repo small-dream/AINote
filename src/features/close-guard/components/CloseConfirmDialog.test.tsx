@@ -75,7 +75,9 @@ describe("CloseConfirmDialog", () => {
     expect(await screen.findByText("有待提交的变更")).toBeTruthy();
     expect(screen.getByText(/下次同步时自动提交/)).toBeTruthy();
   });
+});
 
+describe("CloseConfirmDialog 确认与重试", () => {
   it("确认退出时调用 confirmClose", async () => {
     render(<CloseConfirmDialog />);
     fireCloseRequested();
@@ -89,5 +91,35 @@ describe("CloseConfirmDialog", () => {
     fireEvent.click(await screen.findByRole("button", { name: "取消" }));
     expect(appApiMock.confirmClose).not.toHaveBeenCalled();
     expect(screen.queryByText("有待提交的变更")).toBeNull();
+  });
+
+  describe("确认退出失败与重试", () => {
+    it("confirmClose 失败后确认按钮可重试，不会一次性死亡", async () => {
+      appApiMock.confirmClose.mockRejectedValueOnce(new Error("close rejected"));
+      render(<CloseConfirmDialog />);
+      fireCloseRequested();
+      fireEvent.click(await screen.findByRole("button", { name: "确认退出" }));
+      await waitFor(() => expect(appApiMock.confirmClose).toHaveBeenCalledTimes(1));
+
+      // 失败复位后再次确认：走完整 flush → confirmClose 流程并成功退出
+      fireEvent.click(screen.getByRole("button", { name: "确认退出" }));
+      await waitFor(() => expect(appApiMock.confirmClose).toHaveBeenCalledTimes(2));
+    });
+
+    it("关闭流程进行中重复确认被忽略，不重复调用 confirmClose", async () => {
+      let release: () => void = () => undefined;
+      appApiMock.confirmClose.mockImplementationOnce(
+        () => new Promise<void>((resolve) => { release = resolve; }),
+      );
+      render(<CloseConfirmDialog />);
+      fireCloseRequested();
+      const button = await screen.findByRole("button", { name: "确认退出" });
+      fireEvent.click(button);
+      fireEvent.click(button);
+      await waitFor(() => expect(appApiMock.confirmClose).toHaveBeenCalledTimes(1));
+
+      release();
+      await waitFor(() => expect(appApiMock.confirmClose).toHaveBeenCalledTimes(1));
+    });
   });
 });

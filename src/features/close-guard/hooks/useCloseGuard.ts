@@ -28,19 +28,20 @@ export function useCloseGuard() {
     };
   }, []);
 
-  /** 确认退出：先落盘未保存草稿，成功后才关闭窗口；保存失败则留在应用内并提示。 */
+  /** 确认退出：先落盘未保存草稿，成功后才关闭窗口；任一步失败则复位并提示，允许重试。 */
   const confirm = () => {
     if (closing.current) return;
     closing.current = true;
     void (async () => {
       try {
         await flushPendingDrafts();
+        await confirmClose();
       } catch (error) {
-        closing.current = false;
         reportToastError(error);
-        return;
+      } finally {
+        // 成功时窗口随即销毁，复位无害；失败时必须复位，否则确认按钮「一次性死亡」
+        closing.current = false;
       }
-      await confirmClose().catch(reportToastError);
     })();
   };
   const cancel = () => setOpen(false);

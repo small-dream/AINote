@@ -1,15 +1,16 @@
-import {
-  cancel,
-  isPermissionGranted,
-  pending,
-  requestPermission,
-  Schedule,
-  sendNotification,
-  type Options,
-} from "@tauri-apps/plugin-notification";
 import type { TaskItemDto } from "@/api/types";
 import { isTauriRuntime } from "@/api/back-button.api";
-import { needsDetailInBody, reminderDelivery, requestReminderAttention } from "@/platform/reminders";
+import {
+  cancelReminderNotifications,
+  needsDetailInBody,
+  pendingNotificationIds,
+  reminderDelivery,
+  reminderScheduleAt,
+  requestNotificationPermission,
+  requestReminderAttention,
+  sendReminderNotification,
+  type ReminderNotificationOptions,
+} from "@/platform/reminders";
 import { useReminderAlertStore } from "@/stores/reminderAlert.store";
 import { useUiStore } from "@/stores/ui.store";
 import { reminderAlertOf, reminderDigestOf, reminderNoticeOf, type ReminderNotice } from "../utils/reminderMessage";
@@ -77,7 +78,7 @@ async function ensurePermission(runtime: ReminderRuntime): Promise<boolean> {
   if (runtime.permission === "granted") return true;
   if (runtime.permission === "denied") return false;
   try {
-    const granted = (await isPermissionGranted()) || (await requestPermission()) === "granted";
+    const granted = await requestNotificationPermission();
     runtime.permission = granted ? "granted" : "denied";
     return granted;
   } catch {
@@ -94,7 +95,7 @@ function noticeOf(tasks: TaskItemDto[], now: Date): { notice: ReminderNotice; ta
 }
 
 /** 通知选项：标题带任务名、正文带截止与优先级、展开长文本放说明、多条走收件箱样式 */
-function systemOptionsOf(tasks: TaskItemDto[], now: Date, at?: Date): Options {
+function systemOptionsOf(tasks: TaskItemDto[], now: Date, at?: Date): ReminderNotificationOptions {
   const { notice, taskId } = noticeOf(tasks, now);
   const first = tasks[0];
   const detail = notice.detail;
@@ -106,7 +107,7 @@ function systemOptionsOf(tasks: TaskItemDto[], now: Date, at?: Date): Options {
     ...(notice.lines.length > 0 ? { inboxLines: notice.lines } : {}),
     group: NOTIFICATION_GROUP,
     ...(taskId ? { extra: { taskId } } : {}),
-    ...(at && first ? { id: notificationIdOf(first.id), schedule: Schedule.at(at) } : {}),
+    ...(at && first ? { id: notificationIdOf(first.id), schedule: reminderScheduleAt(at) } : {}),
   };
 }
 
@@ -122,7 +123,7 @@ async function deliver(runtime: ReminderRuntime, tasks: TaskItemDto[], now: Date
   if (active.length === 0) return;
   for (const task of active) runtime.fired.add(reminderKeyOf(task));
   publishAlerts(active, now);
-  if (reminderDelivery() === "immediate" && (await ensurePermission(runtime))) sendNotification(systemOptionsOf(active, now));
+  if (reminderDelivery() === "immediate" && (await ensurePermission(runtime))) sendReminderNotification(systemOptionsOf(active, now));
   void requestReminderAttention();
 }
 
@@ -163,9 +164,9 @@ function syncTimers(runtime: ReminderRuntime, tasks: TaskItemDto[], tasksRef: Ta
 async function sweepPendingOnce(runtime: ReminderRuntime, desiredIds: Set<number>): Promise<void> {
   if (runtime.sweptPending || !isTauriRuntime()) return;
   runtime.sweptPending = true;
-  const stale = await pending().catch(() => []);
-  const orphanIds = stale.map((item) => item.id).filter((id) => !desiredIds.has(id));
-  if (orphanIds.length > 0) await cancel(orphanIds).catch(() => undefined);
+  const stale = await pendingNotificationIds().catch(() => []);
+  const orphanIds = stale.filter((id) => !desiredIds.has(id));
+  if (orphanIds.length > 0) await cancelReminderNotifications(orphanIds).catch(() => undefined);
 }
 
 /** 移动端：把未来提醒交给 OS 预约（应用挂起仍可触发），并取消不再需要的旧调度 */
@@ -176,13 +177,13 @@ async function syncScheduled(runtime: ReminderRuntime, tasks: TaskItemDto[]): Pr
   for (const [taskId, entry] of runtime.scheduled) {
     if (desired.get(taskId) === entry.remindAt) continue;
     runtime.scheduled.delete(taskId);
-    await cancel([entry.id]).catch(() => undefined);
+    await cancelReminderNotifications([entry.id]).catch(() => undefined);
   }
   if (upcoming.length === 0 || !(await ensurePermission(runtime))) return;
   await sweepPendingOnce(runtime, new Set(upcoming.map((task) => notificationIdOf(task.id))));
   for (const task of upcoming) {
     if (runtime.scheduled.has(task.id) || !task.remindAt) continue;
-    sendNotification(systemOptionsOf([task], new Date(), new Date(task.remindAt)));
+    sendReminderNotification(systemOptionsOf([task], new Date(), new Date(task.remindAt)));
     runtime.scheduled.set(task.id, { id: notificationIdOf(task.id), remindAt: task.remindAt });
   }
 }
