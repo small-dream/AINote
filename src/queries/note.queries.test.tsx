@@ -86,7 +86,7 @@ describe("useUpdateNoteMutation", () => {
     expect(client.getQueryState(noteKeys.list("/repo"))?.isInvalidated).toBe(true);
   });
 
-  it("note-content 无缓存时写入新的内容对象", async () => {
+  it("note-content 无缓存时跳过回写，不写入缺字段的半成品", async () => {
     const { client, wrapper } = createHarness();
     noteApiMock.update.mockResolvedValue(null);
     const { result } = renderHook(() => useUpdateNoteMutation("/repo"), { wrapper });
@@ -94,10 +94,8 @@ describe("useUpdateNoteMutation", () => {
     result.current.mutate({ path: "fresh.md", content: "首次保存" });
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    expect(client.getQueryData(noteKeys.content("/repo", "fresh.md"))).toEqual({
-      path: "fresh.md",
-      content: "首次保存",
-    });
+    expect(client.getQueryData(noteKeys.content("/repo", "fresh.md"))).toBeUndefined();
+    expect(client.getQueryState(noteKeys.content("/repo", "fresh.md"))).toBeUndefined();
   });
 });
 

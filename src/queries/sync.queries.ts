@@ -38,7 +38,11 @@ export function useCommitPendingMutation() {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (message: string) => syncApi.commit(message),
-    onSuccess: () => invalidateSync(queryClient),
+    onSuccess: () => {
+      invalidateSync(queryClient);
+      // 提交清空待提交列表（一键同步路径由 invalidateWorkspaceQueries 覆盖此键）
+      void queryClient.invalidateQueries({ queryKey: ["changed-files"] });
+    },
   });
 }
 

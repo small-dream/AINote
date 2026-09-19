@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { taskApi, type CreateTaskInput, type UpdateTaskInput } from "@/api";
 import { useWorkspaceActivityStore } from "@/stores/workspace-activity.store";
-import { reportToastError } from "@/stores/toast.store";
 
 /** Todo 看板（todos.json 快照，服务端/Git 状态权威来源） */
 export function useTaskBoardQuery(repoPath: string | null) {
@@ -23,7 +22,7 @@ function useTaskMutation<TInput>(mutationFn: (input: TInput) => Promise<unknown>
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       markActivity();
     },
-    onError: reportToastError,
+    // 错误上报交给全局 MutationCache.onError（providers.tsx）兜底，这里不再重复弹 toast
   });
 }
 

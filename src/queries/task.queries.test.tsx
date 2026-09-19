@@ -1,7 +1,8 @@
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { MutationCache, QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { act, renderHook, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SyncStatus } from "@/api/types";
+import { reportToastError, useToastStore } from "@/stores/toast.store";
 import { useSyncStatusQuery } from "./sync.queries";
 import { useSyncNowMutation } from "./sync.queries";
 import { useTaskBoardQuery, useTaskCreateMutation, useTaskToggleMutation } from "./task.queries";
@@ -85,5 +86,32 @@ describe("待办写入后的同步状态", () => {
     act(() => result.current.syncNow.mutate());
 
     await waitFor(() => expect(apiMock.taskBoard).toHaveBeenCalledTimes(2));
+  });
+});
+
+describe("任务 mutation 失败上报", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useToastStore.getState().clear();
+  });
+
+  it("mutation 自身不带 onError，全局 MutationCache 兜底只弹一次 toast", async () => {
+    // 复刻 providers.tsx 的全局错误兜底：失败只应由这里上报一次
+    const client = new QueryClient({
+      mutationCache: new MutationCache({
+        onError: (error) => reportToastError(error),
+      }),
+      defaultOptions: { queries: { retry: false } },
+    });
+    apiMock.taskCreate.mockRejectedValue({ code: "IO_5001", kind: "io", message: "磁盘已满", retriable: false });
+    const { result } = renderHook(() => useTaskCreateMutation(), {
+      wrapper: ({ children }) => <QueryClientProvider client={client}>{children}</QueryClientProvider>,
+    });
+
+    act(() => result.current.mutate({ title: "写周报", description: "", dueAt: null, priority: "none", remindAt: null }));
+
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(useToastStore.getState().items).toHaveLength(1);
+    expect(useToastStore.getState().items[0]?.message).toContain("磁盘已满");
   });
 });

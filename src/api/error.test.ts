@@ -75,4 +75,13 @@ describe("errorActionOf", () => {
   it("未知错误不给建议", () => {
     expect(errorActionOf(syncError("GIT_4001", "unknown", true))).toBeNull();
   });
+
+  it("后端 hint 优先于错误码推断", () => {
+    expect(errorActionOf({ ...syncError("SYNC_4002", "network", true), hint: "relogin" })).toBe("relogin");
+    expect(errorActionOf({ ...syncError("GIT_4001", "unknown", true), hint: "retry" })).toBe("retry");
+  });
+
+  it("hint 为 resolveConflicts 时不映射按钮动作（由冲突面板承接）", () => {
+    expect(errorActionOf({ ...syncError("SYNC_4001", "conflict", false), hint: "resolveConflicts" })).toBeNull();
+  });
 });

@@ -6,6 +6,7 @@ import type { SyncProgress, SyncStatus } from "@/api/types";
 import { useSyncRetryStore } from "@/stores/sync-retry.store";
 import { useNoteReloadStore } from "@/stores/note-reload.store";
 import {
+  useCommitPendingMutation,
   useResolveConflictMutation,
   useResolveFileMutation,
   useSyncNowMutation,
@@ -13,6 +14,7 @@ import {
 
 const syncApiMock = vi.hoisted(() => ({
   syncNow: vi.fn(),
+  commit: vi.fn(),
   resolveConflict: vi.fn(),
   resolveFile: vi.fn(),
 }));
@@ -165,6 +167,26 @@ describe("useSyncNowMutation 草稿落盘与失效面", () => {
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
     expect(useNoteReloadStore.getState().epoch).toBe(0);
+  });
+});
+
+describe("useCommitPendingMutation", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("提交成功后失效 [sync] 与 [changed-files]（待提交面板立即清空）", async () => {
+    syncApiMock.commit.mockResolvedValue(undefined);
+    const { client, wrapper: harnessWrapper } = createHarness();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+    const { result } = renderHook(() => useCommitPendingMutation(), { wrapper: harnessWrapper });
+
+    result.current.mutate("note: update a.md");
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(syncApiMock.commit).toHaveBeenCalledWith("note: update a.md");
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["sync"] });
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["changed-files"] });
   });
 });
 

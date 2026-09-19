@@ -87,9 +87,11 @@ export function useUpdateNoteMutation(repoPath: string | null = null) {
       void queryClient.invalidateQueries({ queryKey: ["wiki"], refetchType: "none" });
       void queryClient.invalidateQueries({ queryKey: ["sync"] });
       markActivity();
-      void queryClient.setQueryData(noteKeys.content(repoPath, path), (old: NoteContent | undefined) =>
-        old ? { ...old, content } : { path, content }
-      );
+      // 只更新已有缓存的内容字段；无缓存时跳过（避免写入缺 kind/locked/encrypted 的半成品）
+      const key = noteKeys.content(repoPath, path);
+      if (queryClient.getQueryData<NoteContent>(key)) {
+        queryClient.setQueryData<NoteContent>(key, (old) => (old ? { ...old, content } : old));
+      }
     },
   });
 }

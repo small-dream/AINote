@@ -57,8 +57,20 @@ export function loginProviderOf(err: unknown): string | null {
 /** 同步类错误对应的可操作建议 */
 export type ErrorAction = "retry" | "relogin" | "checkPermission";
 
-/** 按错误码给出下一步动作；无特定建议时返回 null，避免误导用户。 */
+/**
+ * 后端建议码 → 动作。`resolveConflicts` 的对应动作是打开冲突面板解决，
+ * 不映射为按钮动作（返回 null），避免「重试」误导用户对冲突重试。
+ */
+const HINT_ACTION: Record<SyncHint, ErrorAction | null> = {
+  retry: "retry",
+  relogin: "relogin",
+  checkPermission: "checkPermission",
+  resolveConflicts: null,
+};
+
+/** 后端 hint 优先于错误码推断；hint 缺失时按错误码兜底。无特定建议时返回 null，避免误导用户。 */
 export function errorActionOf(err: AppError): ErrorAction | null {
+  if (err.hint) return HINT_ACTION[err.hint];
   switch (err.code) {
     case "SYNC_4002":
       return "retry";
