@@ -43,6 +43,17 @@ pub(crate) fn is_hidden(path: &Path) -> bool {
         .is_some_and(|name| name.to_string_lossy().starts_with('.'))
 }
 
+/// 文件 mtime（unix 秒）；metadata / mtime 读取失败统一降级为 0，
+/// 与「读内容失败降级」一致：单文件异常不得中断整个列表 / 搜索。
+pub fn mtime_secs(path: &Path) -> u64 {
+    path.metadata()
+        .and_then(|m| m.modified())
+        .ok()
+        .and_then(|t| t.duration_since(std::time::UNIX_EPOCH).ok())
+        .map(|d| d.as_secs())
+        .unwrap_or(0)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -68,6 +79,16 @@ mod tests {
     fn rejects_non_directory() {
         let err = collect_note_files(Path::new("/nonexistent/path")).unwrap_err();
         assert!(matches!(err, AppError::Repo(_)));
+    }
+
+    /// metadata 失败（如文件已消失）降级为 0 而不是报错；正常文件返回真实 mtime。
+    #[test]
+    fn mtime_secs_degrades_to_zero_on_missing_file() {
+        let tmp = tempfile::tempdir().unwrap();
+        let root = tmp.path();
+        assert_eq!(mtime_secs(&root.join("gone.md")), 0);
+        File::create(root.join("a.md")).unwrap();
+        assert!(mtime_secs(&root.join("a.md")) > 0);
     }
 
     /// R1：符号链接笔记与目录一律跳过；指向祖先目录的链接不得造成无限递归。

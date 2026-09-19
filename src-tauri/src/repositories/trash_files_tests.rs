@@ -93,6 +93,26 @@ fn missing_note_returns_not_found() {
     ));
 }
 
+/// 同秒同路径二次删除必须产生不同 id（随机分量兜底，旧实现会互相覆盖正文与清单条目）。
+#[test]
+fn same_path_deleted_twice_gets_distinct_ids() {
+    let (_tmp, root) = setup();
+    seed_note(&root, "a.md", "第一版");
+    let first = soft_delete_note(&root, "a.md").unwrap();
+    seed_note(&root, "a.md", "第二版");
+    let second = soft_delete_note(&root, "a.md").unwrap();
+    assert_ne!(first.id, second.id, "同路径二次删除的回收站 id 必须不同");
+    let items = list(&root).unwrap();
+    assert_eq!(items.len(), 2);
+    let by_id: std::collections::HashMap<_, _> =
+        items.iter().map(|i| (i.id.as_str(), i)).collect();
+    assert_eq!(by_id[first.id.as_str()].path, "a.md");
+    assert_eq!(by_id[second.id.as_str()].path, "a.md");
+    // 两份正文都在，恢复先删的那份拿到的是第一版内容
+    restore(&root, &first.id).unwrap();
+    assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "第一版");
+}
+
 /// R7：目录含非笔记文件（图片）时拒绝删除，且不丢失任何文件。
 #[test]
 fn folder_with_non_note_files_is_refused_and_nothing_is_lost() {

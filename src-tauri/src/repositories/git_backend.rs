@@ -65,6 +65,10 @@ pub struct MockGitBackend {
     pub conflict_on_pull: bool,
     /// 本地提交失败（模拟磁盘 / 权限类问题）
     pub commit_fails: bool,
+    /// clone 失败（模拟网络 / 凭证类问题）
+    pub clone_fails: bool,
+    /// clone 失败前已创建目标目录（模拟 git2 部分写入的残留目录）
+    pub clone_leaves_dir: bool,
     /// 推送被远端拒绝
     pub push_rejected: bool,
     /// 前 N 次 pull 返回网络错误（模拟可重试失败），0 表示直接成功
@@ -114,9 +118,15 @@ impl GitBackend for MockGitBackend {
         Ok(self.is_repo)
     }
 
-    fn clone_repo(&self, url: &str, _dest: &Path, cred: &RemoteCredential) -> Result<(), AppError> {
+    fn clone_repo(&self, url: &str, dest: &Path, cred: &RemoteCredential) -> Result<(), AppError> {
         self.record_credential(cred);
         self.record(format!("clone:{url}"));
+        if self.clone_leaves_dir {
+            std::fs::create_dir_all(dest).map_err(|e| AppError::Io(e.to_string()))?;
+        }
+        if self.clone_fails {
+            return Err(AppError::SyncNetwork("mock clone failed".into()));
+        }
         Ok(())
     }
 

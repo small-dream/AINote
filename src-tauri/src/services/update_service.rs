@@ -33,6 +33,19 @@ pub fn install_path_allowed(dir: &Path, path: &Path) -> bool {
             .is_some_and(|name| name.starts_with("ainote-") && name.ends_with(".apk"))
 }
 
+/// 由版本号拼 APK 文件名；version 只许 `[0-9A-Za-z.-]`，防止注入路径分隔符穿越出 updates 目录。
+pub fn apk_file_name(version: &str) -> Result<String, AppError> {
+    let valid = !version.is_empty()
+        && version
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'.' || b == b'-');
+    if valid {
+        Ok(format!("ainote-{version}.apk"))
+    } else {
+        Err(AppError::UpdateDownload(format!("非法版本号: {version}")))
+    }
+}
+
 /// 解析 sha256 校验文件：取首个空白分隔的 64 位十六进制串（小写）。
 pub fn parse_sha256_file(content: &str) -> Option<String> {
     let token = content.split_whitespace().next()?;
@@ -82,10 +95,10 @@ pub fn download_apk(
     if !apk_download_url_allowed(url) || !sha256_url_allowed(sha256_url) {
         return Err(AppError::UpdateDownload("更新包地址不在允许范围".into()));
     }
+    let file_name = apk_file_name(version)?;
     fs::create_dir_all(dir).map_err(|err| AppError::io_context("创建更新目录失败", dir, err))?;
     clear_stale_files(dir);
 
-    let file_name = format!("ainote-{version}.apk");
     let part_path = dir.join(format!("{file_name}.part"));
     let result = download_to_file(url, &part_path, cancel, &on_progress);
     if result.is_err() || cancel.load(Ordering::SeqCst) {
@@ -258,5 +271,22 @@ mod tests {
             dir,
             &dir.join("sub").join("ainote-0.27.0.apk")
         ));
+    }
+
+    #[test]
+    fn apk_file_name_accepts_semver_like_versions() {
+        assert_eq!(apk_file_name("0.27.0").unwrap(), "ainote-0.27.0.apk");
+        assert_eq!(apk_file_name("1.0-beta.2").unwrap(), "ainote-1.0-beta.2.apk");
+    }
+
+    /// 版本号拼路径前必须拒绝路径分隔符与空白等字符，防穿越出 updates 目录。
+    #[test]
+    fn apk_file_name_rejects_path_injection() {
+        for bad in ["../evil", "1.0/x", "1.0\\x", "1 0", "1.0;rm", ""] {
+            assert!(
+                matches!(apk_file_name(bad), Err(AppError::UpdateDownload(_))),
+                "非法版本号应被拒绝: {bad:?}"
+            );
+        }
     }
 }

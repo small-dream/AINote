@@ -126,7 +126,18 @@ fn load_key(root: &Path) -> Result<[u8; KEY_LEN], AppError> {
 }
 
 fn write_secure(path: PathBuf, bytes: Vec<u8>) -> Result<(), AppError> {
-    fs::write(&path, bytes)?;
+    let mut options = fs::OpenOptions::new();
+    options.write(true).create(true).truncate(true);
+    // unix：创建时即定 0600，消除「先按 umask 0644 落盘再 chmod」的窗口期；
+    // Windows 无 unix mode，权限继承自目录 ACL（保持原行为）。
+    #[cfg(unix)]
+    {
+        use std::os::unix::fs::OpenOptionsExt;
+        options.mode(0o600);
+    }
+    let mut file = options.open(&path)?;
+    std::io::Write::write_all(&mut file, &bytes)?;
+    // 已存在文件的 mode 不受 OpenOptions 影响：收紧历史版本遗留的宽松权限。
     #[cfg(unix)]
     {
         use std::os::unix::fs::PermissionsExt;
@@ -216,5 +227,19 @@ mod tests {
             decode_token_record(b"MYNT\x01short"),
             Err(AppError::Auth(_))
         ));
+    }
+
+    /// 密钥与令牌文件创建时即为 0600（无 0644 窗口期），覆盖写后权限不漂移。
+    #[cfg(unix)]
+    #[test]
+    fn written_files_are_owner_only() {
+        use std::os::unix::fs::PermissionsExt;
+        let dir = tempfile::tempdir().unwrap();
+        save(dir.path(), "github", "ghp_secret").unwrap();
+        save(dir.path(), "github", "ghp_secret_2").unwrap();
+        for name in [KEY_FILE, "auth.github.token"] {
+            let mode = fs::metadata(dir.path().join(name)).unwrap().permissions().mode();
+            assert_eq!(mode & 0o777, 0o600, "{name} 必须为 0600");
+        }
     }
 }

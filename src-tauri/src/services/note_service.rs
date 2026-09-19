@@ -186,12 +186,7 @@ fn to_meta(root: &Path, file: &Path) -> Result<NoteMeta, AppError> {
         NoteKind::Markdown => extract_title(&content, &fallback),
         NoteKind::RichText => rich_text::extract_title(&content).unwrap_or(fallback),
     };
-    let updated_at = file
-        .metadata()?
-        .modified()?
-        .duration_since(std::time::UNIX_EPOCH)
-        .map(|d| d.as_secs())
-        .unwrap_or(0);
+    let updated_at = file_storage::mtime_secs(file);
     Ok(NoteMeta {
         path: rel.to_string_lossy().into_owned(),
         kind,

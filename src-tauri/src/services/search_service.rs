@@ -45,12 +45,8 @@ pub fn search_notes(repo_path: &Path, query: &str) -> Result<Vec<SearchResult>, 
             NoteKind::RichText => rich_text::plain_text(&content),
         };
         if let Some(mut result) = match_note(&path, &title, &hay, query) {
-            result.updated_at = file
-                .metadata()?
-                .modified()?
-                .duration_since(std::time::UNIX_EPOCH)
-                .map(|d| d.as_secs())
-                .unwrap_or(0);
+            // metadata 失败同样降级为 0：单文件异常不得中断整仓搜索。
+            result.updated_at = file_storage::mtime_secs(&file);
             result.encrypted = read.encrypted;
             results.push(result);
         }

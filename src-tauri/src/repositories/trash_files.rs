@@ -251,9 +251,27 @@ fn dedup_target(root: &Path, path: &str) -> PathBuf {
     unreachable!()
 }
 
+/// 回收站条目 id：秒级时间戳 + 路径哈希（可读、可定位来源）+ 随机分量，
+/// 借鉴 domain/task 的 new_task_id 模式——同秒同路径二次删除不再互相覆盖。
 fn new_id(path: &str) -> String {
     let secs = now_secs();
-    format!("{secs}-{hash:016x}", hash = fnv1a(path))
+    format!(
+        "{secs}-{hash:016x}-{random:08x}",
+        hash = fnv1a(path),
+        random = random_u32()
+    )
+}
+
+fn random_u32() -> u32 {
+    let mut bytes = [0u8; 4];
+    match getrandom::getrandom(&mut bytes) {
+        Ok(()) => u32::from_le_bytes(bytes),
+        // 兜底：纳秒时间戳低位，仍比纯秒级时间戳难碰撞
+        Err(_) => SystemTime::now()
+            .duration_since(UNIX_EPOCH)
+            .map(|d| d.subsec_nanos())
+            .unwrap_or(0),
+    }
 }
 
 fn now_secs() -> u64 {

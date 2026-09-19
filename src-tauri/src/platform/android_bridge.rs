@@ -22,9 +22,15 @@ fn with_jni<T>(
         .map_err(|err| AppError::UpdateInstall(format!("{action}: 线程附着失败: {err}")))?;
     // SAFETY: 同上，context 为应用 Application Context 的全局引用（jobject 本身即指针）。
     let app_context = unsafe { JObject::from_raw(context.context() as jni::sys::jobject) };
-    let result = f(&mut guard, &app_context)?;
-    check_exception(&mut guard, action)?;
-    Ok(result)
+    let result = f(&mut guard, &app_context);
+    // f 提前返回错误时同样检查并清理未捕获的 Java 异常，
+    // 否则挂起的异常会泄漏到本线程后续任意 JNI 调用。
+    let check = check_exception(&mut guard, action);
+    match (result, check) {
+        (Ok(value), Ok(())) => Ok(value),
+        (Err(err), _) => Err(err),
+        (Ok(_), Err(err)) => Err(err),
+    }
 }
 
 fn check_exception(env: &mut JNIEnv, action: &str) -> Result<(), AppError> {

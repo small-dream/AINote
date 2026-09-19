@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::Path;
 
 use crate::domain::error::AppError;
@@ -36,7 +37,14 @@ pub fn bind_repo<B: GitBackend>(
     }
     let url = strip_userinfo(url);
     backend.ls_remote(&url, cred)?;
-    backend.clone_repo(&url, dest, cred)?;
+    if let Err(err) = backend.clone_repo(&url, dest, cred) {
+        // clone 失败兜底清理残留目录：入口已保证 dest 原不存在，
+        // 此刻存在即本次 clone 的部分写入，删除不会误伤用户既有目录。
+        if dest.exists() {
+            let _ = fs::remove_dir_all(dest);
+        }
+        return Err(err);
+    }
     Ok(dest.to_string_lossy().into_owned())
 }
 
@@ -154,6 +162,35 @@ mod tests {
             mock.recorded(),
             vec!["ls_remote:https://x/y.git", "clone:https://x/y.git"]
         );
+    }
+
+    /// clone 失败时清理本次产生的残留目录（dest 入口已校验不存在，删除是安全的）。
+    #[test]
+    fn bind_cleans_up_partial_clone_dir_on_failure() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dest = tmp.path().join("notes");
+        let mock = MockGitBackend {
+            clone_fails: true,
+            clone_leaves_dir: true,
+            ..Default::default()
+        };
+        let err = bind_repo(&mock, "https://x/y.git", &dest, &cred()).unwrap_err();
+        assert!(matches!(err, AppError::SyncNetwork(_)));
+        assert!(!dest.exists(), "clone 失败的残留目录必须被清理");
+    }
+
+    /// clone 失败但未产生目录时不报错、无残留（清理是幂等兜底而非新失败面）。
+    #[test]
+    fn bind_clone_failure_without_dir_is_clean() {
+        let tmp = tempfile::tempdir().unwrap();
+        let dest = tmp.path().join("notes");
+        let mock = MockGitBackend {
+            clone_fails: true,
+            ..Default::default()
+        };
+        let err = bind_repo(&mock, "https://x/y.git", &dest, &cred()).unwrap_err();
+        assert!(matches!(err, AppError::SyncNetwork(_)));
+        assert!(!dest.exists());
     }
 
     #[test]
