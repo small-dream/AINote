@@ -161,6 +161,11 @@ describe("dueDateLabel", () => {
     expect(dueDateLabel("2026-09-20", "今天", "明天", now)).toBe("09-20");
     expect(dueDateLabel("2026-09-14", "今天", "明天", now)).toBe("09-14");
   });
+
+  it("跨年日期补上完整年份，避免无年份歧义", () => {
+    const now = new Date(2026, 8, 15, 12, 0);
+    expect(dueDateLabel("2027-01-15", "今天", "明天", now)).toBe("2027-01-15");
+  });
 });
 
 describe("parseTaskInput", () => {

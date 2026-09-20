@@ -1,5 +1,5 @@
 import { render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import type { TaskItemDto } from "@/api/types";
 import { TaskRow } from "./TaskRow";
 import { addLocalDays, localDateString } from "../utils/task";
@@ -25,6 +25,10 @@ function renderRow(overrides: Partial<TaskItemDto> = {}) {
   render(<TaskRow task={task(overrides)} onToggle={vi.fn()} onOpenEditor={vi.fn()} />);
   return screen.getByRole("checkbox", { name: "写周报" });
 }
+
+afterEach(() => {
+  vi.useRealTimers();
+});
 
 describe("TaskRow 完成态复选框", () => {
   it("未完成时是空心圆，不渲染勾", () => {
@@ -67,5 +71,13 @@ describe("TaskRow 的时间信号", () => {
 
     expect(screen.queryByTitle(createdAt)).toBeNull();
     expect(screen.queryByText(/9\/15/)).toBeNull();
+  });
+
+  it("跨年截止徽标补上完整年份", () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date(2026, 11, 31, 12, 0));
+    render(<TaskRow task={task({ dueAt: "2027-01-15" })} onToggle={vi.fn()} onOpenEditor={vi.fn()} />);
+
+    expect(screen.getByText("2027-01-15")).toBeTruthy();
   });
 });

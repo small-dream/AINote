@@ -1,3 +1,4 @@
+import { shortDayLabel } from "./dateLabel";
 import type { TaskItemDto, TaskPriority } from "@/api/types";
 
 export type TaskGroup = "overdue" | "today" | "upcoming" | "none" | "done";
@@ -57,7 +58,8 @@ export function dueDayOffset(dueAt: string, today: Date): number {
 }
 
 /**
- * 截止日期展示文案：今天 / 明天 / MM-DD（今天与明天的文案由调用方按语言传入）。
+ * 截止日期展示文案：今天 / 明天 / MM-DD（今天与明天的文案由调用方按语言传入；
+ * 跨年日期落到 YYYY-MM-DD，避免 `01-15` 这类无年份歧义）。
  * `now` 与 `dueDayOffset` 同源由调用方注入：提醒通知里两者必须用同一个时刻，
  * 否则跨过午夜（或测试注入固定时刻）时「相对文案」与「偏移天数」会互相打架。
  */
@@ -70,7 +72,7 @@ export function dueDateLabel(
   const offset = dueDayOffset(dueAt, now);
   if (offset === 0) return todayLabel;
   if (offset === 1) return tomorrowLabel;
-  return dueDay(dueAt).slice(5);
+  return shortDayLabel(dueAt, now);
 }
 
 function groupOf(task: TaskItemDto, now: Date): TaskGroup {

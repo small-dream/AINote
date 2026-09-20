@@ -3,7 +3,8 @@ import { translate } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 import type { Locale } from "@/stores/ui.store";
 import type { ReminderAlertItem } from "@/stores/reminderAlert.store";
-import { dueDateLabel, dueDay, dueDayOffset, dueInstant, dueTime } from "./task";
+import { shortDayLabel } from "./dateLabel";
+import { dueDateLabel, dueDayOffset, dueInstant, dueTime } from "./task";
 
 /** 说明摘要上限：过长会撑爆通知的折叠视图与提醒卡片 */
 export const NOTICE_EXCERPT_LIMIT = 120;
@@ -45,7 +46,7 @@ export function reminderDueLabel(task: TaskItemDto, locale: Locale, now: Date): 
     now
   );
   const offset = dueDayOffset(task.dueAt, now);
-  const day = offset === 2 ? translate(locale, "todo.dateDayAfter") : offset >= 3 ? dueDay(task.dueAt).slice(5) : dayLabel;
+  const day = offset === 2 ? translate(locale, "todo.dateDayAfter") : offset >= 3 ? shortDayLabel(task.dueAt, now) : dayLabel;
   const time = dueTime(task.dueAt);
   return time ? `${day} ${time}` : day;
 }

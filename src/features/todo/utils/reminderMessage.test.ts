@@ -56,6 +56,10 @@ describe("reminderDueLabel", () => {
     expect(reminderDueLabel(task({ dueAt: "2026-10-08T18:00" }), "zh-CN", NOW)).toBe("10-08 18:00");
   });
 
+  it("跨年日期补上完整年份", () => {
+    expect(reminderDueLabel(task({ dueAt: "2027-01-15" }), "zh-CN", NOW)).toBe("2027-01-15");
+  });
+
   it("无截止时间返回 null", () => {
     expect(reminderDueLabel(task({ dueAt: null }), "zh-CN", NOW)).toBeNull();
   });

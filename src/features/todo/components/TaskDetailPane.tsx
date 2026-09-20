@@ -38,6 +38,7 @@ export function TaskDetailPane({ task, busy, onSave, onDelete, onClose }: TaskDe
         dueAt={editor.dueAt}
         priority={editor.priority}
         remindAt={editor.remindAt}
+        createdAt={task.createdAt}
         onTitleChange={editor.setTitle}
         onDescriptionChange={editor.setDescription}
         onDueAtChange={editor.commitDueDate}

@@ -55,7 +55,7 @@ export function MobileTaskEditor({ task, busy, onSave, onDelete, onClose }: Mobi
             description={editor.description}
             dueAt={editor.dueAt}
             priority={editor.priority}
-            remindAt={editor.remindAt}
+            remindAt={editor.remindAt} createdAt={task.createdAt}
             onTitleChange={editor.setTitle}
             onDescriptionChange={editor.setDescription}
             onDueAtChange={editor.commitDueDate}

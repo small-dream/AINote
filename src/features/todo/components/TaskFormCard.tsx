@@ -1,6 +1,7 @@
 import type { KeyboardEventHandler, ReactNode } from "react";
 import type { TaskPriority } from "@/api/types";
 import { useTranslation } from "@/i18n";
+import { createdDayLabel } from "../utils/dateLabel";
 import { DueDateChip, DueTimeChip, PriorityChip, ReminderChip } from "./TaskMetaControls";
 
 /**
@@ -20,6 +21,8 @@ interface TaskFormCardProps {
   dueAt: string | null;
   priority: TaskPriority;
   remindAt: string | null;
+  /** pane 密度（桌面主区详情 / 移动全屏编辑面）显示的弱化创建时间；其它密度忽略 */
+  createdAt?: string | null;
   titlePlaceholder?: string;
   autoFocusTitle?: boolean;
   disabled?: boolean;
@@ -75,6 +78,7 @@ export function TaskFormCard({
   dueAt,
   priority,
   remindAt,
+  createdAt,
   titlePlaceholder,
   autoFocusTitle = false,
   disabled = false,
@@ -114,6 +118,7 @@ export function TaskFormCard({
         onBlur={onDescriptionBlur}
       />
       <div className={`flex flex-wrap items-center ${META_CLASS[density]}`}>
+        {createdAt && density === "pane" ? <TaskCreatedAtLabel createdAt={createdAt} /> : null}
         <DueDateChip value={dueAt} onChange={onDueAtChange} />
         <DueTimeChip dueAt={dueAt} onChange={onDueAtChange} />
         <PriorityChip value={priority} onChange={onPriorityChange} />
@@ -122,4 +127,13 @@ export function TaskFormCard({
       </div>
     </div>
   );
+}
+
+/** 创建时间弱化元信息：不抢截止/优先级这些决策信号的注意力，只在详情与全屏编辑面出现。 */
+function TaskCreatedAtLabel({ createdAt }: { createdAt: string }) {
+  const { t } = useTranslation();
+  const date = createdDayLabel(createdAt, new Date());
+  return date ? (
+    <span className="shrink-0 text-xs text-text-tertiary">{t("todo.createdAt", { date })}</span>
+  ) : null;
 }

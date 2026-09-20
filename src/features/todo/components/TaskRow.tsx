@@ -2,8 +2,9 @@ import { Check, Flag } from "lucide-react";
 import type { TaskItemDto, TaskPriority } from "@/api/types";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
+import { shortDayLabel } from "../utils/dateLabel";
 import { PRIORITY_FLAG_CLASS } from "./TaskMetaControls";
-import { dueDay, dueDayOffset, dueInstant, dueTime } from "../utils/task";
+import { dueDayOffset, dueInstant, dueTime } from "../utils/task";
 
 interface TaskRowProps {
   task: TaskItemDto;
@@ -17,7 +18,7 @@ const PRIORITY_LABEL_KEY: Record<Exclude<TaskPriority, "none">, TranslationKey> 
   low: "todo.priorityLow",
 };
 
-/** 截止徽标：今天 / 明天 / MM-DD，带具体时刻时追加 HH:mm；未完成且已过截止时刻标红。 */
+/** 截止徽标：今天 / 明天 / MM-DD（跨年显示 YYYY-MM-DD），带具体时刻时追加 HH:mm；未完成且已过截止时刻标红。 */
 export function DueBadge({ dueAt, done }: { dueAt: string; done: boolean }) {
   const { t } = useTranslation();
   const now = new Date();
@@ -26,7 +27,7 @@ export function DueBadge({ dueAt, done }: { dueAt: string; done: boolean }) {
     ? t("todo.dateToday")
     : !done && offset === 1
       ? t("todo.dateTomorrow")
-      : dueDay(dueAt).slice(5);
+      : shortDayLabel(dueAt, now);
   const time = dueTime(dueAt);
   const tone = !done && dueInstant(dueAt) < now
     ? "bg-danger/10 text-danger"
