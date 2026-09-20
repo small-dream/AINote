@@ -1,5 +1,17 @@
 # 更新日志
 
+## v0.51.1 — 2026-09-20（修复：Android 设备级快速解锁入口不可见）
+
+### 修复
+
+- **Android 完全没有设备解锁入口**：release 混淆（R8）看不到 Rust 侧按字符串名发起的 JNI 调用，把 Kotlin `QuickUnlock` 的方法表整体裁掉；同时这些方法未加 `@JvmStatic`（Kotlin `object` 默认生成实例方法），导致设备认证能力探测每次抛 `NoSuchMethodError`、被静默降级为「本机不支持」，前端据此按设计隐藏入口 —— 所以既没有入口也没有报错。现已补上 JNI 契约的 keep 规则与 `@JvmStatic`，并用反汇编 `classes.dex` 固化验证（`isSupported` / `kind` / `store` / `read` / `remove` 均保留为 `PUBLIC STATIC FINAL`）。
+- **能力探测失败不再静默**：探测异常写 warn 日志，可在 logcat 与诊断包中看到原因，不再只表现为「入口消失」。
+- **Android 9 权限补齐**：`FingerprintManager.hasEnrolledFingerprints()` 仍要求 `USE_FINGERPRINT`，已在清单中补上。
+
+### 测试
+
+- 通过前端构建、全量前端测试（1171 用例）、Lint、Rust 单元测试（425 passed / 7 ignored）、Android release 构建（APK / AAB，含 dex 反汇编核对）与桌面 release 编译。
+
 ## v0.51.0 — 2026-09-20（优化：设备级快速解锁免点即弹，失败后直入口令）
 
 ### 优化
