@@ -98,6 +98,6 @@ describe("VaultQuickUnlockCard", () => {
     fireEvent.click(await screen.findByRole("button", { name: "开启快速解锁" }));
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe("设备认证失败，请重试或改用仓库口令。");
+    expect(alert.textContent).toBe("设备认证失败，请重试，或直接在下方输入仓库口令解锁。");
   });
 });

@@ -70,6 +70,16 @@ describe("VaultUnlockCard", () => {
     await waitFor(() => expect(vaultApiMock.unlockWithDevice).toHaveBeenCalledTimes(1));
   });
 
+});
+
+/** 设备认证不可用时的兜底：口令入口必须在位、够顺手，且错误文案要指向它。 */
+describe("VaultUnlockCard · 认证失败兜底", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    useSessionStore.setState({ repoPath: "/repo/notes", currentNotePath: null, login: null });
+    useVaultUnlockStore.setState({ suppressed: false, spent: false });
+  });
+
   it("用户取消设备认证保持静默，且本次锁定周期内不再自动重复弹窗", async () => {
     vaultApiMock.status.mockResolvedValue(lockedStatus(true));
     vaultApiMock.unlockWithDevice.mockRejectedValue(
@@ -94,6 +104,28 @@ describe("VaultUnlockCard", () => {
     renderCard();
 
     const alert = await screen.findByRole("alert");
-    expect(alert.textContent).toBe("本机的快速解锁条目已失效，请用仓库口令解锁后重新开启。");
+    expect(alert.textContent).toBe("本机的快速解锁条目已失效，请在下方输入仓库口令解锁，然后重新开启。");
+  });
+
+  it("设备认证失败后口令入口仍在，且自动聚焦可直接输入", async () => {
+    vaultApiMock.status.mockResolvedValue(lockedStatus(true));
+    vaultApiMock.unlockWithDevice.mockRejectedValue(
+      appError("VAULT_9008", "vault device auth failed: 指纹已被系统锁定")
+    );
+    vaultApiMock.unlock.mockResolvedValue({ state: "unlocked", encryptedNotes: 2 });
+    const onUnlocked = vi.fn();
+    renderCard(onUnlocked);
+
+    await waitFor(() => expect(vaultApiMock.unlockWithDevice).toHaveBeenCalledTimes(1));
+    expect(await screen.findByRole("alert")).toBeTruthy();
+
+    // 关键：失败后焦点已经在仓库口令输入框里，用户可以直接敲口令
+    const input = screen.getByLabelText("仓库口令") as HTMLInputElement;
+    expect(document.activeElement).toBe(input);
+    fireEvent.change(input, { target: { value: "correct horse battery" } });
+    fireEvent.click(screen.getByRole("button", { name: "解锁" }));
+
+    await waitFor(() => expect(vaultApiMock.unlock).toHaveBeenCalledWith("correct horse battery"));
+    await waitFor(() => expect(onUnlocked).toHaveBeenCalledTimes(1));
   });
 });

@@ -86,6 +86,8 @@ legacy-plain (登录钥匙串):                                           0 成�
   4. 多个解锁界面同时挂载（设置页 + 笔记遮罩 + 解锁弹层）时，`consumeAuto()` 原子取用保证**只弹一次**。
 - **不支持**：`quickUnlockSupported = false` 时完全不渲染该入口（Windows / Linux / Android < 9）。
 - 关闭后立即回到纯口令流程；`VAULT_9007` 不渲染错误文本。
+- **认证失败后的口令入口**：口令输入框在所有解锁界面**始终与设备按钮同屏**；设备认证失败（`VAULT_9008`）或条目失效（`VAULT_9006`）时焦点自动移进口令输入框，文案也直接指向「在下方输入仓库口令」，用户不必再找入口。
+- **系统弹窗自身的兜底**：macOS 用 `LAContext.deviceOwnerAuthentication`（Touch ID 或登录密码）、iOS 用 `kSecAccessControlUserPresence`（Face ID / Touch ID 或设备密码）、Android 10+ 用 `BIOMETRIC_STRONG | DEVICE_CREDENTIAL`，系统弹窗内自带「使用密码 / 图案」入口；**Android 9（API 28）** 的平台 `BiometricPrompt` 只支持生物识别，此时唯一的兜底就是应用内的仓库口令。
 
 ## 6. 明确不做
 

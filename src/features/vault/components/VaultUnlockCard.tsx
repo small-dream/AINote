@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "@/components/atoms/Button";
 import { useTranslation } from "@/i18n";
 import { useVaultDeviceUnlock } from "../hooks/useVaultDeviceUnlock";
@@ -18,10 +18,16 @@ export function VaultUnlockCard({ onUnlocked }: VaultUnlockCardProps = {}) {
   const { unlock } = useVaultSettings();
   const device = useVaultDeviceUnlock();
   const [passphrase, setPassphrase] = useState("");
+  const passphraseRef = useRef<HTMLInputElement>(null);
   useVaultAutoUnlock({
     enabled: device.quick.enabled,
     unlock: () => device.unlock(onUnlocked),
   });
+  // 设备认证失败（口令错误之外的任何失败）后把焦点交给口令输入框：
+  // 用户不必再找入口，直接敲仓库口令即可解锁。
+  useEffect(() => {
+    if (device.error !== null) passphraseRef.current?.focus();
+  }, [device.error]);
 
   const submit = () => {
     if (passphrase === "" || unlock.isPending) return;
@@ -42,6 +48,7 @@ export function VaultUnlockCard({ onUnlocked }: VaultUnlockCardProps = {}) {
         <VaultField label={t("vault.passphraseLabel")}>
           <VaultPassphraseInput
             autoFocus
+            ref={passphraseRef}
             autoComplete="current-password"
             value={passphrase}
             onChange={(event) => setPassphrase(event.target.value)}
