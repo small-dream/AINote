@@ -41,6 +41,8 @@ targets:
       properties:
         LSRequiresIPhoneOS: true
         UILaunchStoryboardName: LaunchScreen
+        # 设备级快速解锁会调用 LAContext 做 Face ID 认证；缺少该说明会被系统直接终止进程。
+        NSFaceIDUsageDescription: 解锁本机的加密笔记 / Unlock encrypted notes on this device
         UIRequiredDeviceCapabilities: [arm64, metal]
         UISupportedInterfaceOrientations:
           - UIInterfaceOrientationPortrait
