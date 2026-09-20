@@ -87,6 +87,7 @@ View → Hooks/Queries → api/ → IPC → commands → services → repositori
 ## 安全红线
 
 - GitHub Token / AI API Key：桌面端为 AES-256-GCM 加密文件落盘（密钥 `auth.key` 与密文 `auth.token` 同存 app_config_dir，0600 权限），移动端走系统钥匙串（iOS Keychain / Android Keystore，`keyring` 插件）；前端永远拿不到明文，绝不提交。
+- 加密笔记与设备级快速解锁：主密钥（VaultKey）默认**只在进程内存**；用户显式开启「设备级快速解锁」后，同一把主密钥才封进平台安全存储（macOS 登录钥匙串 + `LAContext` 门禁 / iOS Keychain 访问控制 / Android Keystore 用户认证密钥），设备侧标记写在 app_config_dir 的 `quick-unlock/`（0600）。**这些条目与标记只在本机，绝不进仓库、绝不同步、绝不提交**（Windows / Linux 不支持，入口不出现）。平台实现只放在 `src-tauri/src/platform/quick_unlock/`，用例层只依赖 `DeviceKeyStore` trait；方案与威胁模型见 `docs/QUICK_UNLOCK_PLAN.md`。
 - Markdown 渲染必须 sanitize（防 XSS）。
 - 禁止提交：密钥、构建产物、`node_modules/`、本地笔记仓库数据目录（`local-repos/`）。
 

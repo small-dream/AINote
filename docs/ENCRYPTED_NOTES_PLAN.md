@@ -11,7 +11,7 @@
 | ② | **只加密正文** | 文件名、目录结构、提交时间、作者、文件数量保持明文 |
 | ③ | **加密笔记不提供 AI 能力** | 加密笔记不参与 AI 写作、问答与全库检索上下文 |
 | ④ | **加密笔记不提供版本历史** | Diff 与「恢复此版本」都不提供：笔记级版本历史面板对加密笔记整体关闭，Repo Git Graph 中选中加密笔记文件时也不展示内容对比与回滚。因此 Rust 侧完全不实现「解密历史 blob」的链路 |
-| ⑤ | **桌面端不提供「记住口令」** | VaultKey 只活在进程内存里，应用退出/重启后必须重新输入口令，不写入系统钥匙串、不落盘 |
+| ⑤ | **默认不落盘主密钥；可选「设备级快速解锁」** | 默认与原来一致：VaultKey 只活在进程内存里，退出/重启必须重新输入口令。用户可在「设置 → 加密笔记」显式开启**设备级快速解锁**（P0，macOS / iOS / Android），开启后同一把主密钥会额外封进平台安全存储（macOS 登录钥匙串 / iOS Keychain / Android Keystore）并受系统身份验证门禁保护；该条目只在本机、不进仓库、不随 Git 同步。方案与威胁模型见 `docs/QUICK_UNLOCK_PLAN.md` |
 | ⑥ | **不做恢复码** | 口令是唯一凭证，遗忘即数据永久不可恢复；配套做建库时的强度校验与不可逆确认 |
 
 术语更正：本方案是**远端静态加密 + 客户端解密**，不是严格意义的端到端加密（没有第二个参与方）。PRD P2-4 的措辞应同步调整为「加密笔记」。
@@ -96,8 +96,8 @@ AINOTE-ENC-v1
 
 ### 4.3 口令是唯一凭证（决策 ⑤ + ⑥）
 
-- **桌面端不提供「记住口令」**：不写系统钥匙串、不落盘；`VaultKey` 只在 `VaultSession` 内存中存活，应用退出、重启、崩溃后一律失效。
-- **移动端沿用系统钥匙串**（iOS Keychain / Android Keystore）：软键盘输入长口令的体验代价过高，且沙盒外的进程本就无法读取应用私有存储；平台边界收敛在 `platform/` 与 `keyring` 插件既有接缝上。
+- **默认不落盘**：`VaultKey` 只在 `VaultSession` 内存中存活，应用退出、重启、崩溃后一律失效。
+- **可选设备级快速解锁**（P0，默认关闭）：用户在已解锁状态下显式开启后，同一把主密钥额外封进平台安全存储并受系统身份验证门禁保护（macOS 登录钥匙串 + `LAContext`、iOS Keychain 访问控制、Android Keystore 用户认证密钥）；条目只在本机、不进仓库、不同步。开启后本机对该仓库的防护档位从「仅进程内存」降为「与 GitHub Token 同一档」，须在 UI 与文档中如实说明。平台接缝见 `platform/quick_unlock/`，方案见 `docs/QUICK_UNLOCK_PLAN.md`。
 - **不做恢复码**：口令遗忘 = 数据永久不可恢复，没有后门、没有客服重置。
 
 由此产生的必做配套：
@@ -137,7 +137,7 @@ AINOTE-ENC-v1
 - `api/types.ts` + `api/note.api.ts`：新增 `NoteMeta.encrypted`、`NoteContent.locked`；新增 `api/vault.api.ts`。
 - `queries/vault.queries.ts`：vault 状态属服务端态，走 TanStack Query（`CODING_STANDARDS.md` §2：禁止 Zustand/useState 镜像）。
 - 新增 `features/vault/`：解锁门 Overlay、设置页分类（`settingsSections.tsx` 增 `vault`）、笔记右键/工具栏「加密此笔记 / 解密此笔记」、锁定态只读遮罩、目录树与标签页的锁标记。
-- `features/vault/` 建库对话框：口令强度校验 + 二次输入 + 不可恢复确认勾选；桌面端不渲染「记住口令」选项（`src/platform/` 判定，桌面恒为 false）。
+- `features/vault/` 建库对话框：口令强度校验 + 二次输入 + 不可恢复确认勾选；「设备级快速解锁」开关只在**已解锁态**的仓库内出现，且必须由用户显式开启（平台不支持时整块不渲染）。
 - `features/ai/*`：加密笔记禁用全部 AI 入口（写作 / 问答 / 建议）并说明原因。
 - `features/history/*`：加密笔记的历史入口整体隐藏（含 Diff 与「恢复此版本」），打开时显示「已加密，不提供版本历史」的静态说明；Repo Git Graph 中选中加密笔记文件时同样只显示该说明，不渲染对比与回滚按钮。
 - `i18n/messages.ts` 新增双语文案；`api/error.ts` 映射 `VAULT_9xxx`。
@@ -158,7 +158,8 @@ AINOTE-ENC-v1
 | Git 冲突 | 加密笔记二选一；明文笔记保持原有三栏合并 |
 | 草稿未落盘时锁定 | 先 flush 保存队列再锁定，失败则留在解锁态并提示 |
 | 桌面端退出 / 重启 | 密钥随进程消失，必须重新输入口令；无「记住口令」开关 |
-| 移动端 | 口令解锁 + 系统钥匙串（可免输入）；不承诺后台自动解锁 |
+| 设备级快速解锁（P0，默认关闭） | 已开启时可用系统身份验证免口令解锁；条目只在本机、不随 Git 同步；用户取消认证静默回到口令输入，条目失效（改口令 / 重建密钥库 / 生物识别变更）时自动清理并提示重新开启。macOS 未签名构建下为「登录钥匙串 + LAContext 门禁」（见 `QUICK_UNLOCK_PLAN.md` §2） |
+| 移动端 | 口令解锁 + 可选系统钥匙串快速解锁（默认关闭）；不承诺后台自动解锁 |
 | 口令遗忘 | 无恢复码、无重置途径，数据不可恢复（UI 必须提前告知） |
 | 日志与诊断包 | 正文、口令与密钥永不进日志；沿用现有脱敏管线 |
 
@@ -190,7 +191,7 @@ AINOTE-ENC-v1
 - 附件与 `todos.json` / `favorites.json` 加密。
 - 加密笔记的任何 AI 能力（决策 ③）。
 - 加密笔记的版本历史（决策 ④）：Diff 与「恢复此版本」都不实现，也不实现针对历史 blob 的解密链路。
-- 桌面端「记住口令」/ 系统钥匙串免输入（决策 ⑤）。
+- 无条件免输入：设备级快速解锁必须由用户显式开启、可随时关闭、条目只在本机（见 `QUICK_UNLOCK_PLAN.md`）。
 - 恢复码、托管式密钥找回、客服重置（决策 ⑥）。
 - 跨用户密钥分发、团队共享密钥、GPG 收件人式多设备封装。
 - Git 历史重写与已提交明文清理。
@@ -280,3 +281,16 @@ AINOTE-ENC-v1
 | E5 冲突降级 | 冲突面板检测到信封内容后不再渲染三栏：`EncryptedMergePane` 只给「保留本地 / 保留远端」，选定后**原样写回**该侧密文（新增 `resolveWithSide`，绕开异步 setState 读到旧值的问题） |
 | E5 版本历史关闭 | 后端 `file_history` / `file_diff` / `restore_file` 一律返回 `VAULT_9003` 且不触达 Git 层；前端工具栏历史按钮禁用并说明原因；目录树入口路径改为 toast 说明（不再打开空面板） |
 | E5 锁定时机 | 由设计天然满足：主密钥只存在于进程内存、会话按仓库绑定，因此「启动即锁定」无需额外代码；未实现空闲自动锁定（决策⑤ 下会强制频繁输入口令，默认不做） |
+
+### P0 设备级快速解锁（已完成，macOS / iOS / Android）
+
+决策 ⑤ 修订后新增的可选能力：已解锁状态下可把仓库主密钥封进平台安全存储，之后用系统身份验证（Touch ID / Face ID / 指纹 / 设备密码）免口令解锁。**默认关闭**，条目只在本机、不进仓库、不随 Git 同步；改口令或重建密钥库后自动失效并要求重新开启。完整方案、平台强度差异与验证记录见 `docs/QUICK_UNLOCK_PLAN.md`。
+
+| 项 | 交付物 |
+|---|---|
+| 领域 | `domain/quick_unlock.rs`（条目载荷 / 标记 / 能力状态 + 纯校验）、`VaultStatusResponse`、`VAULT_9006~9008` |
+| 平台 | `platform/quick_unlock/{mod,apple,android,unsupported}.rs`：`DeviceKeyStore` trait + macOS/iOS 钥匙串（`security-framework` + `LAContext`）、Android JNI → Kotlin `QuickUnlock.kt`（Keystore + BiometricPrompt）、Windows/Linux 明确不支持 |
+| 存储 | `repositories/quick_unlock_files.rs`（app_config_dir 下的设备标记，0600 原子写） |
+| 用例 | `services/quick_unlock_service.rs`（status / enable / disable / unlock / after_vault_rewritten）+ `vault_service::adopt_master` |
+| 命令 | `vault_quick_unlock_enable` / `vault_quick_unlock_disable` / `vault_unlock_with_device`，`vault_status` 等返回 `VaultStatusResponse` |
+| 前端 | `features/vault` 开关卡片 + 锁定态设备解锁主操作、`quickUnlockOf` 归一化、`VAULT_9007` 取消静默、双语文案 |
