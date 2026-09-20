@@ -44,6 +44,12 @@ async function enableVault(page: Page): Promise<void> {
   await expect(page.getByText("加密笔记已解锁")).toBeVisible();
 }
 
+/** 加密笔记在目录树里带「已加密」徽标，可访问名会多出这一段，因此按前缀匹配点名。 */
+async function openEncryptedNote(page: Page, fileName: string, marker: string): Promise<void> {
+  await page.getByRole("button", { name: new RegExp(`^${fileName}\\b`) }).first().click();
+  await expect(page.locator(".cm-content").first()).toContainText(marker, { timeout: 15_000 });
+}
+
 test.describe("加密笔记（E2）", () => {
   test("设备级快速解锁：开启 → 锁定 → 用 Touch ID 解锁 → 关闭", async ({ page }) => {
     await openWorkspace(page, baseState());
@@ -61,6 +67,28 @@ test.describe("加密笔记（E2）", () => {
 
     await page.getByRole("button", { name: "关闭快速解锁" }).click();
     await expect(page.getByRole("button", { name: "开启快速解锁" })).toBeVisible();
+  });
+
+  test("已开启快速解锁：点开加密笔记时自动弹设备认证，无需先点按钮", async ({ page }) => {
+    await openWorkspace(page, baseState());
+    await openNote(page, "a", "正文");
+    await openVaultSettings(page);
+    await enableVault(page);
+    await page.getByRole("button", { name: "开启快速解锁" }).click();
+    await expect(page.getByText("本机已开启：Touch ID")).toBeVisible();
+    await closeSettings(page);
+    await toggleEncryption(page, "加密此笔记", "已加密这篇笔记：仓库里只保留密文");
+
+    // 主动锁定：锁定瞬间不自动弹设备认证（否则等于刚锁上就被解开）
+    await openVaultTab(page);
+    await page.getByRole("button", { name: "立即锁定", exact: true }).click();
+    await expect(page.getByText("已锁定", { exact: true })).toBeVisible();
+    await closeSettings(page);
+    await expect(page.getByText("这篇笔记已加密")).toBeVisible();
+
+    // 用户重新点开这篇加密笔记：解锁遮罩一出现就自动设备解锁，正文直接回来，没有再点任何按钮
+    await openEncryptedNote(page, "a", "正文");
+    await expect(page.getByText("这篇笔记已加密")).toBeHidden();
   });
 
   test("建库后立即进入解锁态，可一键锁定", async ({ page }) => {

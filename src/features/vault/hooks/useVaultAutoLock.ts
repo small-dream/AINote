@@ -4,6 +4,7 @@ import { flushPendingDrafts } from "@/features/note/utils/draftRegistry";
 import { useVaultLockMutation, useVaultStatusQuery } from "@/queries/vault.queries";
 import { useToastStore } from "@/stores/toast.store";
 import { useUiStore } from "@/stores/ui.store";
+import { useVaultUnlockStore } from "@/stores/vault-unlock.store";
 import { useTranslation } from "@/i18n";
 
 const ACTIVITY_EVENTS = ["pointerdown", "keydown", "scroll", "wheel", "touchstart"] as const;
@@ -38,6 +39,8 @@ export function useVaultAutoLock(repoPath: string | null) {
     const attemptLock = () => {
       clearTimer();
       if (lockRef.current.isPending) return;
+      // 空闲自动锁定是被动锁定：允许用户回来后由解锁界面自动弹一次设备认证。
+      useVaultUnlockStore.getState().arm();
       void flushPendingDrafts()
         .then(() => lockRef.current.mutateAsync())
         .catch((error: unknown) => {

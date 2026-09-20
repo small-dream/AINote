@@ -6,6 +6,7 @@ import { useTaskReminders } from "@/features/todo/hooks/useTaskReminders";
 import { useAuthStatusQuery } from "@/queries/auth.queries";
 import { useSessionStore } from "@/stores/session.store";
 import { useUiStore } from "@/stores/ui.store";
+import { useVaultUnlockStore } from "@/stores/vault-unlock.store";
 import { WorkspaceShellSwitcher } from "@/app/ShellSwitcher";
 import { useWorkspaceActions } from "./useWorkspaceActions";
 import { useTranslation } from "@/i18n";
@@ -24,6 +25,8 @@ export function WorkspacePage() {
 
   async function handleSelect(path: string) {
     await editorRef.current?.flush();
+    // 用户主动打开笔记：允许加密笔记的解锁遮罩自动弹一次系统认证。
+    useVaultUnlockStore.getState().arm();
     openNote(path);
     if (repoPath) recordRecentNote(repoPath, path);
   }

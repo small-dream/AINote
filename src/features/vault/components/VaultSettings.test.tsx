@@ -2,6 +2,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { useSessionStore } from "@/stores/session.store";
+import { useVaultUnlockStore } from "@/stores/vault-unlock.store";
 import { VaultSettings } from "./VaultSettings";
 
 const vaultApiMock = vi.hoisted(() => ({
@@ -10,6 +11,7 @@ const vaultApiMock = vi.hoisted(() => ({
   unlock: vi.fn(),
   lock: vi.fn(),
   changePassphrase: vi.fn(),
+  unlockWithDevice: vi.fn(),
 }));
 vi.mock("@/api", () => ({ vaultApi: vaultApiMock }));
 
@@ -30,6 +32,7 @@ describe("VaultSettings", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     useSessionStore.setState({ repoPath: "/repo/notes", currentNotePath: null, login: null });
+    useVaultUnlockStore.setState({ suppressed: false, spent: false });
   });
 
   it("未建库时展示建库表单，口令不达标则禁用提交", async () => {
@@ -96,5 +99,30 @@ describe("VaultSettings", () => {
     expect(await screen.findByText("加密笔记已解锁")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: /立即锁定/ }));
     await waitFor(() => expect(vaultApiMock.lock).toHaveBeenCalled());
+  });
+
+});
+
+/** 设备级快速解锁与「立即锁定」的互相关系：见 docs/QUICK_UNLOCK_PLAN.md §5 的闸门规则。 */
+describe("VaultSettings · 设备级快速解锁", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    useSessionStore.setState({ repoPath: "/repo/notes", currentNotePath: null, login: null });
+    useVaultUnlockStore.setState({ suppressed: false, spent: false });
+  });
+
+  it("用户主动锁定后不自动弹设备认证，避免刚锁上就被解开", async () => {
+    const quickUnlock = { supported: true, enabled: true, kind: "touchId" };
+    vaultApiMock.status
+      .mockResolvedValueOnce({ state: "unlocked", encryptedNotes: 1, quickUnlock })
+      .mockResolvedValue({ state: "locked", encryptedNotes: 1, quickUnlock });
+    vaultApiMock.lock.mockResolvedValue({ state: "locked", encryptedNotes: 1, quickUnlock });
+    renderSettings();
+
+    fireEvent.click(await screen.findByRole("button", { name: /立即锁定/ }));
+    await waitFor(() => expect(vaultApiMock.lock).toHaveBeenCalled());
+
+    expect(await screen.findByRole("button", { name: "用 Touch ID 解锁" })).toBeTruthy();
+    expect(vaultApiMock.unlockWithDevice).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Button } from "@/components/atoms/Button";
 import { useTranslation } from "@/i18n";
 import { useVaultDeviceUnlock } from "../hooks/useVaultDeviceUnlock";
+import { useVaultAutoUnlock } from "../hooks/useVaultAutoUnlock";
 import { useVaultSettings } from "../hooks/useVaultSettings";
 import { vaultErrorText } from "../utils/errorText";
 import { VaultField, VaultPassphraseInput } from "./VaultField";
@@ -17,6 +18,10 @@ export function VaultUnlockCard({ onUnlocked }: VaultUnlockCardProps = {}) {
   const { unlock } = useVaultSettings();
   const device = useVaultDeviceUnlock();
   const [passphrase, setPassphrase] = useState("");
+  useVaultAutoUnlock({
+    enabled: device.quick.enabled,
+    unlock: () => device.unlock(onUnlocked),
+  });
 
   const submit = () => {
     if (passphrase === "" || unlock.isPending) return;

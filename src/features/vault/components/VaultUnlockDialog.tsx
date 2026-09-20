@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { X } from "lucide-react";
 import { useUiStore } from "@/stores/ui.store";
+import { useVaultUnlockStore } from "@/stores/vault-unlock.store";
 import { useTranslation } from "@/i18n";
 import { useBackHandler } from "@/platform/back-navigation";
 import { VaultUnlockCard } from "./VaultUnlockCard";
@@ -12,6 +13,11 @@ export function VaultUnlockDialog() {
   const runAfterUnlock = useUiStore((state) => state.vaultUnlockCallback);
   const close = useUiStore((state) => state.closeVaultDialog);
   useBackHandler(open, close);
+
+  // 用户主动打开解锁入口 = 明确要解锁：允许解锁卡片自动弹一次系统认证。
+  useEffect(() => {
+    if (open) useVaultUnlockStore.getState().arm();
+  }, [open]);
 
   useEffect(() => {
     if (!open) return;

@@ -78,7 +78,12 @@ legacy-plain (登录钥匙串):                                           0 成�
 ## 5. 前端交互
 
 - **解锁态（设置页 / 已解锁卡片）**：新增「设备级快速解锁」开关；开启后展示当前设备认证方式（Touch ID / Face ID / 指纹 / 设备密码）与「密钥存放在系统安全存储」的说明。
-- **锁定态（设置页 / 全局解锁弹层 / 笔记内嵌解锁卡片）**：已开启时把「用 Touch ID 解锁」放在口令输入之前作为主操作，口令输入保留为兜底。
+- **锁定态（设置页 / 全局解锁弹层 / 笔记内嵌解锁卡片）**：已开启时把「用 Touch ID 解锁」放在口令输入之前作为主操作，并且**解锁界面一出现就自动触发一次系统认证**（`useVaultAutoUnlock`），用户不必先点按钮；口令输入保留为兜底。
+- **自动触发的闸门**（`stores/vault-unlock.store.ts`，纯 UI 态不落盘）：
+  1. 用户主动点「立即锁定」→ **抑制**自动触发，否则弹窗会当场把刚锁上的仓库解开；按钮仍可手动解锁；
+  2. 用户取消系统认证（`VAULT_9007`）→ 本次锁定周期内**不再自动重复弹窗**，按钮仍可重试；
+  3. 用户重新表达解锁意图（点开加密笔记 / 打开导航轨或移动端解锁入口）或发生**被动锁定**（启动、切仓库、空闲自动锁定）→ 闸门重新放开，下一次解锁界面出现时自动弹；
+  4. 多个解锁界面同时挂载（设置页 + 笔记遮罩 + 解锁弹层）时，`consumeAuto()` 原子取用保证**只弹一次**。
 - **不支持**：`quickUnlockSupported = false` 时完全不渲染该入口（Windows / Linux / Android < 9）。
 - 关闭后立即回到纯口令流程；`VAULT_9007` 不渲染错误文本。
 
@@ -107,7 +112,7 @@ legacy-plain (登录钥匙串):                                           0 成�
 | `cargo test` | 425 passed（新增 25 个：领域载荷 / 标记、仓库标记文件、用例开关 / 失效 / 取消 / 瞬时失败分支、平台协议解析、Apple 错误码映射，其中 1 个真机钥匙串用例默认 ignore） |
 | `pnpm build` / `pnpm lint` | 通过 |
 | `pnpm test` | 1164 passed（新增 `VaultQuickUnlockCard`、`VaultUnlockCard`、`quickUnlock` 纯函数用例） |
-| `pnpm test:e2e` | vault-flow 7 passed（新增「开启 → 锁定 → 用 Touch ID 解锁 → 关闭」） |
+| `pnpm test:e2e` | vault-flow 8 passed（新增「开启 → 锁定 → 用 Touch ID 解锁 → 关闭」与「点开加密笔记时自动弹设备认证，无需先点按钮」） |
 | `pnpm android:build` | 通过（`app-universal-release.apk` / `.aab`，Kotlin `QuickUnlock.kt` 参与编译） |
 | `pnpm desktop:build` | 通过（release 可执行文件，Apple 框架链接正常） |
 | macOS 真机钥匙串往返 | 通过（`cargo test -- --ignored apple_keychain`：写入 → 读回 → 删除，含 -34018 回退路径；该用例默认 ignore，因为它会写真实钥匙串） |

@@ -2,6 +2,7 @@ import { useCallback, useState } from "react";
 import { messageOf } from "@/api/error";
 import { flushPendingDrafts } from "@/features/note/utils/draftRegistry";
 import { useTranslation } from "@/i18n";
+import { useVaultUnlockStore } from "@/stores/vault-unlock.store";
 import { useVaultSettings } from "./useVaultSettings";
 
 /**
@@ -17,7 +18,11 @@ export function useVaultLock() {
     if (lock.isPending) return;
     setError(null);
     void flushPendingDrafts()
-      .then(() => lock.mutate())
+      .then(() => {
+        // 用户主动锁定：抑制自动触发，避免解锁界面立刻用设备认证把仓库弹回解锁态。
+        useVaultUnlockStore.getState().suppress();
+        lock.mutate();
+      })
       .catch((error: unknown) => setError(t("vault.lockFlushFailed", { message: messageOf(error) })));
   }, [lock, t]);
 
