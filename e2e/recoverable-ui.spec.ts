@@ -64,7 +64,13 @@ test.describe("可恢复 UI 收口（E3-T5）", () => {
 
     // 冲突态自带入口：此前这里只会反复「重试同步」，点多少次都是同一个错
     await page.getByRole("button", { name: "解决同步冲突" }).click();
-    await expect(page.getByRole("dialog", { name: ".ainote/todos.json" })).toBeVisible();
+    const dialog = page.getByRole("dialog", { name: ".ainote/todos.json" });
+    await expect(dialog).toBeVisible();
+
+    // 「保存合并」也要能走通：后端曾用笔记路径规则校验目标，`.ainote/todos.json`
+    // 会被 `.` 前缀规则挡成 invalid path，用户点一次报一次错。
+    await dialog.getByRole("button", { name: "保存合并" }).click();
+    await expect(dialog).toBeHidden();
   });
 
   test("删除确认：说明进入回收站并提供恢复入口", async ({ page }) => {

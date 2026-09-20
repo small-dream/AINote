@@ -161,7 +161,10 @@ const commandHandlers: Record<string, CommandHandler> = {
   },
   resolve_file_conflict: (args, ctx) => {
     const path = String(args.path ?? "");
-    needNote(ctx.store.notes, path).content = String(args.content ?? "");
+    // 冲突文件可能是仓库内部受管文件（如 .ainote/todos.json），并不在笔记表里：
+    // 只登记变更并把它移出待解决清单，不按笔记查表。
+    const note = ctx.store.notes.get(path);
+    if (note) note.content = String(args.content ?? "");
     markWorkspaceDirty(ctx.store, path);
     ctx.store.conflicts = ctx.store.conflicts.filter((conflict) => conflict.path !== path);
     ctx.store.conflicted = ctx.store.conflicts.length > 0;

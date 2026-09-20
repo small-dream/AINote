@@ -15,11 +15,22 @@ fn sig() -> git2::Signature<'static> {
     git2::Signature::now("t", "t@t").unwrap()
 }
 
-fn commit_file(repo: &git2::Repository, name: &str, content: &str, msg: &str) -> git2::Oid {
+/// 写一个文件的提交；`path` 支持一层目录，用来覆盖 `.ainote/todos.json` 这类仓库内部路径。
+fn commit_file(repo: &git2::Repository, path: &str, content: &str, msg: &str) -> git2::Oid {
     let blob = repo.blob(content.as_bytes()).unwrap();
-    let mut tb = repo.treebuilder(None).unwrap();
-    tb.insert(name, blob, 0o100644).unwrap();
-    let tree = repo.find_tree(tb.write().unwrap()).unwrap();
+    let mut root = repo.treebuilder(None).unwrap();
+    match path.split_once('/') {
+        Some((dir, name)) => {
+            let mut sub = repo.treebuilder(None).unwrap();
+            sub.insert(name, blob, 0o100644).unwrap();
+            let sub_tree = repo.find_tree(sub.write().unwrap()).unwrap();
+            root.insert(dir, sub_tree.id(), 0o040000).unwrap();
+        }
+        None => {
+            root.insert(path, blob, 0o100644).unwrap();
+        }
+    }
+    let tree = repo.find_tree(root.write().unwrap()).unwrap();
     let sig = sig();
     let parents: Vec<git2::Commit> = repo
         .head()
@@ -152,22 +163,22 @@ const ENVELOPE_BASE: &str = "AINOTE-ENC-v1\nQkFTRQo=\n";
 const ENVELOPE_OURS: &str = "AINOTE-ENC-v1\nT1VSUwo=\n";
 const ENVELOPE_THEIRS: &str = "AINOTE-ENC-v1\nVEhFSVJTCg==\n";
 
-/// 夹具：base/本地/远端三侧内容各不相同，merge 必然在 note.md 上产生冲突。
+/// 夹具：base/本地/远端三侧内容各不相同，merge 必然在 `file` 上产生冲突。
 /// 返回时仓库处于合并中状态，工作区 note.md 为冲突标记文本。
-fn merge_conflict_repo(base: &str, ours: &str, theirs: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+fn merge_conflict_repo_on(file: &str, base: &str, ours: &str, theirs: &str) -> (tempfile::TempDir, std::path::PathBuf) {
     let tmp = tempfile::tempdir().unwrap();
     let dir = tmp.path().join("repo");
     std::fs::create_dir_all(&dir).unwrap();
     let repo = git2::Repository::init(&dir).unwrap();
-    commit_file(&repo, "note.md", base, "base");
+    commit_file(&repo, file, base, "base");
     let head_ref = repo.head().unwrap().name().unwrap().to_string();
     let base_commit = repo.head().unwrap().peel_to_commit().unwrap();
     repo.branch("side", &base_commit, false).unwrap();
-    commit_file(&repo, "note.md", ours, "ours");
+    commit_file(&repo, file, ours, "ours");
     repo.set_head("refs/heads/side").unwrap();
     repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))
         .unwrap();
-    commit_file(&repo, "note.md", theirs, "theirs");
+    commit_file(&repo, file, theirs, "theirs");
     // commit_file 只写对象库不动工作区/索引；merge 前把两者重置到 HEAD（theirs）保持干净。
     repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))
         .unwrap();
@@ -178,6 +189,41 @@ fn merge_conflict_repo(base: &str, ours: &str, theirs: &str) -> (tempfile::TempD
     repo.merge(&[&annotated], None, Some(&mut checkout)).unwrap();
     assert!(repo.index().unwrap().has_conflicts(), "夹具必须制造冲突");
     (tmp, dir)
+}
+
+fn merge_conflict_repo(base: &str, ours: &str, theirs: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+    merge_conflict_repo_on("note.md", base, ours, theirs)
+}
+
+/// 待办看板这类仓库内部受管文件也会产生冲突（`.ainote/todos.json` 随仓库同步）。
+/// 解决路径必须放行——此前复用笔记路径校验，会被 `.` 前缀规则挡成 `invalid path`。
+#[test]
+fn resolve_conflict_accepts_repository_internal_path() {
+    let ours = "{\n  \"tasks\": [\"本地\"]\n}\n";
+    let theirs = "{\n  \"tasks\": [\"远端\"]\n}\n";
+    let merged = "{\n  \"tasks\": [\"本地\", \"远端\"]\n}\n";
+    let (_tmp, dir) = merge_conflict_repo_on(".ainote/todos.json", "{\n  \"tasks\": []\n}\n", ours, theirs);
+
+    resolve_conflict_file(dir.to_str().unwrap(), ".ainote/todos.json", merged).unwrap();
+
+    assert_eq!(
+        std::fs::read_to_string(dir.join(".ainote/todos.json")).unwrap(),
+        merged
+    );
+}
+
+/// 命令可被直接 invoke：不在冲突清单里的路径（含 `.git/`、路径穿越）必须一律拒绝。
+#[test]
+fn resolve_conflict_rejects_path_outside_conflict_list() {
+    let (_tmp, dir) = merge_conflict_repo("base\n", "ours\n", "theirs\n");
+    let repo = dir.to_str().unwrap();
+
+    for path in [".git/config", ".ainote/todos.json", "other.md", "../escape.md", ""] {
+        assert!(
+            matches!(resolve_conflict_file(repo, path, "x").unwrap_err(), AppError::InvalidPath(_)),
+            "{path} 不在冲突清单里，必须拒绝"
+        );
+    }
 }
 
 #[test]

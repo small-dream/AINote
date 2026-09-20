@@ -9,7 +9,6 @@ use crate::domain::error::AppError;
 use crate::domain::remote::RemoteCredential;
 use crate::domain::sync::ConflictFile;
 use crate::domain::vault::is_envelope;
-use crate::repositories::note_files::validate_rel_path;
 use crate::repositories::vault_files;
 
 use super::ca_bundle;
@@ -230,10 +229,36 @@ pub fn conflict_files(path: &str) -> Result<Vec<ConflictFile>, AppError> {
     Ok(files)
 }
 
+/// 冲突目标路径校验：必须是当前正处于冲突中的那一份文件。
+///
+/// 这里**不能**复用 `note_files::validate_rel_path`——那是笔记路径规则，按设计拒绝一切以 `.`
+/// 开头的路径段，而冲突完全可以落在仓库内部受管文件上（待办看板就是 `.ainote/todos.json`），
+/// 用户点「保存合并」只会拿到一句 `invalid path`。
+///
+/// 也不能只做词法放行：命令可被直接 invoke，放开 `.` 前缀就等于允许往 `.git/`、`.ainote/` 里
+/// 任意写内容并绕过领域校验。冲突清单来自 git index，天然不含绝对路径与 `..`，
+/// 因此「必须在当前冲突清单里」既是最小放行面，也顺带挡住了路径穿越。
+fn require_conflicted_path(repo: &Repository, rel: &str) -> Result<(), AppError> {
+    let mut index = repo.index().map_err(to_git)?;
+    for entry in index.conflicts().map_err(to_git)? {
+        let entry = entry.map_err(to_git)?;
+        let candidate = entry
+            .our
+            .or(entry.their)
+            .or(entry.ancestor)
+            .map(|side| String::from_utf8_lossy(&side.path).into_owned());
+        if candidate.as_deref() == Some(rel) {
+            return Ok(());
+        }
+    }
+    Err(AppError::InvalidPath(rel.to_string()))
+}
+
 /// 以指定内容解决单个冲突文件并写入 index；返回是否已无冲突（P1-3）。
 pub fn resolve_conflict_file(path: &str, rel: &str, content: &str) -> Result<bool, AppError> {
     let repo = open(path)?;
-    let rel = validate_rel_path(rel)?;
+    require_conflicted_path(&repo, rel)?;
+    let rel = PathBuf::from(rel);
     let file_path = repo
         .workdir()
         .ok_or_else(|| AppError::Repo("no workdir".into()))?
