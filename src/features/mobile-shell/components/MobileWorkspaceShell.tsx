@@ -37,7 +37,6 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
   const sync = useSync(repoPath);
   const { online, status, label, syncNow, isSyncing } = sync;
   const failure = deriveSyncFailure(syncNow.error, locale);
-  const [conflictOpen, setConflictOpen] = useState(false);
   const [commitOpen, setCommitOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
   const { showEditor, backToList } = useMobileEditorView({
@@ -64,7 +63,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
         onSync={() => syncNow.mutate()}
         hasUncommitted={status.hasUncommitted}
         onOpenCommit={() => setCommitOpen(true)}
-        onOpenConflict={() => setConflictOpen(true)}
+        onOpenConflict={() => useUiStore.getState().openConflictDialog()}
       />
       <SyncNotice sync={sync} />
       <MobileUpdateDialog />
@@ -78,10 +77,8 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
       />
       <MobileWorkspaceDialogs
         repoPath={repoPath}
-        conflictOpen={conflictOpen}
         commitOpen={commitOpen}
         graphOpen={graphOpen}
-        onCloseConflict={() => setConflictOpen(false)}
         onCloseCommit={() => setCommitOpen(false)}
         onCloseGraph={() => setGraphOpen(false)}
       />
@@ -127,12 +124,14 @@ function MobileContent({ showEditor, sidebarTab, setSidebarTab, onOpenGraph, edi
   );
 }
 
-function MobileWorkspaceDialogs({ repoPath, conflictOpen, commitOpen, graphOpen, onCloseConflict, onCloseCommit, onCloseGraph }: { repoPath: string | null; conflictOpen: boolean; commitOpen: boolean; graphOpen: boolean; onCloseConflict: () => void; onCloseCommit: () => void; onCloseGraph: () => void }) {
+/** 冲突面板的开关在全局 UI store 里：同步失败横幅与顶栏状态胶囊都要能拉起它。 */
+function MobileWorkspaceDialogs({ repoPath, commitOpen, graphOpen, onCloseCommit, onCloseGraph }: { repoPath: string | null; commitOpen: boolean; graphOpen: boolean; onCloseCommit: () => void; onCloseGraph: () => void }) {
+  const conflictOpen = useUiStore((state) => state.conflictDialogOpen);
   return (
     <>
       {conflictOpen ? (
         <Suspense fallback={null}>
-          <LazyConflictMergeDialog repoPath={repoPath} open onClose={onCloseConflict} />
+          <LazyConflictMergeDialog repoPath={repoPath} open onClose={useUiStore.getState().closeConflictDialog} />
         </Suspense>
       ) : null}
       {commitOpen ? (

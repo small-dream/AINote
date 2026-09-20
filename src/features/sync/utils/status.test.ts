@@ -160,6 +160,8 @@ describe("deriveSyncFailure / 后端同步上下文（E4-T4）", () => {
   it("冲突建议码给出解决冲突文案", () => {
     const failure = deriveSyncFailure(syncError("SYNC_4001", { hint: "resolveConflicts" }));
     expect(failure?.suggestion).toBe("存在未解决的合并冲突，请先解决冲突再同步");
+    // 冲突必须给出可点的解决入口，而不是只会重试
+    expect(failure?.action).toBe("resolveConflicts");
   });
 
   it("失败文件透传给 UI", () => {

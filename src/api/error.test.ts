@@ -81,7 +81,7 @@ describe("errorActionOf", () => {
     expect(errorActionOf({ ...syncError("GIT_4001", "unknown", true), hint: "retry" })).toBe("retry");
   });
 
-  it("hint 为 resolveConflicts 时不映射按钮动作（由冲突面板承接）", () => {
-    expect(errorActionOf({ ...syncError("SYNC_4001", "conflict", false), hint: "resolveConflicts" })).toBeNull();
+  it("hint 为 resolveConflicts 时映射到「打开冲突面板」，不能退化成让用户重试", () => {
+    expect(errorActionOf({ ...syncError("SYNC_4001", "conflict", false), hint: "resolveConflicts" })).toBe("resolveConflicts");
   });
 });

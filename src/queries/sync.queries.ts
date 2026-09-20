@@ -59,6 +59,12 @@ export function useSyncNowMutation(options: { onProgress?: (progress: SyncProgre
       return syncApi.syncNow(options.onProgress ?? reportSyncProgress);
     },
     onSettled: () => useSyncRetryStore.getState().clear(),
+    onError: () => {
+      // 拉取冲突会把仓库留在「合并进行中」：必须重取状态，外壳才能从「已同步」翻成「解决同步冲突」，
+      // 否则失败横幅提示「请先解决冲突」，而界面上找不到任何解决入口。
+      invalidateSync(queryClient);
+      void queryClient.invalidateQueries({ queryKey: ["conflicts"] });
+    },
     onSuccess: () => {
       // pull 可能改写任意文件：失效整个工作区读取面，并让干净的编辑器重载当前笔记
       invalidateWorkspaceQueries(queryClient);

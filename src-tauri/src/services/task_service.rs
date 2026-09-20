@@ -15,6 +15,20 @@ fn mutate_board<T>(
     Ok(result)
 }
 
+/// 与 `mutate_board` 相同，但允许用例声明「本次没有任何实际变更」，此时不落盘。
+/// 内容一致的写入若照样刷新文件，工作区会凭空多出一次变更（多端同步时表现为无意义的合并冲突）。
+fn mutate_board_if_changed<T>(
+    root: &Path,
+    mutate: impl FnOnce(&mut TaskBoard) -> Result<(T, bool), AppError>,
+) -> Result<T, AppError> {
+    let mut board = task_files::load(root)?;
+    let (result, changed) = mutate(&mut board)?;
+    if changed {
+        task_files::save(root, &board)?;
+    }
+    Ok(result)
+}
+
 /// 用例：读取看板并按展示规则排序任务。
 pub fn board(root: &Path) -> Result<TaskBoard, AppError> {
     let mut board = task_files::load(root)?;
@@ -60,7 +74,7 @@ pub fn create_task(
     })
 }
 
-/// 用例：全量更新任务可编辑字段（前端总是回传完整编辑态），并刷新 updated_at。
+/// 用例：全量更新任务可编辑字段（前端总是回传完整编辑态），内容确有变化时才刷新 updated_at 并落盘。
 #[allow(clippy::too_many_arguments)]
 pub fn update_task(
     root: &Path,
@@ -74,19 +88,30 @@ pub fn update_task(
     let title = task::require_non_blank(title, "任务标题不能为空")?;
     task::validate_due_at(&due_at)?;
     task::validate_reminder(&due_at, &remind_at)?;
-    mutate_board(root, |board| {
+    let description = description.unwrap_or_default();
+    mutate_board_if_changed(root, |board| {
         let item = board
             .tasks
             .iter_mut()
             .find(|item| item.id == task_id)
             .ok_or_else(|| AppError::TaskNotFound(task_id.to_string()))?;
+        // 提交内容与现状完全一致时不推进 updated_at：前端「失焦即保存」会原样回传整份草稿，
+        // 若照样刷新时间戳，todos.json 会凭空产生一次工作区变更，多端同步时变成毫无意义的合并冲突。
+        if item.title == title
+            && item.description == description
+            && item.due_at == due_at
+            && item.priority == priority
+            && item.remind_at == remind_at
+        {
+            return Ok((item.clone(), false));
+        }
         item.title = title;
-        item.description = description.unwrap_or_default();
+        item.description = description;
         item.due_at = due_at;
         item.priority = priority;
         item.remind_at = remind_at;
         item.updated_at = now_rfc3339();
-        Ok(item.clone())
+        Ok((item.clone(), true))
     })
 }
 
@@ -114,6 +139,7 @@ pub fn delete_task(root: &Path, task_id: &str) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
 
     fn setup() -> tempfile::TempDir {
         tempfile::tempdir().unwrap()
@@ -192,6 +218,50 @@ mod tests {
             update_task(root.path(), "missing", "x", None, None, TaskPriority::None, None),
             Err(AppError::TaskNotFound(_))
         ));
+    }
+
+    #[test]
+    fn update_task_does_not_touch_file_when_nothing_changed() {
+        let root = setup();
+        let item = create_task(
+            root.path(),
+            "写周报",
+            Some("三条".into()),
+            Some("2026-09-21".into()),
+            TaskPriority::High,
+            None,
+        )
+        .unwrap();
+        let file = root.path().join(".ainote/todos.json");
+        let before = fs::read_to_string(&file).unwrap();
+        let before_mtime = fs::metadata(&file).unwrap().modified().unwrap();
+
+        // 原样回传整份草稿（前端「失焦即保存」的真实入参）不得产生任何落盘行为
+        let updated = update_task(
+            root.path(),
+            &item.id,
+            "写周报",
+            Some("三条".into()),
+            Some("2026-09-21".into()),
+            TaskPriority::High,
+            None,
+        )
+        .unwrap();
+
+        assert_eq!(updated.updated_at, item.updated_at);
+        assert_eq!(fs::read_to_string(&file).unwrap(), before);
+        assert_eq!(fs::metadata(&file).unwrap().modified().unwrap(), before_mtime);
+    }
+
+    #[test]
+    fn update_task_still_bumps_updated_at_on_real_change() {
+        let root = setup();
+        let item = create_task(root.path(), "写周报", None, None, TaskPriority::None, None).unwrap();
+
+        let updated = update_task(root.path(), &item.id, "写周报", Some("三条".into()), None, TaskPriority::None, None).unwrap();
+
+        assert_eq!(updated.description, "三条");
+        assert_ne!(updated.updated_at, item.updated_at);
     }
 
     #[test]

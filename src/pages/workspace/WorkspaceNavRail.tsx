@@ -122,7 +122,8 @@ function SettingsNavButton() {
 function SyncNavButton({ repoPath, startupSyncing, sync }: WorkspaceNavRailProps) {
   const { locale, t } = useTranslation();
   const { online, syncNow, isSyncing, status, resolving } = sync;
-  const [conflictOpen, setConflictOpen] = useState(false);
+  const conflictOpen = useUiStore((state) => state.conflictDialogOpen);
+  const closeConflictDialog = useUiStore((state) => state.closeConflictDialog);
   const display = deriveSyncHeader(status, online, resolveSyncOperation(startupSyncing, isSyncing, resolving), locale);
   const failure = deriveSyncFailure(syncNow.error, locale);
   const hasConflict = display.tone === "conflict";
@@ -137,14 +138,14 @@ function SyncNavButton({ repoPath, startupSyncing, sync }: WorkspaceNavRailProps
         <button
           type="button"
           aria-label={label}
-          onClick={() => (hasConflict ? setConflictOpen(true) : syncNow.mutate())}
+          onClick={() => (hasConflict ? useUiStore.getState().openConflictDialog() : syncNow.mutate())}
           disabled={display.busy || (!online && !hasConflict)}
           className={`group relative grid h-10 w-10 shrink-0 place-items-center rounded-xl text-white shadow-sm transition-all hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-70 ${SYNC_COLOR[tone]}`}
         >
           <Icon size={19} className={display.busy ? "animate-spin" : ""} />
         </button>
       </Tooltip>
-      {conflictOpen ? <Suspense fallback={null}><LazyConflictMergeDialog repoPath={repoPath} open onClose={() => setConflictOpen(false)} /></Suspense> : null}
+      {conflictOpen ? <Suspense fallback={null}><LazyConflictMergeDialog repoPath={repoPath} open onClose={closeConflictDialog} /></Suspense> : null}
     </>
   );
 }

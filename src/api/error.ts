@@ -55,17 +55,17 @@ export function loginProviderOf(err: unknown): string | null {
 }
 
 /** 同步类错误对应的可操作建议 */
-export type ErrorAction = "retry" | "relogin" | "checkPermission";
+export type ErrorAction = "retry" | "relogin" | "checkPermission" | "resolveConflicts";
 
 /**
- * 后端建议码 → 动作。`resolveConflicts` 的对应动作是打开冲突面板解决，
- * 不映射为按钮动作（返回 null），避免「重试」误导用户对冲突重试。
+ * 后端建议码 → 动作。`resolveConflicts` 有明确动作（打开冲突面板），
+ * 关键是**不能**退回「重试」——对冲突重试只会原样再失败一次。
  */
 const HINT_ACTION: Record<SyncHint, ErrorAction | null> = {
   retry: "retry",
   relogin: "relogin",
   checkPermission: "checkPermission",
-  resolveConflicts: null,
+  resolveConflicts: "resolveConflicts",
 };
 
 /** 后端 hint 优先于错误码推断；hint 缺失时按错误码兜底。无特定建议时返回 null，避免误导用户。 */

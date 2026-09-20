@@ -38,6 +38,7 @@ const ERROR_ACTION_KEY: Record<ErrorAction, TranslationKey> = {
   retry: "error.sync.network",
   relogin: "error.sync.auth",
   checkPermission: "error.sync.permission",
+  resolveConflicts: "error.sync.conflict",
 };
 
 /** 技术细节 + 本地化可操作建议；无建议时只保留原始信息。 */

@@ -77,6 +77,15 @@ function SyncFailureActions({ failure, retrying, onRetry }: SyncFailureBannerPro
         >
           {t("sync.failedRelogin")}
         </Button>
+      ) : failure.action === "resolveConflicts" ? (
+        // 冲突失败不能给「重试同步」：对冲突重试只会原样再失败一次，必须就地给出解决入口。
+        <Button
+          variant="primary"
+          className="px-3 text-xs"
+          onClick={() => useUiStore.getState().openConflictDialog()}
+        >
+          {t("sync.resolveConflict")}
+        </Button>
       ) : (
         <Button
           variant="primary"

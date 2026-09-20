@@ -11,11 +11,12 @@ export function useTaskBoardQuery(repoPath: string | null) {
   });
 }
 
-function useTaskMutation<TInput>(mutationFn: (input: TInput) => Promise<unknown>) {
+function useTaskMutation<TInput>(mutationFn: (input: TInput) => Promise<unknown>, options?: { silentError?: boolean }) {
   const queryClient = useQueryClient();
   const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
   return useMutation({
     mutationFn,
+    meta: { silentError: options?.silentError === true },
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["tasks"] });
       // todos.json 落在仓库工作区，写入即产生待提交变更：即时刷新 [sync] 才能点亮待提交徽标。
@@ -32,6 +33,14 @@ export function useTaskCreateMutation() {
 
 export function useTaskUpdateMutation() {
   return useTaskMutation((input: UpdateTaskInput) => taskApi.update(input));
+}
+
+/**
+ * 编辑器自动保存专用的 task_update：错误交给编辑器内的保存状态区呈现（带重试），
+ * 因此关掉全局 toast，避免同一次失败被报两遍。
+ */
+export function useTaskAutoSaveMutation() {
+  return useTaskMutation((input: UpdateTaskInput) => taskApi.update(input), { silentError: true });
 }
 
 export function useTaskToggleMutation() {

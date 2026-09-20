@@ -52,7 +52,9 @@ const TITLE_CLASS: Record<TaskFormDensity, string> = {
 const DETAIL_CLASS: Record<TaskFormDensity, string> = {
   dialog: "min-h-32 px-3 py-2.5 text-base leading-6 sm:min-h-36 sm:text-sm",
   inline: "mt-1 min-h-24 px-1 py-2 text-base leading-6 sm:min-h-20 sm:px-1 sm:py-1.5 sm:text-sm",
-  pane: "min-h-[45vh] px-4 py-3 text-sm leading-6",
+  // `pane` 同时服务桌面主区详情与移动全屏编辑面：移动端键盘弹起后可视高度只剩一半，
+  // 45vh 的详情区会把底部 chips 行顶出视野，小屏因此收窄到固定高度，属性仍一眼可查。
+  pane: "max-md:min-h-48 min-h-[45vh] px-4 py-3 text-sm leading-6",
 };
 
 const META_CLASS: Record<TaskFormDensity, string> = {

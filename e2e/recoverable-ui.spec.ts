@@ -44,6 +44,29 @@ test.describe("可恢复 UI 收口（E3-T5）", () => {
     await expect(dialog.getByRole("button", { name: "已导出冲突文件" })).toBeVisible();
   });
 
+  test("拉取冲突不留死胡同：冲突态下有待办数据也能进解决面板", async ({ page }) => {
+    const state = baseState();
+    // 拉取冲突后的仓库状态：合并进行中，两端都改过 todos.json
+    state.conflicted = true;
+    state.syncFailure = {
+      code: "SYNC_4001",
+      kind: "conflict",
+      message: "存在未解决的合并冲突",
+      retriable: false,
+      stage: "pull",
+      hint: "resolveConflicts",
+      files: [".ainote/todos.json"],
+    };
+    state.conflicts = [
+      { path: ".ainote/todos.json", local: '{"tasks":[]}', remote: '{"tasks":[{"title":"交周报"}]}' },
+    ];
+    await openWorkspace(page, state);
+
+    // 冲突态自带入口：此前这里只会反复「重试同步」，点多少次都是同一个错
+    await page.getByRole("button", { name: "解决同步冲突" }).click();
+    await expect(page.getByRole("dialog", { name: ".ainote/todos.json" })).toBeVisible();
+  });
+
   test("删除确认：说明进入回收站并提供恢复入口", async ({ page }) => {
     await openWorkspace(page, baseState());
 
@@ -98,6 +121,11 @@ test.describe("同步失败定位（E4-T4）", () => {
     await expect(banner).toContainText("失败文件（2）");
     await expect(banner).toContainText("daily/a.md");
     await expect(banner).toContainText("daily/b.md");
+
+    // 冲突失败横幅不再只给「重试同步」，而是就地打开解决面板
+    await expect(banner.getByRole("button", { name: "重试同步" })).toHaveCount(0);
+    await banner.getByRole("button", { name: "解决同步冲突" }).click();
+    await expect(page.getByRole("dialog", { name: "三栏合并" })).toBeVisible();
   });
 });
 

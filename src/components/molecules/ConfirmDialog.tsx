@@ -8,12 +8,14 @@ interface ConfirmDialogProps {
   title: string;
   children: ReactNode;
   busy?: boolean;
+  /** 破坏性操作（删除等）：确认按钮改用危险色，与文件树的删除确认保持一致 */
+  danger?: boolean;
   onConfirm: () => void;
   onClose: () => void;
 }
 
 /** 轻量确认框：替代 window.confirm（移动端 WebView 中不可靠），Esc / 遮罩点击即取消。 */
-export function ConfirmDialog({ open, title, children, busy = false, onConfirm, onClose }: ConfirmDialogProps) {
+export function ConfirmDialog({ open, title, children, busy = false, danger = false, onConfirm, onClose }: ConfirmDialogProps) {
   const { t } = useTranslation();
   return (
     <Modal open={open} title={title} onClose={onClose}>
@@ -22,7 +24,7 @@ export function ConfirmDialog({ open, title, children, busy = false, onConfirm, 
         <Button variant="ghost" onClick={onClose} disabled={busy}>
           {t("common.cancel")}
         </Button>
-        <Button onClick={onConfirm} disabled={busy}>
+        <Button className={danger ? "bg-danger hover:brightness-95" : ""} onClick={onConfirm} disabled={busy}>
           {t("common.confirm")}
         </Button>
       </div>

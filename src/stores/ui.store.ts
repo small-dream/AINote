@@ -184,6 +184,8 @@ interface UiState {
   askAiOpen: boolean;
   /** 全局「解锁加密笔记」弹层（导航轨 / 命令面板 / 移动端入口共用） */
   vaultDialogOpen: boolean;
+  /** 全局冲突合并面板（导航轨冲突入口与同步失败横幅共用） */
+  conflictDialogOpen: boolean;
   /** 解锁成功后自动执行的动作（锁定态点击「加密/解密」时挂载，解锁后执行） */
   vaultUnlockCallback: (() => void) | null;
   vaultAutoLock: VaultAutoLockMinutes;
@@ -206,6 +208,8 @@ interface UiState {
   closeAskAi: () => void;
   openVaultDialog: (callback?: () => void) => void;
   closeVaultDialog: () => void;
+  openConflictDialog: () => void;
+  closeConflictDialog: () => void;
   setVaultAutoLock: (minutes: VaultAutoLockMinutes) => void;
   openSettings: (tab?: SettingsTab) => void;
   closeSettings: () => void;
@@ -246,6 +250,7 @@ export const useUiStore = create<UiState>((set) => ({
   recentNotes: readStoredRecentNotes(),
   askAiOpen: false,
   vaultDialogOpen: false,
+  conflictDialogOpen: false,
   vaultUnlockCallback: null,
   vaultAutoLock: readStoredVaultAutoLock(),
   settingsOpen: false,
@@ -270,6 +275,8 @@ export const useUiStore = create<UiState>((set) => ({
   closeAskAi: () => set({ askAiOpen: false }),
   openVaultDialog: (callback) => set({ vaultDialogOpen: true, vaultUnlockCallback: callback ?? null }),
   closeVaultDialog: () => set({ vaultDialogOpen: false, vaultUnlockCallback: null }),
+  openConflictDialog: () => set({ conflictDialogOpen: true }),
+  closeConflictDialog: () => set({ conflictDialogOpen: false }),
   setVaultAutoLock: (vaultAutoLock) => {
     writeStoredVaultAutoLock(vaultAutoLock);
     set({ vaultAutoLock });

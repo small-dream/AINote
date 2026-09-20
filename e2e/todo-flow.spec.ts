@@ -162,6 +162,47 @@ test.describe("Todo 待办（桌面壳）", () => {
     await assertCardOrder(page, "pane");
   });
 
+  test("详情改标题自动落盘并给出「已保存」，删除需要确认", async ({ page }) => {
+    await openWorkspace(page, baseState());
+    await page.getByRole("button", { name: "待办", exact: true }).click();
+    await page.getByRole("button", { name: "新建任务" }).click();
+    await page.getByLabel("任务标题").fill("写周报");
+    await page.getByRole("button", { name: "添加任务" }).click();
+
+    await page.getByRole("button", { name: /写周报/ }).click();
+    await page.getByLabel("任务标题").fill("写周报（含数据）");
+    // 不提供保存按钮，但保存结果必须自己出现在卡片底部
+    await expect(page.getByRole("status")).toContainText("已保存");
+
+    // 删除不再是单击即生效：取消后任务与改动都还在
+    await page.getByRole("button", { name: "删除任务" }).click();
+    await page.getByRole("button", { name: "取消" }).click();
+    await expect(page.getByRole("button", { name: /写周报（含数据）/ })).toBeVisible();
+
+    const update = (await calls(page)).find((entry) => entry.cmd === "task_update");
+    expect(String(update?.args.title)).toBe("写周报（含数据）");
+  });
+
+  test("打开详情看完就返回：没有改动就不写盘，不制造待提交变更", async ({ page }) => {
+    await openWorkspace(page, baseState());
+    await page.getByRole("button", { name: "待办", exact: true }).click();
+    await page.getByRole("button", { name: "新建任务" }).click();
+    await page.getByLabel("任务标题").fill("交周报");
+    await page.getByRole("button", { name: "添加任务" }).click();
+
+    await page.getByRole("button", { name: /交周报/ }).click();
+    const before = (await calls(page)).filter((entry) => entry.cmd === "task_update").length;
+
+    // 点进标题再点「返回总览」会先触发失焦：这条路径曾经原样回传整份草稿并刷新 updated_at，
+    // 让 todos.json 凭空多出一次变更，多端同步时表现成毫无意义的合并冲突
+    await page.getByLabel("任务标题").click();
+    await page.getByRole("button", { name: "返回总览" }).click();
+    await page.waitForTimeout(400);
+
+    const after = (await calls(page)).filter((entry) => entry.cmd === "task_update").length;
+    expect(after).toBe(before);
+  });
+
   test("日期与时间分两次选，时刻精确到分钟并存成带时刻的 dueAt", async ({ page }) => {
     await openWorkspace(page, baseState());
 
@@ -298,7 +339,7 @@ test.describe("Todo 待办（移动壳）", () => {
     await expect(page.getByRole("button", { name: /随身任务/ })).toBeVisible();
   });
 
-  test("行内编辑器同序：详情在上，元数据 chips 与删除入口收在底部", async ({ page }) => {
+  test("点任务行进入全屏编辑面：列表不再就地展开，卡片同序、底部有状态与完成", async ({ page }) => {
     await openWorkspace(page, baseState());
     await page.locator(".mobile-list-tabs").getByRole("tab", { name: "待办" }).click();
     await page.getByRole("button", { name: "新建任务" }).click();
@@ -307,14 +348,37 @@ test.describe("Todo 待办（移动壳）", () => {
 
     const list = page.locator(".mobile-list-content");
     await list.getByRole("button", { name: /随身任务/ }).click();
-    await assertCardOrder(page, "inline");
 
-    const meta = await list.getByRole("button", { name: "设置截止日期" }).boundingBox();
-    const remove = await list.getByRole("button", { name: "删除任务" }).boundingBox();
-    if (!meta || !remove) throw new Error("行内编辑器未渲染完整");
-    // 删除入口与 chips 同在卡片底部这一行
-    expect(Math.abs(remove.y - meta.y)).toBeLessThanOrEqual(8);
-    expect(remove.x).toBeGreaterThan(meta.x + meta.width);
+    // 列表里不再就地展开编辑器，编辑走独立工作面（与「新建任务」同构）
+    await expect(page.locator('[data-task-form="inline"]')).toHaveCount(0);
+    await assertCardOrder(page, "pane");
+
+    const dialog = page.getByRole("dialog", { name: "编辑任务" });
+    const box = await dialog.boundingBox();
+    const screen = page.viewportSize();
+    expect(box?.width).toBe(screen?.width);
+    await expect(page.getByRole("button", { name: "删除任务" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "完成" })).toBeVisible();
+  });
+
+  test("改标题自动落盘并给出「已保存」，点完成回到列表且改动还在", async ({ page }) => {
+    await openWorkspace(page, baseState());
+    await page.locator(".mobile-list-tabs").getByRole("tab", { name: "待办" }).click();
+    await page.getByRole("button", { name: "新建任务" }).click();
+    await page.getByLabel("任务标题").fill("随身任务");
+    await page.getByRole("button", { name: "添加任务" }).click();
+
+    await page.getByRole("button", { name: /随身任务/ }).click();
+    await page.getByLabel("任务标题").fill("随身任务（已改）");
+    // 不需要按保存：防抖到期后状态区自己给出结果
+    await expect(page.getByRole("status")).toContainText("已保存");
+
+    await page.getByRole("button", { name: "完成" }).click();
+    await expect(page.locator(".mobile-list-tabs")).toBeVisible();
+    await expect(page.getByRole("button", { name: /随身任务（已改）/ })).toBeVisible();
+
+    const update = (await calls(page)).find((entry) => entry.cmd === "task_update");
+    expect(String(update?.args.title)).toBe("随身任务（已改）");
   });
 
   test("到点提醒卡片在移动壳同样可见，点「查看任务」展开该任务", async ({ page }) => {
@@ -378,5 +442,31 @@ test.describe("Todo 待办（移动小屏 375×667）", () => {
     await expect(page.getByRole("menu", { name: "设置提醒" }).getByRole("button", { name: "确认" })).toBeVisible();
     await page.getByRole("menu", { name: "设置提醒" }).getByRole("button", { name: "确认" }).click();
     await expect(page.getByRole("menu", { name: "设置提醒" })).toBeHidden();
+  });
+
+  test("编辑面在小屏上仍完整：底部保存状态与「完成」落在视口内", async ({ page }) => {
+    await openWorkspace(page, baseState());
+    await page.locator(".mobile-list-tabs").getByRole("tab", { name: "待办" }).click();
+    await page.getByRole("button", { name: "新建任务" }).click();
+    await page.getByLabel("任务标题").fill("随身任务");
+    await page.getByRole("button", { name: "添加任务" }).click();
+
+    await page.getByRole("button", { name: /随身任务/ }).click();
+    await page.getByLabel("任务标题").fill("随身任务（已改）");
+
+    // 状态区与操作条固定在底部：矮视口下不滚动也必须能看见并点到
+    const status = await page.getByRole("status").boundingBox();
+    const done = await page.getByRole("button", { name: "完成" }).boundingBox();
+    const screen = page.viewportSize();
+    const height = screen?.height ?? 0;
+    for (const box of [status, done]) {
+      if (!box) throw new Error("底部操作条未渲染");
+      expect(box.y).toBeGreaterThanOrEqual(0);
+      expect(box.y + box.height).toBeLessThanOrEqual(height);
+    }
+
+    // 卡片本体的元数据 chips 排在内容下方，仍在编辑面内可滚动到
+    const chip = await page.getByRole("button", { name: "设置截止日期" }).boundingBox();
+    expect(chip?.y ?? -1).toBeGreaterThanOrEqual(0);
   });
 });

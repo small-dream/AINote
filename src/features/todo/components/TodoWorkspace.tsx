@@ -56,7 +56,7 @@ export function TodoWorkspace({ repoPath }: { repoPath: string | null }) {
             key={selectedTask.id}
             task={selectedTask}
             busy={mutations.busy}
-            onSave={(draft) => mutations.update.mutate({ taskId: selectedTask.id, ...draft })}
+            onSave={async (draft) => { await mutations.save.mutateAsync({ taskId: selectedTask.id, ...draft }); }}
             onDelete={() => { mutations.remove.mutate(selectedTask.id); selectTask(null); }}
             onClose={() => selectTask(null)}
           />

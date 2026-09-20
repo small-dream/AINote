@@ -1,6 +1,7 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { AppError } from "@/api/error";
+import { useUiStore } from "@/stores/ui.store";
 import type { SyncController } from "../hooks/useSync";
 import { SyncNotice } from "./SyncNotice";
 
@@ -125,6 +126,28 @@ describe("SyncNotice / 失败定位（E4-T4）", () => {
     expect(screen.getByText("daily/a.md")).toBeTruthy();
     expect(screen.getByText("daily/b.md")).toBeTruthy();
     expect(screen.getByText("存在未解决的合并冲突，请先解决冲突再同步")).toBeTruthy();
+  });
+
+  it("冲突失败不给「重试同步」，而是就地打开冲突面板", () => {
+    useUiStore.setState({ conflictDialogOpen: false });
+    render(
+      <SyncNotice
+        sync={controller({
+          code: "SYNC_4001",
+          kind: "conflict",
+          message: "存在未解决的合并冲突",
+          retriable: false,
+          stage: "pull",
+          hint: "resolveConflicts",
+          files: [".ainote/todos.json"],
+        })}
+      />,
+    );
+
+    // 对冲突点「重试」只会原样再失败一次，入口必须是解决面板
+    expect(screen.queryByRole("button", { name: "重试同步" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "解决同步冲突" }));
+    expect(useUiStore.getState().conflictDialogOpen).toBe(true);
   });
 
   it("失败文件过多时折叠为计数", () => {
