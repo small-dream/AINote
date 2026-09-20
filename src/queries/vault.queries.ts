@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { vaultApi } from "@/api";
-import type { NoteMeta, VaultStatus } from "@/api/types";
+import type { NoteMeta, VaultStatusResponse } from "@/api/types";
 
 /** 仓库加密状态：服务端态（唯一权威来源），不用 Zustand/useState 镜像。 */
 export const vaultKeys = {
@@ -19,7 +19,7 @@ export function useVaultStatusQuery(repoPath: string | null) {
  * 解锁/锁定会改变「哪些笔记可读」，因此一次性失效内容、列表、搜索、wiki 与同步态；
  * 错误不做全局 toast，交给表单就地提示（口令错误属于用户输入问题）。
  */
-function useVaultMutation<TInput>(mutationFn: (input: TInput) => Promise<VaultStatus>) {
+function useVaultMutation<TInput>(mutationFn: (input: TInput) => Promise<VaultStatusResponse>) {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
@@ -49,6 +49,21 @@ export function useVaultChangePassphraseMutation() {
   return useVaultMutation(({ oldPassphrase, newPassphrase }: { oldPassphrase: string; newPassphrase: string }) =>
     vaultApi.changePassphrase(oldPassphrase, newPassphrase),
   );
+}
+
+/** 开启设备级快速解锁：会弹出系统认证，成功后本机可用设备认证免口令解锁。 */
+export function useVaultQuickUnlockEnableMutation() {
+  return useVaultMutation(() => vaultApi.enableQuickUnlock());
+}
+
+/** 关闭设备级快速解锁：删除本机条目，立即回到「每次输入口令」。 */
+export function useVaultQuickUnlockDisableMutation() {
+  return useVaultMutation(() => vaultApi.disableQuickUnlock());
+}
+
+/** 设备认证解锁：系统界面可能停留数秒，取消与失败分别由 VAULT_9007 / VAULT_9008 表达。 */
+export function useVaultDeviceUnlockMutation() {
+  return useVaultMutation(() => vaultApi.unlockWithDevice());
 }
 
 interface NoteEncryptionInput {

@@ -1,7 +1,10 @@
 import {
   useVaultChangePassphraseMutation,
   useVaultCreateMutation,
+  useVaultDeviceUnlockMutation,
   useVaultLockMutation,
+  useVaultQuickUnlockDisableMutation,
+  useVaultQuickUnlockEnableMutation,
   useVaultStatusQuery,
   useVaultUnlockMutation,
 } from "@/queries/vault.queries";
@@ -22,5 +25,8 @@ export function useVaultSettings() {
     unlock: useVaultUnlockMutation(),
     lock: useVaultLockMutation(),
     changePassphrase: useVaultChangePassphraseMutation(),
+    enableQuickUnlock: useVaultQuickUnlockEnableMutation(),
+    disableQuickUnlock: useVaultQuickUnlockDisableMutation(),
+    unlockWithDevice: useVaultDeviceUnlockMutation(),
   };
 }

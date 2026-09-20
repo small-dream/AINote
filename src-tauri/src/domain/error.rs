@@ -86,6 +86,15 @@ pub enum AppError {
     /// 密文校验失败：文件已损坏或被人为篡改
     #[error("vault corrupt: {0}")]
     VaultCorrupt(String),
+    /// 设备级快速解锁不可用：平台不支持、本机未开启，或设备条目已失效（需用口令解锁后重新开启）
+    #[error("vault quick unlock unavailable: {0}")]
+    VaultQuickUnlockUnavailable(String),
+    /// 设备认证被用户主动取消：前端静默处理，不显示红色错误
+    #[error("vault device auth cancelled: {0}")]
+    VaultDeviceAuthCancelled(String),
+    /// 设备认证失败：未录入生物识别、被系统锁定、密钥失效等（可重试或用口令解锁）
+    #[error("vault device auth failed: {0}")]
+    VaultDeviceAuthFailed(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -171,6 +180,9 @@ impl From<AppError> for AppErrorDto {
             AppError::VaultHistoryUnavailable(_) => ("VAULT_9003", ErrorKind::Unknown, false),
             AppError::VaultInvalid(_) => ("VAULT_9004", ErrorKind::Unknown, false),
             AppError::VaultCorrupt(_) => ("VAULT_9005", ErrorKind::Unknown, false),
+            AppError::VaultQuickUnlockUnavailable(_) => ("VAULT_9006", ErrorKind::Unknown, false),
+            AppError::VaultDeviceAuthCancelled(_) => ("VAULT_9007", ErrorKind::Unknown, false),
+            AppError::VaultDeviceAuthFailed(_) => ("VAULT_9008", ErrorKind::Unknown, false),
         };
         let provider = match &err {
             AppError::AuthLoginRequired { provider, .. } => Some(provider.clone()),
@@ -291,6 +303,18 @@ mod tests {
         );
         assert_eq!(dto(AppError::VaultInvalid("weak".into())).code, "VAULT_9004");
         assert_eq!(dto(AppError::VaultCorrupt("tampered".into())).code, "VAULT_9005");
+        assert_eq!(
+            dto(AppError::VaultQuickUnlockUnavailable("stale".into())).code,
+            "VAULT_9006"
+        );
+        assert_eq!(
+            dto(AppError::VaultDeviceAuthCancelled("cancel".into())).code,
+            "VAULT_9007"
+        );
+        assert_eq!(
+            dto(AppError::VaultDeviceAuthFailed("no biometrics".into())).code,
+            "VAULT_9008"
+        );
     }
 
     #[test]
@@ -309,6 +333,19 @@ mod tests {
 
         assert!(!dto(AppError::VaultInvalid("weak".into())).retriable);
         assert!(!dto(AppError::VaultCorrupt("tampered".into())).retriable);
+        // 设备认证失败可重试（用户可再试一次或改用口令），但都不是认证类错误。
+        assert_eq!(
+            dto(AppError::VaultDeviceAuthFailed("locked out".into())).kind,
+            ErrorKind::Unknown
+        );
+        assert_eq!(
+            dto(AppError::VaultDeviceAuthCancelled("cancel".into())).kind,
+            ErrorKind::Unknown
+        );
+        assert_eq!(
+            dto(AppError::VaultQuickUnlockUnavailable("stale".into())).kind,
+            ErrorKind::Unknown
+        );
     }
 
     #[test]

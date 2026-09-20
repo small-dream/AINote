@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 use crate::domain::error::AppError;
+use crate::domain::quick_unlock::QuickUnlockStatus;
 
 /// 加密笔记信封首行 magic：版本号内嵌在标识里，便于未来格式升级时分支。
 pub const ENVELOPE_MAGIC: &str = "AINOTE-ENC-v1";
@@ -73,6 +74,26 @@ pub struct VaultStatus {
     pub state: VaultState,
     /// 仓库内处于加密态的笔记数量（由服务层扫描后传入）
     pub encrypted_notes: u32,
+}
+
+/// vault 类命令对前端的完整响应：仓库加密状态 + 本机设备级快速解锁状态。
+/// 快速解锁是**设备侧**能力，因此不写进 `VaultStatus`（用例层返回值），只在 Controller 组装。
+#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct VaultStatusResponse {
+    pub state: VaultState,
+    pub encrypted_notes: u32,
+    pub quick_unlock: QuickUnlockStatus,
+}
+
+impl VaultStatusResponse {
+    pub fn new(status: VaultStatus, quick_unlock: QuickUnlockStatus) -> Self {
+        Self {
+            state: status.state,
+            encrypted_notes: status.encrypted_notes,
+            quick_unlock,
+        }
+    }
 }
 
 impl VaultFile {

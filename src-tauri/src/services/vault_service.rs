@@ -127,6 +127,16 @@ pub fn is_unlocked(root: &Path) -> bool {
         .is_some_and(|unlocked| unlocked.repo == root)
 }
 
+/// 设备级快速解锁专用：把**已由平台安全存储解封**的主密钥放进会话（不经过口令）。
+/// 口令仍是唯一凭证；这里只是把「设备认证通过」这一事实转成会话状态。
+pub fn adopt_master(
+    root: &Path,
+    master: Zeroizing<[u8; MASTER_KEY_LEN]>,
+) -> Result<VaultStatus, AppError> {
+    set_session(root, master);
+    status(root)
+}
+
 /// 统计仓库内处于加密态的笔记数量：只看每个笔记文件的首行，不解密、不读全文。
 pub fn count_encrypted_notes(root: &Path) -> Result<u32, AppError> {
     let mut total = 0u32;

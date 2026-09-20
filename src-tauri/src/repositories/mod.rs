@@ -16,6 +16,7 @@ pub mod git_backend;
 pub mod llm;
 pub(crate) mod llm_stream;
 pub mod note_files;
+pub(crate) mod quick_unlock_files;
 pub mod repo_size;
 pub mod repo_maintenance;
 pub mod repo_rewrite;

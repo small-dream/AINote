@@ -1,6 +1,10 @@
 pub mod change_passphrase;
 pub mod create;
 pub mod lock;
+pub mod quick_unlock_disable;
+pub mod quick_unlock_enable;
 pub mod set_note_encryption;
 pub mod status;
+pub mod support;
 pub mod unlock;
+pub mod unlock_with_device;

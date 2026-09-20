@@ -61,6 +61,7 @@ function createStore(state: E2eState): MockStore {
     taskSeq: 1,
     vaultState: "absent",
     passphrase: null,
+    quickUnlockEnabled: false,
   };
 }
 

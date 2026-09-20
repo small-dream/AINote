@@ -10,6 +10,8 @@ export interface VaultStore extends DirtyTrackedStore {
   vaultState: E2eVaultState;
   /** 当前口令（改口令后轮换；未建库为 null） */
   passphrase: string | null;
+  /** 设备级快速解锁开关（e2e 模拟「支持设备认证的本机」） */
+  quickUnlockEnabled: boolean;
   notes: E2eNoteMap;
 }
 
@@ -28,6 +30,7 @@ function vaultError(code: string, kind: string, message: string): never {
 const vaultInvalid = (message: string): never => vaultError("VAULT_9004", "Unknown", message);
 const unlockFailed = (): never => vaultError("VAULT_9002", "Auth", "vault unlock failed: 口令错误");
 const vaultLocked = (): never => vaultError("VAULT_9001", "Permission", "加密笔记需要先解锁仓库密钥");
+const quickUnavailable = (message: string): never => vaultError("VAULT_9006", "Unknown", message);
 
 /** 与 Rust `check_passphrase_strength` 同一判定顺序与文案（前端 util 即其 TS 对照）。 */
 const STRENGTH_MESSAGES: Record<PassphraseIssue, string> = {
@@ -44,7 +47,16 @@ function checkStrength(passphrase: string, repoPath: string): void {
 /** encryptedNotes 由内容信封首行统计（与 Rust `count_encrypted_notes` 同口径），不再恒为 0。 */
 function status(store: VaultStore) {
   const encryptedNotes = [...store.notes.values()].filter((note) => isEnvelopeText(note.content)).length;
-  return { state: store.vaultState, encryptedNotes };
+  return {
+    state: store.vaultState,
+    encryptedNotes,
+    // e2e 默认模拟「本机支持 Touch ID」的桌面/移动设备，便于验证完整开关闭环。
+    quickUnlock: {
+      supported: true,
+      enabled: store.quickUnlockEnabled && store.vaultState !== "absent",
+      kind: "touchId" as const,
+    },
+  };
 }
 
 function requireVault(store: VaultStore): void {
@@ -73,6 +85,7 @@ export const vaultCommandHandlers: Record<string, VaultCommandHandler> = {
     checkStrength(passphrase, ctx.state.repoPath);
     ctx.store.passphrase = passphrase;
     ctx.store.vaultState = "unlocked";
+    ctx.store.quickUnlockEnabled = false;
     return status(ctx.store);
   },
   vault_unlock: (args, ctx) => {
@@ -91,6 +104,24 @@ export const vaultCommandHandlers: Record<string, VaultCommandHandler> = {
     const next = String(args.newPassphrase ?? "");
     checkStrength(next, ctx.state.repoPath);
     ctx.store.passphrase = next;
+    ctx.store.vaultState = "unlocked";
+    return status(ctx.store);
+  },
+  vault_quick_unlock_enable: (_args, ctx) => {
+    requireVault(ctx.store);
+    if (ctx.store.vaultState !== "unlocked") vaultLocked();
+    ctx.store.quickUnlockEnabled = true;
+    return status(ctx.store);
+  },
+  vault_quick_unlock_disable: (_args, ctx) => {
+    ctx.store.quickUnlockEnabled = false;
+    return status(ctx.store);
+  },
+  vault_unlock_with_device: (_args, ctx) => {
+    requireVault(ctx.store);
+    if (!ctx.store.quickUnlockEnabled) {
+      quickUnavailable("本机尚未开启设备级快速解锁，请用仓库口令解锁");
+    }
     ctx.store.vaultState = "unlocked";
     return status(ctx.store);
   },

@@ -8,6 +8,9 @@ const VAULT_ERROR_KEYS: Record<string, TranslationKey> = {
   VAULT_9003: "vault.errorHistoryUnavailable",
   VAULT_9004: "vault.errorInvalid",
   VAULT_9005: "vault.errorCorrupt",
+  VAULT_9006: "vault.errorQuickUnlockUnavailable",
+  VAULT_9007: "vault.errorDeviceCancelled",
+  VAULT_9008: "vault.errorDeviceFailed",
 };
 
 export function vaultErrorKey(error: unknown): TranslationKey | null {
@@ -19,4 +22,12 @@ export function vaultErrorKey(error: unknown): TranslationKey | null {
 export function vaultErrorText(error: unknown, t: (key: TranslationKey) => string): string {
   const key = vaultErrorKey(error);
   return key === null ? messageOf(error) : t(key);
+}
+
+/**
+ * 设备认证被用户取消：属于正常操作，不应显示成红色错误。
+ * 取消后条目仍然有效，用户可以直接重试或改用口令。
+ */
+export function isVaultDeviceCancel(error: unknown): boolean {
+  return isAppError(error) && error.code === "VAULT_9007";
 }

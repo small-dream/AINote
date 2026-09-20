@@ -35,6 +35,24 @@ export interface VaultStatus {
   encryptedNotes: number;
 }
 
+/** 设备级快速解锁的认证方式（与 Rust domain/quick_unlock.rs 的 QuickUnlockKind 一致） */
+export type QuickUnlockKind = "touchId" | "faceId" | "opticId" | "biometric" | "deviceCredential";
+
+/** 本机设备级快速解锁状态：supported=false 时前端不渲染任何入口 */
+export interface QuickUnlockStatus {
+  supported: boolean;
+  enabled: boolean;
+  kind: QuickUnlockKind | null;
+}
+
+/**
+ * vault 类命令的完整响应。
+ * `quickUnlock` 为可选：老后端与部分测试夹具不带该字段，读取一律经过 `quickUnlockOf()` 归一化。
+ */
+export interface VaultStatusResponse extends VaultStatus {
+  quickUnlock?: QuickUnlockStatus;
+}
+
 /** note_tree 的节点类型：目录 / 文件 */
 export type NodeKind = "file" | "dir";
 

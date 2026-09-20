@@ -45,6 +45,24 @@ async function enableVault(page: Page): Promise<void> {
 }
 
 test.describe("加密笔记（E2）", () => {
+  test("设备级快速解锁：开启 → 锁定 → 用 Touch ID 解锁 → 关闭", async ({ page }) => {
+    await openWorkspace(page, baseState());
+    await openVaultSettings(page);
+    await enableVault(page);
+
+    await page.getByRole("button", { name: "开启快速解锁" }).click();
+    await expect(page.getByText("本机已开启：Touch ID")).toBeVisible();
+
+    await page.getByRole("button", { name: "立即锁定", exact: true }).click();
+    await expect(page.getByText("已锁定", { exact: true })).toBeVisible();
+    await page.getByRole("button", { name: "用 Touch ID 解锁" }).click();
+    // 设备解锁成功后回到解锁态：设置页回到已解锁卡片
+    await expect(page.getByText("加密笔记已解锁")).toBeVisible();
+
+    await page.getByRole("button", { name: "关闭快速解锁" }).click();
+    await expect(page.getByRole("button", { name: "开启快速解锁" })).toBeVisible();
+  });
+
   test("建库后立即进入解锁态，可一键锁定", async ({ page }) => {
     await openWorkspace(page, baseState());
     await openVaultSettings(page);
@@ -78,7 +96,7 @@ test.describe("加密笔记（E2）", () => {
     await openWorkspace(page, baseState());
     await openVaultSettings(page);
 
-    await expect(page.getByText(/桌面端不提供「记住口令」/)).toBeVisible();
+    await expect(page.getByText(/默认不记住口令/)).toBeVisible();
     await expect(page.getByText(/不会生成恢复码/)).toBeVisible();
     await expect(page.getByText(/也不提供版本历史/)).toBeVisible();
   });

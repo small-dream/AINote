@@ -9,13 +9,15 @@ use argon2::{Algorithm, Argon2, Params, Version};
 use base64::engine::general_purpose::STANDARD as B64;
 use base64::Engine;
 use hkdf::Hkdf;
+use sha2::Digest;
 use sha2::Sha256;
 use zeroize::Zeroizing;
 
 use crate::domain::error::AppError;
 use crate::domain::vault::{
-    encode_envelope, envelope_payload, KdfParams, WrapParams, ARGON2_ITERATIONS, ARGON2_M_KIB,
-    ARGON2_PARALLELISM, ENVELOPE_AD, KDF_ALG, MASTER_KEY_LEN, NONCE_LEN, SALT_LEN, WRAP_ALG,
+    encode_envelope, envelope_payload, KdfParams, VaultFile, WrapParams, ARGON2_ITERATIONS,
+    ARGON2_M_KIB, ARGON2_PARALLELISM, ENVELOPE_AD, KDF_ALG, MASTER_KEY_LEN, NONCE_LEN, SALT_LEN,
+    WRAP_ALG,
 };
 
 /// AES-256-SIV 需要两把 256 位子密钥（RFC 5297）。
@@ -159,6 +161,19 @@ fn siv_cipher(master: &[u8; MASTER_KEY_LEN]) -> Result<Aes256Siv, AppError> {
         .map_err(|_| AppError::VaultInvalid("笔记密钥派生失败".into()))?;
     Aes256Siv::new_from_slice(key.as_ref())
         .map_err(|_| AppError::VaultInvalid("笔记密钥长度非法".into()))
+}
+
+/// 仓库密钥指纹：sha256(封装密文) 的前 16 字节 hex（32 字符）。
+/// 设备级快速解锁条目用它绑定某一次密钥封装：改口令会换盐与 nonce，重建密钥库会换主密钥，
+/// 两种情况指纹都会变，因此不存在「拿旧主密钥打开新笔记」的窗口。
+/// 该指纹不是机密（`vault.json` 本身随仓库公开），只用于匹配。
+pub fn vault_fingerprint(file: &VaultFile) -> String {
+    let digest = Sha256::digest(file.wrap.ciphertext.as_bytes());
+    let mut fingerprint = String::with_capacity(32);
+    for byte in digest.iter().take(16) {
+        fingerprint.push_str(&format!("{byte:02x}"));
+    }
+    fingerprint
 }
 
 fn random_array<const N: usize>() -> Result<[u8; N], AppError> {

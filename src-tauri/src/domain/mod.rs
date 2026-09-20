@@ -13,6 +13,7 @@ pub mod hosting;
 pub mod maintenance;
 pub mod metrics;
 pub mod note;
+pub mod quick_unlock;
 pub mod remote;
 pub mod rich_text;
 pub mod search;

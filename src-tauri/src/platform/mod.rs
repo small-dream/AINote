@@ -7,10 +7,16 @@ mod android_bridge;
 #[cfg(target_os = "android")]
 pub use android_bridge::*;
 
+#[cfg(target_os = "android")]
+mod android_jni;
+
 #[cfg(not(target_os = "android"))]
 mod fallback;
 #[cfg(not(target_os = "android"))]
 pub use fallback::*;
+
+/// 设备级快速解锁的平台接缝（macOS / iOS / Android，其余平台明确不支持）。
+pub mod quick_unlock;
 
 #[cfg(desktop)]
 pub mod tray;

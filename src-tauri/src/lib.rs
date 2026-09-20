@@ -179,6 +179,9 @@ pub fn run() {
             commands::vault::lock::vault_lock,
             commands::vault::change_passphrase::vault_change_passphrase,
             commands::vault::set_note_encryption::vault_set_note_encryption,
+            commands::vault::quick_unlock_enable::vault_quick_unlock_enable,
+            commands::vault::quick_unlock_disable::vault_quick_unlock_disable,
+            commands::vault::unlock_with_device::vault_unlock_with_device,
         ])
         .build(tauri::generate_context!())
         .expect("error while building AINote")
