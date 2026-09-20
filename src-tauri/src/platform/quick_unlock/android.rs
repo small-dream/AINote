@@ -28,8 +28,15 @@ impl AndroidDeviceKeyStore {
 
 impl DeviceKeyStore for AndroidDeviceKeyStore {
     fn support(&self) -> DeviceSupport {
-        // 能力探测失败（JNI 不可用等）一律按「不支持」处理，绝不因此阻断口令解锁。
-        let supported = call_bool("isSupported", SUPPORT_SIG, "检查设备级快速解锁可用性").unwrap_or(false);
+        // 能力探测失败（JNI 不可用、类被混淆裁掉等）一律按「不支持」处理，绝不因此阻断口令解锁；
+        // 但必须留下日志，否则线上表现只是「入口凭空消失」，无法定位。
+        let supported = match call_bool("isSupported", SUPPORT_SIG, "检查设备级快速解锁可用性") {
+            Ok(value) => value,
+            Err(err) => {
+                log::warn!(target: "ainote::vault", "设备快速解锁能力探测失败，按不支持处理: {err}");
+                false
+            }
+        };
         if !supported {
             return DeviceSupport::unavailable();
         }

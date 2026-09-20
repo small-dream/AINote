@@ -5,9 +5,11 @@
 # For more details, see
 #   http://developer.android.com/guide/developing/tools/proguard.html
 
-# Rust 侧经 JNI 按字符串类名/方法名调用（platform/android_bridge.rs、keyring crate），
-# R8 看不到这些引用，release 混淆时必须完整保留，否则调用安装器/钥匙串会抛 NoSuchMethodError。
+# Rust 侧经 JNI 按字符串类名/方法名调用（platform/android_bridge.rs、platform/quick_unlock/android.rs、
+# keyring crate），R8 看不到这些引用，release 混淆时必须完整保留，
+# 否则调用安装器/钥匙串/设备认证会抛 NoSuchMethodError（表现为功能静默不可用）。
 -keep class dev.ainote.app.ApkInstaller { *; }
+-keep class dev.ainote.app.QuickUnlock { *; }
 -keep class io.crates.keyring.Keyring { *; }
 
 # If your project uses WebView with JS, uncomment the following

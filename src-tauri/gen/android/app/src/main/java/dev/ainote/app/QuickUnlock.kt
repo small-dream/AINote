@@ -55,24 +55,30 @@ object QuickUnlock {
     }
 
     /** 能力探测：不弹窗、不写盘，只查系统条件。 */
+    @JvmStatic
     fun isSupported(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT < MIN_SDK) return false
-        val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager ?: return false
-        if (!keyguard.isDeviceSecure) return false
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val manager = context.getSystemService(BiometricManager::class.java) ?: return false
-            val allowed = BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                BiometricManager.Authenticators.DEVICE_CREDENTIAL
-            return manager.canAuthenticate(allowed) == BiometricManager.BIOMETRIC_SUCCESS
-        }
-        // Android 9：只有指纹提示可用，且密钥不接受设备凭证，因此必须有已录入的指纹。
-        @Suppress("DEPRECATION")
-        val fingerprint = context.getSystemService(FingerprintManager::class.java) ?: return false
-        @Suppress("DEPRECATION")
-        return fingerprint.hasEnrolledFingerprints()
+        // 任何系统异常都按「不支持」处理：能力探测绝不能把异常抛给 JNI（会污染后续调用）。
+        return runCatching {
+            if (Build.VERSION.SDK_INT < MIN_SDK) return false
+            val keyguard =
+                context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager ?: return false
+            if (!keyguard.isDeviceSecure) return false
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+                val manager = context.getSystemService(BiometricManager::class.java) ?: return false
+                val allowed = BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                return manager.canAuthenticate(allowed) == BiometricManager.BIOMETRIC_SUCCESS
+            }
+            // Android 9：只有指纹提示可用，且密钥不接受设备凭证，因此必须有已录入的指纹。
+            @Suppress("DEPRECATION")
+            val fingerprint = context.getSystemService(FingerprintManager::class.java) ?: return false
+            @Suppress("DEPRECATION")
+            fingerprint.hasEnrolledFingerprints()
+        }.getOrDefault(false)
     }
 
     /** 本机实际可用的认证方式：生物识别，或仅有设备凭证（PIN / 图案 / 密码）。 */
+    @JvmStatic
     fun kind(context: Context): String {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
             val manager = context.getSystemService(BiometricManager::class.java)
@@ -88,6 +94,7 @@ object QuickUnlock {
     }
 
     /** 开启（或重新开启）：先生成新密钥，再要求一次系统认证，最后写入口令载荷。 */
+    @JvmStatic
     fun store(context: Context, account: String, payload: String): String = runCatching {
         val key = generateKey(account)
         val authenticated = authenticate(context, "开启加密笔记的设备级快速解锁")
@@ -101,6 +108,7 @@ object QuickUnlock {
     }.getOrElse { describe(it) }
 
     /** 读取载荷：认证通过后解密条目。 */
+    @JvmStatic
     fun read(context: Context, account: String, reason: String): String = runCatching {
         val record = prefs(context).getString(account, null)
             ?: return "stale:本机未保存快速解锁条目"
@@ -117,6 +125,7 @@ object QuickUnlock {
     }.getOrElse { describe(it) }
 
     /** 关闭：删除条目与密钥（幂等）。 */
+    @JvmStatic
     fun remove(context: Context, account: String): String = runCatching {
         prefs(context).edit().remove(account).commit()
         val store = keyStore()
