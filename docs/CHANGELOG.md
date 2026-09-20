@@ -1,5 +1,20 @@
 # 更新日志
 
+## v0.51.2 — 2026-09-20（修复：Android 设备解锁真正可用；iOS 补 Face ID 用途声明）
+
+### 修复
+
+- **Android 端设备级快速解锁完全没有入口（0.51.1 仍未修好）**：JNI 在 attach 上来的原生线程里用**系统 ClassLoader** 查找类，看不到应用自己的类，按类名调用一律抛 `ClassNotFoundException: Didn't find class "dev.ainote.app.QuickUnlock"`，能力探测被吞成「本机不支持」，前端据此隐藏入口且没有任何提示。现统一改为经 Application Context 的 `ClassLoader.loadClass()` 解析应用类；同一处隐患也波及 `ApkInstaller`（应用内更新安装 / 打开外部链接），一并修掉。
+- **入口不再「凭空消失」**：只要有密钥库，设置页就恒定显示「设备级快速解锁」区块 —— 已解锁可开关、已锁定提示「先用仓库口令解锁，随后即可在此开启」并禁用按钮、平台真不支持时写明原因（未设锁屏 / 无可用生物识别 / 系统版本过低 / 探测失败）；桌面 Windows・Linux 不产生噪音。Android 10 起允许设备密码兜底，探测不再强制要求录入指纹（原先会误判为不支持）。
+- **iOS Face ID 机型会闪退**：构建产物的 Info.plist 缺少 `NSFaceIDUsageDescription`，而 LAContext 的生物识别策略属于隐私敏感能力，缺失该说明会被系统直接终止进程。已补上用途说明（`project.yml` 与生成的 Info.plist 同步）。
+- **探测失败不再静默**：能力探测协议化为 `ok:<kind>` / `unsupported:<原因码>`，失败写 `ainote::vault` 的 warn 日志；移动端启动时打一条 `设备级快速解锁能力探测: supported=… kind=… reason=…`，线上定位不必靠猜。
+
+### 测试
+
+- **Android 真机运行时验证**（OPPO PGJM10 / Android 14）：入口出现、指纹解锁可用；已设锁屏 → `supported=true kind=Biometric`，清除锁屏 → `supported=false reason=NoDeviceLock`。
+- **iOS 模拟器运行时验证**（iPhone 17 / iOS 26.2）：应用正常启动，探测 `supported=true kind=DeviceCredential`；构建产物 Info.plist 已含 Face ID 用途声明。
+- 通过前端构建、全量前端测试（1176 用例）、Lint、Rust 单元测试（426 passed / 7 ignored）、Playwright 端到端（84 条）、Android release 构建（APK / AAB，反汇编 dex 确认 JNI 方法保留为 static）与桌面 release 编译。
+
 ## v0.51.1 — 2026-09-20（修复：Android 设备级快速解锁入口不可见）
 
 ### 修复
