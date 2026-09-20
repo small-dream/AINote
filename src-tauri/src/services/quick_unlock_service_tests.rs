@@ -5,7 +5,7 @@ use std::path::{Path, PathBuf};
 use std::sync::Mutex;
 
 use super::*;
-use crate::domain::quick_unlock::QuickUnlockKind;
+use crate::domain::quick_unlock::{QuickUnlockKind, QuickUnlockUnsupportedReason};
 use crate::domain::vault::VaultState;
 use crate::platform::quick_unlock::DeviceSupport;
 use crate::services::vault_service::test_guard;
@@ -69,7 +69,7 @@ impl DeviceKeyStore for MockStore {
         if self.supported {
             DeviceSupport::available(self.kind)
         } else {
-            DeviceSupport::unavailable()
+            DeviceSupport::unavailable(QuickUnlockUnsupportedReason::PlatformUnsupported)
         }
     }
 

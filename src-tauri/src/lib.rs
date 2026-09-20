@@ -63,6 +63,19 @@ pub fn run() {
                 domain::metrics::MetricEvent::AppLaunched,
             );
             log::info!(target: "ainote::startup", "AINote {} 启动", env!("CARGO_PKG_VERSION"));
+            // 移动端启动时探测一次设备级快速解锁能力：这条日志让「入口为什么没出现」可以直接
+            // 从 logcat / 诊断包读出原因（supported / kind / reason），不必靠猜。
+            #[cfg(any(target_os = "android", target_os = "ios"))]
+            {
+                let support = platform::quick_unlock::store().support();
+                log::info!(
+                    target: "ainote::vault",
+                    "设备级快速解锁能力探测: supported={} kind={:?} reason={:?}",
+                    support.supported,
+                    support.kind,
+                    support.reason
+                );
+            }
             #[cfg(desktop)]
             {
                 _app.handle().plugin(tauri_plugin_process::init())?;

@@ -5,13 +5,14 @@
 use jni::objects::{JString, JValue};
 
 use crate::domain::error::AppError;
-use crate::domain::quick_unlock::QuickUnlockKind;
-use crate::platform::android_jni::with_application_context;
-use crate::platform::quick_unlock::{DeviceKeyStore, DeviceSupport, PlatformOutcome};
+use crate::platform::android_jni::{app_class, with_application_context};
+use crate::platform::quick_unlock::{
+    parse_probe, DeviceKeyStore, DeviceSupport, PlatformOutcome,
+};
+use crate::domain::quick_unlock::QuickUnlockUnsupportedReason;
 
 const QUICK_UNLOCK_CLASS: &str = "dev/ainote/app/QuickUnlock";
-const SUPPORT_SIG: &str = "(Landroid/content/Context;)Z";
-const KIND_SIG: &str = "(Landroid/content/Context;)Ljava/lang/String;";
+const PROBE_SIG: &str = "(Landroid/content/Context;)Ljava/lang/String;";
 const STORE_SIG: &str =
     "(Landroid/content/Context;Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;";
 const READ_SIG: &str =
@@ -28,23 +29,15 @@ impl AndroidDeviceKeyStore {
 
 impl DeviceKeyStore for AndroidDeviceKeyStore {
     fn support(&self) -> DeviceSupport {
-        // 能力探测失败（JNI 不可用、类被混淆裁掉等）一律按「不支持」处理，绝不因此阻断口令解锁；
-        // 但必须留下日志，否则线上表现只是「入口凭空消失」，无法定位。
-        let supported = match call_bool("isSupported", SUPPORT_SIG, "检查设备级快速解锁可用性") {
-            Ok(value) => value,
+        // 探测失败（JNI 不可用、类被混淆裁掉等）按「不支持」处理，但必须留下日志与原因，
+        // 否则线上表现只是「入口凭空消失」，无法定位。
+        match call_text("probe", PROBE_SIG, "检查设备级快速解锁可用性", &[]) {
+            Ok(raw) => parse_probe(&raw),
             Err(err) => {
                 log::warn!(target: "ainote::vault", "设备快速解锁能力探测失败，按不支持处理: {err}");
-                false
+                DeviceSupport::unavailable(QuickUnlockUnsupportedReason::ProbeFailed)
             }
-        };
-        if !supported {
-            return DeviceSupport::unavailable();
         }
-        let kind = match call_text("kind", KIND_SIG, "读取设备认证方式", &[]) {
-            Ok(value) if value == "deviceCredential" => QuickUnlockKind::DeviceCredential,
-            _ => QuickUnlockKind::Biometric,
-        };
-        DeviceSupport::available(kind)
     }
 
     fn store(&self, account: &str, payload: &str) -> Result<(), AppError> {
@@ -72,16 +65,15 @@ impl DeviceKeyStore for AndroidDeviceKeyStore {
     }
 }
 
-fn call_bool(method: &str, signature: &str, action: &str) -> Result<bool, AppError> {
-    with_application_context(action, &AppError::VaultQuickUnlockUnavailable, |env, context| {
-        env.call_static_method(QUICK_UNLOCK_CLASS, method, signature, &[JValue::Object(context)])
-            .and_then(|value| value.z())
-            .map_err(|err| AppError::VaultQuickUnlockUnavailable(format!("{action}: {err}")))
-    })
-}
-
 fn call_text(method: &str, signature: &str, action: &str, strings: &[&str]) -> Result<String, AppError> {
     with_application_context(action, &AppError::VaultQuickUnlockUnavailable, |env, context| {
+        let class = app_class(
+            env,
+            context,
+            QUICK_UNLOCK_CLASS,
+            action,
+            &AppError::VaultQuickUnlockUnavailable,
+        )?;
         let mut args: Vec<JValue> = Vec::with_capacity(strings.len() + 1);
         args.push(JValue::Object(context));
         let owned: Vec<JString> = strings
@@ -93,7 +85,7 @@ fn call_text(method: &str, signature: &str, action: &str, strings: &[&str]) -> R
             .collect::<Result<_, _>>()?;
         args.extend(owned.iter().map(|value| JValue::Object(value)));
         let value = env
-            .call_static_method(QUICK_UNLOCK_CLASS, method, signature, &args)
+            .call_static_method(&class, method, signature, &args)
             .map_err(|err| AppError::VaultQuickUnlockUnavailable(format!("{action}: {err}")))?;
         let text = JString::from(
             value

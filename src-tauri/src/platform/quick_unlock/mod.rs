@@ -6,7 +6,7 @@
 use std::sync::OnceLock;
 
 use crate::domain::error::AppError;
-use crate::domain::quick_unlock::QuickUnlockKind;
+use crate::domain::quick_unlock::{QuickUnlockKind, QuickUnlockUnsupportedReason};
 
 #[cfg(any(target_os = "macos", target_os = "ios"))]
 mod apple;
@@ -28,6 +28,8 @@ use unsupported::UnsupportedDeviceKeyStore as PlatformStore;
 pub struct DeviceSupport {
     pub supported: bool,
     pub kind: Option<QuickUnlockKind>,
+    /// 不支持时的原因码：能力探测不能只返回一个 false，否则线上表现就是「入口凭空消失」。
+    pub reason: Option<QuickUnlockUnsupportedReason>,
 }
 
 impl DeviceSupport {
@@ -36,14 +38,16 @@ impl DeviceSupport {
         Self {
             supported: true,
             kind: Some(kind),
+            reason: None,
         }
     }
 
     /// 平台 / 设备不具备条件（含 Android < 9、未设置设备密码等）。
-    pub fn unavailable() -> Self {
+    pub fn unavailable(reason: QuickUnlockUnsupportedReason) -> Self {
         Self {
             supported: false,
             kind: None,
+            reason: Some(reason),
         }
     }
 }
@@ -68,6 +72,32 @@ pub trait DeviceKeyStore: Send + Sync {
 pub fn store() -> &'static dyn DeviceKeyStore {
     static STORE: OnceLock<PlatformStore> = OnceLock::new();
     STORE.get_or_init(PlatformStore::new)
+}
+
+/// Android 原生探测协议的解析：`ok:<kind>` / `unsupported:<原因码>`。
+/// 协议放在这里（而不是 Android 专属模块），是为了在任意平台都能单测。
+#[cfg_attr(not(target_os = "android"), allow(dead_code))]
+pub fn parse_probe(raw: &str) -> DeviceSupport {
+    match raw.split_once(':') {
+        Some(("ok", "biometric")) => DeviceSupport::available(QuickUnlockKind::Biometric),
+        Some(("ok", "deviceCredential")) => {
+            DeviceSupport::available(QuickUnlockKind::DeviceCredential)
+        }
+        Some(("unsupported", code)) => DeviceSupport::unavailable(probe_reason(code)),
+        // 协议不认识（含旧版本 Kotlin 只回 true/false）一律按探测失败处理，界面会写明原因。
+        _ => DeviceSupport::unavailable(QuickUnlockUnsupportedReason::ProbeFailed),
+    }
+}
+
+#[cfg_attr(not(target_os = "android"), allow(dead_code))]
+fn probe_reason(code: &str) -> QuickUnlockUnsupportedReason {
+    match code {
+        "platformUnsupported" => QuickUnlockUnsupportedReason::PlatformUnsupported,
+        "noDeviceLock" => QuickUnlockUnsupportedReason::NoDeviceLock,
+        "noBiometric" => QuickUnlockUnsupportedReason::NoBiometric,
+        "deviceAuthUnavailable" => QuickUnlockUnsupportedReason::DeviceAuthUnavailable,
+        _ => QuickUnlockUnsupportedReason::ProbeFailed,
+    }
 }
 
 /// Kotlin 侧返回的协议结果（Android 专用，放在这里是为了能在任意平台单测解析逻辑）。
@@ -116,6 +146,36 @@ impl PlatformOutcome {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn probe_protocol_maps_to_capability_and_reason() {
+        let biometric = parse_probe("ok:biometric");
+        assert!(biometric.supported);
+        assert_eq!(biometric.kind, Some(QuickUnlockKind::Biometric));
+        assert!(biometric.reason.is_none());
+
+        let credential = parse_probe("ok:deviceCredential");
+        assert!(credential.supported);
+        assert_eq!(credential.kind, Some(QuickUnlockKind::DeviceCredential));
+
+        let no_lock = parse_probe("unsupported:noDeviceLock");
+        assert!(!no_lock.supported);
+        assert_eq!(
+            no_lock.reason,
+            Some(QuickUnlockUnsupportedReason::NoDeviceLock)
+        );
+
+        // 未知 / 损坏的应答不能静默当成「支持」，也不能丢原因。
+        for raw in ["", "true", "unsupported:", "unsupported:???", "boom"] {
+            let support = parse_probe(raw);
+            assert!(!support.supported, "{raw} 不应被当成支持");
+            assert_eq!(
+                support.reason,
+                Some(QuickUnlockUnsupportedReason::ProbeFailed),
+                "{raw} 应归为探测失败"
+            );
+        }
+    }
 
     #[test]
     fn platform_outcome_parses_android_protocol() {

@@ -86,6 +86,7 @@ legacy-plain (登录钥匙串):                                           0 成�
   4. 多个解锁界面同时挂载（设置页 + 笔记遮罩 + 解锁弹层）时，`consumeAuto()` 原子取用保证**只弹一次**。
 - **不支持**：`quickUnlockSupported = false` 时完全不渲染该入口（Windows / Linux / Android < 9）。
 - 关闭后立即回到纯口令流程；`VAULT_9007` 不渲染错误文本。
+- **设置页恒定可见**：只要有密钥库，设置页就显示「设备级快速解锁」区块——已解锁可开关、已锁定显示「先用仓库口令解锁，随后即可在此开启」并禁用按钮、平台不支持则写明原因码文案（`noDeviceLock` / `noBiometric` / `platformUnsupported` / `deviceAuthUnavailable` / `probeFailed`，仅移动端展示，桌面 Windows・Linux 不产生噪音）。**绝不出现「入口凭空消失且没有任何解释」**。
 - **认证失败后的口令入口**：口令输入框在所有解锁界面**始终与设备按钮同屏**；设备认证失败（`VAULT_9008`）或条目失效（`VAULT_9006`）时焦点自动移进口令输入框，文案也直接指向「在下方输入仓库口令」，用户不必再找入口。
 - **系统弹窗自身的兜底**：macOS 用 `LAContext.deviceOwnerAuthentication`（Touch ID 或登录密码）、iOS 用 `kSecAccessControlUserPresence`（Face ID / Touch ID 或设备密码）、Android 10+ 用 `BIOMETRIC_STRONG | DEVICE_CREDENTIAL`，系统弹窗内自带「使用密码 / 图案」入口；**Android 9（API 28）** 的平台 `BiometricPrompt` 只支持生物识别，此时唯一的兜底就是应用内的仓库口令。
 
@@ -115,10 +116,35 @@ legacy-plain (登录钥匙串):                                           0 成�
 | `pnpm build` / `pnpm lint` | 通过 |
 | `pnpm test` | 1164 passed（新增 `VaultQuickUnlockCard`、`VaultUnlockCard`、`quickUnlock` 纯函数用例） |
 | `pnpm test:e2e` | vault-flow 8 passed（新增「开启 → 锁定 → 用 Touch ID 解锁 → 关闭」与「点开加密笔记时自动弹设备认证，无需先点按钮」） |
-| `pnpm android:build` | 通过（`app-universal-release.apk` / `.aab`，Kotlin `QuickUnlock.kt` 参与编译） |
+| `pnpm android:build` | 通过（`app-universal-release.apk` / `.aab`，Kotlin `QuickUnlock.kt` 参与编译）；反汇编 `classes.dex` 确认 `probe` / `store` / `read` / `remove` 保留为 `PUBLIC STATIC FINAL` |
 | `pnpm desktop:build` | 通过（release 可执行文件，Apple 框架链接正常） |
 | macOS 真机钥匙串往返 | 通过（`cargo test -- --ignored apple_keychain`：写入 → 读回 → 删除，含 -34018 回退路径；该用例默认 ignore，因为它会写真实钥匙串） |
 | macOS 认证弹窗人工冒烟 | 未在本次无人值守环境执行（会弹出系统 Touch ID 界面）；`load()` 的 LAContext 分支由错误码映射单测与 `support()` 探测覆盖，首次使用建议人工确认一次 |
+| Android 运行时冒烟 | 已在 Pixel 7 / Android 16 模拟器实测：`pnpm android:dev` 安装后读取 logcat，有 PIN → `supported=true kind=DeviceCredential`；清除 PIN → `supported=false reason=NoDeviceLock`（详见 §10） |
+
+## 10. Android JNI 约束（踩坑记录，务必遵守）
+
+Android 侧有两层「看起来编译通过、运行时静默失效」的坑，均在真机运行时定位并验证：
+
+1. **应用类必须经 Application Context 的 ClassLoader 加载**。JNI 在 attach 上来的原生线程里用
+   **系统 ClassLoader** 查找类，直接 `FindClass` / 按类名 `call_static_method` 会抛
+   `ClassNotFoundException: Didn't find class "dev.ainote.app.QuickUnlock"`。
+   统一走 `platform/android_jni.rs` 的 `app_class()`（`context.getClassLoader().loadClass(...)`）。
+   同一处历史隐患也一并修掉了：`ApkInstaller`（应用内更新安装 / 打开外链）此前用同一种写法。
+2. **JNI 入口必须是静态方法且不能被 R8 裁掉**。Kotlin `object` 的方法默认是实例方法，
+   必须加 `@JvmStatic`；同时在 `proguard-rules.pro` 里对每个 JNI 契约类加
+   `-keep class <类> { *; }`，否则 release 包会只剩字段、方法表被裁空。
+3. **能力探测失败不能只回一个 false**：现在返回 `ok:<kind>` / `unsupported:<原因码>`，
+   失败还会打 `ainote::vault` 的 warn 日志；移动端启动时会打一条
+   `设备级快速解锁能力探测: supported=… kind=… reason=…`，线上定位不必再靠猜。
+
+真机运行时证据（Pixel 7 / Android 16 模拟器，debug APK 安装后看 logcat）：
+
+| 设备条件 | 探测结果 |
+|---|---|
+| 已设 PIN | `supported=true kind=Some(DeviceCredential) reason=None` |
+| 清除 PIN（无锁屏） | `supported=false reason=Some(NoDeviceLock)` |
+| 修复前（0.51.1） | `ClassNotFoundException` → `supported=false reason=ProbeFailed`，界面无入口且无解释 |
 
 ## 8. 文档同步义务
 

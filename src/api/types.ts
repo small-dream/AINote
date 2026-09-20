@@ -38,11 +38,21 @@ export interface VaultStatus {
 /** 设备级快速解锁的认证方式（与 Rust domain/quick_unlock.rs 的 QuickUnlockKind 一致） */
 export type QuickUnlockKind = "touchId" | "faceId" | "opticId" | "biometric" | "deviceCredential";
 
+/** 平台不支持设备级快速解锁时的原因码（与 Rust domain/quick_unlock.rs 一致） */
+export type QuickUnlockUnsupportedReason =
+  | "platformUnsupported"
+  | "noDeviceLock"
+  | "noBiometric"
+  | "deviceAuthUnavailable"
+  | "probeFailed";
+
 /** 本机设备级快速解锁状态：supported=false 时前端不渲染任何入口 */
 export interface QuickUnlockStatus {
   supported: boolean;
   enabled: boolean;
   kind: QuickUnlockKind | null;
+  /** 不支持时的原因码：设置页据此说明「为什么没有这个选项」 */
+  reason?: QuickUnlockUnsupportedReason | null;
 }
 
 /**

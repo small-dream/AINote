@@ -4,6 +4,7 @@
 //! 又把主密钥放进一个用户无法在应用内关闭的位置。
 
 use crate::domain::error::AppError;
+use crate::domain::quick_unlock::QuickUnlockUnsupportedReason;
 use crate::platform::quick_unlock::{DeviceKeyStore, DeviceSupport};
 
 pub(super) struct UnsupportedDeviceKeyStore;
@@ -22,7 +23,7 @@ fn unavailable(action: &str) -> AppError {
 
 impl DeviceKeyStore for UnsupportedDeviceKeyStore {
     fn support(&self) -> DeviceSupport {
-        DeviceSupport::unavailable()
+        DeviceSupport::unavailable(QuickUnlockUnsupportedReason::PlatformUnsupported)
     }
 
     fn store(&self, _account: &str, _payload: &str) -> Result<(), AppError> {

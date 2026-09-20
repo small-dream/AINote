@@ -31,7 +31,7 @@ use security_framework::passwords::{
 use security_framework_sys::base::errSecItemNotFound;
 
 use crate::domain::error::AppError;
-use crate::domain::quick_unlock::QuickUnlockKind;
+use crate::domain::quick_unlock::{QuickUnlockKind, QuickUnlockUnsupportedReason};
 use crate::platform::quick_unlock::{DeviceKeyStore, DeviceSupport};
 
 /// 设备条目所属的钥匙串服务名：与 Token / API Key 的凭证存储隔离。
@@ -72,7 +72,7 @@ impl DeviceKeyStore for AppleDeviceKeyStore {
             if owner {
                 return DeviceSupport::available(QuickUnlockKind::DeviceCredential);
             }
-            DeviceSupport::unavailable()
+            DeviceSupport::unavailable(QuickUnlockUnsupportedReason::DeviceAuthUnavailable)
         })
     }
 

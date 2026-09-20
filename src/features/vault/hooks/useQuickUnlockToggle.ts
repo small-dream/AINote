@@ -25,5 +25,6 @@ export function useQuickUnlockToggle() {
     });
   };
 
-  return { quick, pending, error, toggle };
+  // 状态未就绪时不渲染：device 支持与否只有拿到状态才知道，避免先闪一句「探测失败」。
+  return { quick, ready: status.data !== undefined, pending, error, toggle };
 }

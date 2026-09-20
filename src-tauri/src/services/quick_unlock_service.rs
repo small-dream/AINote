@@ -10,7 +10,9 @@ use sha2::{Digest, Sha256};
 use zeroize::Zeroizing;
 
 use crate::domain::error::AppError;
-use crate::domain::quick_unlock::{QuickUnlockMarker, QuickUnlockPayload, QuickUnlockStatus};
+use crate::domain::quick_unlock::{
+    QuickUnlockMarker, QuickUnlockPayload, QuickUnlockStatus, QuickUnlockUnsupportedReason,
+};
 use crate::domain::vault::MASTER_KEY_LEN;
 use crate::platform::quick_unlock::DeviceKeyStore;
 use crate::repositories::{quick_unlock_files, vault_files};
@@ -57,7 +59,11 @@ fn account_id(repo: &Path) -> String {
 pub fn status(ctx: &QuickUnlockContext, store: &dyn DeviceKeyStore) -> QuickUnlockStatus {
     let support = store.support();
     if !support.supported {
-        return QuickUnlockStatus::unsupported();
+        return QuickUnlockStatus::unsupported(
+            support
+                .reason
+                .unwrap_or(QuickUnlockUnsupportedReason::ProbeFailed),
+        );
     }
     let enabled = quick_unlock_files::load(&ctx.config_root, &ctx.account).is_some();
     QuickUnlockStatus::new(true, enabled, support.kind)

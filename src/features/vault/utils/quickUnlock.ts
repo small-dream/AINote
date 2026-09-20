@@ -1,4 +1,4 @@
-import type { QuickUnlockKind, QuickUnlockStatus } from "@/api/types";
+import type { QuickUnlockKind, QuickUnlockStatus, QuickUnlockUnsupportedReason } from "@/api/types";
 import type { TranslationKey } from "@/i18n/messages";
 
 /** 平台不支持 / 未开启：不渲染入口时使用同一常量，避免各处重复构造。 */
@@ -6,6 +6,7 @@ export const DISABLED_QUICK_UNLOCK: QuickUnlockStatus = {
   supported: false,
   enabled: false,
   kind: null,
+  reason: null,
 };
 
 /**
@@ -19,6 +20,7 @@ export function quickUnlockOf(status: { quickUnlock?: QuickUnlockStatus } | unde
     supported: value.supported === true,
     enabled: value.enabled === true,
     kind: value.kind ?? null,
+    reason: value.reason ?? null,
   };
 }
 
@@ -38,4 +40,21 @@ export function quickUnlockKindLabel(
   if (!kind) return t("vault.deviceKindDefault");
   const key = KIND_LABEL_KEYS[kind];
   return key ? t(key) : t("vault.deviceKindDefault");
+}
+
+const REASON_KEYS: Record<QuickUnlockUnsupportedReason, TranslationKey> = {
+  platformUnsupported: "vault.unsupportedPlatform",
+  noDeviceLock: "vault.unsupportedNoDeviceLock",
+  noBiometric: "vault.unsupportedNoBiometric",
+  deviceAuthUnavailable: "vault.unsupportedDeviceAuthUnavailable",
+  probeFailed: "vault.unsupportedProbeFailed",
+};
+
+/** 不支持时的原因说明；**绝不返回空**，否则用户只能看到「入口不见了」。 */
+export function quickUnlockReasonText(
+  reason: QuickUnlockUnsupportedReason | null | undefined,
+  t: (key: TranslationKey) => string,
+): string {
+  const key = reason ? REASON_KEYS[reason] : undefined;
+  return key ? t(key) : t("vault.unsupportedProbeFailed");
 }

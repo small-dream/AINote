@@ -32,7 +32,7 @@ export function VaultSettings() {
       {state === "absent" && <VaultCreateCard />}
       {state === "locked" && <VaultUnlockCard />}
       {state === "unlocked" && <VaultUnlockedCard />}
-      {state === "unlocked" && <VaultQuickUnlockCard />}
+      {state !== "absent" && <VaultQuickUnlockCard locked={state === "locked"} />}
       {state !== "absent" && <VaultAutoLockSettings />}
       <VaultPolicyNotes />
     </div>

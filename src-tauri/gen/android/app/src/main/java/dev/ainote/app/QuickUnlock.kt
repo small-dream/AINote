@@ -54,44 +54,49 @@ object QuickUnlock {
         if (current === activity) current = null
     }
 
-    /** 能力探测：不弹窗、不写盘，只查系统条件。 */
+    /**
+     * 能力探测：返回 `"ok:<biometric|deviceCredential>"` 或 `"unsupported:<原因码>"`。
+     * 不弹窗、不写盘；任何系统异常都收敛成 `unsupported:probeFailed`，绝不把异常抛给 JNI。
+     * 原因码与 Rust 侧 `QuickUnlockUnsupportedReason` 一一对应，界面据此解释「为什么没有入口」。
+     */
     @JvmStatic
-    fun isSupported(context: Context): Boolean {
-        // 任何系统异常都按「不支持」处理：能力探测绝不能把异常抛给 JNI（会污染后续调用）。
+    fun probe(context: Context): String {
         return runCatching {
-            if (Build.VERSION.SDK_INT < MIN_SDK) return false
-            val keyguard =
-                context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager ?: return false
-            if (!keyguard.isDeviceSecure) return false
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-                val manager = context.getSystemService(BiometricManager::class.java) ?: return false
-                val allowed = BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                    BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                return manager.canAuthenticate(allowed) == BiometricManager.BIOMETRIC_SUCCESS
+            if (Build.VERSION.SDK_INT < MIN_SDK) return "unsupported:platformUnsupported"
+            val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
+                ?: return "unsupported:probeFailed"
+            if (!keyguard.isDeviceSecure) return "unsupported:noDeviceLock"
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                // Android 10 起提示允许设备凭证兜底：只要有锁屏就能用，生物识别可选。
+                return if (hasBiometric(context)) "ok:biometric" else "ok:deviceCredential"
             }
-            // Android 9：只有指纹提示可用，且密钥不接受设备凭证，因此必须有已录入的指纹。
+            // Android 9：平台 BiometricPrompt 只支持生物识别，必须有已录入的指纹。
             @Suppress("DEPRECATION")
-            val fingerprint = context.getSystemService(FingerprintManager::class.java) ?: return false
+            val fingerprint = context.getSystemService(FingerprintManager::class.java)
+                ?: return "unsupported:noBiometric"
             @Suppress("DEPRECATION")
-            fingerprint.hasEnrolledFingerprints()
-        }.getOrDefault(false)
+            if (fingerprint.hasEnrolledFingerprints()) "ok:biometric" else "unsupported:noBiometric"
+        }.getOrElse { "unsupported:probeFailed" }
     }
 
-    /** 本机实际可用的认证方式：生物识别，或仅有设备凭证（PIN / 图案 / 密码）。 */
-    @JvmStatic
-    fun kind(context: Context): String {
+    /** 本机是否已录入可用的强生物识别（探测用，不弹窗）。 */
+    private fun hasBiometric(context: Context): Boolean {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val manager = context.getSystemService(BiometricManager::class.java)
-            if (manager != null &&
+            val manager = context.getSystemService(BiometricManager::class.java) ?: return false
+            return runCatching {
                 manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
-                BiometricManager.BIOMETRIC_SUCCESS
-            ) {
-                return "biometric"
-            }
-            return "deviceCredential"
+                    BiometricManager.BIOMETRIC_SUCCESS
+            }.getOrDefault(false)
         }
-        return "biometric"
+        // Android 10 只有无参 canAuthenticate()（API 30 起被废弃）。
+        return hasAnyBiometric(context)
     }
+
+    @Suppress("DEPRECATION")
+    private fun hasAnyBiometric(context: Context): Boolean = runCatching {
+        val manager = context.getSystemService(BiometricManager::class.java) ?: return false
+        manager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
+    }.getOrDefault(false)
 
     /** 开启（或重新开启）：先生成新密钥，再要求一次系统认证，最后写入口令载荷。 */
     @JvmStatic

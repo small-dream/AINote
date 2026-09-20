@@ -21,6 +21,22 @@ pub enum QuickUnlockKind {
     DeviceCredential,
 }
 
+/// 平台不支持设备级快速解锁时的**稳定原因码**（前端本地化，便于用户与支持者定位）。
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub enum QuickUnlockUnsupportedReason {
+    /// 平台本身不提供：Windows / Linux，或 Android 9 以下
+    PlatformUnsupported,
+    /// 设备未设置锁屏 / 设备密码
+    NoDeviceLock,
+    /// 有锁屏但没有可用生物识别，且该平台不能用设备密码兜底（Android 9）
+    NoBiometric,
+    /// 系统没有可用的设备认证方式（Apple：LAContext 判定）
+    DeviceAuthUnavailable,
+    /// 能力探测本身失败（平台桥异常，日志里有明细）
+    ProbeFailed,
+}
+
 /// 平台能力 + 本机开关状态（随 `vault_status` 一起下发）。
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -31,6 +47,8 @@ pub struct QuickUnlockStatus {
     pub enabled: bool,
     /// 本机使用的认证方式；不支持时为 null。
     pub kind: Option<QuickUnlockKind>,
+    /// 不支持时的原因码；支持时为 null。
+    pub reason: Option<QuickUnlockUnsupportedReason>,
 }
 
 impl QuickUnlockStatus {
@@ -39,12 +57,18 @@ impl QuickUnlockStatus {
             supported,
             enabled,
             kind,
+            reason: None,
         }
     }
 
-    /// 平台不支持（Windows / Linux / Android < 9）。
-    pub fn unsupported() -> Self {
-        Self::new(false, false, None)
+    /// 平台 / 设备不支持：带上原因码，让「入口消失」变成可解释的状态。
+    pub fn unsupported(reason: QuickUnlockUnsupportedReason) -> Self {
+        Self {
+            supported: false,
+            enabled: false,
+            kind: None,
+            reason: Some(reason),
+        }
     }
 }
 
@@ -172,9 +196,16 @@ mod tests {
         assert_eq!(json["supported"], true);
         assert_eq!(json["enabled"], false);
         assert!(json["kind"].is_null(), "kind 恒下发，前端无需处理 undefined");
+        assert!(json["reason"].is_null());
 
         let supported = serde_json::to_value(QuickUnlockStatus::new(true, true, Some(QuickUnlockKind::TouchId))).unwrap();
         assert_eq!(supported["kind"], "touchId");
-        assert_eq!(serde_json::to_value(QuickUnlockStatus::unsupported()).unwrap()["supported"], false);
+        let unsupported = serde_json::to_value(QuickUnlockStatus::unsupported(
+            QuickUnlockUnsupportedReason::NoDeviceLock,
+        ))
+        .unwrap();
+        assert_eq!(unsupported["supported"], false);
+        assert_eq!(unsupported["reason"], "noDeviceLock");
+        assert!(unsupported["kind"].is_null());
     }
 }
