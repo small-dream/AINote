@@ -3,7 +3,7 @@ import type { TaskItemDto, TaskPriority } from "@/api/types";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 import { PRIORITY_FLAG_CLASS } from "./TaskMetaControls";
-import { createdAtLabel, dueDay, dueDayOffset, dueInstant, dueTime } from "../utils/task";
+import { dueDay, dueDayOffset, dueInstant, dueTime } from "../utils/task";
 
 interface TaskRowProps {
   task: TaskItemDto;
@@ -40,10 +40,14 @@ export function DueBadge({ dueAt, done }: { dueAt: string; done: boolean }) {
   );
 }
 
-/** 单条任务行：完成勾选、标题（完成删除线）、截止徽标、优先级旗帜。点击进入编辑器。 */
+/**
+ * 单条任务行：完成勾选、标题（完成删除线）、截止徽标、优先级旗帜。点击进入编辑器。
+ *
+ * 行里只留「什么时候要交」这一个时间信号：创建时间对「现在该做什么」没有决策价值，
+ * 留在数据与详情里即可，显示在列表里只会把截止时间挤掉。
+ */
 export function TaskRow({ task, onToggle, onOpenEditor }: TaskRowProps) {
-  const { t, locale } = useTranslation();
-  const created = createdAtLabel(task.createdAt, locale);
+  const { t } = useTranslation();
   return (
     <div className="flex min-h-11 items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-bg-tertiary sm:min-h-0 sm:gap-2 sm:rounded-md sm:px-2 sm:py-1.5">
       <button
@@ -71,18 +75,9 @@ export function TaskRow({ task, onToggle, onOpenEditor }: TaskRowProps) {
           <span className={`block truncate text-base ${task.done ? "text-text-tertiary line-through" : "text-text-primary"} sm:text-sm`}>
             {task.title}
           </span>
-          {created || task.description ? (
-            <span className="mt-0.5 flex min-w-0 items-center gap-1.5">
-              {created ? (
-                <span className="shrink-0 text-[10px] leading-4 text-text-tertiary" title={task.createdAt}>
-                  {created}
-                </span>
-              ) : null}
-              {task.description ? (
-                <span className="truncate text-sm leading-5 text-text-tertiary sm:text-xs">
-                  {task.description}
-                </span>
-              ) : null}
+          {task.description ? (
+            <span className="mt-0.5 block truncate text-sm leading-5 text-text-tertiary sm:text-xs">
+              {task.description}
             </span>
           ) : null}
         </span>

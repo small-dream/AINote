@@ -2,6 +2,7 @@ import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type { TaskItemDto } from "@/api/types";
 import { TaskRow } from "./TaskRow";
+import { addLocalDays, localDateString } from "../utils/task";
 
 function task(overrides: Partial<TaskItemDto> = {}): TaskItemDto {
   return {
@@ -45,11 +46,26 @@ describe("TaskRow 完成态复选框", () => {
     expect(onToggle).toHaveBeenCalledTimes(1);
   });
 
-  it("显示创建时间，原始时间戳挂在 title 提示上", () => {
-    const createdAt = new Date(2026, 8, 15, 16, 0).toISOString();
+});
+
+describe("TaskRow 的时间信号", () => {
+  const createdAt = new Date(2026, 8, 15, 16, 0).toISOString();
+
+  it("行里只出现截止时间，不再显示创建时间", () => {
+    const dueAt = `${localDateString(addLocalDays(new Date(), 1))}T18:00`;
+    render(<TaskRow task={task({ createdAt, dueAt })} onToggle={vi.fn()} onOpenEditor={vi.fn()} />);
+
+    // 创建时间戳整个从行里消失（连 title 提示一起）
+    expect(screen.queryByTitle(createdAt)).toBeNull();
+    expect(screen.queryByText(/9\/15/)).toBeNull();
+    // 截止徽标承担行里唯一的时间信号，精确到分钟
+    expect(screen.getByText("明天 18:00")).toBeTruthy();
+  });
+
+  it("没有截止时间时行里不出现任何时间", () => {
     render(<TaskRow task={task({ createdAt })} onToggle={vi.fn()} onOpenEditor={vi.fn()} />);
-    const created = screen.getByTitle(createdAt);
-    expect(created).not.toBeNull();
-    expect(created.textContent).toMatch(/9\/15/);
+
+    expect(screen.queryByTitle(createdAt)).toBeNull();
+    expect(screen.queryByText(/9\/15/)).toBeNull();
   });
 });

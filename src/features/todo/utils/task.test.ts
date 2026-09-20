@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { TaskItemDto } from "@/api/types";
 import {
   compareTasks,
-  createdAtLabel,
   dueDateLabel,
   dueInstant,
   dueDayOffset,
@@ -13,20 +12,6 @@ import {
   reconcileReminders,
   toLocalInputValue,
 } from "./task";
-
-describe("createdAtLabel", () => {
-  it("按 locale 输出本地日期与时刻", () => {
-    // 用本地时刻构造输入，避免断言依赖运行环境时区
-    const label = createdAtLabel(new Date(2026, 8, 15, 16, 0).toISOString(), "zh-CN");
-    expect(label).toContain("9/15");
-    expect(label).toContain("16:00");
-  });
-
-  it("无法解析的时间回退空串", () => {
-    expect(createdAtLabel("not-a-date", "zh-CN")).toBe("");
-    expect(createdAtLabel("", "zh-CN")).toBe("");
-  });
-});
 
 function task(partial: Partial<TaskItemDto>): TaskItemDto {
   return {

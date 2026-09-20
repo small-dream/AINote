@@ -9,12 +9,12 @@ function inputOf(container: HTMLElement, kind: "date" | "time"): HTMLInputElemen
 }
 
 describe("移动端原生日期 chip", () => {
-  it("未设置截止时间时无清除入口，选中日期后回调 YYYY-MM-DD", () => {
+  it("未设置截止日期时显示「截止日期」且无清除入口，选中后回调 YYYY-MM-DD", () => {
     const onChange = vi.fn();
     const { container } = render(<NativeDueDateChip value={null} onChange={onChange} />);
 
     expect(inputOf(container, "date").value).toBe("");
-    expect(screen.getByText("截止时间")).toBeDefined();
+    expect(screen.getByText("截止日期")).toBeDefined();
     expect(screen.queryByRole("button", { name: "清除截止时间" })).toBeNull();
 
     fireEvent.change(inputOf(container, "date"), { target: { value: "2026-09-20" } });
