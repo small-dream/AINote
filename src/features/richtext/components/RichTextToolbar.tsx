@@ -7,6 +7,7 @@ import { ToolbarPopover, type ToolbarMenuItem } from "./ToolbarPopover";
 import { LinkButton } from "./LinkButton";
 import { BLOCK_COMMANDS, getActiveHeadingCommand, HEADING_COMMANDS, INLINE_COMMANDS, INSERT_COMMANDS, type EditorToolbarCommand } from "../utils/toolbarCommands";
 import { NoteThemePicker } from "@/features/note/components/NoteThemePicker";
+import { TextStylePanel } from "./TextStylePanel";
 
 interface RichTextToolbarProps {
   editor: Editor | null;
@@ -24,6 +25,7 @@ export function RichTextToolbar({ editor, onImagePicked, status, trailing }: Ric
           <HeadingSelector editor={editor} />
           <ToolbarDivider />
           <ToolbarCommandGroup editor={editor} commands={INLINE_COMMANDS} />
+          <TextStylePanel editor={editor} tooltipPortal />
           <LinkButton editor={editor} variant="toolbar" tooltipPortal />
           <ToolbarDivider />
           <ToolbarCommandGroup editor={editor} commands={BLOCK_COMMANDS} />

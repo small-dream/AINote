@@ -6,10 +6,12 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Highlighter,
   Italic,
   List,
   ListChecks,
   ListOrdered,
+  Palette,
   Strikethrough,
   TextQuote,
   type LucideIcon,
@@ -17,6 +19,7 @@ import {
 import { useTranslation } from "@/i18n";
 import { Tooltip } from "@/components/atoms/Tooltip";
 import { LinkButton } from "./LinkButton";
+import { TextStylePanel } from "./TextStylePanel";
 
 interface RichTextBubbleMenuProps {
   editor: Editor | null;
@@ -57,6 +60,8 @@ export function RichTextBubbleMenu({ editor }: RichTextBubbleMenuProps) {
       }}
     >
       <div className="flex items-center gap-0.5 rounded-lg border border-border bg-bg-primary px-1 py-1 shadow-lg">
+        <TextStylePanel editor={editor} kinds={["mark"]} icon={Highlighter} labelKey="richtext.markLabel" />
+        <TextStylePanel editor={editor} kinds={["color"]} icon={Palette} labelKey="richtext.colorLabel" />
         {BUBBLE_BUTTONS.map(({ icon: Icon, labelKey, active, run }) => (
           <Tooltip key={labelKey} content={t(labelKey)}>
             <button

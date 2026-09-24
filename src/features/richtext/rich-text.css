@@ -202,3 +202,62 @@
   border-radius: 4px;
   padding: 0 0.25em;
 }
+
+/* ── 字符级样式（字体 / 字号 / 颜色 / 高亮） ─────────────────────────────
+   派生公式与取值理由见 docs/RICHTEXT_FORMATTING_PLAN.md §3.3；比例常量必须与
+   utils/textStyles.ts 的 TEXT_COLOR_MIX(0.78) / MARK_ALPHA(0.30) 保持一致
+   （utils/textStyles.contrast.test.ts 会同时校验公式与对比度）。
+   刻意不加作用域：样式面板 portal 到 body、打印页也不在 .rich-text-editor 内，
+   两处都要命中同一套规则；取值取自最近一层的 --note-* token（主题表面提供，:root 兜底）。 */
+
+.rt-font-sans { font-family: var(--note-body-font-sans); }
+.rt-font-serif { font-family: var(--note-body-font-serif); }
+.rt-font-mono { font-family: var(--note-code-font); }
+
+.rt-size-sm { font-size: 0.875em; }
+.rt-size-lg { font-size: 1.25em; }
+.rt-size-xl { font-size: 1.5em; }
+
+/* 不支持 color-mix 的旧 WebView 兜底：直接用语义 token（forest / solar 下略低于 AA，但不丢样式） */
+.rt-fg-accent { color: var(--note-accent); }
+.rt-fg-success { color: var(--note-success); }
+.rt-fg-warning { color: var(--note-warning); }
+.rt-fg-danger { color: var(--note-danger); }
+.rt-fg-muted { color: var(--note-secondary); }
+
+/* <mark> 的 UA 默认色（MarkText）必须覆盖，否则暗色主题下高亮里的文字会变黑 */
+.rt-mark-yellow,
+.rt-mark-green,
+.rt-mark-blue,
+.rt-mark-pink,
+.rt-mark-gray {
+  background-color: var(--note-muted);
+  color: inherit;
+}
+
+@supports (color: color-mix(in oklab, red, blue)) {
+  .rt-fg-accent { color: color-mix(in oklab, var(--note-accent) 78%, var(--note-ink)); }
+  .rt-fg-success { color: color-mix(in oklab, var(--note-success) 78%, var(--note-ink)); }
+  .rt-fg-warning { color: color-mix(in oklab, var(--note-warning) 78%, var(--note-ink)); }
+  .rt-fg-danger { color: color-mix(in oklab, var(--note-danger) 78%, var(--note-ink)); }
+  .rt-fg-muted { color: color-mix(in oklab, var(--note-secondary) 78%, var(--note-ink)); }
+
+  .rt-mark-yellow { background-color: color-mix(in oklab, var(--note-warning) 30%, transparent); }
+  .rt-mark-green { background-color: color-mix(in oklab, var(--note-success) 30%, transparent); }
+  .rt-mark-blue { background-color: color-mix(in oklab, var(--note-accent) 30%, transparent); }
+  .rt-mark-pink { background-color: color-mix(in oklab, var(--note-danger) 30%, transparent); }
+  .rt-mark-gray { background-color: color-mix(in oklab, var(--note-secondary) 30%, transparent); }
+}
+
+/* 打印 / PDF：A4 为浅色纸面，若阅读主题是暗色系，派生色会算出「暗底暗字」。
+   这里在 PDF 预览作用域内自带一份浅色基线 token（与 .pdf-export-root 的浅色覆盖一致），
+   使暗色主题下选的高亮与文字色在打印页上仍然可读。 */
+.pdf-export-root {
+  --note-bg: #ffffff;
+  --note-ink: #1f2937;
+  --note-secondary: #4b5563;
+  --note-accent: #3f6fe5;
+  --note-success: #1a7f37;
+  --note-warning: #9a6700;
+  --note-danger: #cf222e;
+}

@@ -57,3 +57,44 @@ describe("richTextJsonToMarkdown", () => {
     expect(roundTripped).not.toContain("<span");
   });
 });
+
+describe("字符样式与 Markdown 的边界", () => {
+  it("导出 Markdown 时颜色 / 字号 / 字体标记被剥离，不残留 HTML", () => {
+    const json = JSON.stringify({
+      type: "doc",
+      content: [
+        {
+          type: "paragraph",
+          content: [
+            {
+              type: "text",
+              text: "重点句",
+              marks: [
+                { type: "fgStyle", attrs: { value: "danger" } },
+                { type: "sizeStyle", attrs: { value: "lg" } },
+                { type: "fontStyle", attrs: { value: "mono" } },
+              ],
+            },
+          ],
+        },
+      ],
+    });
+    const markdown = richTextJsonToMarkdown(json);
+
+    expect(markdown).toContain("重点句");
+    // tiptap-markdown 对没有 markdown spec 的 mark 会回退成输出原始 HTML，必须显式声明为无标记
+    expect(markdown).not.toMatch(/<span/);
+    expect(markdown).not.toMatch(/class="rt-/);
+    expect(markdown).not.toMatch(/style=/);
+  });
+
+  it("非法档位不影响导出（回退为纯文本）", () => {
+    const json = JSON.stringify({
+      type: "doc",
+      content: [{ type: "paragraph", content: [{ type: "text", text: "正文", marks: [{ type: "fgStyle", attrs: { value: "purple" } }] }] }],
+    });
+    const markdown = richTextJsonToMarkdown(json);
+    expect(markdown).toContain("正文");
+    expect(markdown).not.toMatch(/rt-fg-/);
+  });
+});

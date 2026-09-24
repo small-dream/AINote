@@ -19,6 +19,7 @@ const LOSS_LABEL_KEYS: Record<ConversionLoss, TranslationKey> = {
   footnote: "richtext.convertLossFootnote",
   wikiLink: "richtext.convertLossWikiLink",
   tag: "richtext.convertLossTag",
+  inlineStyle: "richtext.convertLossInlineStyle",
 };
 
 /** 转换为富文本前的确认对话框：逐项列出将丢失的内容，并说明回收站/Git 提交回滚保障。Esc 取消、Enter 确认。 */

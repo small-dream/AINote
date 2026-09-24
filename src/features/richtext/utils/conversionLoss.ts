@@ -1,8 +1,13 @@
 /** 富文本转换「内容损失」静态检测的纯函数：转换确认对话框据此逐项列出将丢失的内容。 */
 
-export type ConversionLoss = "frontmatter" | "callout" | "footnote" | "wikiLink" | "tag";
+export type ConversionLoss = "frontmatter" | "callout" | "footnote" | "wikiLink" | "tag" | "inlineStyle";
 
-export const CONVERSION_LOSSES: readonly ConversionLoss[] = ["frontmatter", "callout", "footnote", "wikiLink", "tag"];
+export const CONVERSION_LOSSES: readonly ConversionLoss[] = ["frontmatter", "callout", "footnote", "wikiLink", "tag", "inlineStyle"];
+
+/** 原始 HTML 内联样式：`<mark>` / `<font>` 或任意带 style 属性的标签（如 `<span style="color:…">`）。
+ * 富文本只认自有 `rt-*` class，转换后这些字体 / 字号 / 颜色 / 高亮不会被带入。
+ * 注意 `<b>` / `<i>` 不带 style 时由 Markdown 解析为粗体 / 斜体，不算损失，故不列入。 */
+const INLINE_STYLE_RE = /<(?:mark|font)\b|<[a-z][a-z0-9]*\b[^>]*\bstyle\s*=/i;
 
 /** YAML frontmatter 块（文件头 --- ... ---） */
 const FRONTMATTER_RE = /^---\r?\n[\s\S]*?\r?\n---(?:\r?\n|$)/;
@@ -46,5 +51,6 @@ export function detectConversionLosses(markdown: string): ConversionLoss[] {
   if (FOOTNOTE_RE.test(markdown)) losses.push("footnote");
   if (WIKI_LINK_RE.test(markdown)) losses.push("wikiLink");
   if (hasTag(markdown)) losses.push("tag");
+  if (INLINE_STYLE_RE.test(markdown)) losses.push("inlineStyle");
   return losses;
 }

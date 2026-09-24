@@ -44,4 +44,20 @@ describe("detectConversionLosses", () => {
     const md = "---\nt: 1\n---\n> [!note]\n> x\n\n[^1]\n\n[[a]] #b";
     expect(detectConversionLosses(md)).toEqual(["frontmatter", "callout", "footnote", "wikiLink", "tag"]);
   });
+
+  it("检测原始 HTML 内联样式（字体 / 字号 / 颜色 / 高亮）", () => {
+    expect(detectConversionLosses('正文 <span style="color:#f00">红字</span>')).toContain("inlineStyle");
+    expect(detectConversionLosses("正文 <mark>高亮</mark>")).toContain("inlineStyle");
+    expect(detectConversionLosses('<font color="red">字</font>')).toContain("inlineStyle");
+  });
+
+  it("普通 Markdown 强调语法不算样式损失", () => {
+    expect(detectConversionLosses("**粗体** 与 *斜体* 与 `代码`")).not.toContain("inlineStyle");
+    expect(detectConversionLosses("<b>粗体</b>")).not.toContain("inlineStyle");
+  });
+
+  it("多类损失含内联样式时顺序稳定", () => {
+    const md = "---\nt: 1\n---\n#tag <mark>高亮</mark>";
+    expect(detectConversionLosses(md)).toEqual(["frontmatter", "tag", "inlineStyle"]);
+  });
 });
