@@ -200,7 +200,7 @@ src/features/note/
 |---|---|---|---|
 | 应用主题 | 全局 UI 态（Zustand + localStorage） | 否 | 亮色 / 暗色 / 跟随系统 |
 | 阅读主题 + 排版偏好 | 视图偏好（localStorage） | 否 | 经典 / 夜航、字号 15、行高 1.7 |
-| 字符级样式 | **文档属性** | **是**（TipTap JSON 枚举 mark / `==高亮==`） | 这段字是红色、大一号、黄底 |
+| 字符级样式 | **文档属性** | **是**（TipTap JSON 枚举 mark；`==高亮==` 的 `.md` 互通暂缓，见 `docs/RICHTEXT_FORMATTING_PLAN.md` §4.1） | 这段字是红色、大一号、黄底 |
 | 块级结构 | **文档属性** | 是 | 标题级别、列表、表格 |
 
 字符级样式属于第三类：它随笔记走、出现在所有主题下，因此取值必须是**语义枚举**而非绝对色值 / 像素值，色值由各主题 token 派生（详见 `docs/RICHTEXT_FORMATTING_PLAN.md` §3.3 与 `docs/RICHTEXT_FORMATTING_EVAL.md` §4.2）。
