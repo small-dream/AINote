@@ -10,7 +10,7 @@ import { NOTE_THEME_GROUPS, NOTE_THEME_OPTIONS, type NoteThemeOption } from "../
 const THEME_MENU_WIDTH = 208;
 
 /** 编辑器与预览共用的主题选择器，偏好存储在 UI store。 */
-export function NoteThemePicker() {
+export function NoteThemePicker({ tooltipPortal = false }: { tooltipPortal?: boolean }) {
   const { t } = useTranslation();
   const noteTheme = useUiStore((state) => state.noteTheme);
   const setNoteTheme = useUiStore((state) => state.setNoteTheme);
@@ -24,6 +24,7 @@ export function NoteThemePicker() {
         icon={Palette}
         label={t("note.theme")}
         tooltipPlacement="bottom"
+        tooltipPortal={tooltipPortal}
         active={open}
         aria-haspopup="menu"
         aria-expanded={open}

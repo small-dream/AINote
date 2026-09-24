@@ -13,10 +13,12 @@ interface LinkButtonProps {
   editor: Editor;
   /** bubble = 气泡菜单按钮（7 格）；toolbar = 格式工具栏按钮（8 格带边框） */
   variant: "bubble" | "toolbar";
+  /** 工具栏内被 overflow 滚动容器裁剪时开启，气泡 portal 到 body */
+  tooltipPortal?: boolean;
 }
 
 /** 链接按钮：未激活点击弹出 URL 输入，已激活点击解除链接；同时响应 Mod-k / 斜杠命令的事件请求 */
-export function LinkButton({ editor, variant }: LinkButtonProps) {
+export function LinkButton({ editor, variant, tooltipPortal = false }: LinkButtonProps) {
   const { t } = useTranslation();
   const buttonRef = useRef<HTMLButtonElement | null>(null);
   const link = useLinkInput(editor, buttonRef);
@@ -24,7 +26,7 @@ export function LinkButton({ editor, variant }: LinkButtonProps) {
   const label = active ? t("richtext.removeLink") : t(LINK_COMMAND.labelKey);
   return (
     <>
-      <Tooltip content={label}>
+      <Tooltip content={label} portal={tooltipPortal}>
         <button
           ref={buttonRef}
           type="button"

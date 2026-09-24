@@ -20,6 +20,8 @@ interface ToolbarPopoverProps {
   active?: boolean;
   align?: "left" | "right";
   items: ToolbarMenuItem[];
+  /** 工具栏内被 overflow 滚动容器裁剪时开启，触发按钮的气泡 portal 到 body */
+  tooltipPortal?: boolean;
 }
 
 const MENU_MIN_WIDTH = 192;
@@ -29,14 +31,14 @@ const triggerState = (active: boolean) => active
   : "border-transparent text-text-secondary hover:border-border hover:bg-bg-tertiary hover:text-text-primary";
 
 /** 工具栏折叠菜单：portal 到 body 定位，避免被工具栏滚动容器裁剪；保留编辑器当前选区 */
-export function ToolbarPopover({ label, icon: Icon, text, active = false, align = "left", items }: ToolbarPopoverProps) {
+export function ToolbarPopover({ label, icon: Icon, text, active = false, align = "left", items, tooltipPortal = false }: ToolbarPopoverProps) {
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   const { menuRef, position } = useAnchoredLayer({ triggerRef: containerRef, open, close: () => setOpen(false), width: MENU_MIN_WIDTH, align: align === "right" ? "end" : "start" });
 
   return (
     <div ref={containerRef} className="relative shrink-0">
-      <Tooltip content={label} placement="bottom">
+      <Tooltip content={label} placement="bottom" portal={tooltipPortal}>
         <button type="button" aria-expanded={open} aria-haspopup="menu" aria-label={label} className={`inline-flex h-8 min-w-8 items-center justify-center gap-1 rounded-md border px-1.5 text-xs font-medium transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] ${triggerState(active)}`} onMouseDown={(event) => event.preventDefault()} onClick={() => setOpen((value) => !value)}>
           {Icon ? <Icon size={16} strokeWidth={1.9} aria-hidden="true" /> : null}
           {text ? <span>{text}</span> : null}

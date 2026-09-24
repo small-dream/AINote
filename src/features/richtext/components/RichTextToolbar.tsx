@@ -24,7 +24,7 @@ export function RichTextToolbar({ editor, onImagePicked, status, trailing }: Ric
           <HeadingSelector editor={editor} />
           <ToolbarDivider />
           <ToolbarCommandGroup editor={editor} commands={INLINE_COMMANDS} />
-          <LinkButton editor={editor} variant="toolbar" />
+          <LinkButton editor={editor} variant="toolbar" tooltipPortal />
           <ToolbarDivider />
           <ToolbarCommandGroup editor={editor} commands={BLOCK_COMMANDS} />
           <ToolbarDivider />
@@ -41,7 +41,7 @@ function HeadingSelector({ editor }: { editor: Editor }) {
   const { t } = useTranslation();
   const activeCommand = getActiveHeadingCommand(editor);
   const items = HEADING_ITEMS(editor, t);
-  return <ToolbarPopover label={t("note.headingLevel")} text={activeCommand.key === "paragraph" ? t(activeCommand.labelKey) : activeCommand.key.toUpperCase()} active={activeCommand.key !== "paragraph"} items={items} />;
+  return <ToolbarPopover label={t("note.headingLevel")} text={activeCommand.key === "paragraph" ? t(activeCommand.labelKey) : activeCommand.key.toUpperCase()} active={activeCommand.key !== "paragraph"} tooltipPortal items={items} />;
 }
 
 function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (files: File[]) => void }) {
@@ -51,7 +51,7 @@ function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (file
     if (files.length > 0) onPicked(files);
   };
   return (
-    <Tooltip content={label} placement="bottom">
+    <Tooltip content={label} placement="bottom" portal>
       <label aria-label={label} className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-transparent text-text-secondary transition-[background-color,border-color,color,transform] duration-150 hover:border-border hover:bg-bg-tertiary hover:text-text-primary active:scale-[0.96]">
         <ImageIcon size={16} strokeWidth={1.9} aria-hidden="true" />
         <input type="file" accept="image/*" multiple className="hidden" onChange={handleChange} />
@@ -70,7 +70,7 @@ function ToolbarHistoryGroup({ editor, status, trailing }: ToolbarHistoryGroupPr
       {status ? <span role="status" className="mr-1 hidden truncate text-xs text-text-secondary lg:block">{status}</span> : null}
       <ToolbarButton icon={Undo} label={t("richtext.undo")} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} />
       <ToolbarButton icon={Redo} label={t("richtext.redo")} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} />
-      <NoteThemePicker />
+      <NoteThemePicker tooltipPortal />
       {trailing}
     </div>
   );
@@ -94,7 +94,7 @@ function ToolbarButton({ icon, label, active, disabled, onClick }: { icon: Edito
   const state = active ? "border-accent/30 bg-accent-soft text-accent" : "border-transparent text-text-secondary hover:border-border hover:bg-bg-tertiary hover:text-text-primary";
   const Icon = icon;
   return (
-    <Tooltip content={label} placement="bottom">
+    <Tooltip content={label} placement="bottom" portal>
       <button type="button" aria-label={label} aria-pressed={active} disabled={disabled} onMouseDown={(event) => event.preventDefault()} onClick={onClick} className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border transition-[background-color,border-color,color,transform] duration-150 active:scale-[0.96] disabled:pointer-events-none disabled:opacity-40 ${state}`}>
         <Icon size={16} strokeWidth={1.9} aria-hidden="true" />
       </button>
