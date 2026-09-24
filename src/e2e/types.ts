@@ -59,6 +59,8 @@ export interface E2eState {
   conflicts?: E2eConflictSeed[];
   /** 注入一次更新包下载失败（download_update 抛错，验证失败态与重试） */
   updateDownloadFails?: boolean;
+  /** 注入「下载挂住不返回」的后端（弱网 / CDN 不通，验证取消不被阻塞的后端拖住） */
+  updateDownloadStalls?: boolean;
   /** 注入一次同步失败（用于验证失败态 UI 与恢复入口） */
   syncFailure?: {
     code: string;

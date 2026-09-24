@@ -218,3 +218,64 @@ describe("useMobileUpdate 安装失败与重试", () => {
     expect(api.installApk).toHaveBeenCalledWith("/cache/updates/ainote-0.25.0.apk");
   });
 });
+
+describe("useMobileUpdate 取消下载", () => {
+  /** 后端卡在不可中断的连接 / 读取里：downloadUpdate 迟迟不返回也不报错。 */
+  function stallDownload() {
+    let settle: (value: { path: string } | null) => void = () => undefined;
+    api.downloadUpdate.mockImplementation(
+      () => new Promise<{ path: string } | null>((resolve) => { settle = resolve; }),
+    );
+    return (value: { path: string } | null) => settle(value);
+  }
+
+  it("点取消立即回到 available，不等待后端返回", async () => {
+    stallDownload();
+    const { result } = await renderAvailable();
+
+    void result.current.download();
+    await waitFor(() => expect(result.current.phase).toBe("downloading"));
+
+    result.current.cancelDownload();
+    await waitFor(() => expect(result.current.phase).toBe("available"));
+    expect(api.cancelUpdateDownload).toHaveBeenCalled();
+    expect(result.current.progress).toBeNull();
+  });
+
+  it("取消后迟到的下载结果不再调起安装器", async () => {
+    const settle = stallDownload();
+    const { result } = await renderAvailable();
+
+    void result.current.download();
+    await waitFor(() => expect(result.current.phase).toBe("downloading"));
+    result.current.cancelDownload();
+    await waitFor(() => expect(result.current.phase).toBe("available"));
+
+    settle({ path: "/cache/updates/ainote-0.25.0.apk" });
+    await new Promise((resolve) => setTimeout(resolve, 10));
+
+    expect(result.current.phase).toBe("available");
+    expect(api.installApk).not.toHaveBeenCalled();
+  });
+
+  it("取消后可以立刻重新开始下载", async () => {
+    stallDownload();
+    const { result } = await renderAvailable();
+
+    void result.current.download();
+    await waitFor(() => expect(result.current.phase).toBe("downloading"));
+    result.current.cancelDownload();
+    await waitFor(() => expect(result.current.phase).toBe("available"));
+
+    // 上一次后端调用可能仍卡着，重新下载不能被它挡住（Rust 侧允许取消后重入槽位）
+    state.downloadResult = { path: "/cache/updates/ainote-0.25.0.apk" };
+    api.downloadUpdate.mockImplementation(async (_args, onProgress) => {
+      onProgress?.({ receivedBytes: 100, totalBytes: 100, percent: 100 });
+      return state.downloadResult;
+    });
+    await result.current.download();
+
+    await waitFor(() => expect(result.current.phase).toBe("installing"));
+    expect(api.downloadUpdate).toHaveBeenCalledTimes(2);
+  });
+});

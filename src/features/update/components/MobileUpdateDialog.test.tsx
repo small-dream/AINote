@@ -128,7 +128,7 @@ describe("MobileUpdateDialog 下载与安装", () => {
     expect(await screen.findByText(/安装器已打开/)).toBeTruthy();
   });
 
-  it("下载中可取消：通知后端取消", async () => {
+  it("下载中可取消：通知后端取消并立刻回到「有新版本」，不卡在下载中", async () => {
     api.downloadUpdate.mockImplementation(
       () => new Promise(() => {}), // 永不返回，停留在下载中
     );
@@ -137,6 +137,9 @@ describe("MobileUpdateDialog 下载与安装", () => {
     fireEvent.click(await screen.findByRole("button", { name: "取消下载" }));
 
     expect(api.cancelUpdateDownload).toHaveBeenCalled();
+    // 后端可能仍卡在阻塞调用里：界面不等它，直接回到可操作状态
+    expect(await screen.findByRole("button", { name: "立即更新" })).toBeTruthy();
+    expect(screen.queryByRole("progressbar")).toBeNull();
   });
 
   it("下载失败时提示并可重试", async () => {

@@ -8,6 +8,12 @@ import { isNewerVersion } from "../utils/version";
 /** 同一时刻只允许一次检查（弹窗与设置页可能同时挂载）。 */
 let inFlight: Promise<void> | null = null;
 
+/**
+ * 下载代际：取消（或开始新一次下载）即 +1，迟到的下载结果据此丢弃。
+ * 后端取消是异步的，可能正卡在阻塞的网络读写里，不能把 UI 挂在「下载中」等它返回。
+ */
+let downloadGeneration = 0;
+
 async function checkLatestRelease(): Promise<void> {
   const store = useMobileUpdateStore.getState();
   if (store.phase === "checking") return;
@@ -53,6 +59,7 @@ async function downloadAndInstall(): Promise<void> {
   const release = store.release;
   if (!release?.apkUrl || !release.apkSha256Url || store.phase === "downloading") return;
 
+  const generation = ++downloadGeneration;
   store.beginDownload();
   let result: Awaited<ReturnType<typeof mobileUpdateApi.downloadUpdate>>;
   try {
@@ -61,10 +68,14 @@ async function downloadAndInstall(): Promise<void> {
       (progress) => useMobileUpdateStore.getState().reportProgress(progress),
     );
   } catch (error) {
+    // 用户已取消：这次下载的失败不再打扰（后端稍后才察觉取消属于正常现象）
+    if (generation !== downloadGeneration) return;
     reportFrontendError(error, "mobile-update-download");
     useMobileUpdateStore.getState().reportDownloadFailed();
     return;
   }
+  // 用户已取消：丢弃这次结果，既不回到下载态也不调起安装器
+  if (generation !== downloadGeneration) return;
   if (!result) {
     useMobileUpdateStore.getState().resetDownload();
     return;
@@ -84,8 +95,11 @@ export function useMobileUpdate() {
   const state = useMobileUpdateStore();
   const check = useCallback(() => requestCheck(), []);
   const download = useCallback(() => downloadAndInstall(), []);
+  // 取消点即生效：先回「有新版本」让弹窗立刻可用，再通知后端停止（后端可能仍在阻塞调用里）
   const cancelDownload = useCallback(() => {
-    void mobileUpdateApi.cancelUpdateDownload();
+    downloadGeneration += 1;
+    void mobileUpdateApi.cancelUpdateDownload().catch(() => undefined);
+    useMobileUpdateStore.getState().resetDownload();
   }, []);
   const reopenInstaller = useCallback(async () => {
     const { apkPath } = useMobileUpdateStore.getState();

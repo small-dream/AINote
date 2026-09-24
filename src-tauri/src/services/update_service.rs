@@ -4,7 +4,7 @@
 use std::fs;
 use std::io::{Read, Write};
 use std::path::{Path, PathBuf};
-use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::atomic::{AtomicBool, AtomicU64, Ordering};
 
 use sha2::{Digest, Sha256};
 
@@ -15,6 +15,10 @@ use crate::domain::update::UpdateDownloadProgressDto;
 const ALLOWED_PREFIX: &str = "https://github.com/small-dream/AINote/releases/download/";
 const CHUNK_SIZE: usize = 64 * 1024;
 const DOWNLOAD_TIMEOUT_SECS: u64 = 600;
+
+/// 下载任务序号：临时文件名带上它，取消后用户马上重下时新旧任务各写各的临时文件，
+/// 旧任务收尾清理不会删掉新任务正在写的分片。
+static DOWNLOAD_SEQ: AtomicU64 = AtomicU64::new(0);
 
 pub fn apk_download_url_allowed(url: &str) -> bool {
     url.starts_with(ALLOWED_PREFIX) && url.ends_with(".apk")
@@ -84,6 +88,9 @@ fn agent() -> ureq::Agent {
 
 /// 下载 APK 并校验 SHA-256，返回最终文件路径；`cancel` 置位时返回 `Ok(None)`。
 /// 任何失败都会清理临时文件，成功前不覆盖旧文件。
+///
+/// 取消在联网取校验和、算摘要与重命名前都会再确认一次：置位后不得再占用网络或覆盖
+/// 已有安装包（旧版本行为是「分片刚下载完就取消」仍会完成校验并落地）。
 pub fn download_apk(
     url: &str,
     sha256_url: &str,
@@ -99,18 +106,26 @@ pub fn download_apk(
     fs::create_dir_all(dir).map_err(|err| AppError::io_context("创建更新目录失败", dir, err))?;
     clear_stale_files(dir);
 
-    let part_path = dir.join(format!("{file_name}.part"));
-    let result = download_to_file(url, &part_path, cancel, &on_progress);
-    if result.is_err() || cancel.load(Ordering::SeqCst) {
+    let seq = DOWNLOAD_SEQ.fetch_add(1, Ordering::Relaxed);
+    let part_path = dir.join(part_file_name(&file_name, seq));
+    let downloaded = download_to_file(url, &part_path, cancel, &on_progress);
+    if !matches!(downloaded, Ok(true)) || cancel.load(Ordering::SeqCst) {
         let _ = fs::remove_file(&part_path);
     }
-    // false = 用户取消
-    if !result? {
+    // false = 用户取消（含「分片刚下载完用户就点了取消」）
+    if !downloaded? || cancel.load(Ordering::SeqCst) {
         return Ok(None);
     }
 
+    // 取校验和要联网、算摘要要顺序读整个安装包：两处都可能耗时，取消要在此之前拦下
+    if let Some(cancelled) = finish_if_cancelled(cancel, &part_path) {
+        return cancelled;
+    }
     let expected = fetch_expected_sha256(sha256_url)?;
     let actual = sha256_hex(&part_path)?;
+    if let Some(cancelled) = finish_if_cancelled(cancel, &part_path) {
+        return cancelled;
+    }
     if actual != expected {
         let _ = fs::remove_file(&part_path);
         return Err(AppError::UpdateChecksum(format!(
@@ -124,6 +139,23 @@ pub fn download_apk(
     Ok(Some(final_path))
 }
 
+/// 临时文件名：`ainote-<version>.apk.<任务序号>.part`，保留 `.part` 后缀便于下次下载时清理残留。
+fn part_file_name(file_name: &str, seq: u64) -> String {
+    format!("{file_name}.{seq}.part")
+}
+
+/// 用户取消时的统一收尾：清临时文件并返回 `Ok(None)`；未取消返回 `None` 让调用方继续流程。
+fn finish_if_cancelled(
+    cancel: &AtomicBool,
+    part_path: &Path,
+) -> Option<Result<Option<PathBuf>, AppError>> {
+    if !cancel.load(Ordering::SeqCst) {
+        return None;
+    }
+    let _ = fs::remove_file(part_path);
+    Some(Ok(None))
+}
+
 /// 下载前的目录清理：删除历史 APK 与残留临时文件，避免积累占用。
 fn clear_stale_files(dir: &Path) {
     let entries = match fs::read_dir(dir) {
@@ -133,7 +165,7 @@ fn clear_stale_files(dir: &Path) {
     for entry in entries.flatten() {
         let name = entry.file_name();
         let name = name.to_string_lossy();
-        if name.ends_with(".apk") || name.ends_with(".apk.part") {
+        if name.ends_with(".apk") || name.ends_with(".part") {
             let _ = fs::remove_file(entry.path());
         }
     }
@@ -146,11 +178,19 @@ fn download_to_file(
     cancel: &AtomicBool,
     on_progress: &impl Fn(UpdateDownloadProgressDto),
 ) -> Result<bool, AppError> {
+    // 连接与 TLS 握手可能长时间无响应（弱网 / 不可达的 CDN），取消要在发请求前先生效，
+    // 否则用户点了取消还要等这次阻塞调用自己超时（最长 DOWNLOAD_TIMEOUT_SECS）。
+    if cancel.load(Ordering::SeqCst) {
+        return Ok(false);
+    }
     let response = agent()
         .get(url)
         .header("User-Agent", "AINote")
         .call()
         .map_err(|err| AppError::UpdateDownload(err.to_string()))?;
+    if cancel.load(Ordering::SeqCst) {
+        return Ok(false);
+    }
     let total_bytes = response
         .headers()
         .get("content-length")
@@ -210,83 +250,5 @@ fn fetch_expected_sha256(sha256_url: &str) -> Result<String, AppError> {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    const APK_URL: &str =
-        "https://github.com/small-dream/AINote/releases/download/v0.26.2/AINote-v0.26.2-android-arm64.apk";
-
-    #[test]
-    fn allows_only_official_release_apk_urls() {
-        assert!(apk_download_url_allowed(APK_URL));
-        assert!(!apk_download_url_allowed(
-            "https://evil.example.com/AINote-v0.26.2-android-arm64.apk"
-        ));
-        assert!(!apk_download_url_allowed(
-            "https://github.com/small-dream/AINote/releases/download/v0.26.2/AINote.exe"
-        ));
-        assert!(!apk_download_url_allowed("http://github.com/small-dream/AINote/releases/download/v0.26.2/x.apk"));
-    }
-
-    #[test]
-    fn allows_only_official_sha256_urls() {
-        assert!(sha256_url_allowed(&format!("{APK_URL}.sha256")));
-        assert!(!sha256_url_allowed(APK_URL));
-        assert!(!sha256_url_allowed(
-            "https://github.com/other/repo/releases/download/v1/x.apk.sha256"
-        ));
-    }
-
-    #[test]
-    fn parses_standard_sha256_file() {
-        let hash = "a".repeat(64);
-        assert_eq!(
-            parse_sha256_file(&format!("{hash}  AINote-v0.26.2-android-arm64.apk\n")),
-            Some(hash.clone())
-        );
-        assert_eq!(parse_sha256_file(&hash.to_uppercase()), Some(hash));
-        assert_eq!(parse_sha256_file("not-a-hash  file.apk"), None);
-        assert_eq!(parse_sha256_file(""), None);
-    }
-
-    #[test]
-    fn sha256_hex_matches_known_digest() {
-        let dir = tempfile::tempdir().unwrap();
-        let file = dir.path().join("sample.bin");
-        fs::write(&file, b"ainote").unwrap();
-        assert_eq!(
-            sha256_hex(&file).unwrap(),
-            "be7c83a93906d566901d96ea2e20dc1cfe1bc18df2a8aef6a03d348e1e1021ce"
-        );
-    }
-
-    #[test]
-    fn install_path_requires_updates_dir_and_apk_name() {
-        let dir = Path::new("/cache/updates");
-        assert!(install_path_allowed(dir, &dir.join("ainote-0.27.0.apk")));
-        assert!(!install_path_allowed(dir, &dir.join("evil.apk")));
-        assert!(!install_path_allowed(dir, &dir.join("ainote-0.27.0.apk.part")));
-        assert!(!install_path_allowed(dir, Path::new("/etc/ainote-0.27.0.apk")));
-        assert!(!install_path_allowed(
-            dir,
-            &dir.join("sub").join("ainote-0.27.0.apk")
-        ));
-    }
-
-    #[test]
-    fn apk_file_name_accepts_semver_like_versions() {
-        assert_eq!(apk_file_name("0.27.0").unwrap(), "ainote-0.27.0.apk");
-        assert_eq!(apk_file_name("1.0-beta.2").unwrap(), "ainote-1.0-beta.2.apk");
-    }
-
-    /// 版本号拼路径前必须拒绝路径分隔符与空白等字符，防穿越出 updates 目录。
-    #[test]
-    fn apk_file_name_rejects_path_injection() {
-        for bad in ["../evil", "1.0/x", "1.0\\x", "1 0", "1.0;rm", ""] {
-            assert!(
-                matches!(apk_file_name(bad), Err(AppError::UpdateDownload(_))),
-                "非法版本号应被拒绝: {bad:?}"
-            );
-        }
-    }
-}
+#[path = "update_service_tests.rs"]
+mod update_service_tests;

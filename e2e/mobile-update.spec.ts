@@ -73,6 +73,25 @@ test.describe("Android 应用内更新弹窗（E1-T5）", () => {
     await expect(dialog.getByRole("button", { name: "重试" })).toBeVisible();
   });
 
+  test("后端卡住时点「取消下载」立刻回到可操作状态，不调起安装器", async ({ page }) => {
+    await page.route(RELEASE_API, (route) => route.fulfill(fulfillRelease("v0.25.0")));
+    await openWorkspace(page, { ...baseState(), updateDownloadStalls: true });
+
+    const dialog = page.getByRole("dialog", { name: "发现新版本 0.25.0" });
+    await dialog.getByRole("button", { name: "立即更新" }).click();
+    await expect(dialog.getByRole("progressbar")).toBeVisible();
+
+    await dialog.getByRole("button", { name: "取消下载" }).click();
+
+    await expect
+      .poll(async () => (await calls(page)).filter((call) => call.cmd === "cancel_update_download").length)
+      .toBe(1);
+    // download_update 仍没返回：界面不等它，直接回到「立即更新」
+    await expect(dialog.getByRole("button", { name: "立即更新" })).toBeVisible();
+    await expect(dialog.getByRole("progressbar")).toHaveCount(0);
+    expect((await calls(page)).some((call) => call.cmd === "install_update")).toBe(false);
+  });
+
   test("忽略后不再提示该版本", async ({ page }) => {
     await page.route(RELEASE_API, (route) => route.fulfill(fulfillRelease("v0.25.0")));
     await openWorkspace(page, baseState());

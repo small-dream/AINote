@@ -20,13 +20,18 @@ pub struct UpdateDownloadState(Mutex<Option<Arc<AtomicBool>>>);
 
 impl UpdateDownloadState {
     /// 抢占下载槽位并返回取消标志；已有下载进行中时拒绝重入（UPDATE_7004）。
+    ///
+    /// 上一任务已被取消时放行：取消是异步的，旧任务可能仍卡在不可中断的连接 / 读取里，
+    /// 不该继续占着槽位让用户点了取消就重下不了（临时文件名带任务序号，两者互不干扰）。
     fn acquire(&self) -> Result<Arc<AtomicBool>, AppError> {
         let mut guard = self
             .0
             .lock()
             .map_err(|_| AppError::Io("更新下载状态锁不可用".into()))?;
-        if guard.is_some() {
-            return Err(AppError::UpdateBusy("已有下载任务进行中，请稍后再试".into()));
+        if let Some(current) = guard.as_ref() {
+            if !current.load(Ordering::SeqCst) {
+                return Err(AppError::UpdateBusy("已有下载任务进行中，请稍后再试".into()));
+            }
         }
         let flag = Arc::new(AtomicBool::new(false));
         *guard = Some(flag.clone());
@@ -34,7 +39,7 @@ impl UpdateDownloadState {
     }
 
     /// 任务结束释放槽位：只有槽位里仍是自己的 flag 才清理，
-    /// 避免先完成者把仍在下载任务的取消标志清掉。
+    /// 避免先完成者把仍在下载任务的取消标志清掉（取消后重下的新任务同样受此保护）。
     fn release(&self, flag: &Arc<AtomicBool>) {
         if let Ok(mut guard) = self.0.lock() {
             if guard.as_ref().is_some_and(|current| Arc::ptr_eq(current, flag)) {
@@ -144,6 +149,23 @@ mod tests {
         assert!(state.current().is_some_and(|f| Arc::ptr_eq(&f, &current)),
             "取消标志仍归属当前任务");
         state.release(&current);
+        assert!(state.current().is_none());
+    }
+
+    /// 取消是异步的：旧任务可能仍卡在阻塞读写里，此时用户重下必须能拿到槽位。
+    #[test]
+    fn acquire_allows_reentry_after_cancel() {
+        let state = UpdateDownloadState::default();
+        let cancelled = state.acquire().unwrap();
+        cancelled.store(true, Ordering::SeqCst);
+
+        let restarted = state.acquire().expect("取消后重下应放行");
+        assert!(state.current().is_some_and(|f| Arc::ptr_eq(&f, &restarted)));
+
+        // 旧任务收尾不得清掉新任务的槽位，新任务自己收尾才释放
+        state.release(&cancelled);
+        assert!(state.current().is_some_and(|f| Arc::ptr_eq(&f, &restarted)));
+        state.release(&restarted);
         assert!(state.current().is_none());
     }
 }

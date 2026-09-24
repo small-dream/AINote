@@ -233,6 +233,11 @@ const commandHandlers: Record<string, CommandHandler> = {
   download_update: (args, ctx) => {
     if (ctx.state.updateDownloadFails) throw appError("update download failed");
     const channel = args.onEvent as { onmessage?: (message: unknown) => void } | undefined;
+    // 连接卡住的后端：命令可能长时间不返回，取消必须不依赖它返回
+    if (ctx.state.updateDownloadStalls) {
+      channel?.onmessage?.({ receivedBytes: 512, totalBytes: 1024, percent: 50 });
+      return new Promise(() => undefined);
+    }
     channel?.onmessage?.({ receivedBytes: 1024, totalBytes: 1024, percent: 100 });
     return { path: "/mock-cache/updates/ainote-update.apk" };
   },
