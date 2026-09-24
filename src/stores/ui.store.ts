@@ -13,9 +13,14 @@ export interface RecentNoteEntry {
 /** 设置页左侧分类导航的激活项 */
 export type SettingsTab = "repositories" | "vault" | "appearance" | "language" | "ai" | "updates" | "support" | "account";
 
-/** 空闲自动锁定时长（分钟）；0 = 从不自动锁定 */
-export type VaultAutoLockMinutes = 0 | 1 | 5 | 15 | 30;
-export const DEFAULT_VAULT_AUTO_LOCK: VaultAutoLockMinutes = 5;
+/** 空闲自动锁定时长（分钟）；0 = 从不自动锁定。档位从 30 分钟起：短档位在「离开电脑」场景只会制造频繁解锁 */
+export type VaultAutoLockMinutes = 0 | 30 | 60 | 120;
+/**
+ * 默认「从不」：解锁一次即保持到应用退出，不在空闲后反复要求输入口令
+ * （见 docs/ENCRYPTED_NOTES_PLAN.md §4.2）。显式选过时长的用户偏好不受影响，
+ * 「离开电脑即锁定」需要用户在设置中主动开启。
+ */
+export const DEFAULT_VAULT_AUTO_LOCK: VaultAutoLockMinutes = 0;
 
 /** 主题偏好持久化键（localStorage，纯前端全局 UI 态） */
 export const THEME_STORAGE_KEY = "ainote.theme";
@@ -65,11 +70,15 @@ export function parseSidebarWidth(value: string | null): number {
 export function parseVaultAutoLock(value: string | null): VaultAutoLockMinutes {
   switch (value) {
     case "0":
+    case "30":
+    case "60":
+    case "120":
+      return Number(value) as VaultAutoLockMinutes;
+    // v0.53.1 移除的短档位（1 / 5 / 15 分钟）：保留「要自动锁定」的意图，就近落到最短的 30 分钟
     case "1":
     case "5":
     case "15":
-    case "30":
-      return Number(value) as VaultAutoLockMinutes;
+      return 30;
     default:
       return DEFAULT_VAULT_AUTO_LOCK;
   }

@@ -38,7 +38,7 @@ describe("CommandPalette vault 命令", () => {
   beforeEach(() => {
     vi.resetAllMocks();
     useCommandPaletteStore.setState({ open: false, query: "" });
-    useUiStore.setState({ vaultDialogOpen: false, vaultAutoLock: 5 });
+    useUiStore.setState({ vaultDialogOpen: false, vaultAutoLock: 30 });
     syncApiMock.status.mockResolvedValue({
       ahead: 0,
       behind: 0,

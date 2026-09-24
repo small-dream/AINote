@@ -71,12 +71,12 @@ describe("ui.store 主题解析与持久化", () => {
   });
 
   it("解析并持久化空闲自动锁定时长", () => {
-    expect(parseVaultAutoLock("1")).toBe(1);
     expect(parseVaultAutoLock("30")).toBe(30);
+    expect(parseVaultAutoLock("120")).toBe(120);
     expect(parseVaultAutoLock("unknown")).toBe(DEFAULT_VAULT_AUTO_LOCK);
-    useUiStore.getState().setVaultAutoLock(15);
-    expect(localStorage.getItem(VAULT_AUTO_LOCK_STORAGE_KEY)).toBe("15");
-    expect(readStoredVaultAutoLock()).toBe(15);
+    useUiStore.getState().setVaultAutoLock(60);
+    expect(localStorage.getItem(VAULT_AUTO_LOCK_STORAGE_KEY)).toBe("60");
+    expect(readStoredVaultAutoLock()).toBe(60);
   });
 
   it("全局解锁弹层开关", () => {
@@ -106,6 +106,23 @@ describe("ui.store 侧边栏 Tab 与标签聚焦", () => {
     useUiStore.getState().openTagIndex("project");
     expect(useUiStore.getState().sidebarTab).toBe("tags");
     expect(useUiStore.getState().focusedTag).toBe("project");
+  });
+});
+
+describe("ui.store 空闲自动锁定默认值与档位迁移", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("默认「从不」：解锁一次后保持到应用退出", () => {
+    expect(DEFAULT_VAULT_AUTO_LOCK).toBe(0);
+    expect(parseVaultAutoLock(null)).toBe(0);
+    expect(parseVaultAutoLock("0")).toBe(0);
+    expect(readStoredVaultAutoLock()).toBe(0);
+  });
+
+  it("已移除的短档位（1 / 5 / 15 分钟）就近落到 30 分钟", () => {
+    expect(parseVaultAutoLock("1")).toBe(30);
+    expect(parseVaultAutoLock("5")).toBe(30);
+    expect(parseVaultAutoLock("15")).toBe(30);
   });
 });
 

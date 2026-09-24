@@ -4,10 +4,9 @@ import type { TranslationKey } from "@/i18n/messages";
 
 const AUTO_LOCK_OPTIONS: ReadonlyArray<{ value: VaultAutoLockMinutes; key: TranslationKey }> = [
   { value: 0, key: "vault.autoLockNever" },
-  { value: 1, key: "vault.autoLock1m" },
-  { value: 5, key: "vault.autoLock5m" },
-  { value: 15, key: "vault.autoLock15m" },
   { value: 30, key: "vault.autoLock30m" },
+  { value: 60, key: "vault.autoLock1h" },
+  { value: 120, key: "vault.autoLock2h" },
 ];
 
 /** 空闲自动锁定设置：纯前端 UI 偏好（localStorage），与主题等偏好一致。 */

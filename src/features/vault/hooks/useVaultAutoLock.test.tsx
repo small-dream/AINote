@@ -23,7 +23,7 @@ vi.mock("@/stores/toast.store", () => ({
   useToastStore: { getState: () => toastMock },
 }));
 
-const FIVE_MINUTES = 5 * 60_000;
+const THIRTY_MINUTES = 30 * 60_000;
 
 function setUnlocked(unlocked: boolean) {
   queriesMock.useVaultStatusQuery.mockReturnValue({ data: { state: unlocked ? "unlocked" : "locked" } });
@@ -48,7 +48,7 @@ beforeEach(() => {
     isPending: false,
     mutateAsync: vi.fn().mockResolvedValue({ state: "locked", encryptedNotes: 1 }),
   });
-  useUiStore.setState({ vaultAutoLock: 5 });
+  useUiStore.setState({ vaultAutoLock: 30 });
 });
 
 afterEach(() => {
@@ -60,7 +60,7 @@ describe("useVaultAutoLock 计时", () => {
     setUnlocked(true);
     renderHook(() => useVaultAutoLock("/repo"));
 
-    await advanceAndSettle(FIVE_MINUTES - 1);
+    await advanceAndSettle(THIRTY_MINUTES - 1);
     expect(queriesMock.useVaultLockMutation().mutateAsync).not.toHaveBeenCalled();
 
     await advanceAndSettle(1);
@@ -80,7 +80,7 @@ describe("useVaultAutoLock 计时", () => {
     setUnlocked(false);
     renderHook(() => useVaultAutoLock("/repo"));
 
-    await advanceAndSettle(FIVE_MINUTES);
+    await advanceAndSettle(THIRTY_MINUTES);
     expect(queriesMock.useVaultLockMutation().mutateAsync).not.toHaveBeenCalled();
   });
 });
@@ -90,10 +90,10 @@ describe("useVaultAutoLock 活动与可见性", () => {
     setUnlocked(true);
     renderHook(() => useVaultAutoLock("/repo"));
 
-    await advanceAndSettle(FIVE_MINUTES - 1);
+    await advanceAndSettle(THIRTY_MINUTES - 1);
     await act(async () => {
       document.dispatchEvent(new Event("pointerdown"));
-      vi.advanceTimersByTime(FIVE_MINUTES - 1);
+      vi.advanceTimersByTime(THIRTY_MINUTES - 1);
     });
     expect(queriesMock.useVaultLockMutation().mutateAsync).not.toHaveBeenCalled();
 
@@ -107,7 +107,7 @@ describe("useVaultAutoLock 活动与可见性", () => {
 
     await act(async () => {
       setHidden(true);
-      vi.advanceTimersByTime(FIVE_MINUTES + 1);
+      vi.advanceTimersByTime(THIRTY_MINUTES + 1);
     });
     expect(queriesMock.useVaultLockMutation().mutateAsync).not.toHaveBeenCalled();
 
@@ -123,7 +123,7 @@ describe("useVaultAutoLock 活动与可见性", () => {
 
     await act(async () => {
       setHidden(true);
-      vi.advanceTimersByTime(FIVE_MINUTES - 2);
+      vi.advanceTimersByTime(THIRTY_MINUTES - 2);
     });
     await act(async () => {
       setHidden(false);
@@ -142,11 +142,11 @@ describe("useVaultAutoLock 失败处理", () => {
     draftMock.flushPendingDrafts.mockRejectedValue(new Error("disk full"));
     renderHook(() => useVaultAutoLock("/repo"));
 
-    await advanceAndSettle(FIVE_MINUTES);
+    await advanceAndSettle(THIRTY_MINUTES);
     expect(queriesMock.useVaultLockMutation().mutateAsync).not.toHaveBeenCalled();
     expect(toastMock.push).toHaveBeenCalledWith(expect.stringContaining("disk full"), "error");
 
-    await advanceAndSettle(FIVE_MINUTES);
+    await advanceAndSettle(THIRTY_MINUTES);
     expect(toastMock.push).toHaveBeenCalledTimes(2);
   });
 });
