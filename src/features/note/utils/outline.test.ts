@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { extractOutline } from "./outline";
+import { extractOutline, outlineIndent } from "./outline";
+
+describe("outlineIndent", () => {
+  it("按级别递增缩进，H4 之后不再加深（H5/H6 与 H4 同缩进）", () => {
+    expect(outlineIndent(1)).toBe(0);
+    expect(outlineIndent(2)).toBe(12);
+    expect(outlineIndent(3)).toBe(24);
+    expect(outlineIndent(4)).toBe(36);
+    expect(outlineIndent(5)).toBe(36);
+    expect(outlineIndent(6)).toBe(36);
+  });
+
+  it("非法级别按 H1 处理，不产生负缩进", () => {
+    expect(outlineIndent(0)).toBe(0);
+    expect(outlineIndent(-1)).toBe(0);
+  });
+});
 
 describe("extractOutline", () => {
   it("提取标题层级、行号和稳定 id", () => {

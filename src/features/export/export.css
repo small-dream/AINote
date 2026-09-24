@@ -142,6 +142,9 @@
   .pdf-export-page h1,
   .pdf-export-page h2,
   .pdf-export-page h3,
+  .pdf-export-page h4,
+  .pdf-export-page h5,
+  .pdf-export-page h6,
   .pdf-export-page blockquote,
   .pdf-export-page table,
   .pdf-export-page .markdown-image {

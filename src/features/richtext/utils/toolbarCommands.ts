@@ -5,6 +5,9 @@ import {
   Heading1,
   Heading2,
   Heading3,
+  Heading4,
+  Heading5,
+  Heading6,
   Italic,
   Link,
   List,
@@ -28,9 +31,12 @@ export interface EditorToolbarCommand {
   run: (editor: Editor) => void;
 }
 
-const isHeading = (editor: Editor, level: 1 | 2 | 3): boolean => editor.isActive("heading", { level });
+/** 标题级别：与 Markdown ATX 标题 `#` 到 `######` 一致 */
+type HeadingCommandLevel = 1 | 2 | 3 | 4 | 5 | 6;
 
-/** 一级分组：段落类型用文字选择器收敛，避免 H1/H2/H3 长期占据空间 */
+const isHeading = (editor: Editor, level: HeadingCommandLevel): boolean => editor.isActive("heading", { level });
+
+/** 一级分组：段落类型用文字选择器收敛，避免 H1-H6 长期占据空间 */
 const PARAGRAPH_COMMAND: EditorToolbarCommand = { key: "paragraph", icon: Heading1, labelKey: "richtext.paragraph", isActive: (editor) => !editor.isActive("heading"), run: (editor) => void editor.chain().focus().setParagraph().run() };
 
 export const HEADING_COMMANDS: EditorToolbarCommand[] = [
@@ -38,6 +44,9 @@ export const HEADING_COMMANDS: EditorToolbarCommand[] = [
   { key: "h1", icon: Heading1, labelKey: "richtext.h1", isActive: (editor) => isHeading(editor, 1), run: (editor) => void editor.chain().focus().toggleHeading({ level: 1 }).run() },
   { key: "h2", icon: Heading2, labelKey: "richtext.h2", isActive: (editor) => isHeading(editor, 2), run: (editor) => void editor.chain().focus().toggleHeading({ level: 2 }).run() },
   { key: "h3", icon: Heading3, labelKey: "richtext.h3", isActive: (editor) => isHeading(editor, 3), run: (editor) => void editor.chain().focus().toggleHeading({ level: 3 }).run() },
+  { key: "h4", icon: Heading4, labelKey: "richtext.h4", isActive: (editor) => isHeading(editor, 4), run: (editor) => void editor.chain().focus().toggleHeading({ level: 4 }).run() },
+  { key: "h5", icon: Heading5, labelKey: "richtext.h5", isActive: (editor) => isHeading(editor, 5), run: (editor) => void editor.chain().focus().toggleHeading({ level: 5 }).run() },
+  { key: "h6", icon: Heading6, labelKey: "richtext.h6", isActive: (editor) => isHeading(editor, 6), run: (editor) => void editor.chain().focus().toggleHeading({ level: 6 }).run() },
 ];
 
 /** 二级分组：行内格式（业界工具栏最高频操作） */

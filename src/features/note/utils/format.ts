@@ -1,6 +1,6 @@
 import type { ChangeSpec, EditorState, Line } from "@codemirror/state";
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
-import type { SyntaxNode } from "@lezer/common";
+import type { SyntaxNode, Tree } from "@lezer/common";
 
 /** 格式化操作结果：文档变更 + 可选新选区（省略时由 CodeMirror 自动映射选区） */
 export interface FormatResult {
@@ -42,12 +42,15 @@ export function toggleInline(state: EditorState, format: InlineFormat): FormatRe
     if (enclosing) {
       // 光标已在格式内（工具栏此时是高亮态）：按下按钮 = 取消该格式，
       // 避免插入一对空标记（在加粗末尾按加粗会留下 `****` 残渣）。
+      // 游标可能停在行尾/后标记上（软渲染下块边界也会归属到该格式），此时
+      // `from - marker.length` 会越过删除两个标记后的文本末尾，需按新长度收回。
+      const textEnd = enclosing.to - marker.length * 2;
       return {
         changes: [
           { from: enclosing.from, to: enclosing.from + marker.length },
           { from: enclosing.to - marker.length, to: enclosing.to },
         ],
-        selection: { anchor: Math.max(enclosing.from, from - marker.length) },
+        selection: { anchor: Math.min(Math.max(enclosing.from, from - marker.length), textEnd) },
       };
     }
   }
@@ -84,7 +87,7 @@ function enclosingFormatRange(state: EditorState, format: InlineFormat): { from:
   const markerLength = INLINE_MARKERS[format].length;
   const head = state.selection.main.head;
   const tree = ensureSyntaxTree(state, head, 50) ?? syntaxTree(state);
-  for (let node: SyntaxNode | null = tree.resolveInner(head, 0); node; node = node.parent) {
+  for (let node: SyntaxNode | null = resolveNodeAt(tree, head); node; node = node.parent) {
     if (node.name !== nodeName) continue;
     const marks = node.getChildren(markName);
     const first = marks[0];
@@ -111,16 +114,30 @@ export function toggleBlock(state: EditorState, format: BlockFormat): FormatResu
   return { changes };
 }
 
-/** 设置标题级别：0 = 正文（去除 `#` 前缀），1-3 设置/替换为对应级别 */
-export function setHeading(state: EditorState, level: 0 | 1 | 2 | 3): FormatResult {
+/** 标题级别：0 = 正文，1-6 与 Markdown ATX 标题（`#` 到 `######`）一一对应 */
+export type HeadingLevel = 0 | 1 | 2 | 3 | 4 | 5 | 6;
+
+/** 设置标题级别：0 = 正文（去除 `#` 前缀），1-6 设置/替换为对应级别 */
+export function setHeading(state: EditorState, level: HeadingLevel): FormatResult {
   const prefix = level === 0 ? "" : `${"#".repeat(level)} `;
   const changes: ChangeSpec[] = [];
-  for (const line of selectedLines(state)) {
+  const lines = selectedLines(state);
+  const { from, to } = state.selection.main;
+  const caret = from === to && lines.length === 1 ? from : null;
+  let anchor: number | undefined;
+  for (const line of lines) {
     const match = /^#{1,6}\s*/.exec(line.text);
-    if (match) changes.push({ from: line.from, to: line.from + match[0].length, insert: prefix });
+    const oldPrefix = match?.[0].length ?? 0;
+    if (match) changes.push({ from: line.from, to: line.from + oldPrefix, insert: prefix });
     else if (prefix) changes.push({ from: line.from, insert: prefix });
+    // 光标落在旧前缀内部（软渲染下用户很容易点到淡显的 `#`）时，CodeMirror 会把光标
+    // 映射到变更起点即行首，而行首不在 ATXHeading 节点里，工具栏于是退回「正文」。
+    // 这里显式把光标落到新前缀之后的文字起点，级别回显与「改完继续写」都符合预期。
+    if (caret !== null) anchor = line.from + prefix.length + Math.max(caret - line.from - oldPrefix, 0);
   }
-  return { changes };
+  // 没有实际变更（已处于目标级别且光标在文字里）时不改选区，避免多余的 dispatch。
+  if (changes.length === 0 || anchor === undefined) return { changes };
+  return { changes, selection: { anchor } };
 }
 
 const NODE_TO_FORMAT: Record<string, string> = {
@@ -132,17 +149,20 @@ const NODE_TO_FORMAT: Record<string, string> = {
   ATXHeading1: "h1",
   ATXHeading2: "h2",
   ATXHeading3: "h3",
+  ATXHeading4: "h4",
+  ATXHeading5: "h5",
+  ATXHeading6: "h6",
   Task: "task",
   TaskMarker: "task",
 };
 
-/** 光标处的激活格式集合：bold/italic/strikethrough/code/quote/bulletList/orderedList/task/h1-h3 */
+/** 光标处的激活格式集合：bold/italic/strikethrough/code/quote/bulletList/orderedList/task/h1-h6 */
 export function getActiveFormats(state: EditorState): Set<string> {
   // 只解析到光标位置：按 doc.length 解析整篇文档会让长笔记里每次移动光标/拖选都卡顿。
   const head = state.selection.main.head;
   const tree = ensureSyntaxTree(state, head, 50) ?? syntaxTree(state);
   const active = new Set<string>();
-  let node: SyntaxNode | null = tree.resolveInner(head, 0);
+  let node: SyntaxNode | null = resolveNodeAt(tree, head);
   while (node) {
     const format = NODE_TO_FORMAT[node.name];
     if (format) active.add(format);
@@ -152,6 +172,22 @@ export function getActiveFormats(state: EditorState): Set<string> {
     node = node.parent;
   }
   return active;
+}
+
+/**
+ * 光标处的语法节点。`resolveInner(pos, 0)` 在块边界（行首、行尾）会落到文档根节点，
+ * 导致工具栏在该位置丢掉全部格式（标题显示成「正文」、列表/引用同理）——而这正是
+ * 光标最常见的停留位置。这里按 0 → 后 → 前 依次取第一个非根节点：行尾需要向前归属
+ * 上一个块，行首需要向后归属下一个块。
+ */
+function resolveNodeAt(tree: Tree, pos: number): SyntaxNode {
+  const fallback = tree.resolveInner(pos, 0);
+  if (fallback.name !== "Document") return fallback;
+  for (const side of [1, -1] as const) {
+    const node = tree.resolveInner(pos, side);
+    if (node.name !== "Document") return node;
+  }
+  return fallback;
 }
 
 function matchOutside(state: EditorState, marker: string, from: number, to: number): boolean {

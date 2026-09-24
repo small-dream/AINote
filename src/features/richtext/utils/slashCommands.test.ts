@@ -8,13 +8,13 @@ describe("filterSlashCommands", () => {
   });
 
   it("按关键字过滤命令", () => {
-    expect(filterSlashCommands("head").map((c) => c.key)).toEqual(["h1", "h2", "h3"]);
+    expect(filterSlashCommands("head").map((c) => c.key)).toEqual(["h1", "h2", "h3", "h4", "h5", "h6"]);
     expect(filterSlashCommands("table").map((c) => c.key)).toEqual(["table"]);
   });
 
   it("支持中文关键字", () => {
     expect(filterSlashCommands("任务").map((c) => c.key)).toEqual(["taskList"]);
-    expect(filterSlashCommands("标题").map((c) => c.key)).toEqual(["h1", "h2", "h3"]);
+    expect(filterSlashCommands("标题").map((c) => c.key)).toEqual(["h1", "h2", "h3", "h4", "h5", "h6"]);
   });
 
   it("大小写不敏感", () => {

@@ -4,16 +4,14 @@ import { ChevronDown } from "lucide-react";
 import { Tooltip } from "@/components/atoms/Tooltip";
 import { useTranslation } from "@/i18n";
 import { useAnchoredLayer } from "@/hooks/useAnchoredLayer";
+import type { HeadingLevel } from "../utils/format";
 
-const OPTIONS = [
-  { level: 0, labelKey: "note.body" },
-  { level: 1, labelKey: "H1" },
-  { level: 2, labelKey: "H2" },
-  { level: 3, labelKey: "H3" },
-] as const;
+const LEVELS = [0, 1, 2, 3, 4, 5, 6] as const;
 
-type HeadingLevel = (typeof OPTIONS)[number]["level"];
-type Option = (typeof OPTIONS)[number];
+interface HeadingOption {
+  level: HeadingLevel;
+  label: string;
+}
 
 const MENU_WIDTH = 96;
 
@@ -29,7 +27,9 @@ export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const { menuRef, position } = useAnchoredLayer<HTMLUListElement>({ triggerRef: rootRef, open, close: () => setOpen(false), width: MENU_WIDTH, align: "start" });
 
-  const current = OPTIONS.find((o) => o.level > 0 && active.has(`h${o.level}`)) ?? OPTIONS[0];
+  const options: HeadingOption[] = LEVELS.map((level) => ({ level, label: level === 0 ? t("note.body") : `H${level}` }));
+  const fallback: HeadingOption = { level: 0, label: t("note.body") };
+  const current = options.find((option) => option.level > 0 && active.has(`h${option.level}`)) ?? fallback;
   return (
     <div ref={rootRef} className="relative">
       <Tooltip content={t("note.headingLevel")} placement="bottom">
@@ -45,12 +45,13 @@ export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
               : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
           }`}
         >
-          {current.labelKey === "H1" ? "H1" : current.labelKey === "H2" ? "H2" : current.labelKey === "H3" ? "H3" : t(current.labelKey)}
+          {current.label}
           <ChevronDown size={12} />
         </button>
       </Tooltip>
       {open ? createPortal(
         <MenuList
+          options={options}
           current={current}
           position={position}
           menuRef={menuRef}
@@ -65,25 +66,24 @@ export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
   );
 }
 
-function MenuList({ current, position, menuRef, onPick }: { current: Option; position: CSSProperties; menuRef: RefObject<HTMLUListElement | null>; onPick: (l: HeadingLevel) => void }) {
-  const { t } = useTranslation();
-  const itemClass = (o: Option) =>
+function MenuList({ options, current, position, menuRef, onPick }: { options: HeadingOption[]; current: HeadingOption; position: CSSProperties; menuRef: RefObject<HTMLUListElement | null>; onPick: (l: HeadingLevel) => void }) {
+  const itemClass = (level: HeadingLevel) =>
     `block w-full px-3 py-1.5 text-left text-xs transition-colors duration-120 ${
-      o.level === current.level
+      level === current.level
         ? "bg-accent-soft text-accent"
         : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
     }`;
   return (
     <ul ref={menuRef} style={position} className="fixed z-50 min-w-20 rounded-md border border-border bg-bg-primary py-1 shadow-md">
-      {OPTIONS.map((o) => (
-        <li key={o.level}>
+      {options.map((option) => (
+        <li key={option.level}>
           <button
             type="button"
             onMouseDown={(e) => e.preventDefault()}
-            onClick={() => onPick(o.level)}
-            className={itemClass(o)}
+            onClick={() => onPick(option.level)}
+            className={itemClass(option.level)}
           >
-            {o.labelKey === "H1" ? "H1" : o.labelKey === "H2" ? "H2" : o.labelKey === "H3" ? "H3" : t(o.labelKey)}
+            {option.label}
           </button>
         </li>
       ))}

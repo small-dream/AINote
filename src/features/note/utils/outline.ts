@@ -7,6 +7,14 @@ export interface OutlineItem {
   line: number;
 }
 
+/** 大纲缩进上限级别：H5/H6 与 H4 同缩进，避免深层标题把侧栏文字挤到只剩零星几字。 */
+export const MAX_OUTLINE_INDENT_LEVEL = 4;
+
+/** 大纲条目缩进（px）：按级别递增，到 H4 后不再加深（H5/H6 与 H4 同缩进）。 */
+export function outlineIndent(level: number, step = 12): number {
+  return (Math.min(Math.max(level, 1), MAX_OUTLINE_INDENT_LEVEL) - 1) * step;
+}
+
 /** 提取 Markdown 标题大纲，忽略代码围栏与顶部 frontmatter。 */
 export function extractOutline(markdown: string): OutlineItem[] {
   const items: OutlineItem[] = [];

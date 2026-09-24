@@ -14,7 +14,7 @@ function createEditor(activeType: string | null = null) {
   };
   return {
     editor: {
-      isActive: vi.fn((type: string, attrs?: { level?: 1 | 2 | 3 }) => type === activeType && (!attrs || attrs.level === 2)),
+      isActive: vi.fn((type: string, attrs?: { level?: 1 | 2 | 3 | 4 | 5 | 6 }) => type === activeType && (!attrs || attrs.level === 2)),
       can: vi.fn(() => ({ undo: () => true, redo: () => false })),
       chain: vi.fn(() => ({ focus: () => chainMethods })),
     } as unknown as Editor,
