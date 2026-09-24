@@ -239,7 +239,7 @@ pub fn conflict_files(path: &str) -> Result<Vec<ConflictFile>, AppError> {
 /// 任意写内容并绕过领域校验。冲突清单来自 git index，天然不含绝对路径与 `..`，
 /// 因此「必须在当前冲突清单里」既是最小放行面，也顺带挡住了路径穿越。
 fn require_conflicted_path(repo: &Repository, rel: &str) -> Result<(), AppError> {
-    let mut index = repo.index().map_err(to_git)?;
+    let index = repo.index().map_err(to_git)?;
     for entry in index.conflicts().map_err(to_git)? {
         let entry = entry.map_err(to_git)?;
         let candidate = entry
