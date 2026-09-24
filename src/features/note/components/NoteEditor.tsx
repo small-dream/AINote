@@ -1,4 +1,4 @@
-import { forwardRef, useImperativeHandle, useMemo, useRef, useState } from "react";
+import { forwardRef, useCallback, useImperativeHandle, useMemo, useRef, useState } from "react";
 import { useNoteEditor, type NoteEditorHandle } from "../hooks/useNoteEditor";
 import { useNoteHistory } from "@/features/history/hooks/useNoteHistory";
 import { useFocusTitleOnLoad } from "../hooks/useEditorFocus";
@@ -30,6 +30,8 @@ import { useTranslation } from "@/i18n";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
 import { resolveViewMode, usesSoftRender } from "../utils/viewMode";
 import { useNoteEncryption } from "@/features/vault/hooks/useNoteEncryption";
+import type { LinkOverlayRequest } from "./LinkOverlay";
+import { openExternalLink } from "@/platform/open-link";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -51,6 +53,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const history = useNoteHistory();
     const [outlineOpen, setOutlineOpen] = useState(false);
     const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
+    const [linkOverlay, setLinkOverlay] = useState<LinkOverlayRequest | null>(null);
     const { draft, kind, onChange, flush, saving, dirty, loadError, saveError, locked, encrypted } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
     const preferences = useEditorPreferences(repoPath, notePath);
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
@@ -61,7 +64,9 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const mode = resolveViewMode(preferredMode, isCompact);
     const pdf = usePdfExport({ notePath, kind, repoPath, flush });
     const softRenderEnabled = usesSoftRender(mode);
-    const { extensions, activeFormats } = useEditorExtensions({ notes: wiki.notes, repoPath, onOpenWiki: wiki.handleOpenWiki, softRenderEnabled });
+    const handleLinkAction = useCallback((request: { point: { x: number; y: number }; href: string; onOpenLink: () => void }) => setLinkOverlay({ ...request, onCopyLink: () => void navigator.clipboard.writeText(request.href).catch(() => undefined), onClose: () => setLinkOverlay(null) }), []);
+    const onLinkAction = useCallback((href: string, point: { x: number; y: number }) => handleLinkAction({ href, point, onOpenLink: () => void openExternalLink(href).catch(() => undefined) }), [handleLinkAction]);
+    const { extensions, activeFormats } = useEditorExtensions({ notes: wiki.notes, repoPath, onOpenWiki: wiki.handleOpenWiki, onLinkAction, softRenderEnabled });
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
     const outline = useMemo(() => extractOutline(draft), [draft]);
     const asset = useAssetImport(readyView);
@@ -95,8 +100,8 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
     const placeholder = editorPlaceholder(notePath, loadError, locked);
     if (placeholder !== null) return placeholder;
-    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, onContextMenu: markdownMenu.handleContextMenu, onLongPress: handleLongPress, contextMenu: <MarkdownContextMenu menu={markdownMenu} noteTheme={noteTheme} aiBlocked={encrypted} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />, previewContextMenu: { onContextMenu: previewMenu.handleContextMenu, onLongPress: previewMenu.openAt }, softRender: softRenderEnabled };
-    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} previewMenu={previewMenu} noteTheme={noteTheme} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} encrypted={encrypted} />;
+    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, onImagePicked: asset.handleFiles, assetStatus: asset.status, onContextMenu: markdownMenu.handleContextMenu, onLongPress: handleLongPress, contextMenu: <MarkdownContextMenu menu={markdownMenu} noteTheme={noteTheme} aiBlocked={encrypted} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />, previewContextMenu: { onContextMenu: previewMenu.handleContextMenu, onLongPress: previewMenu.openAt }, softRender: softRenderEnabled, onLinkAction: handleLinkAction };
+    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} previewMenu={previewMenu} noteTheme={noteTheme} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} encrypted={encrypted} linkOverlay={linkOverlay} />;
   },
 );
 

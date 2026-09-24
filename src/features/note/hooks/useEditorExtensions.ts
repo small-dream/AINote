@@ -26,6 +26,7 @@ export interface EditorExtensionsInput {
   notes?: NoteWikiDto[];
   repoPath?: string | null;
   onOpenWiki?: (name: string) => void;
+  onLinkAction?: (href: string, point: { x: number; y: number }) => void;
   /** Markdown 编辑是否启用软渲染（WYSIWYG），false = 源码模式 */
   softRenderEnabled?: boolean;
 }
@@ -68,7 +69,7 @@ const markdownInputKeymap = Prec.high(
 
 /** 编辑器扩展集合 + 光标激活格式集合（选择/文档变化时经 updateListener 刷新） */
 export function useEditorExtensions(input: EditorExtensionsInput = {}): { extensions: Extension[]; activeFormats: Set<string> } {
-  const { notes = [], repoPath = null, onOpenWiki, softRenderEnabled = true } = input;
+  const { notes = [], repoPath = null, onOpenWiki, onLinkAction, softRenderEnabled = true } = input;
   const [activeFormats, setActiveFormats] = useState<Set<string>>(() => new Set());
   const noteTheme = useUiStore((s) => s.noteTheme);
   const { t } = useTranslation();
@@ -88,7 +89,7 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
     markdownInputKeymap,
     formatKeymap,
-    ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki, t("note.copyCode"), t("note.copied")) : [syntaxHighlighting(getAinoteHighlightStyle())]),
+    ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki, onLinkAction, t("note.copyCode"), t("note.copied")) : [syntaxHighlighting(getAinoteHighlightStyle())]),
     EditorView.updateListener.of((update) => {
       if (!update.selectionSet && !update.docChanged) return;
       // 只有激活格式真正变化才更新：否则每次移动光标/拖选都会触发重渲染，
@@ -96,7 +97,7 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
       const next = getActiveFormats(update.state);
       setActiveFormats((prev) => (sameFormats(prev, next) ? prev : next));
     }),
-  ], [noteTheme, notes, repoPath, onOpenWiki, softRenderEnabled, t]);
+  ], [noteTheme, notes, onLinkAction, onOpenWiki, repoPath, softRenderEnabled, t]);
   return { extensions, activeFormats };
 }
 
@@ -154,8 +155,11 @@ function sameFormats(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
-function softRenderExtension(repoPath: string | null, onOpenWiki: ((name: string) => void) | undefined, copyCodeLabel: string, copiedLabel: string): Extension[] {
-  return onOpenWiki ? [softRender({ repoPath, onOpenWiki, copyCodeLabel, copiedLabel })] : [softRender({ repoPath, copyCodeLabel, copiedLabel })];
+function softRenderExtension(repoPath: string | null, onOpenWiki: ((name: string) => void) | undefined, onLinkAction: ((href: string, point: { x: number; y: number }) => void) | undefined, copyCodeLabel: string, copiedLabel: string): Extension[] {
+  const options = { repoPath, copyCodeLabel, copiedLabel } as Parameters<typeof softRender>[0];
+  if (onOpenWiki) options.onOpenWiki = onOpenWiki;
+  if (onLinkAction) options.onLinkAction = onLinkAction;
+  return [softRender(options)];
 }
 
 function completionSource(context: CompletionContext, notes: Parameters<typeof buildCompletions>[0]) {

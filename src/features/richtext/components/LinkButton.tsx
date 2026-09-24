@@ -1,13 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { createPortal } from "react-dom";
 import type { Editor } from "@tiptap/core";
 import { useTranslation } from "@/i18n";
 import { Tooltip } from "@/components/atoms/Tooltip";
-import { useAnchoredLayer } from "@/hooks/useAnchoredLayer";
+import { LinkPopover, type LinkPopoverRequest } from "@/components/molecules/LinkPopover";
 import { LINK_INPUT_EVENT, normalizeLinkUrl } from "../utils/linkUrl";
 import { LINK_COMMAND } from "../utils/toolbarCommands";
-
-const POPOVER_WIDTH = 280;
 
 interface LinkButtonProps {
   editor: Editor;
@@ -45,13 +42,14 @@ export function LinkButton({ editor, variant, tooltipPortal = false }: LinkButto
           <LINK_COMMAND.icon size={variant === "bubble" ? 15 : 16} strokeWidth={1.9} aria-hidden="true" />
         </button>
       </Tooltip>
-      <LinkUrlPopover anchorRef={buttonRef} link={link} />
+      <LinkPopover request={link.request} anchorRect={link.anchorRect} />
     </>
   );
 }
 
 interface LinkInputState {
-  open: boolean;
+  request: LinkPopoverRequest | null;
+  anchorRect: DOMRect | null;
   value: string;
   invalid: boolean;
   setValue: (value: string) => void;
@@ -65,6 +63,7 @@ function useLinkInput(editor: Editor, buttonRef: React.RefObject<HTMLButtonEleme
   const [open, setOpen] = useState(false);
   const [value, setValue] = useState("");
   const [invalid, setInvalid] = useState(false);
+  const [anchorRect, setAnchorRect] = useState<DOMRect | null>(null);
 
   const close = useCallback(() => {
     setOpen(false);
@@ -76,8 +75,9 @@ function useLinkInput(editor: Editor, buttonRef: React.RefObject<HTMLButtonEleme
 
   const openInput = useCallback(() => {
     setValue(String(editor.getAttributes("link").href ?? ""));
+    setAnchorRect(buttonRef.current?.getBoundingClientRect() ?? null);
     setOpen(true);
-  }, [editor]);
+  }, [buttonRef, editor]);
 
   const submit = useCallback(() => {
     const href = value.trim();
@@ -106,46 +106,15 @@ function useLinkInput(editor: Editor, buttonRef: React.RefObject<HTMLButtonEleme
     return () => window.removeEventListener(LINK_INPUT_EVENT, onRequest);
   }, [openInput]);
 
-  return { open, value, invalid, setValue: (v) => { setValue(v); setInvalid(false); }, openInput, close, submit };
-}
-
-function LinkUrlPopover({ anchorRef, link }: { anchorRef: React.RefObject<HTMLButtonElement | null>; link: LinkInputState }) {
-  const { t } = useTranslation();
-  const inputRef = useRef<HTMLInputElement | null>(null);
-  const { menuRef, position } = useAnchoredLayer({ triggerRef: anchorRef, open: link.open, close: link.close, width: POPOVER_WIDTH });
-  useEffect(() => {
-    if (link.open) inputRef.current?.focus();
-  }, [link.open]);
-  if (!link.open) return null;
-  return createPortal(
-    <div
-      ref={menuRef}
-      role="dialog"
-      aria-label={t("note.link")}
-      style={{ ...position, position: "fixed", zIndex: 50, width: POPOVER_WIDTH }}
-      className="rounded-lg border border-border bg-bg-primary p-2 shadow-lg"
-    >
-      <input
-        ref={inputRef}
-        value={link.value}
-        onChange={(event) => link.setValue(event.target.value)}
-        onKeyDown={(event) => {
-          if (event.key === "Enter" && !event.nativeEvent.isComposing) {
-            event.preventDefault();
-            link.submit();
-          }
-        }}
-        placeholder={t("richtext.linkPlaceholder")}
-        aria-invalid={link.invalid}
-        aria-label={t("richtext.linkPlaceholder")}
-        className="h-8 w-full rounded-md border border-border bg-bg-secondary px-2 text-sm text-text-primary outline-none focus:border-accent"
-      />
-      {link.invalid ? (
-        <p role="alert" className="mt-1.5 text-xs text-danger">{t("richtext.linkInvalid")}</p>
-      ) : null}
-    </div>,
-    document.body
-  );
+  const request = open ? {
+    value,
+    invalid,
+    onChange: (next: string) => { setValue(next); setInvalid(false); },
+    onSubmit: submit,
+    onRemove: () => { editor.chain().focus().extendMarkRange("link").unsetLink().run(); close(); },
+    onClose: close,
+  } satisfies LinkPopoverRequest : null;
+  return { request, anchorRect, value, invalid, setValue: (v) => { setValue(v); setInvalid(false); }, openInput, close, submit };
 }
 
 function buttonClass(variant: "bubble" | "toolbar", active: boolean): string {

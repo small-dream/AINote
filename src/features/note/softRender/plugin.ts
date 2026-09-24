@@ -24,6 +24,8 @@ export interface SoftRenderOptions {
   repoPath: string | null;
   /** 点击 [[双链]] 时回调目标名 */
   onOpenWiki?: (name: string) => void;
+  /** 普通点击外链时交给上层显示统一动作浮层。 */
+  onLinkAction?: (href: string, point: { x: number; y: number }) => void;
   /** 代码块复制按钮文案 */
   copyCodeLabel?: string;
   copiedLabel?: string;
@@ -115,9 +117,16 @@ function handleClick(event: MouseEvent, view: EditorView, options: SoftRenderOpt
   if (enterWidgetAt(event, view)) return true;
   correctSelectionToClickedLine(event, view);
   debugClick("click:after", event, view, options);
-  if (!isModifierClick(event)) return false;
   const link = closestElement(target, ".cm-sr-link, .cm-sr-wikilink, .cm-sr-autolink");
   if (!link) return false;
+  const wikiTarget = link.getAttribute("data-sr-target");
+  const href = link.getAttribute("data-sr-href");
+  if (!isModifierClick(event)) {
+    event.preventDefault();
+    if (wikiTarget) options.onOpenWiki?.(wikiTarget);
+    else if (href) options.onLinkAction?.(href, { x: event.clientX, y: event.clientY });
+    return true;
+  }
   event.preventDefault();
   return openFromLink(link, options);
 }

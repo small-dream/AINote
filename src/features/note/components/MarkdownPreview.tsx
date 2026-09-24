@@ -28,7 +28,7 @@ import { PreviewImage } from "./PreviewImage";
 import { isExternalHttpUrl, openExternalLink } from "@/platform/open-link";
 import { reportToastError } from "@/stores/toast.store";
 
-interface MarkdownPreviewProps {
+export interface MarkdownPreviewProps {
   content: string;
   /** 活动仓库绝对路径，用于把仓库相对图片路径解析为本地资产 URL（P1-4） */
   repoPath?: string | null;
@@ -38,6 +38,8 @@ interface MarkdownPreviewProps {
   wikiNotes?: NoteWikiDto[];
   /** Preview 任务勾选后的源码更新回调；未提供时保持只读。 */
   onChange?: (content: string) => void;
+  /** 点击链接后弹出统一动作浮层（可选；预览 PDF 导出等无编辑场景不传） */
+  onLinkAction?: ((request: { point: { x: number; y: number }; href: string; onOpenLink: () => void }) => void) | undefined;
 }
 
 /** 为块级元素注入 data-line（Markdown 起始行号），供分栏同步滚动收集锚点 */
@@ -150,7 +152,7 @@ function WikiLink({ href, children, onOpenWiki, resolved }: { href: string; chil
 }
 
 /** Markdown 渲染预览。react-markdown 默认不渲染原始 HTML（当作文本），天然防 XSS（安全红线）。 */
-export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onChange }: MarkdownPreviewProps) {
+export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onChange, onLinkAction }: MarkdownPreviewProps) {
   const document = useMemo(() => parseMarkdownDocument(content), [content]);
   const components = useMemo<Components>(() => ({
     ...blockComponents,
@@ -180,7 +182,9 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onCh
             rel="noreferrer"
             onClick={(event) => {
               event.preventDefault();
-              void openExternalLink(href).catch(reportToastError);
+              const request = { point: { x: event.clientX, y: event.clientY }, href, onOpenLink: () => void openExternalLink(href).catch(reportToastError) };
+              if (onLinkAction) onLinkAction(request);
+              else request.onOpenLink();
             }}
             {...props}
           >
@@ -190,7 +194,7 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onCh
       }
       return <a href={href} target="_blank" rel="noreferrer" {...props}>{children}</a>;
     },
-  }), [content, onChange, onOpenWiki, repoPath, wikiNotes]);
+  }), [content, onChange, onLinkAction, onOpenWiki, repoPath, wikiNotes]);
   return (
     <article className="markdown-body max-w-3xl mx-auto">
       {document.frontmatter.length > 0 ? <MarkdownProperties fields={document.frontmatter} /> : null}
