@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { markdown } from "@codemirror/lang-markdown";
 import { GFM } from "@lezer/markdown";
-import { Prec, type Extension } from "@codemirror/state";
+import { EditorState, Prec, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
 import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
@@ -13,11 +13,13 @@ import { autocompletion, type CompletionContext } from "@codemirror/autocomplete
 import { dispatchFormat, dispatchLink } from "./useFormatCommands";
 import { getActiveFormats, toggleInline } from "../utils/format";
 import { getListContinuation } from "../utils/markdownInput";
+import { indentPastedText } from "../utils/pasteIndent";
 import { getNoteThemeMode } from "../utils/noteThemes";
 import { getAinoteEditorTheme, getAinoteHighlightStyle } from "./editorTheme";
 import { buildCompletions, getCompletionContext } from "../utils/completion";
 import { softRender } from "../softRender/plugin";
 import { useTranslation } from "@/i18n";
+import type { TranslationKey } from "@/i18n/messages";
 import { readCspNonce } from "@/platform/csp-nonce";
 
 export interface EditorExtensionsInput {
@@ -76,7 +78,7 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     ...cspNonceExtension(),
     markdown({ extensions: [GFM] }),
     history(),
-    search({ top: true }),
+    searchExtension(t),
     highlightSelectionMatches(),
     closeBrackets(),
     bracketMatching(),
@@ -102,6 +104,48 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
 function cspNonceExtension(): Extension[] {
   const nonce = readCspNonce();
   return nonce ? [EditorView.cspNonce.of(nonce)] : [];
+}
+
+/**
+ * 查找替换面板 + 中文短语 + 多行粘贴保持缩进。
+ *
+ * 短语表覆盖 CodeMirror 各包内建的英文文案（搜索面板按钮、跳转行对话框、
+ * 屏幕阅读器播报），按中文界面显示；英文界面无需翻译，`t` 会返回原文。
+ */
+function searchExtension(t: (key: TranslationKey) => string): Extension {
+  return [
+    search({ top: true }),
+    EditorState.phrases.of({
+      Find: t("editor.find"),
+      Replace: t("editor.replace"),
+      next: t("editor.findNext"),
+      previous: t("editor.findPrevious"),
+      all: t("editor.findAllMatches"),
+      "match case": t("editor.matchCase"),
+      regexp: t("editor.useRegexp"),
+      "by word": t("editor.wholeWord"),
+      replace: t("editor.replaceOne"),
+      "replace all": t("editor.replaceAll"),
+      close: t("editor.closePanel"),
+      "Go to line": t("editor.gotoLine"),
+      go: t("editor.goto"),
+      "on line": t("editor.gotoOnLine"),
+      "current match": t("editor.currentMatch"),
+      "replaced $ matches": t("editor.replacedMatches"),
+      "replaced match on line $": t("editor.replacedMatchOnLine"),
+      "Selection deleted": t("editor.selectionDeleted"),
+      "folded code": t("editor.foldedCode"),
+      unfold: t("editor.unfold"),
+      to: t("editor.foldTo"),
+      "Fold line": t("editor.foldLine"),
+      "Unfold line": t("editor.unfoldLine"),
+      "Folded lines": t("editor.foldedLines"),
+      "Unfolded lines": t("editor.unfoldedLines"),
+      Completions: t("editor.completions"),
+      "Control character": t("editor.controlCharacter"),
+    }),
+    EditorView.clipboardInputFilter.of(indentPastedText),
+  ];
 }
 
 function sameFormats(a: Set<string>, b: Set<string>): boolean {

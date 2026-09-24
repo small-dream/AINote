@@ -65,6 +65,61 @@ const EDITOR_THEME_STYLES = {
     color: "var(--text-primary)",
     borderColor: "var(--border)",
   },
+  /* 查找替换面板：默认排版是「所有控件挤在一行 + 70% 字号」，
+     在分栏与窄屏下按钮被压扁。这里改成可换行的工具条，输入框自适应宽度，
+     并让出右上角关闭按钮的位置。DOM 由 @codemirror/search 生成，顺序固定。 */
+  ".cm-panel.cm-search": {
+    display: "flex",
+    flexWrap: "wrap",
+    alignItems: "center",
+    gap: "6px 8px",
+    padding: "8px 40px 8px 12px",
+    fontSize: "13px",
+  },
+  ".cm-panel.cm-search br": {
+    display: "none",
+  },
+  ".cm-panel.cm-search input, .cm-panel.cm-search button, .cm-panel.cm-search label": {
+    margin: "0",
+  },
+  ".cm-panel.cm-search label": {
+    display: "inline-flex",
+    alignItems: "center",
+    gap: "4px",
+    fontSize: "12px",
+    color: "var(--text-secondary)",
+  },
+  ".cm-panel.cm-search input[type=checkbox]": {
+    margin: "0",
+    accentColor: "var(--accent)",
+  },
+  ".cm-panel.cm-search input[name=search], .cm-panel.cm-search input[name=replace]": {
+    flex: "1 1 140px",
+    minWidth: "110px",
+    fontSize: "13px",
+    padding: "3px 8px",
+  },
+  ".cm-panel.cm-search button": {
+    fontSize: "12px",
+    padding: "3px 10px",
+    whiteSpace: "nowrap",
+  },
+  ".cm-panel.cm-search [name=close]": {
+    top: "50%",
+    right: "8px",
+    transform: "translateY(-50%)",
+    fontSize: "16px",
+    lineHeight: "1",
+    width: "24px",
+    height: "24px",
+    borderRadius: "4px",
+    color: "var(--text-secondary)",
+    cursor: "pointer",
+  },
+  ".cm-panel.cm-search [name=close]:hover": {
+    backgroundColor: "var(--bg-tertiary)",
+    color: "var(--text-primary)",
+  },
   ".cm-button": {
     backgroundImage: "none",
     backgroundColor: "var(--bg-tertiary)",
