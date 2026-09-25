@@ -1,6 +1,6 @@
 [package]
 name = "ainote-core"
-version = "0.55.3"
+version = "0.55.4"
 edition = "2021"
 description = "AINote - Git-native cross-platform markdown notes"
 
@@ -41,6 +41,11 @@ tauri = { version = "2", features = ["tray-icon"] }
 tauri-plugin-process = "2.3.1"
 tauri-plugin-updater = "2.10.1"
 tauri-plugin-window-state = "2.4.1"
+# 仅为启用 reqwest 的 system-proxy 特性：Windows 读取注册表系统代理、macOS 读取系统网络配置，
+# 让 tauri-plugin-updater 的更新检查跟随系统代理，避免直连 GitHub 被重置/超时导致「检查更新失败」。
+# reqwest 本体由 tauri-plugin-updater 引入（rustls-no-provider + 插件自装 ring provider），
+# 此处 default-features = false 不引入新的 TLS 依赖面。
+reqwest = { version = "0.13", default-features = false, features = ["system-proxy"] }
 
 [target."cfg(any(target_os = \"macos\", target_os = \"ios\"))".dependencies]
 security-framework = { version = "3.7", default-features = false, features = ["OSX_10_15"] }

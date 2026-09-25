@@ -94,7 +94,7 @@ sudo dnf install -y ./AINote-*.rpm   # Fedora
 
 **操作步骤**
 
-1. 确认网络与代理：浏览器能打开 `https://github.com/small-dream/AINote/releases/latest`。
+1. 确认网络与代理：浏览器能打开 `https://github.com/small-dream/AINote/releases/latest`。桌面端 v0.55.4 起更新检查会遵循系统代理（Windows 注册表 / macOS 系统网络配置）；若浏览器可走代理而应用仍失败，请反馈。
 2. 在设置 → 软件更新中重试；更新器只接受带签名的更新包，校验失败会自动拒绝。
 3. 仍失败时手动下载对应平台安装包覆盖安装，笔记仓库不受影响。
 4. 收集诊断包（§5）并在 Issue 中附上错误提示。
