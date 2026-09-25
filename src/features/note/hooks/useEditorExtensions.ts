@@ -4,7 +4,7 @@ import { GFM } from "@lezer/markdown";
 import { EditorState, Prec, type Extension } from "@codemirror/state";
 import { EditorView, keymap } from "@codemirror/view";
 import { closeBrackets, closeBracketsKeymap } from "@codemirror/autocomplete";
-import { defaultKeymap, history, historyKeymap, indentWithTab } from "@codemirror/commands";
+import { defaultKeymap, history, historyKeymap, indentWithTab, redoDepth, undoDepth } from "@codemirror/commands";
 import { highlightSelectionMatches, search, searchKeymap } from "@codemirror/search";
 import { bracketMatching, indentOnInput, syntaxHighlighting } from "@codemirror/language";
 import { useUiStore } from "@/stores/ui.store";
@@ -27,6 +27,7 @@ export interface EditorExtensionsInput {
   repoPath?: string | null;
   onOpenWiki?: (name: string) => void;
   onLinkAction?: (href: string, point: { x: number; y: number }) => void;
+  onLinkInput?: () => void;
   /** Markdown 编辑是否启用软渲染（WYSIWYG），false = 源码模式 */
   softRenderEnabled?: boolean;
 }
@@ -38,10 +39,6 @@ const formatKeymap = Prec.high(
     { key: "Mod-i", run: (v) => dispatchFormat(v, (s) => toggleInline(s, "italic")) },
     { key: "Mod-e", run: (v) => dispatchFormat(v, (s) => toggleInline(s, "code")) },
     { key: "Mod-Shift-x", run: (v) => dispatchFormat(v, (s) => toggleInline(s, "strikethrough")) },
-    { key: "Mod-k", run: (v) => {
-      void dispatchLink(v);
-      return true;
-    } },
   ])
 );
 
@@ -68,9 +65,10 @@ const markdownInputKeymap = Prec.high(
 );
 
 /** 编辑器扩展集合 + 光标激活格式集合（选择/文档变化时经 updateListener 刷新） */
-export function useEditorExtensions(input: EditorExtensionsInput = {}): { extensions: Extension[]; activeFormats: Set<string> } {
-  const { notes = [], repoPath = null, onOpenWiki, onLinkAction, softRenderEnabled = true } = input;
+export function useEditorExtensions(input: EditorExtensionsInput = {}): { extensions: Extension[]; activeFormats: Set<string>; canUndo: boolean; canRedo: boolean } {
+  const { notes = [], repoPath = null, onOpenWiki, onLinkAction, onLinkInput, softRenderEnabled = true } = input;
   const [activeFormats, setActiveFormats] = useState<Set<string>>(() => new Set());
+  const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
   const noteTheme = useUiStore((s) => s.noteTheme);
   const { t } = useTranslation();
   const extensions = useMemo(() => [
@@ -89,6 +87,7 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     keymap.of([...closeBracketsKeymap, ...defaultKeymap, ...historyKeymap, ...searchKeymap, indentWithTab]),
     markdownInputKeymap,
     formatKeymap,
+    Prec.high(keymap.of([{ key: "Mod-k", run: (view) => { if (onLinkInput) { onLinkInput(); return true; } void dispatchLink(view); return true; } }])),
     ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki, onLinkAction, t("note.copyCode"), t("note.copied")) : [syntaxHighlighting(getAinoteHighlightStyle())]),
     EditorView.updateListener.of((update) => {
       if (!update.selectionSet && !update.docChanged) return;
@@ -96,9 +95,13 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
       // 进而让 @uiw/react-codemirror 重建扩展，打断进行中的鼠标选择。
       const next = getActiveFormats(update.state);
       setActiveFormats((prev) => (sameFormats(prev, next) ? prev : next));
+      setHistoryState((prev) => {
+        const nextState = { canUndo: undoDepth(update.state) > 0, canRedo: redoDepth(update.state) > 0 };
+        return prev.canUndo === nextState.canUndo && prev.canRedo === nextState.canRedo ? prev : nextState;
+      });
     }),
-  ], [noteTheme, notes, onLinkAction, onOpenWiki, repoPath, softRenderEnabled, t]);
-  return { extensions, activeFormats };
+  ], [noteTheme, notes, onLinkAction, onLinkInput, onOpenWiki, repoPath, softRenderEnabled, t]);
+  return { extensions, activeFormats, ...historyState };
 }
 
 /** 生产壳（CSP 含 nonce）下放行 CodeMirror 注入的样式；无 nonce 环境返回空数组。 */

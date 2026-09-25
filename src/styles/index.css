@@ -35,8 +35,11 @@ body {
   text-rendering: optimizeLegibility;
 }
 
-button, input, textarea { font: inherit; }
-button:focus-visible, input:focus-visible, textarea:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button, input, textarea, select { font: inherit; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+input:not([type="checkbox"]):not([type="radio"]):not([type="range"]):not([type="file"]):focus-visible,
+textarea:focus-visible,
+select:focus-visible { outline: none; }
 input.ai-input:focus-visible { outline: none; }
 input.note-title-input:focus-visible { outline: none; }
 /* 无边框裸输入框（聚焦态由外层容器高亮）：不再叠加全局 accent 外框 */

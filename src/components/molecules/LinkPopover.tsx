@@ -61,7 +61,7 @@ export function LinkPopover({ request, anchorRect }: LinkPopoverProps) {
   return createPortal(
     <div ref={popoverRef} role="dialog" aria-label={t("link.title")} style={style} className="note-theme-surface rounded-xl border border-border bg-bg-primary p-3 shadow-xl">
       <label className="mb-1 block text-xs font-medium text-text-secondary" htmlFor="link-popover-url">{t("link.url")}</label>
-      <input id="link-popover-url" ref={inputRef} value={request.value} onChange={(event) => request.onChange(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.nativeEvent.isComposing) { event.preventDefault(); request.onSubmit(); } }} placeholder={t("richtext.linkPlaceholder")} aria-label={t("richtext.linkPlaceholder")} aria-invalid={request.invalid} className="h-9 w-full rounded-md border border-border bg-bg-secondary px-2.5 text-sm text-text-primary outline-none focus:border-accent" />
+      <input id="link-popover-url" ref={inputRef} value={request.value} onChange={(event) => request.onChange(event.target.value)} onKeyDown={(event) => { if (event.key === "Enter" && !event.nativeEvent.isComposing) { event.preventDefault(); request.onSubmit(); } }} placeholder={t("richtext.linkPlaceholder")} aria-label={t("richtext.linkPlaceholder")} aria-invalid={request.invalid} className="h-9 w-full rounded-md border border-border bg-bg-secondary px-2.5 text-sm text-text-primary outline-none focus:border-accent focus-visible:outline-none" />
       {request.invalid ? <p role="alert" className="mt-1.5 text-xs text-danger">{t("richtext.linkInvalid")}</p> : null}
       <div className="mt-3 flex items-center justify-end gap-2">
         {request.onRemove ? (

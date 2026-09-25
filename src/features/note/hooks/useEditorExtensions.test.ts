@@ -1,6 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
+import { undo } from "@codemirror/commands";
 import { useUiStore } from "@/stores/ui.store";
+import { mountEditor } from "@/test/editorHarness";
 import { useEditorExtensions } from "./useEditorExtensions";
 
 describe("useEditorExtensions", () => {
@@ -31,5 +33,22 @@ describe("useEditorExtensions", () => {
     rerender({ softRender: false });
 
     expect(result.current.extensions).not.toBe(withSoftRender);
+  });
+
+  it("文档事务更新撤销和重做可用状态", () => {
+    const { result } = renderHook(() => useEditorExtensions({ softRenderEnabled: false }));
+    const view = mountEditor(result.current.extensions, "hello");
+
+    act(() => {
+      view.dispatch({ changes: { from: 5, insert: "!" } });
+    });
+    expect(result.current.canUndo).toBe(true);
+    expect(result.current.canRedo).toBe(false);
+
+    act(() => {
+      undo(view);
+    });
+    expect(result.current.canUndo).toBe(false);
+    expect(result.current.canRedo).toBe(true);
   });
 });

@@ -15,8 +15,11 @@ import {
   Strikethrough,
   Table,
   TextQuote,
+  Undo,
+  Redo,
   type LucideIcon,
 } from "lucide-react";
+import { redo, undo } from "@codemirror/commands";
 import { setHeading, toggleBlock, toggleInline, type FormatResult } from "../utils/format";
 import { insertCodeBlock, insertDivider, insertImage, insertTable } from "../utils/insert";
 import { useFormatCommands } from "../hooks/useFormatCommands";
@@ -31,6 +34,9 @@ import type { TranslationKey } from "@/i18n/messages";
 interface FormatToolbarProps {
   viewRef: RefObject<EditorView | null>;
   active: Set<string>;
+  canUndo?: boolean;
+  canRedo?: boolean;
+  onLinkInput?: (() => void) | undefined;
   /** 提供时图片按钮改为本地文件选择器（P1-4 图片/附件管理） */
   onImagePicked?: (files: File[]) => void;
   /** 资产导入瞬时状态提示（成功 / 失败） */
@@ -113,9 +119,9 @@ function renderButtons(buttons: ButtonSpec[], opts: RenderButtonsOptions) {
 }
 
 /** Markdown 格式工具栏：按编辑任务分组，紧凑且保持键盘焦点。 */
-export function FormatToolbar({ viewRef, active, onImagePicked, status, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect }: FormatToolbarProps) {
+export function FormatToolbar({ viewRef, active, canUndo = false, canRedo = false, onLinkInput, onImagePicked, status, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect }: FormatToolbarProps) {
   const { t } = useTranslation();
-  const { run, runLink } = useFormatCommands(viewRef);
+  const { run, runLink } = useFormatCommands(viewRef, onLinkInput);
   const opts = { t, active, run, onImagePicked };
   return (
     <div className="format-toolbar flex h-10 items-center gap-1 border-b border-border bg-bg-secondary/60 px-6">
@@ -137,9 +143,19 @@ export function FormatToolbar({ viewRef, active, onImagePicked, status, diagnost
           </span>
         ) : null}
         <DiagnosticsToolbarButton issues={diagnostics} open={diagnosticsOpen} onToggle={onDiagnosticsToggle} onSelect={onDiagnosticsSelect} />
+        <Divider />
+        <ToolbarButton icon={Undo} label={t("richtext.undo")} shortcut="⌘Z" disabled={!canUndo} onClick={() => runHistory(viewRef, undo)} />
+        <ToolbarButton icon={Redo} label={t("richtext.redo")} shortcut="⌘⇧Z" disabled={!canRedo} onClick={() => runHistory(viewRef, redo)} />
       </div>
     </div>
   );
+}
+
+function runHistory(viewRef: RefObject<EditorView | null>, command: typeof undo): void {
+  const view = viewRef.current;
+  if (!view) return;
+  command(view);
+  view.focus();
 }
 
 function Divider() {

@@ -7,10 +7,11 @@ import { toggleInline } from "../utils/format";
 interface MarkdownContextMenuOptions {
   viewRef: RefObject<EditorView | null>;
   onOpenAi: () => void;
+  onLinkInput?: (point: { x: number; y: number }) => void;
 }
 
 /** Markdown 编辑器右键菜单状态：只保存点击位置，不把 CodeMirror 选区镜像进 React */
-export function useMarkdownContextMenu({ viewRef, onOpenAi }: MarkdownContextMenuOptions) {
+export function useMarkdownContextMenu({ viewRef, onOpenAi, onLinkInput }: MarkdownContextMenuOptions) {
   const [state, setState] = useState<{ x: number; y: number; hasSelection: boolean } | null>(null);
 
   const close = useCallback(() => setState(null), []);
@@ -55,9 +56,10 @@ export function useMarkdownContextMenu({ viewRef, onOpenAi }: MarkdownContextMen
   const runLink = useCallback(() => {
     const view = viewRef.current;
     if (!view) return;
+    const point = state ? { x: state.x, y: state.y } : undefined;
     close();
-    void dispatchLink(view).then(() => view.focus());
-  }, [close, viewRef]);
+    runLinkAction(view, point, onLinkInput);
+  }, [close, onLinkInput, state, viewRef]);
 
   const runPaste = useCallback(() => {
     const view = viewRef.current;
@@ -72,4 +74,12 @@ export function useMarkdownContextMenu({ viewRef, onOpenAi }: MarkdownContextMen
   }, [close, viewRef]);
 
   return { position: state, handleContextMenu, openAt, close, runInline, runClipboard, runSelectAll, runLink, runPaste, openAi: () => { close(); onOpenAi(); } };
+}
+
+function runLinkAction(view: EditorView, point: { x: number; y: number } | undefined, onLinkInput: ((point: { x: number; y: number }) => void) | undefined): void {
+  if (onLinkInput && point) {
+    onLinkInput(point);
+    return;
+  }
+  void dispatchLink(view).then(() => view.focus());
 }

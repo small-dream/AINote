@@ -46,6 +46,8 @@ export interface MarkdownEditorSurfaceProps {
   onDiagnosticsSelect: (issue: DiagnosticIssue) => void;
   viewRef: RefObject<EditorView | null>;
   activeFormats: Set<string>;
+  canUndo?: boolean;
+  canRedo?: boolean;
   onImagePicked: (files: File[]) => void;
   assetStatus: string | null;
   onContextMenu: (event: MouseEvent<HTMLElement>) => void;
@@ -55,13 +57,14 @@ export interface MarkdownEditorSurfaceProps {
   /** 是否启用软渲染（WYSIWYG），false = 源码模式 */
   softRender?: boolean;
   onLinkAction?: MarkdownPreviewProps["onLinkAction"] | undefined;
+  onLinkInput?: () => void;
 }
 
 /** Markdown 编辑器主体：大纲 + 格式工具栏 + 编辑/分栏/预览三模式（P0-2） */
-export function MarkdownEditorSurface({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect, viewRef, activeFormats, onImagePicked, assetStatus, onContextMenu, onLongPress, contextMenu, previewContextMenu, softRender = true, onLinkAction }: MarkdownEditorSurfaceProps) {
+export function MarkdownEditorSurface({ mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor, previewRef, onOpenWiki, wikiNotes, ratio, onRatioChange, outline, outlineOpen, onOutlineToggle, onOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect, viewRef, activeFormats, canUndo = false, canRedo = false, onImagePicked, assetStatus, onContextMenu, onLongPress, contextMenu, previewContextMenu, softRender = true, onLinkAction, onLinkInput }: MarkdownEditorSurfaceProps) {
   return (
     <>
-      {mode !== "preview" ? <FormatToolbar viewRef={viewRef} active={activeFormats} onImagePicked={onImagePicked} status={assetStatus} diagnostics={diagnostics} diagnosticsOpen={diagnosticsOpen} onDiagnosticsToggle={onDiagnosticsToggle} onDiagnosticsSelect={onDiagnosticsSelect} /> : null}
+      {mode !== "preview" ? <FormatToolbar viewRef={viewRef} active={activeFormats} canUndo={canUndo} canRedo={canRedo} onLinkInput={onLinkInput} onImagePicked={onImagePicked} status={assetStatus} diagnostics={diagnostics} diagnosticsOpen={diagnosticsOpen} onDiagnosticsToggle={onDiagnosticsToggle} onDiagnosticsSelect={onDiagnosticsSelect} /> : null}
       <EditorBody mode={mode} noteTheme={noteTheme} repoPath={repoPath} draft={draft} onChange={onChange} extensions={extensions} onCreateEditor={onCreateEditor} previewRef={previewRef} onOpenWiki={onOpenWiki} wikiNotes={wikiNotes} ratio={ratio} onRatioChange={onRatioChange} outline={outline} outlineOpen={outlineOpen} onOutlineToggle={onOutlineToggle} onOutlineSelect={onOutlineSelect} softRender={softRender} onContextMenu={onContextMenu} onLongPress={onLongPress} previewContextMenu={previewContextMenu} onLinkAction={onLinkAction} />
       {contextMenu}
     </>

@@ -78,7 +78,7 @@ interface ResetHistoryFormProps {
 /** 风险说明 + 提交说明 + 仓库名确认输入 */
 function ResetHistoryForm(props: ResetHistoryFormProps) {
   const { t } = useTranslation();
-  const fieldClass = "mb-3 w-full rounded border border-border bg-bg-secondary px-2 py-1 text-xs";
+  const fieldClass = "mb-3 w-full rounded border border-border bg-bg-secondary px-2 py-1 text-xs outline-none focus:border-accent";
   const labelClass = "mb-1 block text-xs text-text-secondary";
   return (
     <>

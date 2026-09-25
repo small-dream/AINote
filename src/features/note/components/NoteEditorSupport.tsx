@@ -25,6 +25,8 @@ import { useToastStore } from "@/stores/toast.store";
 import type { usePreviewContextMenu } from "../hooks/usePreviewContextMenu";
 import { PreviewContextMenu } from "./PreviewContextMenu";
 import { LinkOverlay, type LinkOverlayRequest } from "./LinkOverlay";
+import { LinkPopover } from "@/components/molecules/LinkPopover";
+import type { LinkPopoverRequest } from "@/components/molecules/LinkPopover";
 import { useTranslation } from "@/i18n";
 
 const LazyRichTextEditor = lazy(() => import("@/features/richtext/components/RichTextEditor").then(({ RichTextEditor }) => ({ default: RichTextEditor })));
@@ -69,11 +71,12 @@ export interface NoteEditorContentProps {
   insertAnswer: (text: string) => void;
   pdf: ReturnType<typeof usePdfExport>;
   linkOverlay?: LinkOverlayRequest | null | undefined;
+  markdownLinkInput?: LinkPopoverRequest | null | undefined;
   /** 是否为加密笔记：关闭 AI 与版本历史入口，并提供逐篇加密开关 */
   encrypted: boolean;
 }
 
-export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, previewMenu, noteTheme, richTextDialog, onRequestConvertToRichText, onConfirmConvertToRichText, onCancelConvertToRichText, onConvertToMarkdown, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf, encrypted, linkOverlay = null }: NoteEditorContentProps) {
+export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, previewMenu, noteTheme, richTextDialog, onRequestConvertToRichText, onConfirmConvertToRichText, onCancelConvertToRichText, onConvertToMarkdown, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf, encrypted, linkOverlay = null, markdownLinkInput = null }: NoteEditorContentProps) {
   const richText = kind === "richText";
   const encryption = useNoteEncryption(repoPath, notePath, encrypted);
   // 首次打开后才挂载（触发懒加载分块），之后保持挂载以保留问答历史。
@@ -89,6 +92,7 @@ export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, o
     <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} encrypted={encrypted} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
     <PreviewContextMenu menu={previewMenu} noteTheme={noteTheme} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />
     <LinkOverlay request={linkOverlay} />
+    <LinkPopover request={markdownLinkInput} />
     {encrypted ? null : <AiWriteControls ai={ai} canSummarize={!richText} canSuggest={!richText} suggest={suggest} />}
     {!encrypted && askAiMounted ? <Suspense fallback={null}><LazyAskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} /></Suspense> : null}
     {history.open ? <Suspense fallback={null}><LazyHistoryPanel repoPath={repoPath} path={notePath} open onClose={history.closeHistory} onRestored={history.onRestored} /></Suspense> : null}

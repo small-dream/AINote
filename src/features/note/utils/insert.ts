@@ -1,4 +1,6 @@
 import type { EditorState } from "@codemirror/state";
+import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
+import type { SyntaxNode } from "@lezer/common";
 import type { FormatResult } from "./format";
 
 const TABLE_TEMPLATE = "| 列1 | 列2 |\n| --- | --- |\n|  |  |";
@@ -19,6 +21,50 @@ export function insertLink(state: EditorState, url?: string): FormatResult {
     ? { anchor: from + insert.length }
     : linkPlaceholder(from, text, empty);
   return { changes: { from, to, insert }, selection };
+}
+
+export interface MarkdownLinkTarget {
+  from: number;
+  to: number;
+  urlFrom: number;
+  urlTo: number;
+  href: string;
+}
+
+export function findMarkdownLink(state: EditorState): MarkdownLinkTarget | null {
+  const { from, to } = state.selection.main;
+  const tree = ensureSyntaxTree(state, Math.max(from, to), 50) ?? syntaxTree(state);
+  const nodes = [tree.resolveInner(from, -1), tree.resolveInner(from, 1), tree.resolveInner(to, -1), tree.resolveInner(to, 1)];
+  const start = Math.min(from, to);
+  const end = Math.max(from, to);
+  for (const node of nodes) {
+    const target = findLinkAncestor(node, start, end, state);
+    if (target) return target;
+  }
+  return null;
+}
+
+export function replaceMarkdownLinkUrl(target: MarkdownLinkTarget, href: string): FormatResult {
+  return { changes: { from: target.urlFrom, to: target.urlTo, insert: href }, selection: { anchor: target.urlFrom + href.length } };
+}
+
+export function removeMarkdownLink(state: EditorState, target: MarkdownLinkTarget): FormatResult {
+  const labelFrom = target.from + 1;
+  const labelTo = target.urlFrom - 2;
+  return { changes: { from: target.from, to: target.to, insert: state.sliceDoc(labelFrom, labelTo) }, selection: { anchor: target.from + labelTo - labelFrom } };
+}
+
+function findLinkAncestor(node: SyntaxNode | null, start: number, end: number, state: EditorState): MarkdownLinkTarget | null {
+  for (let current = node; current; current = current.parent) {
+    if (current.name !== "Link" || start > current.to || end < current.from) continue;
+    const url = current.getChild("URL");
+    const marks = current.getChildren("LinkMark");
+    const first = marks[0];
+    const last = marks[marks.length - 1];
+    if (!url || !first || !last) continue;
+    return { from: current.from, to: current.to, urlFrom: url.from, urlTo: url.to, href: state.sliceDoc(url.from, url.to) };
+  }
+  return null;
 }
 
 /** 图片：插入 ![alt]() 并选中 alt */

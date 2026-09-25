@@ -3,7 +3,7 @@ import { GFM } from "@lezer/markdown";
 import { EditorState } from "@codemirror/state";
 import { describe, expect, it } from "vitest";
 import type { FormatResult } from "./format";
-import { insertCodeBlock, insertDivider, insertImage, insertLink, insertTable } from "./insert";
+import { findMarkdownLink, insertCodeBlock, insertDivider, insertImage, insertLink, insertTable, removeMarkdownLink, replaceMarkdownLinkUrl } from "./insert";
 
 type InsertFn = (s: EditorState) => FormatResult;
 
@@ -45,6 +45,23 @@ describe("insertLink", () => {
       anchor: 18,
       head: 18,
     });
+  });
+});
+
+describe("markdown link editing", () => {
+  it("找到选区所在链接并替换 URL", () => {
+    expect(run("[查看](https://old.example)", 1, 3, (state) => {
+      const target = findMarkdownLink(state);
+      expect(target?.href).toBe("https://old.example");
+      return replaceMarkdownLinkUrl(target as NonNullable<typeof target>, "https://new.example");
+    }).doc).toBe("[查看](https://new.example)");
+  });
+
+  it("移除链接时保留可见文本", () => {
+    expect(run("[查看](https://example.com)", 1, 3, (state) => {
+      const target = findMarkdownLink(state);
+      return removeMarkdownLink(state, target as NonNullable<typeof target>);
+    }).doc).toBe("查看");
   });
 });
 

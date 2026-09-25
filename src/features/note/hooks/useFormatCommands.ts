@@ -28,7 +28,7 @@ export async function dispatchLink(view: EditorView): Promise<void> {
 }
 
 /** 工具栏命令：dispatch 后恢复编辑器焦点（按钮用 onMouseDown preventDefault 兜底） */
-export function useFormatCommands(viewRef: RefObject<EditorView | null>) {
+export function useFormatCommands(viewRef: RefObject<EditorView | null>, onLinkInput?: () => void) {
   const run = useCallback(
     (fn: (s: EditorState) => FormatResult) => {
       const view = viewRef.current;
@@ -41,7 +41,11 @@ export function useFormatCommands(viewRef: RefObject<EditorView | null>) {
   const runLink = useCallback(() => {
     const view = viewRef.current;
     if (!view) return;
+    if (onLinkInput) {
+      onLinkInput();
+      return;
+    }
     void dispatchLink(view).then(() => view.focus());
-  }, [viewRef]);
+  }, [onLinkInput, viewRef]);
   return { run, runLink };
 }
