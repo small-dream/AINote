@@ -14,6 +14,7 @@ import type { SidebarTab } from "@/stores/ui.store";
 import type { TranslationKey } from "@/i18n/messages";
 import { MobileVaultButton } from "./MobileVaultButton";
 import { MobileIconButton, MobileNavButton } from "./MobileButtons";
+import { useTodoNavBadge } from "@/features/todo/hooks/useTodoAlertCounts";
 
 const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
 const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
@@ -77,6 +78,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
         onOpenGraph={() => setGraphOpen(true)}
         editor={editor}
         sidebar={sidebar}
+        repoPath={repoPath}
       />
       <MobileWorkspaceDialogs
         repoPath={repoPath}
@@ -101,7 +103,7 @@ const MOBILE_LIST_TITLES: Record<SidebarTab, TranslationKey> = {
   trash: "trash.title",
 };
 
-function MobileContent({ showEditor, sidebarTab, setSidebarTab, onOpenGraph, editor, sidebar }: { showEditor: boolean; sidebarTab: SidebarTab; setSidebarTab: (tab: SidebarTab) => void; onOpenGraph: () => void; editor: ReactNode; sidebar: ReactNode }) {
+function MobileContent({ showEditor, sidebarTab, setSidebarTab, onOpenGraph, editor, sidebar, repoPath }: { showEditor: boolean; sidebarTab: SidebarTab; setSidebarTab: (tab: SidebarTab) => void; onOpenGraph: () => void; editor: ReactNode; sidebar: ReactNode; repoPath: string | null }) {
   return (
     <>
       <main className="min-h-0 flex-1 overflow-hidden">
@@ -116,6 +118,7 @@ function MobileContent({ showEditor, sidebarTab, setSidebarTab, onOpenGraph, edi
       </main>
       {showEditor ? null : (
         <MobileBottomNav
+          repoPath={repoPath}
           notesActive={sidebarTab === "tree"}
           favoritesActive={sidebarTab === "favorites"}
           todoActive={sidebarTab === "todo"}
@@ -212,12 +215,14 @@ function MobileListTabs({ active, onChange, onOpenGraph }: { active: SidebarTab;
   );
 }
 
-function MobileBottomNav({ notesActive, todoActive, favoritesActive, onOpenNotes, onOpenTodo, onOpenFavorites, onOpenSettings }: { notesActive: boolean; todoActive: boolean; favoritesActive: boolean; onOpenNotes: () => void; onOpenTodo: () => void; onOpenFavorites: () => void; onOpenSettings: () => void }) {
+function MobileBottomNav({ repoPath, notesActive, todoActive, favoritesActive, onOpenNotes, onOpenTodo, onOpenFavorites, onOpenSettings }: { repoPath: string | null; notesActive: boolean; todoActive: boolean; favoritesActive: boolean; onOpenNotes: () => void; onOpenTodo: () => void; onOpenFavorites: () => void; onOpenSettings: () => void }) {
   const { t } = useTranslation();
+  // 待办入口常驻显示逾期 / 今日到期的数量角标
+  const todoBadge = useTodoNavBadge(repoPath);
   return (
     <nav className="mobile-bottom-nav flex min-h-16 shrink-0 items-stretch justify-around border-t border-border bg-bg-secondary pb-[var(--safe-bottom)]" aria-label={t("app.workspaceNavigation")}>
       <MobileNavButton active={notesActive} label={t("app.notes")} icon={List} onClick={onOpenNotes} />
-      <MobileNavButton active={todoActive} label={t("todo.title")} icon={ListTodo} onClick={onOpenTodo} />
+      <MobileNavButton active={todoActive} label={t("todo.title")} icon={ListTodo} onClick={onOpenTodo} badge={todoBadge} />
       <MobileNavButton active={favoritesActive} label={t("app.favorites")} icon={Star} onClick={onOpenFavorites} />
       <MobileNavButton label={t("settings.title")} icon={Settings} onClick={onOpenSettings} />
     </nav>

@@ -283,8 +283,18 @@ function context(): E2eCommandContext {
   return session;
 }
 
+/**
+ * 结果跨 IPC 边界时会被序列化（真实 `invoke` 的语义），mock 必须返回副本：
+ * 否则原地改动的种子数据会让订阅方拿到「内容变了但引用没变」的结果，
+ * React Query 的结构化共享便无法识别变更，与生产行为不一致。
+ */
+function cloneResult(value: unknown): unknown {
+  if (value === null || typeof value !== "object") return value;
+  return structuredClone(value);
+}
+
 /** 处理一条 IPC 命令（未知命令抛出结构化错误）。 */
 export function handleCommand(cmd: string, args: Record<string, unknown>): Promise<unknown> {
   const handler = commandHandlers[cmd] ?? (() => { throw appError(`unsupported mock command: ${cmd}`); });
-  return Promise.resolve(handler(args, context()));
+  return Promise.resolve(handler(args, context())).then(cloneResult);
 }

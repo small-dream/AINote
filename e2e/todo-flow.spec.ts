@@ -32,6 +32,34 @@ function reminderState(): E2eState {
   };
 }
 
+/** 本地日期偏移 N 天的 YYYY-MM-DD（摘要卡与角标按「今天」判定，不能用固定日期） */
+function dayOffset(days: number): string {
+  const date = new Date();
+  date.setDate(date.getDate() + days);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+}
+
+/** 预置「一项已逾期 + 一项今天到期」：用于验证启动摘要卡与待办入口角标 */
+function dueState(): E2eState {
+  const stamp = new Date(Date.now() - 3 * 86_400_000).toISOString();
+  return {
+    ...baseState(),
+    taskBoard: {
+      schemaVersion: 3,
+      tasks: [
+        {
+          id: "task-overdue", title: "三天前的周报", description: "补上结论", done: false, priority: "high",
+          dueAt: dayOffset(-3), remindAt: null, sortOrder: 0, createdAt: stamp, updatedAt: stamp, completedAt: null,
+        },
+        {
+          id: "task-today", title: "今天的复盘", description: "", done: false, priority: "none",
+          dueAt: dayOffset(0), remindAt: null, sortOrder: 1, createdAt: stamp, updatedAt: stamp, completedAt: null,
+        },
+      ],
+    },
+  };
+}
+
 /** 读取元素的计算背景色（统一由浏览器归一化，避免手写色值）。 */
 async function background(page: Page, selector: string): Promise<string> {
   return page.locator(selector).first().evaluate((node) => getComputedStyle(node).backgroundColor);
@@ -225,8 +253,8 @@ test.describe("Todo 待办（桌面壳）", () => {
     await page.getByRole("button", { name: "确认" }).click();
 
     await page.getByLabel("任务标题").press("Enter");
-    // 任务行徽标同时显示日期与时刻
-    await expect(page.getByRole("button", { name: /交周报/ })).toContainText("18:30");
+    // 任务行徽标同时显示日期与时刻（限定在任务列表里：总览的「未来」区也会列出这条）
+    await expect(page.locator(".workspace-todo-list").getByRole("button", { name: /交周报/ })).toContainText("18:30");
 
     const recorded = await calls(page);
     const created = recorded.find((entry) => entry.cmd === "task_create");
@@ -288,7 +316,7 @@ test.describe("Todo 待办（桌面壳）", () => {
     await page.getByLabel("任务标题").fill("交周报 明天 18:00");
     await page.getByRole("button", { name: "添加任务" }).click();
 
-    await expect(page.getByRole("button", { name: /交周报/ })).toContainText("18:00");
+    await expect(page.locator(".workspace-todo-list").getByRole("button", { name: /交周报/ })).toContainText("18:00");
     const recorded = await calls(page);
     const created = recorded.find((entry) => entry.cmd === "task_create");
     expect(String(created?.args.dueAt)).toMatch(/^\d{4}-\d{2}-\d{2}T18:00$/);
@@ -310,6 +338,46 @@ test.describe("Todo 待办（桌面壳）", () => {
     const lead = Date.parse(String(update?.args.remindAt)) - Date.now();
     expect(lead).toBeGreaterThan(9 * 60_000);
     expect(lead).toBeLessThanOrEqual(10 * 60_000);
+  });
+
+  test("启动摘要：逾期与今天到期只提示一次，点「查看待办」定位到最紧要的一条", async ({ page }) => {
+    await openWorkspace(page, dueState());
+
+    const card = page.locator("[data-todo-digest]");
+    await expect(card).toBeVisible();
+    await expect(card).toContainText("1 项已逾期");
+    await expect(card).toContainText("1 项今天到期");
+    await expect(card).toContainText("三天前的周报");
+
+    // 入口角标常驻：未完成的逾期 + 今天到期
+    await expect(page.locator(".workspace-nav-rail [data-nav-count-badge]")).toHaveText("2");
+
+    await card.getByRole("button", { name: "查看待办" }).click();
+    await expect(page.locator(".workspace-todo-list")).toBeVisible();
+    await expect(page.getByLabel("任务标题")).toHaveValue("三天前的周报");
+
+    // 同一天重新打开应用不再提示（记录落在本机）
+    await page.goto("/?e2e");
+    await expect(page.getByText("全部笔记").first()).toBeVisible({ timeout: 15_000 });
+    await expect(page.locator("[data-todo-digest]")).toHaveCount(0);
+  });
+
+  test("启动摘要：关掉后不再打扰，任务处理完入口角标随之消失", async ({ page }) => {
+    await openWorkspace(page, dueState());
+
+    const card = page.locator("[data-todo-digest]");
+    await expect(card).toBeVisible();
+    await expect(page.locator(".workspace-nav-rail [data-nav-count-badge]")).toHaveText("2");
+
+    await card.getByRole("button", { name: "今天不再提醒" }).click();
+    await expect(card).toHaveCount(0);
+
+    await page.locator(".workspace-nav-rail button[aria-label^='待办']").click();
+    for (const title of ["三天前的周报", "今天的复盘"]) {
+      await page.getByRole("checkbox", { name: title }).click();
+    }
+
+    await expect(page.locator(".workspace-nav-rail [data-nav-count-badge]")).toHaveCount(0);
   });
 
   test("到点提醒：点「查看任务」回到待办并定位到该任务", async ({ page }) => {
@@ -379,6 +447,18 @@ test.describe("Todo 待办（移动壳）", () => {
 
     const update = (await calls(page)).find((entry) => entry.cmd === "task_update");
     expect(String(update?.args.title)).toBe("随身任务（已改）");
+  });
+
+  test("启动摘要卡在移动壳同样可见，底部导航角标显示数量", async ({ page }) => {
+    await openWorkspace(page, dueState());
+
+    const card = page.locator("[data-todo-digest]");
+    await expect(card).toBeVisible();
+    await expect(page.locator(".mobile-bottom-nav [data-nav-count-badge]")).toHaveText("2");
+
+    await card.getByRole("button", { name: "查看待办" }).click();
+    await expect(page.locator(".mobile-list-tabs").getByRole("tab", { name: "待办" })).toHaveAttribute("aria-selected", "true");
+    await expect(page.getByLabel("任务标题")).toHaveValue("三天前的周报");
   });
 
   test("到点提醒卡片在移动壳同样可见，点「查看任务」展开该任务", async ({ page }) => {

@@ -1,6 +1,8 @@
 import { lazy, Suspense, useState } from "react";
 import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, GitCommitHorizontal, GitGraph, ListTodo, Lock, LockOpen, RotateCcw, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
+import { NavCountBadge } from "@/components/atoms/NavCountBadge";
 import { Tooltip } from "@/components/atoms/Tooltip";
+import { useTodoNavBadge } from "@/features/todo/hooks/useTodoAlertCounts";
 import type { SyncController } from "@/features/sync/hooks/useSync";
 import { deriveSyncFailure, deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
 import { useVaultLock } from "@/features/vault/hooks/useVaultLock";
@@ -40,7 +42,7 @@ export function WorkspaceNavRail({ repoPath, startupSyncing, sync }: WorkspaceNa
     <nav className="workspace-nav-rail flex w-[72px] shrink-0 flex-col items-center gap-1.5 border-r border-border bg-bg-tertiary px-2 pb-3" aria-label={t("app.workspaceNavigation")}>
       <div data-tauri-drag-region className="h-11 w-full shrink-0" aria-hidden="true" />
       <SyncNavButton repoPath={repoPath} startupSyncing={startupSyncing} sync={sync} />
-      <NavigationItems />
+      <NavigationItems repoPath={repoPath} />
       <CommitNavButton repoPath={repoPath} sync={sync} />
       <DiscardNavButton repoPath={repoPath} sync={sync} />
       <GraphNavButton repoPath={repoPath} />
@@ -51,18 +53,24 @@ export function WorkspaceNavRail({ repoPath, startupSyncing, sync }: WorkspaceNa
   );
 }
 
-function NavigationItems() {
+function NavigationItems({ repoPath }: { repoPath: string | null }) {
   const { t } = useTranslation();
   const sidebarTab = useUiStore((state) => state.sidebarTab);
   const setSidebarTab = useUiStore((state) => state.setSidebarTab);
+  // 待办入口常驻显示逾期 / 今日到期的数量角标（无待处理任务时不渲染）
+  const todoBadge = useTodoNavBadge(repoPath);
   return (
     <>
       {NAV_ITEMS.map(({ key, icon: Icon, sidebarTab: targetTab }, index) => {
         const label = t(key);
         const active = sidebarTab === targetTab;
+        const badge = targetTab === "todo" ? todoBadge : null;
         return (
           <Tooltip key={key} content={label} placement="right">
-            <button type="button" aria-label={label} aria-current={active ? "page" : undefined} onClick={() => setSidebarTab(targetTab)} className={`${NAV_BUTTON_CLASS} ${index === 0 ? NAV_SECTION_GAP_CLASS : ""} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}><Icon size={18} strokeWidth={active ? 2.3 : 1.9} /></button>
+            <button type="button" aria-label={badge?.ariaLabel ?? label} aria-current={active ? "page" : undefined} onClick={() => setSidebarTab(targetTab)} className={`${NAV_BUTTON_CLASS} ${index === 0 ? NAV_SECTION_GAP_CLASS : ""} ${active ? "bg-bg-primary text-accent shadow-sm" : ""}`}>
+              <Icon size={18} strokeWidth={active ? 2.3 : 1.9} />
+              {badge ? <NavCountBadge count={badge.count} tone={badge.tone} /> : null}
+            </button>
           </Tooltip>
         );
       })}

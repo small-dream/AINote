@@ -5,6 +5,7 @@ import { RenameNoteDialog } from "@/features/note/components/RenameNoteDialog";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { CommandPalette } from "@/features/search/components/CommandPalette";
 import { ReminderAlertStack } from "@/features/todo/components/ReminderAlertStack";
+import { useTaskStartupDigest } from "@/features/todo/hooks/useTaskStartupDigest";
 import { WorkspaceLayout } from "@/pages/workspace/WorkspaceLayout";
 import type { WorkspaceActions } from "@/pages/workspace/useWorkspaceActions";
 import { useUiStore } from "@/stores/ui.store";
@@ -34,12 +35,14 @@ export function WorkspaceShellSwitcher({ repoPath, startupSyncing, currentNotePa
   const noteTheme = useUiStore((state) => state.noteTheme);
   const noteThemeScope = useUiStore((state) => state.noteThemeScope);
   const isMobile = useIsMobileViewport();
+  // 启动摘要：每天第一次进入工作区时提示逾期 / 今天到期的任务，桌面与移动共用
+  const startupDigest = useTaskStartupDigest(repoPath);
   const content = { repoPath, currentNotePath, editorRef, actions, onSelect, historyRequestPath, setHistoryRequestPath };
   return (
     <div className={`workspace-shell flex h-dvh min-h-0 overflow-hidden bg-bg-tertiary ${noteThemeScope === "workspace" ? "workspace-theme-linked" : ""}`} data-note-theme={noteThemeScope === "workspace" ? noteTheme : undefined}>
       {isMobile ? <MobileWorkspaceContent {...content} /> : <WorkspaceLayout {...content} startupSyncing={startupSyncing} />}
-      {/* 待办提醒卡片：桌面与移动共用，桌面端没有系统调度时的主要提示通道 */}
-      <ReminderAlertStack repoPath={repoPath} />
+      {/* 待办提醒浮层：启动摘要卡 + 到点提醒卡片，桌面与移动共用 */}
+      <ReminderAlertStack repoPath={repoPath} digest={startupDigest} />
       <VaultUnlockDialog />
       <WorkspaceDialogs repoPath={repoPath} actions={actions} onMoved={onMoved} />
       <WorkspaceOverlays repoPath={repoPath} actions={actions} editorRef={editorRef} onOpenNote={onSelect} />

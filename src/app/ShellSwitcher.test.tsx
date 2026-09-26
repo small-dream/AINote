@@ -8,6 +8,7 @@ import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 
 const viewport = vi.hoisted(() => ({ isMobile: false }));
 const vaultApiMock = vi.hoisted(() => ({ status: vi.fn() }));
+const taskApiMock = vi.hoisted(() => ({ board: vi.fn(async () => ({ schemaVersion: 3, tasks: [] })) }));
 
 vi.mock("@/hooks/useIsMobileViewport", () => ({
   useIsMobileViewport: () => viewport.isMobile,
@@ -25,7 +26,7 @@ vi.mock("@/features/file-tree/components/NewFolderDialog", () => ({ NewFolderDia
 vi.mock("@/features/note/components/MoveNoteDialog", () => ({ MoveNoteDialog: () => null }));
 vi.mock("@/features/note/components/RenameNoteDialog", () => ({ RenameNoteDialog: () => null }));
 vi.mock("@/features/search/components/CommandPalette", () => ({ CommandPalette: () => null }));
-vi.mock("@/api", () => ({ vaultApi: vaultApiMock }));
+vi.mock("@/api", () => ({ vaultApi: vaultApiMock, taskApi: taskApiMock }));
 
 const actions = {
   folderDialog: { open: false, dir: "" },

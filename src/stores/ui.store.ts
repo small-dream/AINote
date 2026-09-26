@@ -85,7 +85,7 @@ export function parseVaultAutoLock(value: string | null): VaultAutoLockMinutes {
 }
 
 /** 探测 localStorage 是否真正可用（Node 26+ 实验性 localStorage 会定义但无法使用） */
-function isLocalStorageAvailable(): boolean {
+export function isLocalStorageAvailable(): boolean {
   if (typeof localStorage === "undefined") return false;
   try {
     const probe = "__ainote_ls_probe__";

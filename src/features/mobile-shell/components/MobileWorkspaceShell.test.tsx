@@ -20,7 +20,10 @@ vi.mock("@/features/sync/hooks/useSync", () => ({
 vi.mock("@/features/sync/components/ConflictMergeDialog", () => ({
   ConflictMergeDialog: ({ open }: { open: boolean }) => (open ? <div>mobile-conflict-dialog</div> : null),
 }));
-vi.mock("@/api", () => ({ vaultApi: vaultApiMock }));
+vi.mock("@/api", () => ({
+  vaultApi: vaultApiMock,
+  taskApi: { board: vi.fn(async () => ({ schemaVersion: 3, tasks: [] })) },
+}));
 
 useSyncMock.mockReturnValue({
     online: true,
