@@ -1,6 +1,6 @@
 import { ensureSyntaxTree, syntaxTree } from "@codemirror/language";
 import type { SyntaxNode } from "@lezer/common";
-import { EditorSelection, StateField, type EditorState, type Extension, type Range } from "@codemirror/state";
+import { EditorSelection, StateField, type EditorState, type Extension, type Line, type Range } from "@codemirror/state";
 import { Decoration, type DecorationSet, EditorView, keymap, type MouseSelectionStyle } from "@codemirror/view";
 import { openExternal } from "@/api";
 import type { HideRange, WidgetRange } from "./types";
@@ -140,7 +140,16 @@ function correctSelectionToClickedLine(event: MouseEvent, view: EditorView): voi
 
 function createLineSelectionStyle(view: EditorView, event: MouseEvent, options: SoftRenderOptions): MouseSelectionStyle | null {
   debugMouseDown(event, view, options);
+  if (event.button !== 0) return null;
+  // 双击（以及更快的连击）在软渲染里按「选中当前行」处理：CodeMirror 默认的整行选区
+  // 会连行尾换行一起选，而换行的 DOM 落在下一行行首，高亮看起来就溢到了下一行。
+  if (event.detail >= 2) return createWholeLineStyle(view, event);
   if (!isPlainSingleClick(event)) return null;
+  return createCaretStyle(view, event);
+}
+
+/** 单击 / 拖拽：按命中行夹紧光标位置，拖拽时保留范围选区。 */
+function createCaretStyle(view: EditorView, event: MouseEvent): MouseSelectionStyle | null {
   const start = clickedLinePosition(view, event);
   if (start === null) return null;
   const startSelection = view.state.selection;
@@ -155,6 +164,31 @@ function createLineSelectionStyle(view: EditorView, event: MouseEvent, options: 
       return EditorSelection.create([range]);
     },
   };
+}
+
+/** 双击及连击：选中命中行整行（不含行尾换行），拖拽跨到其它行时按整行扩展。 */
+function createWholeLineStyle(view: EditorView, event: MouseEvent): MouseSelectionStyle | null {
+  const startLine = clickedDocLine(view, event);
+  if (!startLine) return null;
+  const startSelection = view.state.selection;
+  return {
+    update: () => false,
+    get: (currentEvent, extend, multiple) => {
+      const endLine = clickedDocLine(view, currentEvent) ?? startLine;
+      const range = endLine.from < startLine.from
+        ? EditorSelection.range(endLine.from, startLine.to)
+        : EditorSelection.range(startLine.from, endLine.to);
+      if (extend) return startSelection.replaceRange(startSelection.main.extend(range.from, range.to, range.assoc));
+      if (multiple) return startSelection.addRange(range);
+      return EditorSelection.create([range]);
+    },
+  };
+}
+
+/** 事件命中的源码行（软渲染行内按行夹紧，避免落到相邻行）。 */
+function clickedDocLine(view: EditorView, event: MouseEvent): Line | null {
+  const pos = clickedLinePosition(view, event);
+  return pos === null ? null : view.state.doc.lineAt(pos);
 }
 
 function isPlainSingleClick(event: MouseEvent): boolean {

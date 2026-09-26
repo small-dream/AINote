@@ -133,6 +133,31 @@ describe("softRender 点击定位", () => {
     expect(view.state.selection.main.to).toBe(7);
     view.destroy();
   });
+
+  it("双击软渲染行时选中整行，不含行尾换行", async () => {
+    const view = await createView("first\nsecond", 0);
+    const [firstLine] = view.contentDOM.querySelectorAll<HTMLElement>(".cm-line");
+    if (!firstLine) throw new Error("first line not rendered");
+    vi.spyOn(view, "posAtCoords").mockReturnValue(2);
+    firstLine.firstChild?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0, detail: 2, clientX: 20, clientY: 10 }));
+    firstLine.firstChild?.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, button: 0, detail: 2, clientX: 20, clientY: 10 }));
+    const selection = view.state.selection.main;
+    expect(view.state.doc.sliceString(selection.from, selection.to)).toBe("first");
+    view.destroy();
+  });
+
+  it("连击（三击及以上）只选中当前行，不把高亮带到下一行行首", async () => {
+    const view = await createView("first\nsecond", 0);
+    const lines = view.contentDOM.querySelectorAll<HTMLElement>(".cm-line");
+    const secondLine = lines[1];
+    if (!secondLine) throw new Error("second line not rendered");
+    vi.spyOn(view, "posAtCoords").mockReturnValue(7);
+    secondLine.firstChild?.dispatchEvent(new MouseEvent("mousedown", { bubbles: true, button: 0, detail: 3, clientX: 20, clientY: 30 }));
+    secondLine.firstChild?.dispatchEvent(new MouseEvent("mouseup", { bubbles: true, button: 0, detail: 3, clientX: 20, clientY: 30 }));
+    const selection = view.state.selection.main;
+    expect(view.state.doc.sliceString(selection.from, selection.to)).toBe("second");
+    view.destroy();
+  });
 });
 
 describe("softRender 交互与块级", () => {

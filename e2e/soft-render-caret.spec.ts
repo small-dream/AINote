@@ -105,6 +105,19 @@ test.describe("AINote 软渲染光标落点", () => {
     await page.keyboard.type("首");
     await expect(line.locator(".cm-sr-strong")).toHaveText("首加粗");
   });
+
+  test("双击选中当前行：高亮不溢到下一行行首", async ({ page }) => {
+    const line = "4、两勺生抽，半勺老抽，一勺蚝油，一勺糖，半勺盐，两勺玉米淀粉，半碗水。";
+    await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "caret-line.md", content: `${line}\n5、起锅烧油，蒜姜桂皮，倒入汤汁\n` }] });
+    await openNote(page, "caret-line", "两勺生抽");
+
+    const first = visibleLine(page);
+    const edge = await visibleTextRightEdge(first, "一勺蚝油");
+    await page.mouse.dblclick(edge.x - 8, edge.y);
+
+    // 选区只覆盖当前行正文，不含行尾换行（否则换行的 DOM 会把高亮画到下一行行首）。
+    await expect.poll(async () => page.evaluate(() => window.getSelection()?.toString() ?? "")).toBe(line);
+  });
 });
 
 test.describe("AINote 移动端窄屏软渲染光标落点", () => {
@@ -120,5 +133,17 @@ test.describe("AINote 移动端窄屏软渲染光标落点", () => {
     await page.keyboard.type("新");
 
     await expect(line.locator(".cm-sr-strong")).toHaveText(/rules新$/);
+  });
+
+  test("窄屏写作模式双击同样只选中当前行", async ({ page }) => {
+    const line = "4、两勺生抽，半勺老抽，一勺蚝油，一勺糖，半勺盐，两勺玉米淀粉，半碗水。";
+    await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "caret-line-mobile.md", content: `${line}\n5、起锅烧油，蒜姜桂皮，倒入汤汁\n` }] });
+    await openNote(page, "caret-line-mobile", "两勺生抽");
+
+    const first = visibleLine(page);
+    const edge = await visibleTextRightEdge(first, "一勺蚝油");
+    await page.mouse.dblclick(edge.x - 8, edge.y);
+
+    await expect.poll(async () => page.evaluate(() => window.getSelection()?.toString() ?? "")).toBe(line);
   });
 });
