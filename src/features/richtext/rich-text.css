@@ -176,25 +176,58 @@
 .rich-text-editor .ProseMirror .link-mark:hover {
   background: var(--note-accent-soft);
 }
+/* ── 任务列表 ─────────────────────────────────────────────────────────
+   勾选框本体（尺寸 / 圆角 / 描边 / 对勾取色）在 styles/note-task-check.css，与 Markdown
+   软渲染、只读预览、打印共用一套绘制；这里只管任务项的排版。
+   NodeView 里 li 只有 data-checked（data-type 只出现在静态 HTML），所以统一按「taskList 的
+   直系子项」选择；行内间距交给内容区的 padding-left，不留「复选框右侧点不进去」的死区。 */
 .rich-text-editor .ProseMirror ul[data-type="taskList"] {
   list-style: none;
   padding-left: 0;
 }
-.rich-text-editor .ProseMirror li[data-type="taskItem"] {
+.rich-text-editor .ProseMirror ul[data-type="taskList"] > li {
   display: flex;
-  gap: 0.5rem;
   align-items: flex-start;
+  padding: 0.15em 0;
 }
-.rich-text-editor .ProseMirror li[data-type="taskItem"] > label {
+.rich-text-editor .ProseMirror ul[data-type="taskList"] > li > label {
+  display: block;
+  flex: 0 0 auto;
+  /* 与首行文字中线对齐（字号可调，所以按 em 计算） */
+  margin-top: calc((1em * var(--note-line-height) - var(--note-check-size)) / 2);
   user-select: none;
-  margin-top: 0.35em;
+  line-height: 0;
 }
-.rich-text-editor .ProseMirror li[data-type="taskItem"] input[type="checkbox"] {
-  accent-color: var(--note-accent);
+/* 共享样式里勾选框是行内元素（软渲染 / 预览与文字同行）；任务项这里是 flex 行，改回块级 */
+.rich-text-editor .ProseMirror ul[data-type="taskList"] > li input[type="checkbox"] {
+  display: block;
+  vertical-align: baseline;
 }
-.rich-text-editor .ProseMirror li[data-type="taskItem"].is-checked > div {
+.rich-text-editor .ProseMirror ul[data-type="taskList"] > li > div {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 0.6em;
+}
+.rich-text-editor .ProseMirror ul[data-type="taskList"] > li > div > p {
+  margin: 0;
+}
+.rich-text-editor .ProseMirror ul[data-type="taskList"] > li[data-checked="true"] > div {
   text-decoration: line-through;
   color: var(--note-tertiary);
+}
+/* 空任务项占位：空段落里只有一个 trailing <br>，用 :has 精确命中，避免正文段落也出现提示。
+   float + height:0 让光标与占位文字重叠在同一行首（与主流编辑器占位实现一致）。 */
+.rich-text-editor .ProseMirror ul[data-type="taskList"] > li > div > p:has(> br.ProseMirror-trailingBreak:only-child)::before {
+  content: var(--task-placeholder, "");
+  float: left;
+  height: 0;
+  color: var(--note-tertiary);
+  pointer-events: none;
+}
+/* 嵌套任务列表补缩进：外层 ul 的 padding 已被清零，内层不补会与父项文字齐平；
+   父项内容区自带 0.6em 缩进，这里补差额到 1.4rem，与嵌套无序列表的层级感一致 */
+.rich-text-editor .ProseMirror ul[data-type="taskList"] > li ul[data-type="taskList"] {
+  padding-left: calc(1.4rem - 0.6em);
 }
 .rich-text-editor .ProseMirror .tag-mark {
   color: var(--note-accent);

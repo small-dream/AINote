@@ -93,13 +93,10 @@
   margin-right: 0.4em;
 }
 
+/* 勾选框本体（尺寸 / 描边 / 对勾）与富文本编辑器、只读预览、打印共用
+   styles/note-task-check.css；这里只剩本表面特有的行内间距 */
 .cm-sr-checkbox {
-  width: 1.05em;
-  height: 1.05em;
   margin-right: 0.35em;
-  vertical-align: -0.15em;
-  accent-color: var(--note-accent);
-  cursor: pointer;
 }
 
 .cm-sr-image {

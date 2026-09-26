@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import type { Editor } from "@tiptap/core";
-import { HEADING_COMMANDS, getActiveHeadingCommand } from "./toolbarCommands";
+import { CLEAR_FORMAT_COMMAND, HEADING_COMMANDS, getActiveHeadingCommand } from "./toolbarCommands";
 
 /** 只回答「当前是否是某个级别标题」的最简编辑器替身：不传 attrs 表示「任意级别的该类型」。 */
 function editorAt(activeType: string, level?: number): Editor {
@@ -34,5 +34,20 @@ describe("getActiveHeadingCommand", () => {
 
   it("非标题段落返回正文", () => {
     expect(getActiveHeadingCommand(editorAt("paragraph")).key).toBe("paragraph");
+  });
+});
+
+describe("CLEAR_FORMAT_COMMAND", () => {
+  it("清掉行内 mark 与块级类型（工具栏与右键菜单共用同一条命令）", () => {
+    const run = vi.fn();
+    const clearNodes = vi.fn(() => ({ run }));
+    const unsetAllMarks = vi.fn(() => ({ clearNodes }));
+    const editor = { chain: vi.fn(() => ({ focus: () => ({ unsetAllMarks }) })) } as unknown as Editor;
+
+    CLEAR_FORMAT_COMMAND.run(editor);
+
+    expect(unsetAllMarks).toHaveBeenCalled();
+    expect(clearNodes).toHaveBeenCalled();
+    expect(run).toHaveBeenCalled();
   });
 });

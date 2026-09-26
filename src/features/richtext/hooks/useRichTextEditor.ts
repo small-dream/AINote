@@ -21,7 +21,10 @@ export function useRichTextEditor({ content, onChange, repoPath }: UseRichTextEd
     onUpdate: ({ editor: e }) => onChange(JSON.stringify(e.getJSON())),
   });
   useEffect(() => {
-    if (!editor) return;
+    // TipTap 的实例销毁是异步的（scheduleDestroy 走 setTimeout）：被销毁的实例仍可能出现在
+    // 本轮 effect 闭包里，而其 commandManager 已置空，调用 commands 会抛
+    // 「Cannot read properties of null (reading 'commands')」并让整个编辑器白屏。
+    if (!editor || editor.isDestroyed) return;
     const nextContent = parseRichTextContent(content);
     if (JSON.stringify(editor.getJSON()) === JSON.stringify(nextContent)) return;
     editor.commands.setContent(nextContent, { emitUpdate: false });

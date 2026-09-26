@@ -61,7 +61,8 @@ export class CheckboxWidget extends WidgetType {
   toDOM(): HTMLElement {
     const input = document.createElement("input");
     input.type = "checkbox";
-    input.className = "cm-sr-checkbox";
+    // note-task-check：与富文本编辑器、只读预览共用的勾选框绘制
+    input.className = "cm-sr-checkbox note-task-check";
     input.checked = this.checked;
     input.tabIndex = -1;
     input.dataset.srFrom = String(this.from);

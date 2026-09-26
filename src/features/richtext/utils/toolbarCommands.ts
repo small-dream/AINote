@@ -2,6 +2,7 @@ import type { Editor } from "@tiptap/core";
 import {
   Bold,
   Code,
+  Eraser,
   Heading1,
   Heading2,
   Heading3,
@@ -56,6 +57,14 @@ export const INLINE_COMMANDS: EditorToolbarCommand[] = [
   { key: "strike", icon: Strikethrough, labelKey: "richtext.strike", isActive: (editor) => editor.isActive("strike"), run: (editor) => void editor.chain().focus().toggleStrike().run() },
   { key: "inlineCode", icon: Code, labelKey: "richtext.inlineCode", isActive: (editor) => editor.isActive("code"), run: (editor) => void editor.chain().focus().toggleCode().run() },
 ];
+
+/** 清除格式：去掉行内 mark 与块级类型（标题 / 引用 / 列表回到正文），工具栏与右键菜单共用同一条命令。 */
+export const CLEAR_FORMAT_COMMAND: EditorToolbarCommand = {
+  key: "clearFormat",
+  icon: Eraser,
+  labelKey: "editor.clearFormatting",
+  run: (editor) => void editor.chain().focus().unsetAllMarks().clearNodes().run(),
+};
 
 /** 三级分组：块级写作结构 */
 export const BLOCK_COMMANDS: EditorToolbarCommand[] = [

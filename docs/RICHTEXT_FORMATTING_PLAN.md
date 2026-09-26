@@ -1,6 +1,6 @@
 # AINote 富文本字符级样式实施方案（字体 / 字号 / 字体颜色 / 文本高亮）
 
-> 版本：v1.2 · 状态：M1 已交付（v0.54 前「未发布」章节）；M2 经 2026-09-24 复核**暂缓**（理由见 §4.1、决策见 §10）· 维护：产品与前端协作
+> 版本：v1.3（2026-09-26 追加 §3.5 格式刷与清除格式）· 状态：M1 已交付（v0.54 前「未发布」章节）；M2 经 2026-09-24 复核**暂缓**（理由见 §4.1、决策见 §10）· 维护：产品与前端协作
 > 上游：`docs/RICHTEXT_FORMATTING_EVAL.md`（可行性、证据链与风险）；关联 `docs/PRD.md` P1-11、`docs/EDITOR_EXPERIENCE_PLAN.md` §5、`docs/CODING_STANDARDS.md` §3 / §5.2
 > 本方案确定「做成什么样」与「分几步做」；实现 PR 必须同步 `docs/PRD.md`。
 
@@ -85,6 +85,65 @@ mark 的 `renderHTML` 只输出 `class`，绝不输出 `style`（`docs/RICHTEXT_
 - 移动端：面板走底部抽屉形态，触控目标 ≥36px（`docs/CODING_STANDARDS.md` §5.3），支持无 hover、软键盘收起后重定位；桌面与移动共用同一套 class 与 token，**不引入平台分支**。
 - 新增快捷键仅一个：高亮 `Mod+Shift+H`；下发前需在 `useEditorExtensions.ts` 的既有 keymap 里核对无冲突。
 - 斜杠命令沿用现有 `SlashCommand` 机制补「高亮」一项，不新增命令体系。
+
+### 3.5 格式刷与清除格式（2026-09-26 追加）
+
+字符样式落盘为枚举 mark 后，「把一段文字的样式搬到另一段」成为高频诉求。本次在同一套 mark 上补两个动作，**数据形状不变**（`.ainote` JSON 仍是枚举 mark），无新语法、无新增依赖。
+
+| 动作 | 入口 | 行为 |
+|---|---|---|
+| 格式刷 | 工具栏行内格式组右侧（`Paintbrush`） | 单击复制光标 / 当前选区的格式 → 待刷态（按钮高亮 + 提示文案）→ 下一次非空选区自动套用后退出待刷；待刷态再次单击取消 |
+| 清除格式 | 工具栏（`Eraser`）与编辑器右键菜单 | 同一条命令 `unsetAllMarks + clearNodes`：行内 mark 与块级类型一并回到正文 |
+
+复制范围与边界：
+
+- **行内 mark 白名单 + 块级类型**：白名单为加粗 / 斜体 / 删除线 / 行内代码 + §3.1 的四组字符样式 mark；块级只带「正文 / H1–H6」。
+- **链接、`[[双链]]`、`#标签` 不复制**：它们是内容语义，搬到别的文字上会改变含义。套用目标时只清白名单内的 mark，目标上的链接与双链保持原样。
+- **列表 / 引用 / 代码块不复制**：属结构而非格式，「刷一下」静默改变文档结构不是用户预期。
+- **从正文复制再刷到带样式文本 = 清样式**（Word / Google Docs 的既有语义），因此待刷态不因「没复制到任何样式」而禁用。
+- **选区变化后延迟 250ms 套用**（`FORMAT_PAINTER_DELAY_MS`）：拖拽选择会连续触发 `selectionUpdate`，立即套用只会刷到拖拽途中的第一个字符。
+- **跨端**：与字符样式面板同一条工具栏链路，桌面 / 移动共用同一实现（`h-8 w-8` 命中区、无 hover 依赖），无平台分支。
+
+### 3.6 任务列表视觉规范（2026-09-26 追加）
+
+任务列表原本直接用系统原生 `<input type="checkbox">`，观感随平台而定（灰粗边、圆角不一），行距也比同文档的普通列表松，空任务项只剩一个孤框。本次只改**表现层**：`.ainote` 的 JSON 形状、Markdown 往返与落盘字段完全不变。
+
+| 项 | 取值 | 理由 |
+|---|---|---|
+| 勾选框尺寸 | `1.05em`（字号 15px 时约 16px） | 与正文字号联动；与软渲染侧 `--task-check-size` 取值一致 |
+| 圆角 / 描边 | `0.3em` / `1.5px` | 接近 macOS 与主流待办应用的方块勾选框，描边细于系统默认 |
+| 未勾选描边色 | `color-mix(in oklab, var(--note-secondary) 55%, transparent)`，不支持 `color-mix` 时退回 `--note-secondary` | 8 套主题各自派生，不新增逐主题色值；未勾选态比正文轻 |
+| 悬停 / 聚焦 | `hover` 转 `--note-accent`；`:focus-visible` 用 `--note-accent` 外描边 | 键盘可达性 |
+| 勾选态 | 底色 `--note-accent`，对勾用 `--note-bg` | 亮色主题对勾为近白、暗色主题为深底：强调色在亮 / 暗主题下明暗相反，取页面底色才能两边都留对比 |
+| 行距 | `li` 用 `padding: 0.15em 0`，任务项内的段落不吃全局段间距 | 与普通列表同一节奏 |
+| 内容区 | `flex: 1 1 auto; min-width: 0; padding-left: 0.6em` | 复选框右侧不再是点不进去的死区（§10 记录的死区缺陷） |
+| 嵌套缩进 | 内层 `ul` 补 `calc(1.4rem - 0.6em)` | 加上父项内容区自带的 `0.6em`，总缩进等于嵌套无序列表的 `1.4rem` |
+| 空项占位 | `p:has(> br.ProseMirror-trailingBreak:only-child)::before` + 根节点下发 `--task-placeholder` | 只在编辑器里出现（预览/导出无 `ProseMirror-trailingBreak`），文案随语言切换，不写进文档 JSON |
+
+实现位置：`src/styles/note-task-check.css`（勾选框绘制，四处共用）、`src/features/richtext/rich-text.css`（任务项排版）与 `RichTextEditor.tsx` 的 `emptyTaskPlaceholder()`；占位文案 key 为 `richtext.taskItemPlaceholder`。
+
+四处的落点与差异：
+
+| 渲染面 | DOM | 挂载方式 |
+|---|---|---|
+| 富文本编辑器 | TipTap `TaskItem` NodeView 的 `label > input`（加不了 class） | 共享样式里并列写出选择器路径；排版（flex 行、与首行中线对齐）留在 `rich-text.css` |
+| Markdown 软渲染 | CodeMirror widget 的裸 `input` | widget 挂 `.cm-sr-checkbox.note-task-check`，`softrender.css` 只留行内间距 |
+| 只读预览 | react-markdown 的 `input`（`disabled`） | `TaskCheckbox` 挂 `.note-task-check`；`li.task-list-item` 去掉列表圆点，避免与勾选框重复 |
+| PDF 打印 | 上面两套 DOM 各一份 | 打印根把 `--note-*` 钉到浅色纸面（`export.css`），避免深色应用主题把深色语义色带上纸 |
+
+尺寸取 `--note-check-size`（`markdown-themes.css` 的 `:root`），按 `em` 随各表面字号缩放：移动壳为防 iOS 聚焦缩放把可编辑区抬到 16px，只读预览仍是 15px，勾选框随之等比变化（比例一致，绝对像素不同属预期）。跨面一致性由 e2e `e2e/task-checkbox.spec.ts`（桌面 + 移动视口）按字号归一化后比对 `appearance` / 描边色 / 尺寸比 / 圆角比 / 勾选底色与对勾色来守。
+
+### 3.7 加载期白屏：被销毁实例的 `commands`（2026-09-26 修复）
+
+现象：打开内容含列表（`bulletList` / `orderedList`）且缺 `tight` 属性的 `.ainote` 时，编辑器区域变成「Unexpected Application Error!」，控制台报 `Cannot read properties of null (reading 'commands')`。
+
+根因链：
+
+1. 列表节点在加载时会被规范化（补 `tight` 等属性），使 `editor.getJSON()` 与文件里的原始 JSON 不相等；
+2. `useRichTextEditor` 的同步 effect 因此调用 `editor.commands.setContent(...)`；
+3. TipTap 的实例销毁是异步的（`EditorInstanceManager.scheduleDestroy` 走 `setTimeout(…, 1)`），在开发态（`React.StrictMode` 的挂载 / 卸载 / 再挂载）被销毁的实例仍可能出现在这一轮 effect 的闭包里，其 `commandManager` 已置空 → 取 `commands` 即抛错，错误冒到路由错误边界，整页白屏。
+
+修复：effect 首行判 `!editor || editor.isDestroyed` 即返回（`src/features/richtext/hooks/useRichTextEditor.ts`）。正常保存过的笔记内容本身就是规范化结果，不会走到这条分支；旧文档 / 手改文档则会命中，此时编辑器已由创建参数持有正确内容，跳过同步即可正常渲染。e2e 护栏见 `e2e/richtext-flow.spec.ts`「缺 tight 属性的列表文档打开不白屏」（桌面 + 移动视口）。
 
 ## 4. Markdown 互通分级与 M2 暂缓
 
@@ -207,6 +266,15 @@ mark 的 `renderHTML` 只输出 `class`，绝不输出 `style`（`docs/RICHTEXT_
 2. **字号只做相对倍率**：不提供改变段落默认大小的能力，避免与「设置 → 排版偏好」的正文字号打架。
 3. **`==高亮==` 互通（M2）暂缓**（2026-09-24 复核，取代原「按 M2 实施」的决定）：`==` 与程序员笔记的日常写法歧义面大、预览侧需新建排除机制、路线图 M2 交付范围不含此项。重启条件与缩范围方案见 §4.1；四条链路方案保留在 §4.2，重启时可直接施工。
 4. **CSP 最小验证已执行**：结论为内联 `style` 在生产壳被拦截，A 路线出局（方法、矩阵与残余不确定性见 `docs/RICHTEXT_FORMATTING_EVAL.md` §4.1）。
+
+已交付（2026-09-26）：
+
+- **格式刷与清除格式**：工具栏新增两个入口，右键菜单的「清除格式」改为与工具栏共用同一条命令；复制范围为行内 mark 白名单 + 正文 / 标题级别（§3.5）。同一批次还修掉了富文本任务列表的两个既有缺陷——编辑器里 `TaskItem` 由 NodeView 渲染，`li` 上没有 `data-type`，原样式选择器 `li[data-type="taskItem"]` 全部落空（勾选框另起一行、勾选态没有删除线）；`is-checked` 亦是从未渲染过的 class。现统一按「`taskList` 直系子项 + `data-checked`」选择，并补单测与双端 e2e 护栏。任务项的内容区同时改为占满整行剩余宽度（行内间距由 `padding-left` 承担，不再用 `gap`）：默认的 `fit-content` 会让复选框右侧、文字右侧成为点不进去的死区，空任务项更是只剩 0 宽的可点区（触摸端点了不出光标）。
+
+已交付（2026-09-26 续）：
+
+- **任务列表视觉打磨**（§3.6）：勾选框自绘（尺寸 / 圆角 / 描边 / 悬停 / 勾选态与对勾取色全部由 `--note-*` token 派生，8 套主题免逐主题维护）、行距与普通列表对齐、嵌套缩进对齐、空任务项显示占位文案；只动表现层，JSON 形状与 Markdown 往返不变。
+- **加载期白屏修复**（§3.7）：含列表的旧 `.ainote`（缺 `tight` 属性）会命中「在已销毁实例上调用 `commands`」的竞态而白屏，现以 `editor.isDestroyed` 守卫拦下，并补双端 e2e 护栏。
 
 已交付（2026-09-24）：
 

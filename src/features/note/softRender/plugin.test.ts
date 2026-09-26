@@ -166,6 +166,8 @@ describe("softRender 交互与块级", () => {
     const input = view.contentDOM.querySelector<HTMLInputElement>(".cm-sr-checkbox");
     expect(input).toBeDefined();
     expect(input?.checked).toBe(true);
+    // 勾选框绘制与富文本编辑器、只读预览共用（styles/note-task-check.css）
+    expect(input?.classList.contains("note-task-check")).toBe(true);
     input?.click();
     expect(view.state.doc.toString()).toBe("- [ ] done");
     expect(view.contentDOM.querySelector<HTMLInputElement>(".cm-sr-checkbox")?.checked).toBe(false);

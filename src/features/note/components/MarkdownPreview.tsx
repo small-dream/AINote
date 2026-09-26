@@ -122,7 +122,8 @@ function getLanguage(children: ReactNode): string | null {
 
 function TaskCheckbox({ checked, content, onContentChange, ...props }: TaskInputProps) {
   const enabled = Boolean(onContentChange);
-  return <input {...props} type="checkbox" checked={Boolean(checked)} disabled={!enabled} onChange={(event) => {
+  // note-task-check：与富文本编辑器、Markdown 软渲染共用的勾选框绘制
+  return <input {...props} type="checkbox" className="note-task-check" checked={Boolean(checked)} disabled={!enabled} onChange={(event) => {
     if (!onContentChange) return;
     const line = Number(event.currentTarget.closest("li")?.dataset.line);
     const next = toggleTaskAtLine(content, line, event.currentTarget.checked);

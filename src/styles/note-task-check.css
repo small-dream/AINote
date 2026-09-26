@@ -1,0 +1,82 @@
+/* 任务勾选框：富文本编辑器 / Markdown 软渲染 / 只读预览 / PDF 打印四处共用同一套绘制。
+ *
+ * 三处 DOM 结构不同——TipTap TaskItem 的 NodeView 是 label > input，CodeMirror widget 与
+ * react-markdown 都是裸 input；后两处能挂 class，NodeView 不能，所以在选择器里并列补出它的路径。
+ * 取值全部从 --note-* token 派生（主题表面提供、:root 兜底），8 套阅读主题无需逐主题维护；
+ * 尺寸取 --note-check-size（见 styles/markdown-themes.css），间距等排版留在各自的表面样式里。 */
+
+.note-task-check,
+.rich-text-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  position: relative;
+  display: inline-block;
+  box-sizing: border-box;
+  width: var(--note-check-size);
+  height: var(--note-check-size);
+  margin: 0;
+  /* 行内场景（软渲染 / 只读预览）与首行文字视觉居中；富文本任务项是 flex 行，另行覆盖 */
+  vertical-align: -0.15em;
+  border: 1.5px solid var(--note-secondary);
+  border-radius: 0.3em;
+  background-color: transparent;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease;
+}
+
+/* 不支持 color-mix 的旧 WebView 兜底：直接用语义 token（略重于 55% 混色，但不丢样式） */
+@supports (color: color-mix(in oklab, red, blue)) {
+  .note-task-check,
+  .rich-text-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"] {
+    border-color: color-mix(in oklab, var(--note-secondary) 55%, transparent);
+  }
+}
+
+.note-task-check:not(:disabled):hover,
+.rich-text-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:not(:disabled):hover {
+  border-color: var(--note-accent);
+}
+
+.note-task-check:focus-visible,
+.rich-text-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--note-accent);
+  outline-offset: 2px;
+}
+
+.note-task-check:checked,
+.rich-text-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:checked {
+  border-color: var(--note-accent);
+  background-color: var(--note-accent);
+}
+
+/* 对勾：两条边框旋转 45°；颜色取页面底色，使强调色在亮 / 暗主题下都留有对比 */
+.note-task-check::after,
+.rich-text-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 45%;
+  width: 0.26em;
+  height: 0.52em;
+  border: solid var(--note-bg);
+  border-width: 0 0.14em 0.14em 0;
+  border-radius: 1px;
+  transform: translate(-50%, -50%) rotate(45deg) scale(0);
+  transition: transform 120ms ease;
+}
+
+.note-task-check:checked::after,
+.rich-text-editor .ProseMirror ul[data-type="taskList"] input[type="checkbox"]:checked::after {
+  transform: translate(-50%, -50%) rotate(45deg) scale(1);
+}
+
+/* 行内场景（软渲染 / 只读预览）里勾选框与正文的固定间距；
+   富文本任务项的间距由内容区的 padding-left 承担，因此这条不带 NodeView 的选择器 */
+.note-task-check {
+  margin-inline-end: 0.35em;
+}
+
+/* 只读预览与打印里的勾选框是 disabled：观感与可编辑态保持一致，只去掉手型光标 */
+.note-task-check:disabled {
+  cursor: default;
+}

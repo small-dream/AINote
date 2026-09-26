@@ -46,6 +46,8 @@
   --note-code-function: #8250df;
   --note-code-var: #953800;
   --note-font-size: 15px;
+  /* 任务勾选框边长：富文本编辑器 / Markdown 软渲染 / 只读预览 / 打印共用 */
+  --note-check-size: 1.05em;
   --note-line-height: 1.7;
   --note-reading-width: 72ch;
   --note-block-margin: 0.6em;

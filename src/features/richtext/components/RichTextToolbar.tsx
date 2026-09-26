@@ -1,11 +1,12 @@
 import { useTranslation } from "@/i18n";
 import type { ChangeEvent, ReactNode } from "react";
 import type { Editor } from "@tiptap/core";
-import { Image as ImageIcon, Redo, Undo } from "lucide-react";
+import { Eraser, Image as ImageIcon, Paintbrush, Redo, Undo } from "lucide-react";
 import { Tooltip } from "@/components/atoms/Tooltip";
 import { ToolbarPopover, type ToolbarMenuItem } from "./ToolbarPopover";
 import { LinkButton } from "./LinkButton";
-import { BLOCK_COMMANDS, getActiveHeadingCommand, HEADING_COMMANDS, INLINE_COMMANDS, INSERT_COMMANDS, type EditorToolbarCommand } from "../utils/toolbarCommands";
+import { BLOCK_COMMANDS, CLEAR_FORMAT_COMMAND, getActiveHeadingCommand, HEADING_COMMANDS, INLINE_COMMANDS, INSERT_COMMANDS, type EditorToolbarCommand } from "../utils/toolbarCommands";
+import { useFormatPainter } from "../hooks/useFormatPainter";
 import { NoteThemePicker } from "@/features/note/components/NoteThemePicker";
 import { TextStylePanel } from "./TextStylePanel";
 
@@ -25,6 +26,8 @@ export function RichTextToolbar({ editor, onImagePicked, status, trailing }: Ric
           <HeadingSelector editor={editor} />
           <ToolbarDivider />
           <ToolbarCommandGroup editor={editor} commands={INLINE_COMMANDS} />
+          <FormatPainterButton editor={editor} />
+          <ToolbarButton icon={Eraser} label={t("editor.clearFormatting")} onClick={() => CLEAR_FORMAT_COMMAND.run(editor)} />
           <TextStylePanel editor={editor} tooltipPortal />
           <LinkButton editor={editor} variant="toolbar" tooltipPortal />
           <ToolbarDivider />
@@ -36,6 +39,19 @@ export function RichTextToolbar({ editor, onImagePicked, status, trailing }: Ric
       ) : null}
       <ToolbarHistoryGroup editor={editor} status={status} trailing={trailing} />
     </div>
+  );
+}
+
+/** 格式刷：单击复制当前格式，随后选中目标文本即自动套用；待刷态再次单击取消。 */
+function FormatPainterButton({ editor }: { editor: Editor }) {
+  const { t } = useTranslation();
+  const painter = useFormatPainter(editor);
+  const label = painter.armed ? t("richtext.formatPainterArmed") : t("richtext.formatPainter");
+  return (
+    <>
+      <ToolbarButton icon={Paintbrush} label={label} active={painter.armed} onClick={painter.toggle} />
+      {painter.armed ? <span className="hidden shrink-0 pr-1 text-xs text-accent lg:inline">{t("richtext.formatPainterArmed")}</span> : null}
+    </>
   );
 }
 

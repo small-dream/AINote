@@ -185,6 +185,8 @@ describe("MarkdownPreview P1 预览增强", () => {
     const { container } = render(<MarkdownPreview content={"- [ ] 待办"} onChange={onChange} />);
     const checkbox = container.querySelector<HTMLInputElement>("input[type='checkbox']");
     expect(checkbox?.disabled).toBe(false);
+    // 勾选框绘制与富文本编辑器、Markdown 软渲染共用（styles/note-task-check.css）
+    expect(checkbox?.classList.contains("note-task-check")).toBe(true);
     fireEvent.click(checkbox as HTMLInputElement);
     expect(onChange).toHaveBeenCalledWith("- [x] 待办");
   });

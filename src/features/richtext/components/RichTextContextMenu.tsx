@@ -4,6 +4,7 @@ import { EditorContextMenu } from "@/components/molecules/EditorContextMenu";
 import type { Editor } from "@tiptap/core";
 import { useTranslation } from "@/i18n";
 import { requestLinkInput } from "../utils/linkUrl";
+import { CLEAR_FORMAT_COMMAND } from "../utils/toolbarCommands";
 import type { NoteTheme } from "@/stores/ui.store";
 import type { NoteEncryptionMenuAction } from "@/features/vault/hooks/useNoteEncryption";
 import { encryptionMenuItems } from "@/features/vault/utils/encryptionMenuItem";
@@ -34,7 +35,7 @@ export function RichTextContextMenu({ position, editor, hasSelection, onOpenAi, 
     action("strike", Strikethrough, t("richtext.strike"), () => void editor.chain().focus().toggleStrike().run(), !hasSelection),
     action("code", Code, t("richtext.inlineCode"), () => void editor.chain().focus().toggleCode().run(), !hasSelection),
     action("link", Link, t("note.link"), () => requestLinkInput(editor.view.dom)),
-    action("clear", Eraser, t("editor.clearFormatting"), () => void editor.chain().focus().unsetAllMarks().clearNodes().run()),
+    action("clear", Eraser, t("editor.clearFormatting"), () => CLEAR_FORMAT_COMMAND.run(editor)),
     { kind: "separator", key: "format-separator" },
     { key: "ai", icon: Sparkles, label: t("ai.actionTitle"), onSelect: onOpenAi },
     ...encryptionMenuItems(encryption, t),

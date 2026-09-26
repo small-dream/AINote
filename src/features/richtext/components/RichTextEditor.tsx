@@ -1,4 +1,4 @@
-import type { MouseEvent } from "react";
+import type { CSSProperties, MouseEvent } from "react";
 import { EditorContent } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import { RichTextToolbar } from "./RichTextToolbar";
@@ -9,6 +9,7 @@ import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { useRichTextEditor } from "../hooks/useRichTextEditor";
 import { useRichTextOutline } from "../hooks/useRichTextOutline";
 import { useUiStore } from "@/stores/ui.store";
+import { useTranslation } from "@/i18n";
 import { NoteOutlineFloating } from "@/features/note/components/NoteOutlineFloating";
 import type { OutlineItem } from "@/features/note/utils/outline";
 import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
@@ -39,6 +40,7 @@ interface RichTextEditorProps {
  * 支持图片/表格/任务列表、斜杠命令、双链与标签 mark。
  * 通过父组件 key 重挂载以切换笔记；异步加载的 content 会由 hook 同步到编辑器。 */
 export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, encrypted = false, outlineOpen = false, onOutlineToggle = () => undefined }: RichTextEditorProps) {
+  const { t } = useTranslation();
   const { editor, handleFiles, status } = useRichTextEditor({ content, onChange, repoPath });
   const contextMenu = useRichTextContextMenu();
   const encryption = useNoteEncryption(repoPath, notePath, encrypted);
@@ -53,7 +55,7 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
   const longPressProps = useLongPressContextMenu((point) => contextMenu.openAt(point, editor));
 
   return (
-    <div data-note-theme={noteTheme} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" {...longPressProps} onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)} onContextMenu={(event) => contextMenu.handleContextMenu(event, editor)}>
+    <div data-note-theme={noteTheme} style={emptyTaskPlaceholder(t)} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" {...longPressProps} onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)} onContextMenu={(event) => contextMenu.handleContextMenu(event, editor)}>
       <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} trailing={<AiToolbarButton onOpen={ai.openMenu} compact />} />
       <RichTextBubbleMenu editor={editor} />
       <RichTextContextMenu position={contextMenu.position} editor={editor} hasSelection={contextMenu.hasSelection} onOpenAi={() => { contextMenu.close(); ai.openMenu(); }} onClose={contextMenu.close} noteTheme={noteTheme} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />
@@ -64,6 +66,11 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
       </div>
     </div>
   );
+}
+
+/** 空任务项的占位文案：以 CSS 变量下发，样式表用 ::before 渲染（不写进文档、不进落盘 JSON）。 */
+function emptyTaskPlaceholder(t: ReturnType<typeof useTranslation>["t"]): CSSProperties {
+  return { "--task-placeholder": JSON.stringify(t("richtext.taskItemPlaceholder")) } as CSSProperties;
 }
 
 /** 提取笔记标题（续写上下文）。 */

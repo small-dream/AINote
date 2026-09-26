@@ -45,6 +45,14 @@ describe("RichTextToolbar", () => {
     expect(run).toHaveBeenCalledTimes(1);
   });
 
+  it("提供格式刷与清除格式入口", () => {
+    const { editor } = createEditor();
+    render(<RichTextToolbar editor={editor} />);
+
+    expect(screen.getByRole("button", { name: "格式刷" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "清除格式" })).toBeDefined();
+  });
+
   it("链接按钮弹出 URL 输入，Enter 确认后规范化并写入链接", () => {
     const { editor, run, setLink } = createLinkEditor(false);
     render(<RichTextToolbar editor={editor} />);

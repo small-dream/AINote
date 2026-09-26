@@ -373,6 +373,9 @@ pre,
 .markdown-body ul, .markdown-body ol { padding-left: 1.4em; }
 .markdown-body ul { list-style: disc; }
 .markdown-body ol { list-style: decimal; }
+/* remark-gfm 的复选框列表：项目符号与勾选框会重复，去掉圆点（缩进沿用上面的 1.4em，
+   与同文档的普通列表对齐）；勾选框本体见 styles/note-task-check.css */
+.markdown-body li.task-list-item { list-style: none; }
 .markdown-body a { color: var(--accent); text-decoration: underline; }
 .markdown-body .wiki-link { text-decoration-style: solid; text-decoration-thickness: 1px; text-underline-offset: 2px; }
 .markdown-body .wiki-link-unresolved {

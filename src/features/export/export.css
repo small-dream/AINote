@@ -12,6 +12,20 @@
   --success: #1a7f37;
   --warning: #9a6700;
   --danger: #cf222e;
+  /* 打印固定浅色纸面：笔记 token 一并钉到浅色，避免深色应用主题把深色语义色带到纸上
+     （:root 里的 --note-* 是按 :root 的 --bg-primary / --text-* 解析的，不会跟着这里改） */
+  --note-bg: #ffffff;
+  --note-surface: var(--bg-secondary);
+  --note-muted: var(--bg-tertiary);
+  --note-ink: var(--text-primary);
+  --note-secondary: var(--text-secondary);
+  --note-tertiary: var(--text-tertiary);
+  --note-border: var(--border);
+  --note-accent: var(--accent);
+  --note-accent-soft: var(--accent-soft);
+  --note-success: var(--success);
+  --note-warning: var(--warning);
+  --note-danger: var(--danger);
   position: fixed;
   inset: 0;
   z-index: 80;
