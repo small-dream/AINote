@@ -107,6 +107,16 @@ export interface ChangedFile {
   status: ChangedFileStatus;
 }
 
+/** git_discard_changes 返回：丢弃本地改动的结果（与 Rust domain/discard.rs 一致） */
+export interface DiscardReport {
+  /** 已恢复到上次提交版本的已跟踪文件 */
+  restored: string[];
+  /** 已彻底删除的新增文件（无历史版本可恢复） */
+  deleted: string[];
+  /** 复核时已不再是待提交变更、被跳过的文件 */
+  skipped: string[];
+}
+
 /** list_conflicts 返回：单个冲突文件的三栏合并素材（与 Rust domain/sync.rs 一致） */
 export interface ConflictFile {
   /** 相对仓库根目录的路径，如 "daily/a.md" */

@@ -48,6 +48,7 @@ export type {
   BackupProgress,
   CommitInfo,
   ConflictExportDto,
+  DiscardReport,
   DiagnosticsExportDto,
   DiffLine,
   DiffLineKind,

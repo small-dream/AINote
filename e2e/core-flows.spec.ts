@@ -84,11 +84,11 @@ test.describe("AINote 桌面核心流程", () => {
       }),
     );
     const gaps = rects.slice(0, -1).map((rect, index) => (rects[index + 1]?.top ?? 0) - rect.bottom);
-    // 同步 | 笔记 待办 最近 收藏 标签 | 提交版本 Git 历史 …：分组处多 6px
-    expect(gaps.slice(0, 7)).toEqual([12, 6, 6, 6, 6, 12, 6]);
+    // 同步 | 笔记 待办 最近 收藏 标签 | 提交版本 丢弃改动 Git 历史 …：分组处多 6px
+    expect(gaps.slice(0, 8)).toEqual([12, 6, 6, 6, 6, 12, 6, 6]);
     // 「回收站/设置」系统组由 mt-auto 顶到导轨底部：与上一组拉开距离，组内仍 6px
-    expect(gaps[7]).toBeGreaterThan(12);
-    expect(gaps[8]).toBe(6);
+    expect(gaps[8]).toBeGreaterThan(12);
+    expect(gaps[9]).toBe(6);
     const settings = rects[rects.length - 1];
     expect(Math.round(railBox.y + railBox.height - (settings?.bottom ?? 0))).toBeLessThanOrEqual(16);
   });

@@ -1,6 +1,5 @@
 import { lazy, Suspense, useState, type ReactNode, type RefObject } from "react";
-import { ArrowLeft, Clock, FolderTree, GitCommitHorizontal, GitGraph, Hash, List, ListTodo, RefreshCw, Search, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
-import { Tooltip } from "@/components/atoms/Tooltip";
+import { ArrowLeft, Clock, FolderTree, GitCommitHorizontal, GitGraph, Hash, List, ListTodo, RefreshCw, RotateCcw, Search, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
 import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useSync } from "@/features/sync/hooks/useSync";
@@ -14,9 +13,11 @@ import { useMobileKeyboardInsets } from "../hooks/useMobileKeyboardInsets";
 import type { SidebarTab } from "@/stores/ui.store";
 import type { TranslationKey } from "@/i18n/messages";
 import { MobileVaultButton } from "./MobileVaultButton";
+import { MobileIconButton, MobileNavButton } from "./MobileButtons";
 
 const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
 const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
+const LazyDiscardDialog = lazy(() => import("@/features/discard/components/DiscardDialog").then(({ DiscardDialog }) => ({ default: DiscardDialog })));
 const LazyGitGraphPanel = lazy(() => import("@/features/git-graph/components/GitGraphPanel").then(({ GitGraphPanel }) => ({ default: GitGraphPanel })));
 
 interface MobileWorkspaceShellProps {
@@ -38,6 +39,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
   const { online, status, label, syncNow, isSyncing } = sync;
   const failure = deriveSyncFailure(syncNow.error, locale);
   const [commitOpen, setCommitOpen] = useState(false);
+  const [discardOpen, setDiscardOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);
   const { showEditor, backToList } = useMobileEditorView({
     currentNotePath,
@@ -63,6 +65,7 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
         onSync={() => syncNow.mutate()}
         hasUncommitted={status.hasUncommitted}
         onOpenCommit={() => setCommitOpen(true)}
+        onOpenDiscard={() => setDiscardOpen(true)}
         onOpenConflict={() => useUiStore.getState().openConflictDialog()}
       />
       <SyncNotice sync={sync} />
@@ -78,8 +81,10 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
       <MobileWorkspaceDialogs
         repoPath={repoPath}
         commitOpen={commitOpen}
+        discardOpen={discardOpen}
         graphOpen={graphOpen}
         onCloseCommit={() => setCommitOpen(false)}
+        onCloseDiscard={() => setDiscardOpen(false)}
         onCloseGraph={() => setGraphOpen(false)}
       />
       <span className="sr-only" aria-live="polite">{failure ? `${failure.title} · ${failure.suggestion}` : status.conflicted ? t("sync.conflict") : status.hasUncommitted ? t("sync.unsaved") : null}</span>
@@ -125,7 +130,7 @@ function MobileContent({ showEditor, sidebarTab, setSidebarTab, onOpenGraph, edi
 }
 
 /** 冲突面板的开关在全局 UI store 里：同步失败横幅与顶栏状态胶囊都要能拉起它。 */
-function MobileWorkspaceDialogs({ repoPath, commitOpen, graphOpen, onCloseCommit, onCloseGraph }: { repoPath: string | null; commitOpen: boolean; graphOpen: boolean; onCloseCommit: () => void; onCloseGraph: () => void }) {
+function MobileWorkspaceDialogs({ repoPath, commitOpen, discardOpen, graphOpen, onCloseCommit, onCloseDiscard, onCloseGraph }: { repoPath: string | null; commitOpen: boolean; discardOpen: boolean; graphOpen: boolean; onCloseCommit: () => void; onCloseDiscard: () => void; onCloseGraph: () => void }) {
   const conflictOpen = useUiStore((state) => state.conflictDialogOpen);
   return (
     <>
@@ -139,6 +144,11 @@ function MobileWorkspaceDialogs({ repoPath, commitOpen, graphOpen, onCloseCommit
           <LazyCommitDialog repoPath={repoPath} onClose={onCloseCommit} />
         </Suspense>
       ) : null}
+      {discardOpen ? (
+        <Suspense fallback={null}>
+          <LazyDiscardDialog repoPath={repoPath} onClose={onCloseDiscard} />
+        </Suspense>
+      ) : null}
       {graphOpen ? (
         <Suspense fallback={null}>
           <LazyGitGraphPanel repoPath={repoPath} open onClose={onCloseGraph} />
@@ -148,7 +158,7 @@ function MobileWorkspaceDialogs({ repoPath, commitOpen, graphOpen, onCloseCommit
   );
 }
 
-function MobileHeader({ repoPath, showEditor, title, online, label, tone, isSyncing, conflicted, hasUncommitted, onBack, onSync, onOpenCommit, onOpenConflict }: { repoPath: string | null; showEditor: boolean; title: string; online: boolean; label: string; tone: string; isSyncing: boolean; conflicted: boolean; hasUncommitted: boolean; onBack: () => void; onSync: () => void; onOpenCommit: () => void; onOpenConflict: () => void }) {
+function MobileHeader({ repoPath, showEditor, title, online, label, tone, isSyncing, conflicted, hasUncommitted, onBack, onSync, onOpenCommit, onOpenDiscard, onOpenConflict }: { repoPath: string | null; showEditor: boolean; title: string; online: boolean; label: string; tone: string; isSyncing: boolean; conflicted: boolean; hasUncommitted: boolean; onBack: () => void; onSync: () => void; onOpenCommit: () => void; onOpenDiscard: () => void; onOpenConflict: () => void }) {
   const { t } = useTranslation();
   return (
     <header className="mobile-workspace-header flex min-h-14 shrink-0 items-center gap-2 border-b border-border bg-bg-primary px-3 pt-[env(safe-area-inset-top)]">
@@ -166,6 +176,7 @@ function MobileHeader({ repoPath, showEditor, title, online, label, tone, isSync
         </span>
       )}
       {hasUncommitted ? <MobileIconButton label={t("commit.title")} icon={GitCommitHorizontal} onClick={onOpenCommit} /> : null}
+      {hasUncommitted ? <MobileIconButton label={t("discard.title")} icon={RotateCcw} onClick={onOpenDiscard} /> : null}
       <MobileVaultButton repoPath={repoPath} />
       <MobileIconButton label={t("sync.now")} icon={RefreshCw} onClick={onSync} disabled={!online || isSyncing} spinning={isSyncing} />
       {!showEditor ? <MobileSearchButton /> : null}
@@ -210,24 +221,5 @@ function MobileBottomNav({ notesActive, todoActive, favoritesActive, onOpenNotes
       <MobileNavButton active={favoritesActive} label={t("app.favorites")} icon={Star} onClick={onOpenFavorites} />
       <MobileNavButton label={t("settings.title")} icon={Settings} onClick={onOpenSettings} />
     </nav>
-  );
-}
-
-function MobileIconButton({ icon: Icon, label, onClick, disabled = false, spinning = false }: { icon: LucideIcon; label: string; onClick?: () => void; disabled?: boolean; spinning?: boolean }) {
-  return (
-    <Tooltip content={label}>
-      <button type="button" className="mobile-icon-button" aria-label={label} onClick={onClick} disabled={disabled}>
-        <Icon size={20} className={spinning ? "animate-spin" : ""} />
-      </button>
-    </Tooltip>
-  );
-}
-
-function MobileNavButton({ active = false, label, icon: Icon, onClick }: { active?: boolean; label: string; icon: LucideIcon; onClick: () => void }) {
-  return (
-    <button type="button" aria-label={label} aria-current={active ? "page" : undefined} onClick={onClick} className={`mobile-nav-button ${active ? "is-active" : ""}`}>
-      <Icon size={20} />
-      <span>{label}</span>
-    </button>
   );
 }

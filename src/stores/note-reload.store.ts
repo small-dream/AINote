@@ -3,7 +3,13 @@ import { create } from "zustand";
 interface NoteReloadState {
   /** 外部写盘（同步 / 冲突解决 / 历史恢复）后请求编辑器重载的纪元信号 */
   epoch: number;
+  /**
+   * 用户显式丢弃改动后的强制重载信号：与 epoch 不同，它无视未落盘草稿，
+   * 因为草稿已在丢弃前写入磁盘、又随丢弃被回滚，继续保留会让旧内容随后回填。
+   */
+  forcedEpoch: number;
   requestReload: () => void;
+  requestForcedReload: () => void;
 }
 
 /**
@@ -12,5 +18,7 @@ interface NoteReloadState {
  */
 export const useNoteReloadStore = create<NoteReloadState>((set) => ({
   epoch: 0,
+  forcedEpoch: 0,
   requestReload: () => set((state) => ({ epoch: state.epoch + 1 })),
+  requestForcedReload: () => set((state) => ({ forcedEpoch: state.forcedEpoch + 1 })),
 }));

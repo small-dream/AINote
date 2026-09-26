@@ -5,8 +5,10 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import type { SyncProgress, SyncStatus } from "@/api/types";
 import { useSyncRetryStore } from "@/stores/sync-retry.store";
 import { useNoteReloadStore } from "@/stores/note-reload.store";
+import { useSessionStore } from "@/stores/session.store";
 import {
   useCommitPendingMutation,
+  useDiscardChangesMutation,
   useResolveConflictMutation,
   useResolveFileMutation,
   useSyncNowMutation,
@@ -15,6 +17,7 @@ import {
 const syncApiMock = vi.hoisted(() => ({
   syncNow: vi.fn(),
   commit: vi.fn(),
+  discard: vi.fn(),
   resolveConflict: vi.fn(),
   resolveFile: vi.fn(),
 }));
@@ -235,5 +238,58 @@ describe("useResolveFileMutation", () => {
       expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: key });
     }
     expect(useNoteReloadStore.getState().epoch).toBe(1);
+  });
+});
+
+describe("useDiscardChangesMutation", () => {
+  beforeEach(() => {
+    useNoteReloadStore.setState({ epoch: 0, forcedEpoch: 0 });
+    useSessionStore.setState({ currentNotePath: null });
+    vi.clearAllMocks();
+    draftMock.flushPendingDrafts.mockResolvedValue(undefined);
+  });
+
+  it("先落盘草稿再丢弃，成功后失效整个工作区读取面并请求强制重载", async () => {
+    const order: string[] = [];
+    draftMock.flushPendingDrafts.mockImplementation(async () => {
+      order.push("flush");
+    });
+    syncApiMock.discard.mockImplementation(async () => {
+      order.push("discard");
+      return { restored: ["a.md"], deleted: [], skipped: [] };
+    });
+    const { client, wrapper: harnessWrapper } = createHarness();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+    const { result } = renderHook(() => useDiscardChangesMutation(), { wrapper: harnessWrapper });
+
+    result.current.mutate(["a.md"]);
+    await waitFor(() => expect(result.current.isSuccess).toBe(true));
+
+    expect(syncApiMock.discard).toHaveBeenCalledWith(["a.md"]);
+    expect(order).toEqual(["flush", "discard"]);
+    for (const key of WORKSPACE_KEYS) {
+      expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: key });
+    }
+    expect(useNoteReloadStore.getState().forcedEpoch).toBe(1);
+  });
+
+  it("草稿落盘失败即中止，不调用丢弃", async () => {
+    draftMock.flushPendingDrafts.mockRejectedValue(new Error("disk full"));
+    const { result } = renderHook(() => useDiscardChangesMutation(), { wrapper });
+
+    result.current.mutate(["a.md"]);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(syncApiMock.discard).not.toHaveBeenCalled();
+  });
+
+  it("丢弃失败也失效读取面（写盘失败可能已部分生效）", async () => {
+    syncApiMock.discard.mockRejectedValue(new Error("io"));
+    const { client, wrapper: harnessWrapper } = createHarness();
+    const invalidateSpy = vi.spyOn(client, "invalidateQueries");
+    const { result } = renderHook(() => useDiscardChangesMutation(), { wrapper: harnessWrapper });
+
+    result.current.mutate(["a.md"]);
+    await waitFor(() => expect(result.current.isError).toBe(true));
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["changed-files"] });
   });
 });

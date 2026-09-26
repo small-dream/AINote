@@ -1,5 +1,5 @@
 import { lazy, Suspense, useState } from "react";
-import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, GitCommitHorizontal, GitGraph, ListTodo, Lock, LockOpen, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
+import { Clock3, CloudCheck, CloudOff, CloudSync, FileText, GitCommitHorizontal, GitGraph, ListTodo, Lock, LockOpen, RotateCcw, Settings, Star, Tags, Trash2, TriangleAlert } from "lucide-react";
 import { Tooltip } from "@/components/atoms/Tooltip";
 import type { SyncController } from "@/features/sync/hooks/useSync";
 import { deriveSyncFailure, deriveSyncHeader, type SyncOperation } from "@/features/sync/utils/status";
@@ -10,6 +10,7 @@ import { useTranslation } from "@/i18n";
 
 const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
 const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
+const LazyDiscardDialog = lazy(() => import("@/features/discard/components/DiscardDialog").then(({ DiscardDialog }) => ({ default: DiscardDialog })));
 const LazyGitGraphPanel = lazy(() => import("@/features/git-graph/components/GitGraphPanel").then(({ GitGraphPanel }) => ({ default: GitGraphPanel })));
 
 interface WorkspaceNavRailProps {
@@ -41,6 +42,7 @@ export function WorkspaceNavRail({ repoPath, startupSyncing, sync }: WorkspaceNa
       <SyncNavButton repoPath={repoPath} startupSyncing={startupSyncing} sync={sync} />
       <NavigationItems />
       <CommitNavButton repoPath={repoPath} sync={sync} />
+      <DiscardNavButton repoPath={repoPath} sync={sync} />
       <GraphNavButton repoPath={repoPath} />
       <TrashNavButton />
       <VaultNavButton repoPath={repoPath} />
@@ -171,6 +173,33 @@ function CommitNavButton({ repoPath, sync }: { repoPath: string | null; sync: Sy
       {commitOpen ? (
         <Suspense fallback={null}>
           <LazyCommitDialog repoPath={repoPath} onClose={() => setCommitOpen(false)} />
+        </Suspense>
+      ) : null}
+    </>
+  );
+}
+
+/** 丢弃本地改动入口：有待提交变更时显示警示徽标，点击打开丢弃面板。 */
+function DiscardNavButton({ repoPath, sync }: { repoPath: string | null; sync: SyncController }) {
+  const { t } = useTranslation();
+  const [discardOpen, setDiscardOpen] = useState(false);
+  const hasUncommitted = sync.status.hasUncommitted;
+  return (
+    <>
+      <Tooltip content={t("discard.title")} placement="right">
+        <button
+          type="button"
+          aria-label={t("discard.title")}
+          onClick={() => setDiscardOpen(true)}
+          className={`${NAV_BUTTON_CLASS} relative`}
+        >
+          <RotateCcw size={18} />
+          {hasUncommitted ? <span className="absolute right-1.5 top-1.5 h-2 w-2 rounded-full bg-danger" aria-hidden="true" /> : null}
+        </button>
+      </Tooltip>
+      {discardOpen ? (
+        <Suspense fallback={null}>
+          <LazyDiscardDialog repoPath={repoPath} onClose={() => setDiscardOpen(false)} />
         </Suspense>
       ) : null}
     </>

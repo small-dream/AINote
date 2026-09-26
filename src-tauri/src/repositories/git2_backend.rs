@@ -3,12 +3,14 @@ use std::path::Path;
 use git2::{Repository, Signature, StatusOptions};
 
 use crate::domain::error::AppError;
+use crate::domain::discard::DiscardReport;
 use crate::domain::history::{CommitInfo, FileDiff, RepoCommit};
 use crate::domain::remote::RemoteCredential;
 use crate::domain::sync::{ChangedFile, ChangedFileStatus};
 
 use super::git2_history;
 use super::git2_graph;
+use super::git2_discard;
 use super::git2_remote;
 use super::git_backend::GitBackend;
 
@@ -179,6 +181,10 @@ impl GitBackend for Git2Backend {
 
     fn changed_files(&self, path: &str) -> Result<Vec<ChangedFile>, AppError> {
         changed_files(path)
+    }
+
+    fn discard_working(&self, path: &str, files: &[String]) -> Result<DiscardReport, AppError> {
+        git2_discard::discard_working(path, files)
     }
 
     fn is_merging(&self, path: &str) -> Result<bool, AppError> {

@@ -5,6 +5,7 @@ pub mod backup;
 pub mod commit;
 pub mod dto;
 pub mod diagnostics;
+pub mod discard;
 pub mod error;
 pub mod favorite;
 pub mod history;

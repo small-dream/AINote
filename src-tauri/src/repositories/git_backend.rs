@@ -1,6 +1,7 @@
 use std::path::Path;
 
 use crate::domain::error::AppError;
+use crate::domain::discard::DiscardReport;
 use crate::domain::history::{CommitInfo, FileDiff, RepoCommit};
 use crate::domain::remote::RemoteCredential;
 use crate::domain::sync::{ChangedFile, ConflictFile};
@@ -28,6 +29,9 @@ pub trait GitBackend: Send + Sync {
     fn has_uncommitted(&self, path: &str) -> Result<bool, AppError>;
     /// 工作区待提交变更（增/改/删 + 相对仓库根路径），供手动提交面板与同步前 message 生成
     fn changed_files(&self, path: &str) -> Result<Vec<ChangedFile>, AppError>;
+    /// 丢弃指定路径的本地改动：HEAD 中存在则恢复该版本，否则（新增）删除工作区文件。
+    /// 路径必须已由 Service 层校验并复核为待提交变更；不读历史 blob。
+    fn discard_working(&self, path: &str, files: &[String]) -> Result<DiscardReport, AppError>;
     fn is_merging(&self, path: &str) -> Result<bool, AppError>;
     /// 以本地侧解决全部冲突并完成 merge commit
     fn resolve_conflict_ours(&self, path: &str) -> Result<(), AppError>;
@@ -77,6 +81,10 @@ pub struct MockGitBackend {
     pub all_resolved_after_file: bool,
     /// 历史信封探测的编排结果（M1：加密笔记删除/重命名后历史命令仍拒绝）
     pub history_envelope: bool,
+    /// 丢弃工作区改动失败（模拟磁盘 / 权限类问题）
+    pub discard_fails: bool,
+    /// 这些路径按「新增文件」返回（deleted），其余按「恢复到 HEAD」返回（restored）
+    pub discard_as_deleted: Vec<String>,
     pub calls: std::sync::Mutex<Vec<String>>,
     /// 每次远端操作收到的凭证（用于断言平台用户名 / 令牌透传）
     pub credentials: std::sync::Mutex<Vec<RemoteCredential>>,
@@ -182,6 +190,22 @@ impl GitBackend for MockGitBackend {
     fn changed_files(&self, _path: &str) -> Result<Vec<ChangedFile>, AppError> {
         self.record("changed_files".into());
         Ok(self.changed.clone())
+    }
+
+    fn discard_working(&self, _path: &str, files: &[String]) -> Result<DiscardReport, AppError> {
+        self.record(format!("discard:{}", files.join(",")));
+        if self.discard_fails {
+            return Err(AppError::Io("mock discard failed".into()));
+        }
+        let (deleted, restored) = files
+            .iter()
+            .cloned()
+            .partition(|file| self.discard_as_deleted.contains(file));
+        Ok(DiscardReport {
+            restored,
+            deleted,
+            skipped: Vec::new(),
+        })
     }
 
     fn is_merging(&self, _path: &str) -> Result<bool, AppError> {

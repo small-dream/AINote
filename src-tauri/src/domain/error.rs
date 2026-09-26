@@ -43,6 +43,10 @@ pub enum AppError {
     /// 消息直接进全局 toast，故不带英文前缀（同 FolderHasNonNoteFiles 先例）。
     #[error("{0}")]
     SyncBusy(String),
+    /// 仓库处于未解决的合并冲突中：丢弃工作区改动会破坏 merge 状态，必须先解决冲突。
+    /// 消息直接进全局 toast，故不带英文前缀（同 SyncBusy 先例）。
+    #[error("{0}")]
+    DiscardBlocked(String),
     #[error("io error: {0}")]
     Io(String),
     /// AI 配置缺失 / Provider 调用失败（不可自动重试）
@@ -165,6 +169,7 @@ impl From<AppError> for AppErrorDto {
             AppError::SyncAuth(_) => ("SYNC_4003", ErrorKind::Auth, false),
             AppError::SyncRejected(_) => ("SYNC_4004", ErrorKind::Permission, false),
             AppError::SyncBusy(_) => ("SYNC_4005", ErrorKind::Conflict, true),
+            AppError::DiscardBlocked(_) => ("SYNC_4006", ErrorKind::Conflict, true),
             AppError::Io(_) => ("IO_5001", ErrorKind::Io, true),
             AppError::Ai(_) => ("AI_6001", ErrorKind::Unknown, false),
             AppError::AiNetwork(_) => ("AI_6002", ErrorKind::Unknown, true),
@@ -276,6 +281,10 @@ mod tests {
         assert_eq!(dto(AppError::SyncAuth("401".into())).code, "SYNC_4003");
         assert_eq!(dto(AppError::SyncRejected("403".into())).code, "SYNC_4004");
         assert_eq!(dto(AppError::SyncBusy("进行中".into())).code, "SYNC_4005");
+        let discard_blocked = dto(AppError::DiscardBlocked("存在未解决的合并冲突".into()));
+        assert_eq!(discard_blocked.code, "SYNC_4006");
+        assert!(discard_blocked.retriable, "解决冲突后可重试");
+        assert_eq!(discard_blocked.message, "存在未解决的合并冲突", "消息不带英文前缀");
         assert_eq!(dto(AppError::Io("i".into())).code, "IO_5001");
         assert_eq!(dto(AppError::Ai("no key".into())).code, "AI_6001");
         assert_eq!(dto(AppError::AiNetwork("down".into())).code, "AI_6002");

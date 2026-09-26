@@ -3,6 +3,8 @@ import { syncApi } from "@/api";
 import type { SyncStatus } from "@/api/types";
 import type { SyncProgress } from "@/api/types";
 import { reportSyncProgress, useSyncRetryStore } from "@/stores/sync-retry.store";
+import { useNoteReloadStore } from "@/stores/note-reload.store";
+import { useSessionStore } from "@/stores/session.store";
 import { flushPendingDrafts } from "@/features/note/utils/draftRegistry";
 import { invalidateWorkspaceQueries, requestEditorReloadIfClean } from "./workspace";
 
@@ -42,6 +44,36 @@ export function useCommitPendingMutation() {
       invalidateSync(queryClient);
       // 提交清空待提交列表（一键同步路径由 invalidateWorkspaceQueries 覆盖此键）
       void queryClient.invalidateQueries({ queryKey: ["changed-files"] });
+    },
+  });
+}
+
+/**
+ * 丢弃选中路径的本地改动（P1：按文件回滚到上次提交）。
+ *
+ * 丢弃前先把未落盘草稿写进磁盘：草稿不落盘的话，丢弃后防抖保存会把旧内容又写回工作区，
+ * 「丢弃」就名不副实（与 useSyncNowMutation 同一口径，flush 失败即中止）。
+ * 丢弃会改写工作区任意文件，因此成功与失败都失效整个读取面——写盘失败的中间状态也要如实呈现。
+ */
+export function useDiscardChangesMutation() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (paths: string[]) => {
+      await flushPendingDrafts();
+      return syncApi.discard(paths);
+    },
+    onSuccess: (report) => {
+      invalidateWorkspaceQueries(queryClient);
+      // 用户显式丢弃：编辑器即使还有草稿也要以磁盘内容为准，否则旧草稿会随后回填
+      useNoteReloadStore.getState().requestForcedReload();
+      const current = useSessionStore.getState().currentNotePath;
+      if (current && report.deleted.includes(current)) {
+        // 当前笔记本身是新增文件、已被彻底删除：回到列表，不留悬空的编辑器
+        useSessionStore.getState().openNote(null);
+      }
+    },
+    onError: () => {
+      invalidateWorkspaceQueries(queryClient);
     },
   });
 }

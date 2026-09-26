@@ -129,6 +129,7 @@ pub fn run() {
             commands::git::push::git_push,
             commands::git::status::sync_status,
             commands::git::status_files::git_status_files,
+            commands::git::discard::git_discard_changes,
             commands::git::sync::sync_now,
             commands::git::sync::cancel_sync_retry,
             commands::git::resolve::resolve_conflict,

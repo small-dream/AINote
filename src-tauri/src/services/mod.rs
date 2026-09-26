@@ -6,6 +6,7 @@ pub mod auth_store;
 pub(crate) mod backup_service;
 pub(crate) mod conflict_export_service;
 pub(crate) mod diagnostics_service;
+pub mod discard_service;
 pub mod hosting;
 pub mod history_service;
 pub mod history_reset_service;

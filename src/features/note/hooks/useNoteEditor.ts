@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { AppError } from "@/api";
 import { useNoteContentQuery } from "@/queries/note.queries";
-import { useNoteReloadStore } from "@/stores/note-reload.store";
 import { useNoteReload } from "./useNoteReload";
+import { useNoteReloadTokens } from "./useNoteReloadTokens";
 import { useNoteSaveQueue } from "./useNoteSaveQueue";
 import { noteKindOfPath } from "../utils/noteKind";
 import { publishDraftState, registerDraft } from "../utils/draftRegistry";
@@ -28,9 +28,8 @@ export function useNoteEditor(repoPath: string | null, notePath: string | null, 
     setDraft(content);
     setDirty(false);
   }, []);
-  // 工作区级重载信号（同步 / 冲突解决 / Git Graph 恢复）与历史面板纪元合并为一个递增令牌
-  const workspaceReloadEpoch = useNoteReloadStore((state) => state.epoch);
-  const isLoaded = useNoteReload({ notePath, data: contentQuery.data, reloadToken: reloadToken + workspaceReloadEpoch, dirty, applyContent });
+  const tokens = useNoteReloadTokens(reloadToken);
+  const isLoaded = useNoteReload({ ...tokens, notePath, data: contentQuery.data, dirty, applyContent });
   const kind = contentQuery.data?.kind ?? (notePath ? noteKindOfPath(notePath) : "markdown");
   /** 加密笔记在锁定态：正文不参与编辑，界面改由解锁面板接管（后端连明文都不返回）。 */
   const locked = contentQuery.data?.locked === true;

@@ -139,6 +139,27 @@ const commandHandlers: Record<string, CommandHandler> = {
   git_push: (_args, ctx) => syncStatus(ctx.store),
   git_commit: () => "e2e-commit",
   git_status_files: (_args, ctx) => ctx.store.changedFiles,
+  git_discard_changes: (args, ctx) => {
+    const paths = Array.isArray(args.paths) ? (args.paths as string[]) : [];
+    const restored: string[] = [];
+    const deleted: string[] = [];
+    for (const path of paths) {
+      const change = ctx.store.changedFiles.find((file) => file.path === path);
+      if (!change) continue;
+      if (change.status === "added") {
+        ctx.store.notes.delete(path);
+        deleted.push(path);
+      } else {
+        // 恢复到种子里最近一次提交的内容；没有种子时只清掉变更标记
+        const latest = ctx.state.versions?.[path]?.[0];
+        if (latest) ctx.store.notes.set(path, { content: latest.content, kind: "markdown" });
+        restored.push(path);
+      }
+      ctx.store.changedFiles = ctx.store.changedFiles.filter((file) => file.path !== path);
+    }
+    ctx.store.uncommitted = ctx.store.changedFiles.length > 0;
+    return { restored, deleted, skipped: [] };
+  },
   git_repo_history: (_args, ctx) => repoHistoryOf(ctx),
   ...noteCommandHandlers,
   search_notes: () => [],

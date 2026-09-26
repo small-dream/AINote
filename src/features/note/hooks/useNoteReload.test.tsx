@@ -118,3 +118,41 @@ describe("useNoteReload reloadToken 强制重载", () => {
     expect(applyContent).not.toHaveBeenCalled();
   });
 });
+
+describe("useNoteReload 强制重载（用户显式丢弃草稿）", () => {
+  it("forceToken 变化后有脏草稿也照常应用磁盘内容", () => {
+    const applyContent = vi.fn();
+    const before = noteContent({ content: "# 丢弃前" });
+    const { rerender } = renderHook(
+      ({ data, forceToken, dirty }: Props & { forceToken: number }) =>
+        useNoteReload({ notePath: "secret.md", data, reloadToken: 0, forceToken, dirty, applyContent }),
+      { initialProps: { data: before, forceToken: 0, dirty: true } },
+    );
+    applyContent.mockClear();
+
+    // 丢弃成功后：先 bump 令牌（query 尚未重取，数据引用不变）→ 新数据到达
+    rerender({ data: before, forceToken: 1, dirty: true });
+    rerender({ data: noteContent({ content: "# 上次提交的内容" }), forceToken: 1, dirty: true });
+
+    expect(applyContent).toHaveBeenCalledTimes(1);
+    expect(applyContent).toHaveBeenCalledWith("# 上次提交的内容");
+  });
+
+  it("forceToken 不变化时脏草稿仍然被保护", () => {
+    const applyContent = vi.fn();
+    const before = noteContent({ content: "# 丢弃前" });
+    const { rerender } = renderHook(
+      ({ data, forceToken, dirty }: Props & { forceToken: number }) =>
+        useNoteReload({ notePath: "secret.md", data, reloadToken: 0, forceToken, dirty, applyContent }),
+      { initialProps: { data: before, forceToken: 1, dirty: false } },
+    );
+    applyContent.mockClear();
+
+    rerender({ data: before, forceToken: 2, dirty: true });
+    rerender({ data: noteContent({ content: "# 磁盘内容" }), forceToken: 2, dirty: true });
+    expect(applyContent).toHaveBeenCalledTimes(1);
+
+    rerender({ data: noteContent({ content: "# 又一次磁盘内容" }), forceToken: 2, dirty: true });
+    expect(applyContent).toHaveBeenCalledTimes(1);
+  });
+});

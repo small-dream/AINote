@@ -1,6 +1,6 @@
 import { Channel } from "@tauri-apps/api/core";
 import { call } from "./client";
-import type { ChangedFile, ConflictExportDto, ConflictFile, SyncProgress, SyncStatus } from "./types";
+import type { ChangedFile, ConflictExportDto, ConflictFile, DiscardReport, SyncProgress, SyncStatus } from "./types";
 
 /** 同步相关 IPC（P0-4 / P0-5 / P0-6） */
 export const syncApi = {
@@ -8,6 +8,8 @@ export const syncApi = {
   status: () => call<SyncStatus>("sync_status"),
   /** 工作区待提交变更（增/改/删），供手动提交面板展示 */
   statusFiles: () => call<ChangedFile[]>("git_status_files"),
+  /** 丢弃选中路径的本地改动：已跟踪文件恢复到上次提交，新增文件彻底删除 */
+  discard: (paths: string[]) => call<DiscardReport>("git_discard_changes", { paths }),
   /** 一键同步：commit 未提交变更 → pull → push；onProgress 接收拉取阶段的重试进度 */
   syncNow: (onProgress?: (progress: SyncProgress) => void) => {
     const channel = new Channel<SyncProgress>();
