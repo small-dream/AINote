@@ -22,7 +22,7 @@
 
 1. **View Component**：只接 props、只渲染。除数据订阅 Hook 外无逻辑。
 2. **Custom Hook**（`features/x/hooks/useXxx.ts`）：状态、副作用、API 调用全部上移。
-3. **Pure Utils**（`features/x/utils/` 或 `lib/`）：数据转换、格式化抽成纯函数——纯函数最易测试、AI 最不易写错。
+3. **Pure Utils**（`features/x/utils/` 或 `src/utils/`）：数据转换、格式化抽成纯函数——纯函数最易测试、AI 最不易写错。
 
 ```text
 NoteEditor.tsx (渲染, <220行)
@@ -87,7 +87,7 @@ AppError { code: "SYNC_4013", kind: Conflict, message: "...", retriable: true }
 ## 5. 测试友好性
 
 - **依赖注入**：Rust Service 依赖 `trait GitBackend`，测试注入 Mock；前端 Hook 依赖 `api/` 接口，测试用 `vi.mock('@/api')` 替换。
-- **纯函数优先**：`lib/`、`utils/`、`domain/` 下的函数必须无副作用、无 IO，单测覆盖率 ≥ 90%。
+- **纯函数优先**：`utils/`、`domain/` 下的函数必须无副作用、无 IO，单测覆盖率 ≥ 90%。
 - **AI 强制测试义务**：实现核心业务逻辑（Service 用例、纯函数 utils、数据转换）时必须同时交付对应单元测试；UI 组件只要求关键交互集成测试，不追求快照覆盖。
 - **测试金字塔**：纯函数单测（多）→ Hook/Service 逻辑测试（中）→ 页面级冒烟（少）。
 
@@ -108,6 +108,7 @@ AppError { code: "SYNC_4013", kind: Conflict, message: "...", retriable: true }
 | iOS 相关 | 在上一行基础上增加 iOS release/Archive 可行性检查；无法执行时必须在变更说明中记录原因和补验任务 |
 
 - PR / 提交说明必须写明 `Desktop Impact`、`Mobile Impact` 与实际验证结果；无法判定平台影响时按 `shared` 处理。
+- 上述门禁在 CI 上对 `push` / `pull_request` 强制执行（`.github/workflows/ci.yml`）：`frontend` job 覆盖 `pnpm build && pnpm test && pnpm lint`，`e2e` job 覆盖全量 `pnpm test:e2e`，`rust` job 覆盖 `cargo test --locked`。本地无法完成 Android / iOS 构建检查时，以 CI 结论为准并在变更说明中记录。
 - 平台专属代码不得从共享组件中直接判断；新增平台差异先更新本规范，再进入 `src/platform/` 或 `src-tauri/src/platform/`。
 - Android release 构建检查统一走 `pnpm android:build`（注入 `OPENSSL_SRC_PERL`，见 `docs/ARCHITECTURE.md` §6）；直接 `pnpm tauri android build` 会被 `src-tauri/build.rs` 拒绝。
 

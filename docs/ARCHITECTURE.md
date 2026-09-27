@@ -11,6 +11,11 @@
   - `pnpm desktop:build` — 编译 Release 可执行文件，不打安装包（`tauri build --no-bundle`，用于快速验证）
   - `pnpm desktop:bundle` — 编译并产出各平台安装包（`tauri build`，dmg/msi/deb 等）
   - `pnpm build` / `pnpm test` / `pnpm lint` — 前端构建 / 单测 / 静态检查（CI 门槛）
+- **CI 门禁：`.github/workflows/ci.yml`**（`push` 到 `main` / 所有 `pull_request`）并行跑三个 job：
+  - `frontend` — `pnpm install --frozen-lockfile && pnpm build && pnpm test && pnpm lint`
+  - `e2e` — `pnpm install --frozen-lockfile && playwright install chromium && pnpm test:e2e`
+  - `rust` — 装 Linux WebKit 依赖后 `cargo test --manifest-path src-tauri/Cargo.toml --locked`
+  - 发布流程（tag 触发、签名、产物上传）见 `.github/workflows/release.yml`。
 - **依赖版本策略：一律使用最新稳定版**（`^latest`），升级后必须通过 `pnpm build && pnpm test && pnpm lint` 与 `cargo test` 全量验证。
   - 唯一例外：`typescript` 锁定 `~6.0`——typescript-eslint 8.x 尚不支持 TS 7.x 编译器（见 typescript-eslint#10940），待其支持后立即升级。
 - Rust 依赖同样使用最新 stable major（tauri 2 / git2 0.20 / thiserror 2 / aes-gcm 0.10）。
@@ -128,7 +133,7 @@ AINote/
 │   │   └── providers.tsx         # QueryClient/Theme 等 Provider 组装
 │   ├── i18n/                     # 翻译字典与 useTranslation（纯前端显示语言）
 │   ├── pages/                    # 页面级组件, 只做组装
-│   │   ├── workspace/index.tsx
+│   │   ├── workspace/            # 桌面三栏壳：index.tsx + WorkspaceLayout / Sidebar / NavRail / Columns + useSidebarResizer / useWorkspaceActions
 │   │   └── setup/index.tsx
 │   ├── features/                 # 按领域垂直切分 (核心防腐化手段)
 │   │   ├── note/
@@ -147,9 +152,19 @@ AINote/
 │   │   ├── export/              # 导出 PDF：打印预览 overlay + TipTap JSON → HTML
 │   │   ├── auth/                 # 登录（Token 校验/保存）
 │   │   ├── repo/                 # 绑定/创建仓库
+│   │   ├── commit/               # 手动提交面板 + 提交信息生成（`chore: …`）
+│   │   ├── discard/              # 按文件丢弃本地改动（多选/全选回滚到上次提交）
+│   │   ├── favorites/            # 收藏面板
+│   │   ├── git-graph/            # 全仓提交图（含按提交恢复文件）
+│   │   ├── recent/               # 最近打开面板
+│   │   ├── trash/                # 回收站（软删除的列表 / 恢复 / 彻底删除）
 │   │   ├── settings/             # 设置页（左分类导航 + 右内容区，取代设置弹窗）
 │   │   ├── mobile-shell/          # 移动端壳：单栏导航、编辑器路由栈、触控样式
 │   │   ├── todo/                  # Todo 待办（P1-16）：单任务流面板 + 截止日期/优先级 + 到期提醒（应用内卡片 + 系统通知）
+│   │   ├── vault/                 # 加密笔记：口令解锁 / 设备级快速解锁 / 逐篇加密开关 / 空闲自动锁定
+│   │   ├── update/                # 桌面与移动端更新（检查 / 下载 / 安装 / 发布说明）
+│   │   ├── diagnostics/           # Markdown 诊断（未闭合围栏 / 表格结构 / 图片断链）
+│   │   ├── close-guard/           # 退出确认（未落盘草稿 + 未提交变更）
 │   │   └── support/               # 错误边界 + 全局错误日志（渲染崩溃可恢复）
 │   ├── components/               # 业务无关组件
 │   │   ├── atoms/
@@ -157,11 +172,14 @@ AINote/
 │   ├── api/                      # IPC Client, 一领域一文件
 │   │   ├── client.ts             # invoke 薄封装 + 错误统一转换
 │   │   ├── types.ts              # 与 Rust DTO 结构一致的镜像类型
-│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts / asset.api.ts / wiki.api.ts / search.api.ts / history.api.ts / ai.api.ts / support.api.ts
+│   │   ├── error.ts              # AppErrorDto 反序列化与错误码类型
+│   │   ├── index.ts              # 统一导出
+│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts / asset.api.ts / wiki.api.ts / search.api.ts / history.api.ts / ai.api.ts / support.api.ts / task.api.ts / trash.api.ts / favorite.api.ts / vault.api.ts / metrics.api.ts / update.api.ts / release.api.ts / mobile-update.api.ts / app.api.ts / back-button.api.ts / close-guard.api.ts
 │   ├── stores/                   # Zustand, 按领域切片（session / ui / command-palette …）
 │   ├── queries/                  # TanStack Query hooks (服务端/Git 状态)
 │   ├── hooks/                    # 跨领域通用 hooks（useNetworkStatus 等）
-│   ├── lib/                      # 纯工具函数, 无 React 依赖
+│   ├── platform/                 # 平台差异收敛点（运行时判定 / 返回手势 / 软键盘 inset / 外链 / 系统通知 reminders / 原生日期控件 / CSP nonce）
+│   ├── utils/                    # 纯工具函数, 无 React 依赖
 │   └── styles/
 │       └── tokens.css            # 设计 Token (明暗双主题)
 ├── src-tauri/                    # Rust Core
@@ -169,20 +187,23 @@ AINote/
 │   │   ├── main.rs               # 仅做 Command 注册, < 50 行
 │   │   ├── commands/             # Controller: 一命令一文件
 │   │   │   ├── mod.rs            # 仅 re-export
-│   │   │   ├── asset/            # import.rs / import_bytes.rs
-│   │   │   ├── note/             # create.rs / import.rs / read.rs / update.rs / delete.rs / move.rs / tree.rs / list.rs / search.rs / wiki.rs
-│   │   │   ├── git/              # commit.rs / pull.rs / push.rs / status.rs / sync.rs / resolve.rs / history.rs / diff.rs / restore.rs
-│   │   │   ├── repo/             # bind.rs / create.rs / list.rs / rename.rs / remove.rs / switch.rs / validate.rs / path.rs
+│   │   │   ├── asset/            # exists.rs / import.rs / import_bytes.rs
+│   │   │   ├── note/             # create.rs / create_folder.rs / import.rs / read.rs / update.rs / delete.rs / delete_folder.rs / move.rs / convert.rs / tree.rs / list.rs / search.rs / wiki.rs / favorites_list.rs / toggle_favorite.rs
+│   │   │   ├── git/              # commit.rs / pull.rs / push.rs / status.rs / status_files.rs / sync.rs / resolve.rs / resolve_file.rs / conflicts.rs / conflicts_export.rs / history.rs / graph.rs / diff.rs / restore.rs / discard.rs / repo_lock.rs（仓库写锁）
+│   │   │   ├── repo/             # bind.rs / create.rs / list.rs / rename.rs / remove.rs / switch.rs / validate.rs / path.rs / backup.rs / restore.rs / integrity.rs / size.rs / reset_history.rs
 │   │   │   ├── auth/             # save_token.rs / validate.rs / status.rs / logout.rs
-│   │   │   ├── ai/               # config.rs（get/save）/ generate.rs / chat.rs
+│   │   │   ├── ai/               # config.rs（get/save）/ models.rs / generate.rs / generate_stream.rs / chat.rs / chat_stream.rs
 │   │   │   ├── trash/            # list.rs / restore.rs / delete.rs / empty.rs
-│   │   │   ├── task/             # board.rs / create_list.rs / rename_list.rs / delete_list.rs / create.rs / update.rs / toggle.rs / delete.rs
-│   │   │   └── support/          # log_frontend.rs / export.rs（诊断包）
-│   │   ├── services/             # 一用例一模块（含 search_service / history_service / history_reset_service / asset_service / wiki_service / trash_service / task_service / ai_service / ai_store / secure_store / diagnostics_service / hosting（平台 REST 适配）/ auth_store（按平台分槽的凭证存储））
-│   │   ├── repositories/         # trait + 实现分离（git_backend / git2_backend / git2_remote / git2_history / git2_rewrite / repo_maintenance / git2_maintenance / repo_rewrite / file_storage / note_files / file_tree / asset_files / trash_files / task_files / diagnostics_files / backup_files / restore_files / llm）
-│   │   ├── domain/               # 实体、值对象、AppError（含 search.rs / history.rs / history_reset.rs / asset.rs / wiki.rs / trash.rs / task.rs / rich_text.rs / ai.rs / diagnostics.rs / hosting.rs（托管平台元数据）/ remote.rs（远端凭证））
+│   │   │   ├── task/             # board.rs / create.rs / update.rs / toggle.rs / delete.rs
+│   │   │   ├── vault/            # create.rs / unlock.rs / unlock_with_device.rs / lock.rs / change_passphrase.rs / set_note_encryption.rs / status.rs / support.rs / quick_unlock_enable.rs / quick_unlock_disable.rs
+│   │   │   ├── metrics/          # export.rs（本机计数导出）等
+│   │   │   ├── support/          # log_frontend.rs / export.rs（诊断包）
+│   │   │   └── 顶层单文件：# app.rs / close_guard.rs（退出确认与草稿上报）/ print.rs（系统打印）/ save_file.rs（保存对话框）/ update.rs（移动端更新下载与安装）/ blocking.rs（阻塞任务桥）
+│   │   ├── services/             # 一用例一模块（含 note / note_content / note_favorite / search / wiki / asset / trash / task / history / history_reset / sync / retry（退避纯函数）/ discard / repo / backup / restore / maintenance / conflict_export / diagnostics / metrics / update / ai / ai_store / secure_store / auth_service + auth_store（按平台分槽）/ vault_service / vault_crypto（纯密码学原语）/ quick_unlock_service / hosting（平台 REST 适配））
+│   │   ├── repositories/         # trait + 实现分离（git_backend（trait）/ git2_backend / git2_remote / git2_history / git2_graph / git2_discard / git2_rewrite / git2_maintenance / git2_error + repo_maintenance / repo_rewrite（trait） / file_storage / note_files / file_tree / asset_files / trash_files / task_files / favorite_files / vault_files / quick_unlock_files / diagnostics_files / backup_files / restore_files / repo_size / ca_bundle / llm + llm_stream）
+│   │   ├── domain/               # 实体、值对象、AppError（含 note / search / history / history_reset / asset / wiki / trash / task / favorite / commit / discard / sync / remote / hosting / rich_text / ai / ai_settings / backup / diagnostics / maintenance / metrics / update / quick_unlock / vault / dto）
 │   │   ├── config/            # mod.rs（持久化）+ repos.rs（仓库注册表纯逻辑）+ logging.rs（结构化日志与脱敏）
-│   │   └── platform/          # 平台差异收敛点：android_bridge.rs（JNI 桥）+ tray.rs（桌面托盘与窗口生命周期）+ fallback.rs（非 Android 桩）
+│   │   └── platform/          # 平台差异收敛点：android_bridge.rs / android_jni.rs（JNI 桥）+ tray.rs（桌面托盘与窗口生命周期）+ fallback.rs（非 Android 桩）+ quick_unlock/（apple.rs / android.rs / unsupported.rs，设备级快速解锁的钥匙串 / Keystore 实现）
 │   └── Cargo.toml
 ├── package.json / tsconfig.json (strict: true)
 └── 根级配置 (eslint / prettier / tailwind)

@@ -81,7 +81,7 @@ View → Hooks/Queries → api/ → IPC → commands → services → repositori
 ## 测试义务
 
 - 核心业务逻辑（Service 用例、纯函数 utils、数据转换）**必须同时交付单元测试**。
-- `lib/`、`utils/`、`domain/` 纯函数覆盖率 ≥ 90%。
+- `utils/`、`domain/` 纯函数覆盖率 ≥ 90%。
 - 前端测试用 `vi.mock('@/api')` 隔离 IPC；Rust 测试注入 Mock `GitBackend`。
 
 ## 安全红线
