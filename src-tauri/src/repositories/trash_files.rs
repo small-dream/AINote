@@ -14,6 +14,27 @@ use super::note_files::{resolve_within_root, validate_rel_path};
 pub const TRASH_DIR: &str = ".trash";
 const MANIFEST: &str = ".trash/manifest.json";
 
+/// 回收站条目 id 白名单校验（防路径穿越）。
+///
+/// `manifest.json` 是仓库内的普通文件，会随 Git 提交、从远端同步——属于**不可信内容**；
+/// 而 `.trash/<id>.md` 是按 id 拼出来的路径。若 id 含 `/`、`..` 或以 `/` 开头，
+/// `Path::join` 会把读写落到仓库之外（删除任意文件 / 把仓库外文件读进仓库再推送）。
+/// 因此 restore / permanent_delete / empty 三条路径都必须先过这一关。
+/// 历史与当前生成格式均为 `[0-9a-f-]`（`<秒>-<路径哈希>` / `<秒>-<路径哈希>-<随机>`），
+/// 白名单不影响任何既有条目。
+fn validate_id(id: &str) -> Result<(), AppError> {
+    let valid = !id.is_empty()
+        && id.len() <= 128
+        && id
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b == b'-' || b == b'_');
+    if valid {
+        Ok(())
+    } else {
+        Err(AppError::InvalidPath(format!("非法回收站条目 id: {id}")))
+    }
+}
+
 pub fn read_manifest(root: &Path) -> Result<Vec<TrashItem>, AppError> {
     let path = root.join(MANIFEST);
     if !path.is_file() {
@@ -147,6 +168,8 @@ fn collect_non_note_files(
 
 /// 恢复指定条目到原路径；原路径已被占用时自动追加 `-1`、`-2`…。
 pub fn restore(root: &Path, id: &str) -> Result<String, AppError> {
+    // 先校验 id 与恢复目标，再读任何文件 / 建任何目录：manifest 不可信（见 validate_id）。
+    validate_id(id)?;
     let mut items = read_manifest(root)?;
     let index = items
         .iter()
@@ -158,16 +181,19 @@ pub fn restore(root: &Path, id: &str) -> Result<String, AppError> {
         return Err(AppError::Repo(format!("trash file missing: {id}")));
     }
     let content = fs::read_to_string(&src).map_err(|err| AppError::io_context("读取回收站失败", &src, err))?;
-    let target = if root.join(&item.path).exists() {
-        dedup_target(root, &item.path)
+    // 恢复目标同样来自不可信清单：先做词法校验（拒绝绝对路径 / `..` / 隐藏段），
+    // 再交给 resolve_within_root 拦符号链接。顺序很重要——create_dir_all 必须在
+    // 两道校验之后，否则 `../../x` 会在仓库外先建出目录。
+    let original = validate_rel_path(&item.path)?;
+    let target = if root.join(&original).exists() {
+        dedup_target(root, &original)
     } else {
-        PathBuf::from(&item.path)
+        original
     };
-    if let Some(parent) = target.parent() {
-        let dir = root.join(parent);
-        fs::create_dir_all(&dir).map_err(|err| AppError::io_context("创建目录失败", &dir, err))?;
-    }
     let dest = resolve_within_root(root, &target)?;
+    if let Some(parent) = dest.parent() {
+        fs::create_dir_all(parent).map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
+    }
     fs::write(&dest, content).map_err(|err| AppError::io_context("写入失败", &dest, err))?;
     fs::remove_file(&src).map_err(|err| AppError::io_context("删除失败", &src, err))?;
     write_manifest(root, &items)?;
@@ -176,6 +202,7 @@ pub fn restore(root: &Path, id: &str) -> Result<String, AppError> {
 
 /// 彻底删除单个回收站条目。
 pub fn permanent_delete(root: &Path, id: &str) -> Result<(), AppError> {
+    validate_id(id)?;
     let mut items = read_manifest(root)?;
     if !items.iter().any(|i| i.id == id) {
         return Err(AppError::Repo(format!("trash item not found: {id}")));
@@ -187,9 +214,15 @@ pub fn permanent_delete(root: &Path, id: &str) -> Result<(), AppError> {
 }
 
 /// 清空回收站：删除全部正文文件与 manifest。
+/// id 非法的条目一律跳过——它们只可能来自被篡改 / 恶意仓库的清单，
+/// 按未校验的 id 拼路径会删掉仓库外的文件；跳过后清单与其它条目照常清理。
 pub fn empty(root: &Path) -> Result<(), AppError> {
     let items = read_manifest(root)?;
     for item in &items {
+        if validate_id(&item.id).is_err() {
+            log::warn!(target: "ainote::trash", "跳过 id 非法的回收站条目");
+            continue;
+        }
         let _ = fs::remove_file(root.join(TRASH_DIR).join(format!("{}.md", item.id)));
     }
     let manifest = root.join(MANIFEST);
@@ -223,8 +256,7 @@ fn walk_notes(dir: &Path, out: &mut Vec<PathBuf>) -> Result<(), AppError> {
 }
 
 /// 原路径被占用时生成不冲突的恢复路径（同目录追加 `-1`、`-2`…）。
-fn dedup_target(root: &Path, path: &str) -> PathBuf {
-    let path = Path::new(path);
+fn dedup_target(root: &Path, path: &Path) -> PathBuf {
     let stem = path
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())

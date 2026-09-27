@@ -177,3 +177,97 @@ fn soft_delete_rejects_symlink_escaping_root() {
     ));
     assert_eq!(fs::read_to_string(outside.path()).unwrap(), "secret");
 }
+
+/// 写入一份「恶意仓库」形态的清单：id 由远端仓库提供，因此完全不可信。
+fn seed_malicious_manifest(root: &Path, entries: &str) {
+    fs::create_dir_all(root.join(".trash")).unwrap();
+    fs::write(root.join(".trash/manifest.json"), entries).unwrap();
+}
+
+/// S1：id 含路径穿越时恢复必须拒绝，且不得读出仓库外文件。
+#[test]
+fn restore_rejects_traversal_id() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("repo");
+    let outside = tmp.path().join("outside");
+    fs::create_dir_all(&root).unwrap();
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("victim.md"), "TOP-SECRET").unwrap();
+    seed_malicious_manifest(
+        &root,
+        r#"[{"id":"../../outside/victim","path":"stolen.md","deletedAt":1,"title":"x"}]"#,
+    );
+
+    assert!(matches!(
+        restore(&root, "../../outside/victim"),
+        Err(AppError::InvalidPath(_))
+    ));
+    assert!(!root.join("stolen.md").exists(), "仓库外内容不得被读进仓库");
+    assert!(outside.join("victim.md").is_file());
+}
+
+/// S1：彻底删除同样拒绝非法 id，仓库外文件一字不动。
+#[test]
+fn permanent_delete_rejects_traversal_id() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("repo");
+    let outside = tmp.path().join("outside");
+    fs::create_dir_all(&root).unwrap();
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("victim.md"), "keep me").unwrap();
+    seed_malicious_manifest(
+        &root,
+        r#"[{"id":"../../outside/victim","path":"a.md","deletedAt":1,"title":"x"}]"#,
+    );
+
+    assert!(matches!(
+        permanent_delete(&root, "../../outside/victim"),
+        Err(AppError::InvalidPath(_))
+    ));
+    assert_eq!(fs::read_to_string(outside.join("victim.md")).unwrap(), "keep me");
+}
+
+/// S1：清空回收站跳过非法 id，正常条目照常清理（一键操作不得成为任意删除入口）。
+#[test]
+fn empty_skips_malicious_ids_and_still_clears_valid_ones() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("repo");
+    let outside = tmp.path().join("outside");
+    fs::create_dir_all(root.join(".trash")).unwrap();
+    fs::create_dir_all(&outside).unwrap();
+    fs::write(outside.join("victim.md"), "keep me").unwrap();
+    fs::write(root.join(".trash/1700000000-abcdef.md"), "正文").unwrap();
+    seed_malicious_manifest(
+        &root,
+        r#"[
+  {"id":"1700000000-abcdef","path":"a.md","deletedAt":1,"title":"正常"},
+  {"id":"../../outside/victim","path":"b.md","deletedAt":2,"title":"恶意"}
+]"#,
+    );
+
+    empty(&root).unwrap();
+    assert_eq!(fs::read_to_string(outside.join("victim.md")).unwrap(), "keep me");
+    assert!(!root.join(".trash/1700000000-abcdef.md").exists(), "正常条目仍应被清理");
+    assert!(!root.join(".trash/manifest.json").exists());
+}
+
+/// S1：恢复目标路径同样来自不可信清单——穿越路径必须在建目录之前被拒，
+/// 否则 `create_dir_all` 会先在仓库外造出目录。
+#[test]
+fn restore_rejects_traversal_path_before_creating_dirs() {
+    let tmp = tempfile::tempdir().unwrap();
+    let root = tmp.path().join("repo");
+    fs::create_dir_all(root.join(".trash")).unwrap();
+    fs::write(root.join(".trash/1700000000-abcdef.md"), "正文").unwrap();
+    seed_malicious_manifest(
+        &root,
+        r#"[{"id":"1700000000-abcdef","path":"../../outside/newdir/x.md","deletedAt":1,"title":"x"}]"#,
+    );
+
+    assert!(matches!(
+        restore(&root, "1700000000-abcdef"),
+        Err(AppError::InvalidPath(_))
+    ));
+    assert!(!tmp.path().join("outside").exists(), "不得在仓库外创建目录");
+    assert!(root.join(".trash/1700000000-abcdef.md").is_file(), "失败时正文原样保留");
+}
