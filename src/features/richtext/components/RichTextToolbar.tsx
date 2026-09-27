@@ -1,5 +1,5 @@
 import { useTranslation } from "@/i18n";
-import type { ChangeEvent, ReactNode } from "react";
+import type { ChangeEvent } from "react";
 import type { Editor } from "@tiptap/core";
 import { Eraser, Image as ImageIcon, Paintbrush, Redo, Undo } from "lucide-react";
 import { Tooltip } from "@/components/atoms/Tooltip";
@@ -7,17 +7,15 @@ import { ToolbarPopover, type ToolbarMenuItem } from "./ToolbarPopover";
 import { LinkButton } from "./LinkButton";
 import { BLOCK_COMMANDS, CLEAR_FORMAT_COMMAND, getActiveHeadingCommand, HEADING_COMMANDS, INLINE_COMMANDS, INSERT_COMMANDS, type EditorToolbarCommand } from "../utils/toolbarCommands";
 import { useFormatPainter } from "../hooks/useFormatPainter";
-import { NoteThemePicker } from "@/features/note/components/NoteThemePicker";
 import { TextStylePanel } from "./TextStylePanel";
 
 interface RichTextToolbarProps {
   editor: Editor | null;
   onImagePicked?: ((files: File[]) => void) | undefined;
   status?: string | null | undefined;
-  trailing?: ReactNode | undefined;
 }
 
-export function RichTextToolbar({ editor, onImagePicked, status, trailing }: RichTextToolbarProps) {
+export function RichTextToolbar({ editor, onImagePicked, status }: RichTextToolbarProps) {
   const { t } = useTranslation();
   return (
     <div className="format-toolbar flex w-full min-h-10 items-center gap-1 overflow-x-auto border-b border-border bg-bg-secondary px-2 py-1.5">
@@ -37,7 +35,7 @@ export function RichTextToolbar({ editor, onImagePicked, status, trailing }: Ric
           {onImagePicked ? <ImagePickerButton label={t("richtext.image")} onPicked={onImagePicked} /> : null}
         </div>
       ) : null}
-      <ToolbarHistoryGroup editor={editor} status={status} trailing={trailing} />
+      <ToolbarHistoryGroup editor={editor} status={status} />
     </div>
   );
 }
@@ -78,9 +76,8 @@ function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (file
   );
 }
 
-type ToolbarHistoryGroupProps = Pick<RichTextToolbarProps, "editor" | "status" | "trailing">;
-
-function ToolbarHistoryGroup({ editor, status, trailing }: ToolbarHistoryGroupProps) {
+/** 右侧只放编辑历史：阅读主题与 AI 入口统一收在顶部工具栏（EditorToolbar），两种笔记类型保持同一位置。 */
+function ToolbarHistoryGroup({ editor, status }: Pick<RichTextToolbarProps, "editor" | "status">) {
   const { t } = useTranslation();
 
   return (
@@ -88,8 +85,6 @@ function ToolbarHistoryGroup({ editor, status, trailing }: ToolbarHistoryGroupPr
       {status ? <span role="status" className="mr-1 hidden truncate text-xs text-text-secondary lg:block">{status}</span> : null}
       <ToolbarButton icon={Undo} label={t("richtext.undo")} disabled={!editor?.can().undo()} onClick={() => editor?.chain().focus().undo().run()} />
       <ToolbarButton icon={Redo} label={t("richtext.redo")} disabled={!editor?.can().redo()} onClick={() => editor?.chain().focus().redo().run()} />
-      <NoteThemePicker tooltipPortal />
-      {trailing}
     </div>
   );
 }

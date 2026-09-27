@@ -3,6 +3,17 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { describe, expect, it, vi } from "vitest";
 import { EditorToolbar } from "./EditorToolbar";
 
+vi.mock("@/features/ai/hooks/useAiConfig", () => ({
+  useAiConfig: () => ({
+    data: {
+      enabled: true,
+      providers: [{ id: "p1", provider: "openAiCompatible", displayName: "OpenAI", baseUrl: "https://api.example.com", enabled: true, hasKey: true }],
+      models: [{ id: "m1", providerId: "p1", modelId: "gpt-5", displayName: "GPT-5", enabled: true }],
+      defaultModelId: "m1",
+    },
+  }),
+}));
+
 function renderToolbar(overrides: Partial<Parameters<typeof EditorToolbar>[0]> = {}) {
   const props: Parameters<typeof EditorToolbar>[0] = {
     path: "notes/hello.md",
@@ -128,10 +139,10 @@ describe("EditorToolbar / 更多菜单", () => {
     expect(screen.getByRole("button", { name: "双链与标签" })).toBeTruthy();
   });
 
-  it("富文本模式隐藏视图切换、主题与「转换为富文本」", () => {
+  it("富文本模式隐藏视图切换与「转换为富文本」，主题入口保留（与 Markdown 同一位置）", () => {
     renderToolbar({ richText: true });
     expect(screen.queryByText("写作")).toBeNull();
-    expect(screen.queryByRole("button", { name: "笔记主题" })).toBeNull();
+    expect(screen.getByRole("button", { name: "笔记主题" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "双链与标签" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "更多" }));
     expect(screen.queryByRole("menuitem", { name: "转换为富文本" })).toBeNull();
@@ -164,5 +175,19 @@ describe("EditorToolbar / 更多菜单", () => {
     renderToolbar({ onToggleEncryption, encryptionAction: "decrypt" });
     fireEvent.click(screen.getByRole("button", { name: "更多" }));
     expect(screen.getByRole("menuitem", { name: "解密此笔记" })).toBeTruthy();
+  });
+});
+
+describe("EditorToolbar / 中频工具入口位置", () => {
+  it("AI 入口在两种笔记类型下都位于顶部工具栏", () => {
+    const onAi = vi.fn();
+    const first = renderToolbar({ onAi });
+    fireEvent.click(screen.getByRole("button", { name: "AI" }));
+    expect(onAi).toHaveBeenCalledTimes(1);
+    first.unmount();
+
+    renderToolbar({ richText: true, onAi });
+    fireEvent.click(screen.getByRole("button", { name: "AI" }));
+    expect(onAi).toHaveBeenCalledTimes(2);
   });
 });

@@ -15,7 +15,7 @@ interface EditorToolbarProps {
   mode: ViewMode;
   /** 窄屏单栏布局：用「源码」替代「分栏」 */
   compact?: boolean;
-  /** 富文本笔记：隐藏视图切换、主题与大纲（所见即所得无需分栏） */
+  /** 富文本笔记：隐藏视图切换（所见即所得无需分栏）；主题与 AI 入口与 Markdown 保持一致 */
   richText?: boolean;
   saving?: boolean;
   dirty?: boolean;
@@ -63,7 +63,7 @@ const COMPACT_MODE_TABS: ModeTab[] = [
 
 const MODE_ICONS: Record<ViewMode, LucideIcon> = { edit: SquarePen, source: Code, split: Split, preview: Eye };
 
-/** 笔记操作栏：左侧标题锚点，右侧按「高频视图 → 中频工具 → 低频文件操作」分层分组。 */
+/** 笔记操作栏：左侧标题锚点，右侧按「视图切换（仅 Markdown）→ 中频工具 → 低频文件操作」分层分组。 */
 export function EditorToolbar({ path, mode, compact = false, richText = false, saving = false, dirty = false, saveError, saveErrorCode, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onAi, aiBlocked, historyBlocked, onToggleEncryption, encryptionAction, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
   return (
     <div
@@ -119,7 +119,7 @@ interface ToolbarActionsProps {
   onToggleEncryption?: (() => void) | undefined;
 }
 
-/** 右侧操作分组：高频视图 → 中频工具（AI / 双链 / 历史） → 低频文件操作。 */
+/** 右侧操作分组：中频工具（主题 / 历史 / 双链 / AI，两种笔记类型同一顺序） → 低频文件操作。 */
 function ToolbarActions({ mode, compact, richText, aiBlocked, historyBlocked, encryptionAction, onModeChange, onHistory, onWiki, onAi, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onMove, onToggleEncryption }: ToolbarActionsProps) {
   const { t } = useTranslation();
   return (
@@ -128,9 +128,9 @@ function ToolbarActions({ mode, compact, richText, aiBlocked, historyBlocked, en
         <>
           <ModeTabs mode={mode} compact={compact} onChange={onModeChange} />
           <ToolbarDivider />
-          <NoteThemePicker />
         </>
       ) : null}
+      <NoteThemePicker />
       <ToolbarIconButton
         icon={History}
         label={historyBlocked ? t("vault.historyDisabled") : t("history.title")}

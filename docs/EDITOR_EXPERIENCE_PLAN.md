@@ -147,7 +147,7 @@ Markdown 源文
 
 目标：富文本与 Markdown 共用同一套阅读主题；主题数量与 token 维度达到行业主流水平；全局主题支持「跟随系统」。对应 PRD P1-8 的范围扩展，详细方案见 §5。
 
-- [x] 富文本接入阅读主题：`RichTextEditor` 包 `data-note-theme` + `.note-theme-surface`，`rich-text.css` 改用 note token，富文本工具栏提供与 Markdown 共用的主题选择器。
+- [x] 富文本接入阅读主题：`RichTextEditor` 包 `data-note-theme` + `.note-theme-surface`，`rich-text.css` 改用 note token，富文本与 Markdown 共用同一套主题选择器。（2026-09-27 起阅读主题与 AI 入口统一收在编辑器顶部工具栏、两种笔记类型同一位置；富文本格式工具栏右段只保留撤销 / 重做，内容操作与视图 / 生成类入口不再混排。）
 - [x] 修复 `dark` 标志联动：CodeMirror 的 `dark` 依据阅读主题 `mode` 而非全局明暗。
 - [x] 语法高亮 token 化：每个主题补齐 `--note-code-*`，`hljs` 映射与 CodeMirror `HighlightStyle` 统一消费同一 token。
 - [x] 主题扩容至 8 套并按亮/暗系分组，注册表驱动选择器、持久化与测试。

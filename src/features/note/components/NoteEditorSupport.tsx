@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useState } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import type { Dispatch, ReactNode, RefObject, SetStateAction } from "react";
 import { EditorView } from "@codemirror/view";
 import { EditorToolbar, type ViewMode } from "./EditorToolbar";
@@ -78,6 +78,8 @@ export interface NoteEditorContentProps {
 
 export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, previewMenu, noteTheme, richTextDialog, onRequestConvertToRichText, onConfirmConvertToRichText, onCancelConvertToRichText, onConvertToMarkdown, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf, encrypted, linkOverlay = null, markdownLinkInput = null }: NoteEditorContentProps) {
   const richText = kind === "richText";
+  // 富文本的 AI 菜单触发器由 RichTextEditor 注册上来（AI 按钮统一在顶部工具栏，两种笔记类型同一位置）。
+  const richTextAiTrigger = useRef<(() => void) | null>(null);
   const encryption = useNoteEncryption(repoPath, notePath, encrypted);
   // 首次打开后才挂载（触发懒加载分块），之后保持挂载以保留问答历史。
   const [askAiMounted, setAskAiMounted] = useState(askAiOpen);
@@ -87,9 +89,9 @@ export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, o
     if (encrypted) closeAskAi();
   }, [encrypted, closeAskAi]);
   return <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-    <EditorToolbar path={notePath} mode={mode} compact={compact} richText={richText} saving={saving} dirty={dirty} saveError={saveError} saveErrorCode={saveErrorCode} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={onRequestConvertToRichText} onConvertToMarkdown={onConvertToMarkdown} onExportPdf={() => void pdf.request()} onExportMarkdown={onExportMarkdown} {...(richText ? {} : { onAi: ai.openMenu })} aiBlocked={encrypted} historyBlocked={encrypted} onToggleEncryption={encryption.available ? encryption.toggle : undefined} encryptionAction={encryption.action} isNewNote={notePath === createdPath} draft={draft} onTitleChange={onChange} onFlush={flush} onRenamed={onOpenNote} />
+    <EditorToolbar path={notePath} mode={mode} compact={compact} richText={richText} saving={saving} dirty={dirty} saveError={saveError} saveErrorCode={saveErrorCode} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={onRequestConvertToRichText} onConvertToMarkdown={onConvertToMarkdown} onExportPdf={() => void pdf.request()} onExportMarkdown={onExportMarkdown} onAi={richText ? () => richTextAiTrigger.current?.() : ai.openMenu} aiBlocked={encrypted} historyBlocked={encrypted} onToggleEncryption={encryption.available ? encryption.toggle : undefined} encryptionAction={encryption.action} isNewNote={notePath === createdPath} draft={draft} onTitleChange={onChange} onFlush={flush} onRenamed={onOpenNote} />
     <ConvertNoteDialog open={richTextDialog.open} losses={richTextDialog.losses} converting={richTextDialog.converting} onCancel={onCancelConvertToRichText} onConfirm={onConfirmConvertToRichText} />
-    <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} encrypted={encrypted} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
+    <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} encrypted={encrypted} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} aiTriggerRef={richTextAiTrigger} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
     <PreviewContextMenu menu={previewMenu} noteTheme={noteTheme} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />
     <LinkOverlay request={linkOverlay} />
     <LinkPopover request={markdownLinkInput} />

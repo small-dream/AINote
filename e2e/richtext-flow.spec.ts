@@ -113,6 +113,30 @@ test.describe("富文本编辑器", () => {
   });
 });
 
+/** 阅读主题与 AI 入口统一在顶部工具栏：桌面 / 移动同一位置，富文本格式工具栏只留撤销 / 重做。 */
+for (const { name, viewport } of [
+  { name: "桌面端", viewport: { width: 1280, height: 900 } },
+  { name: "移动端", viewport: { width: 402, height: 874 } },
+]) {
+  test.describe(`${name}：编辑器工具栏入口分组`, () => {
+    test.use({ viewport });
+
+    test("富文本笔记：主题与 AI 在顶部工具栏，格式工具栏只留撤销 / 重做", async ({ page }) => {
+      await openWorkspace(page, richTextState());
+      await page.getByRole("button", { name: "rich", exact: true }).first().click();
+      await expect(page.locator(".ProseMirror").first()).toBeVisible({ timeout: 15_000 });
+
+      const topToolbar = page.locator(".workspace-toolbar");
+      await expect(topToolbar.getByRole("button", { name: "笔记主题" })).toBeVisible();
+      await expect(topToolbar.getByRole("button", { name: /AI/ })).toBeVisible();
+
+      const formatToolbar = page.locator(".format-toolbar");
+      await expect(formatToolbar.getByRole("button", { name: "撤销" })).toBeVisible();
+      await expect(formatToolbar.getByRole("button", { name: /笔记主题|AI/ })).toHaveCount(0);
+    });
+  });
+}
+
 /** 字符级样式（字体 / 字号 / 颜色 / 高亮）：桌面与移动共用同一套工具栏与面板。 */
 for (const { name, viewport } of [
   { name: "桌面端", viewport: { width: 1280, height: 900 } },

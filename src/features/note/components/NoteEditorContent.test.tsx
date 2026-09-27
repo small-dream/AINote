@@ -1,10 +1,31 @@
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
+import { useEffect } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { NoteEditorContent, type NoteEditorContentProps } from "./NoteEditorSupport";
 import type { MarkdownEditorSurfaceProps } from "./MarkdownEditorSurface";
 import { useUiStore } from "@/stores/ui.store";
 
-vi.mock("./EditorToolbar", () => ({ EditorToolbar: () => <div data-testid="toolbar" /> }));
+/** 富文本编辑器注册上来的 AI 菜单触发器。 */
+const richtextAiTrigger = vi.hoisted(() => vi.fn());
+
+vi.mock("@/features/richtext/components/RichTextEditor", () => ({
+  RichTextEditor: ({ aiTriggerRef }: { aiTriggerRef?: { current: (() => void) | null } }) => {
+    useEffect(() => {
+      if (!aiTriggerRef) return undefined;
+      aiTriggerRef.current = richtextAiTrigger;
+      return () => { aiTriggerRef.current = null; };
+    }, [aiTriggerRef]);
+    return <div data-testid="richtext-editor" />;
+  },
+}));
+
+vi.mock("./EditorToolbar", () => ({
+  EditorToolbar: ({ onAi }: { onAi?: () => void }) => (
+    <div data-testid="toolbar">
+      <button type="button" onClick={() => onAi?.()}>顶部 AI 入口</button>
+    </div>
+  ),
+}));
 vi.mock("./MarkdownEditorSurface", () => ({ MarkdownEditorSurface: () => <div data-testid="surface" /> }));
 vi.mock("./PreviewContextMenu", () => ({ PreviewContextMenu: () => null }));
 vi.mock("@/features/richtext/components/ConvertNoteDialog", () => ({ ConvertNoteDialog: () => null }));
@@ -103,5 +124,34 @@ describe("NoteEditorContent / 加密笔记 AI 隔离（决策③）", () => {
     expect(screen.queryByTestId("ask-ai-panel")).toBeNull();
     expect(screen.queryByTestId("ai-write-controls")).toBeNull();
     expect(useUiStore.getState().askAiOpen).toBe(false);
+  });
+});
+
+describe("NoteEditorContent / AI 入口统一在顶部工具栏", () => {
+  afterEach(() => {
+    richtextAiTrigger.mockClear();
+  });
+
+  it("富文本笔记：顶部工具栏 AI 入口调用富文本编辑器注册的菜单触发器", async () => {
+    const openMenu = vi.fn();
+    const markdownAi = createProps().ai;
+    render(<NoteEditorContent {...createProps({ kind: "richText", ai: { ...markdownAi, openMenu } })} />);
+    await screen.findByTestId("richtext-editor");
+
+    fireEvent.click(screen.getByRole("button", { name: "顶部 AI 入口" }));
+
+    expect(richtextAiTrigger).toHaveBeenCalledTimes(1);
+    expect(openMenu).not.toHaveBeenCalled();
+  });
+
+  it("Markdown 笔记：顶部工具栏 AI 入口沿用 Markdown 写作菜单", () => {
+    const openMenu = vi.fn();
+    const markdownAi = createProps().ai;
+    render(<NoteEditorContent {...createProps({ ai: { ...markdownAi, openMenu } })} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "顶部 AI 入口" }));
+
+    expect(openMenu).toHaveBeenCalledTimes(1);
+    expect(richtextAiTrigger).not.toHaveBeenCalled();
   });
 });

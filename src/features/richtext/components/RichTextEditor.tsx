@@ -1,4 +1,4 @@
-import type { CSSProperties, MouseEvent } from "react";
+import { useEffect, type CSSProperties, type MouseEvent, type RefObject } from "react";
 import { EditorContent } from "@tiptap/react";
 import type { Editor } from "@tiptap/core";
 import { RichTextToolbar } from "./RichTextToolbar";
@@ -14,7 +14,6 @@ import { NoteOutlineFloating } from "@/features/note/components/NoteOutlineFloat
 import type { OutlineItem } from "@/features/note/utils/outline";
 import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
 import { AiWriteControls } from "@/features/ai/components/AiWriteControls";
-import { AiToolbarButton } from "@/features/ai/components/AiToolbarButton";
 import { getTipTapSelection, applyToTipTapEditor, applyToTipTapDocument } from "@/features/ai/utils/editorAdapters";
 import { useNoteEncryption } from "@/features/vault/hooks/useNoteEncryption";
 
@@ -34,12 +33,14 @@ interface RichTextEditorProps {
   /** 是否保持大纲浮层展开 */
   outlineOpen?: boolean;
   onOutlineToggle?: () => void;
+  /** 顶部工具栏的 AI 入口：AI 按钮统一收在 EditorToolbar，这里把富文本侧的菜单触发器注册给宿主 */
+  aiTriggerRef?: RefObject<(() => void) | null> | undefined;
 }
 
 /** 真富文本所见即所得编辑器：TipTap 读写 TipTap JSON。
  * 支持图片/表格/任务列表、斜杠命令、双链与标签 mark。
  * 通过父组件 key 重挂载以切换笔记；异步加载的 content 会由 hook 同步到编辑器。 */
-export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, encrypted = false, outlineOpen = false, onOutlineToggle = () => undefined }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, encrypted = false, outlineOpen = false, onOutlineToggle = () => undefined, aiTriggerRef }: RichTextEditorProps) {
   const { t } = useTranslation();
   const { editor, handleFiles, status } = useRichTextEditor({ content, onChange, repoPath });
   const contextMenu = useRichTextContextMenu();
@@ -54,9 +55,17 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
   });
   const longPressProps = useLongPressContextMenu((point) => contextMenu.openAt(point, editor));
 
+  // AI 入口统一收在顶部工具栏：把最新触发器交给宿主，宿主未提供时（如独立挂载）不注册。
+  useEffect(() => {
+    const targetRef = aiTriggerRef;
+    if (!targetRef) return undefined;
+    targetRef.current = ai.openMenu;
+    return () => { targetRef.current = null; };
+  }, [aiTriggerRef, ai.openMenu]);
+
   return (
     <div data-note-theme={noteTheme} style={emptyTaskPlaceholder(t)} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" {...longPressProps} onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)} onContextMenu={(event) => contextMenu.handleContextMenu(event, editor)}>
-      <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} trailing={<AiToolbarButton onOpen={ai.openMenu} compact />} />
+      <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} />
       <RichTextBubbleMenu editor={editor} />
       <RichTextContextMenu position={contextMenu.position} editor={editor} hasSelection={contextMenu.hasSelection} onOpenAi={() => { contextMenu.close(); ai.openMenu(); }} onClose={contextMenu.close} noteTheme={noteTheme} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />
       <AiWriteControls ai={ai} />

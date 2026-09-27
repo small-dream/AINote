@@ -8,14 +8,12 @@ import { useUiStore } from "@/stores/ui.store";
 interface AiToolbarButtonProps {
   onOpen: () => void;
   disabled?: boolean;
-  /** 紧凑尺寸：与富文本格式工具栏的 32px 图标按钮对齐 */
-  compact?: boolean;
   /** 禁用原因（如加密笔记不支持 AI）：作为 tooltip 文案，避免「灰掉但不说为什么」 */
   disabledReason?: string;
 }
 
 /** 工具栏 AI 触发按钮：已配置 → 打开写作菜单；未配置 → 引导去设置（P0-AI-1） */
-export function AiToolbarButton({ onOpen, disabled, compact = false, disabledReason }: AiToolbarButtonProps) {
+export function AiToolbarButton({ onOpen, disabled, disabledReason }: AiToolbarButtonProps) {
   const { t } = useTranslation();
   const { data } = useAiConfig();
   const configured = usableAiModels(data).length > 0;
@@ -25,7 +23,6 @@ export function AiToolbarButton({ onOpen, disabled, compact = false, disabledRea
     <IconButton
       icon={Wand2}
       label={label}
-      size={compact ? "sm" : "md"}
       tooltipPlacement="bottom"
       onClick={resolved.action}
       disabled={disabled}

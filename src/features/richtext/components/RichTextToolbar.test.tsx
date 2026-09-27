@@ -53,6 +53,16 @@ describe("RichTextToolbar", () => {
     expect(screen.getByRole("button", { name: "清除格式" })).toBeDefined();
   });
 
+  it("右侧只保留撤销/重做：主题与 AI 入口统一收在顶部工具栏", () => {
+    const { editor } = createEditor();
+    render(<RichTextToolbar editor={editor} />);
+
+    expect(screen.getByRole("button", { name: "撤销" })).toBeDefined();
+    expect(screen.getByRole("button", { name: "重做" })).toBeDefined();
+    expect(screen.queryByRole("button", { name: "笔记主题" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /AI/ })).toBeNull();
+  });
+
   it("链接按钮弹出 URL 输入，Enter 确认后规范化并写入链接", () => {
     const { editor, run, setLink } = createLinkEditor(false);
     render(<RichTextToolbar editor={editor} />);
