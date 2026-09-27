@@ -1,5 +1,23 @@
 # 更新日志
 
+## v0.57.2 — 2026-09-27（安全：回收站路径穿越修复；工程：CI 质量门禁 · 活文档校正 · 清理死代码）
+
+### 安全
+
+- **回收站路径穿越（S1）**：`.trash/manifest.json` 会随 Git 提交、从远端同步，属于**不可信内容**，而回收站正文路径 `.trash/<id>.md` 是按清单里的 `id` 拼出来的。此前 `restore` / `permanent_delete` / `empty` 直接使用该 id：恶意仓库只要在清单里写入 `../../` 形态的 id，就能在恢复时把仓库外文件读进仓库并推送出去，或在彻底删除 / 一键清空时删掉仓库外任意文件。现在三条路径入口都先过 `validate_id` 白名单（非空、≤128、仅 `[A-Za-z0-9_-]`）。
+- **恢复目标同样不可信**：`restore` 的 `path` 也来自清单，现经 `validate_rel_path` 词法校验（拒绝绝对路径与 `..`）加 `resolve_within_root` 符号链接防御；`create_dir_all` 移到两道校验之后，堵住「`../../x` 先在仓库外建出目录」的侧信道（此前会先建目录再校验）。`empty` 遇到非法 id 记警告并跳过，其余条目与清单照常清理，避免「一键清空」变成任意删除入口。
+
+### 工程
+
+- **CI 质量门禁**：新增 `.github/workflows/ci.yml`，`push` 到 `main` 与所有 PR 并行跑三个 job——`frontend`（`pnpm build && pnpm test && pnpm lint`）、`e2e`（Playwright Chromium 全量 `pnpm test:e2e`）、`rust`（Linux WebKit 依赖 + `cargo test --locked`），带并发取消与超时；`docs/ARCHITECTURE.md` / `docs/CODING_STANDARDS.md` 同步说明门禁位置。
+- **清理死代码**：移除已无引用的 `NoteList.tsx` / `NewNoteDialog.tsx` 及其测试，并清理 `src/i18n/messages.ts` 中随之失去引用的 10 个文案键。
+- **活文档校正**：`docs/ARCHITECTURE.md` 目录树按真实文件系统重写（features 全景、`api/` 补 `error.ts` / `index.ts`、`commands/` 全量按真实文件名重写含 `vault` / `metrics` / 顶层单文件、`services` / `repositories` / `domain` / `platform/quick_unlock` 清单更新），`lib/` 统一改为前端 `src/utils/`（`AGENTS.md`、`docs/CODING_STANDARDS.md` 同步）。
+
+### 测试
+
+- 新增 5 条回收站安全回归测试：穿越 id 的恢复 / 彻底删除必须拒绝且不读不删仓库外文件、清空跳过非法 id 但清理正常条目、穿越恢复目标必须在建目录之前被拒。
+- 验证：`pnpm build` / `pnpm test`（225 文件 1381 用例，1 skipped）/ `pnpm lint` 通过；`cargo test --locked` 453 passed（7 ignored）加集成 4 passed；`pnpm test:e2e` 134 passed。
+
 ## v0.57.1 — 2026-09-27（优化：编辑器主题与 AI 入口统一到顶部工具栏）
 
 ### 优化
