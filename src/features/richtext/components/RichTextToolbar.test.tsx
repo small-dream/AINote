@@ -29,19 +29,12 @@ describe("RichTextToolbar", () => {
     render(<RichTextToolbar editor={editor} />);
 
     fireEvent.click(screen.getByRole("button", { name: "标题级别" }));
-    fireEvent.click(screen.getByRole("menuitem", { name: "二级标题" }));
+    // 标题级别是「多选一」：走 menuitemradio + aria-checked，读屏软件据此播报当前级别
+    const level = screen.getByRole("menuitemradio", { name: "二级标题" });
+    expect(level.getAttribute("aria-checked")).toBe("true");
+    fireEvent.click(level);
 
     expect(chainMethods.toggleHeading).toHaveBeenCalledWith({ level: 2 });
-    expect(run).toHaveBeenCalledTimes(1);
-  });
-
-  it("将块级插入命令直接呈现在工具栏", () => {
-    const { chainMethods, editor, run } = createEditor();
-    render(<RichTextToolbar editor={editor} />);
-
-    fireEvent.click(screen.getByRole("button", { name: "插入表格" }));
-
-    expect(chainMethods.insertTable).toHaveBeenCalledWith({ rows: 3, cols: 3, withHeaderRow: true });
     expect(run).toHaveBeenCalledTimes(1);
   });
 
@@ -62,7 +55,35 @@ describe("RichTextToolbar", () => {
     expect(screen.queryByRole("button", { name: "笔记主题" })).toBeNull();
     expect(screen.queryByRole("button", { name: /AI/ })).toBeNull();
   });
+});
 
+describe("RichTextToolbar / 插入菜单", () => {
+  it("块级插入命令收进「插入」菜单，菜单项触发对应命令", () => {
+    const { chainMethods, editor, run } = createEditor();
+    render(<RichTextToolbar editor={editor} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "插入" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "插入表格" }));
+
+    expect(chainMethods.insertTable).toHaveBeenCalledWith({ rows: 3, cols: 3, withHeaderRow: true });
+    expect(run).toHaveBeenCalledTimes(1);
+  });
+
+  it("插入菜单内嵌图片文件选择器并回传文件", () => {
+    const onImagePicked = vi.fn();
+    const { editor } = createEditor();
+    render(<RichTextToolbar editor={editor} onImagePicked={onImagePicked} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "插入" }));
+    const input = document.querySelector<HTMLInputElement>('input[type="file"]');
+    const file = new File(["png"], "a.png", { type: "image/png" });
+    fireEvent.change(input as HTMLInputElement, { target: { files: [file] } });
+
+    expect(onImagePicked).toHaveBeenCalledWith([file]);
+  });
+});
+
+describe("RichTextToolbar / 链接", () => {
   it("链接按钮弹出 URL 输入，Enter 确认后规范化并写入链接", () => {
     const { editor, run, setLink } = createLinkEditor(false);
     render(<RichTextToolbar editor={editor} />);

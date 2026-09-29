@@ -28,7 +28,8 @@ test.describe("Repo Git Graph（阶段 B）", () => {
   test("桌面：打开面板，展示提交列表、改动文件与 diff", async ({ page }) => {
     await openWorkspace(page, graphState());
 
-    await page.getByRole("button", { name: "Git 历史" }).first().click();
+    await page.getByRole("button", { name: "版本", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Git 历史" }).click();
     const dialog = page.getByRole("dialog", { name: "Git 历史" });
     await expect(dialog).toBeVisible({ timeout: 15_000 });
 
@@ -49,7 +50,8 @@ test.describe("Repo Git Graph（阶段 B）", () => {
   test("桌面：从历史版本恢复文件写入工作区", async ({ page }) => {
     await openWorkspace(page, graphState());
 
-    await page.getByRole("button", { name: "Git 历史" }).first().click();
+    await page.getByRole("button", { name: "版本", exact: true }).click();
+    await page.getByRole("menuitem", { name: "Git 历史" }).click();
     const dialog = page.getByRole("dialog", { name: "Git 历史" });
     await expect(dialog).toBeVisible({ timeout: 15_000 });
 

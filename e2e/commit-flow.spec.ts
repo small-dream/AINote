@@ -18,7 +18,8 @@ test.describe("手动提交（阶段 A）", () => {
   test("桌面：打开提交面板，展示变更与默认 message，提交后关闭", async ({ page }) => {
     await openWorkspace(page, pendingState());
 
-    await page.getByRole("button", { name: "提交版本" }).click();
+    await page.getByRole("button", { name: "版本", exact: true }).click();
+    await page.getByRole("menuitem", { name: "提交版本" }).click();
     const dialog = page.getByRole("dialog", { name: "提交版本" });
     await expect(dialog).toBeVisible();
     await expect(dialog.locator("li", { hasText: "daily/a.md" })).toBeVisible();
@@ -73,16 +74,16 @@ test.describe("手动提交（阶段 A）", () => {
     await expect(dialog.locator("li", { hasText: ".ainote/todos.json" })).toBeVisible();
   });
 
-  test("桌面：待办变更后导航轨点亮待提交徽标", async ({ page }) => {
+  test("桌面：待办变更后导航轨「版本」入口点亮待提交徽标", async ({ page }) => {
     await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "daily/a.md", content: "# 笔记" }] });
-    const commitButton = page.getByRole("button", { name: "提交版本" });
-    await expect(commitButton.locator("span")).toHaveCount(0);
+    const versionButton = page.getByRole("button", { name: "版本", exact: true });
+    await expect(versionButton.locator("span")).toHaveCount(0);
 
     await page.getByRole("button", { name: "待办", exact: true }).click();
     await page.getByRole("button", { name: "新建任务" }).click();
     await page.getByLabel("任务标题").fill("写周报");
     await page.getByRole("button", { name: "添加任务" }).click();
 
-    await expect(commitButton.locator("span")).toHaveCount(1);
+    await expect(versionButton.locator("span")).toHaveCount(1);
   });
 });

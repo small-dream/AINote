@@ -93,8 +93,10 @@ for (const { name, viewport } of [
       await expect(trigger).toHaveText("H4");
 
       await trigger.click();
-      await expect(page.getByRole("menuitem", { name: "六级标题" })).toBeVisible();
-      await page.getByRole("menuitem", { name: "六级标题" }).click();
+      // 标题级别是「多选一」：菜单项语义为 menuitemradio（aria-checked 表达当前级别）
+      const h6 = page.getByRole("menuitemradio", { name: "六级标题" });
+      await expect(h6).toBeVisible();
+      await h6.click();
 
       await expect(page.locator(".ProseMirror h6")).toHaveText("富文本标题");
       await expect(trigger).toHaveText("H6");

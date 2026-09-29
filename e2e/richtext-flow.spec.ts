@@ -121,14 +121,17 @@ for (const { name, viewport } of [
   test.describe(`${name}：编辑器工具栏入口分组`, () => {
     test.use({ viewport });
 
-    test("富文本笔记：主题与 AI 在顶部工具栏，格式工具栏只留撤销 / 重做", async ({ page }) => {
+    test("富文本笔记：主题与 AI 收在顶部工具栏「更多」菜单，格式工具栏只留撤销 / 重做", async ({ page }) => {
       await openWorkspace(page, richTextState());
       await page.getByRole("button", { name: "rich", exact: true }).first().click();
       await expect(page.locator(".ProseMirror").first()).toBeVisible({ timeout: 15_000 });
 
       const topToolbar = page.locator(".workspace-toolbar");
-      await expect(topToolbar.getByRole("button", { name: "笔记主题" })).toBeVisible();
-      await expect(topToolbar.getByRole("button", { name: /AI/ })).toBeVisible();
+      await expect(topToolbar.getByRole("button", { name: "笔记主题" })).toHaveCount(0);
+      await topToolbar.getByRole("button", { name: "更多" }).click();
+      await expect(page.getByRole("menuitem", { name: "笔记主题" })).toBeVisible();
+      await expect(page.getByRole("menuitem", { name: "AI" })).toBeVisible();
+      await page.keyboard.press("Escape");
 
       const formatToolbar = page.locator(".format-toolbar");
       await expect(formatToolbar.getByRole("button", { name: "撤销" })).toBeVisible();

@@ -83,7 +83,7 @@ export const LINK_COMMAND: EditorToolbarCommand = {
   run: (editor) => requestLinkInput(editor.view.dom),
 };
 
-/** 插入类块级命令直接呈现在工具栏，减少常用结构的操作层级 */
+/** 插入类块级命令：低频，收进工具栏「插入」下拉菜单（RichTextToolbar.InsertMenu） */
 export const INSERT_COMMANDS: EditorToolbarCommand[] = [
   { key: "codeBlock", icon: SquareCode, labelKey: "richtext.codeBlock", isActive: (editor) => editor.isActive("codeBlock"), run: (editor) => void editor.chain().focus().toggleCodeBlock().run() },
   { key: "table", icon: TableIcon, labelKey: "richtext.table", isActive: (editor) => editor.isActive("table"), run: (editor) => void editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run() },

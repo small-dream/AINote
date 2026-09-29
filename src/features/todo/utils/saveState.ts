@@ -14,7 +14,7 @@ export function taskSaveView(dirty: boolean, status: TaskSaveStatus): TaskSaveVi
   if (status === "error") return "failed";
   if (status === "saving") return "saving";
   if (dirty) return "unsaved";
-  // 卡片里的内容要么已落盘、要么待落盘，没有第三种状态：状态区因此常驻，
-  // 与笔记工具栏的保存状态同一口径，用户不必先改点什么才知道这里会不会给反馈。
+  // 卡片里的内容要么已落盘、要么待落盘，没有第三种状态：状态区因此常驻；
+  // 笔记顶部工具栏口径不同——干净保存态静默，仅「保存中 / 有未保存修改」显示。
   return "saved";
 }

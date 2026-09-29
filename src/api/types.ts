@@ -22,7 +22,7 @@ export interface NoteContent {
   content: string;
   /** 加密笔记且当前会话未解锁：编辑器渲染解锁遮罩（不弹错误提示） */
   locked: boolean;
-  /** 是否为加密笔记：解锁后仍为 true，前端据此关闭 AI 与版本历史入口 */
+  /** 是否为加密笔记：解锁后仍为 true，前端据此关闭 AI 与笔记历史入口 */
   encrypted: boolean;
 }
 

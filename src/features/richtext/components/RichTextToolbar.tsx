@@ -1,9 +1,8 @@
 import { useTranslation } from "@/i18n";
-import type { ChangeEvent } from "react";
 import type { Editor } from "@tiptap/core";
-import { Eraser, Image as ImageIcon, Paintbrush, Redo, Undo } from "lucide-react";
+import { Eraser, Image as ImageIcon, Paintbrush, Plus, Redo, Undo } from "lucide-react";
 import { Tooltip } from "@/components/atoms/Tooltip";
-import { ToolbarPopover, type ToolbarMenuItem } from "./ToolbarPopover";
+import { ToolbarMenu, type ToolbarMenuItem } from "@/components/molecules/ToolbarMenu";
 import { LinkButton } from "./LinkButton";
 import { BLOCK_COMMANDS, CLEAR_FORMAT_COMMAND, getActiveHeadingCommand, HEADING_COMMANDS, INLINE_COMMANDS, INSERT_COMMANDS, type EditorToolbarCommand } from "../utils/toolbarCommands";
 import { useFormatPainter } from "../hooks/useFormatPainter";
@@ -18,7 +17,7 @@ interface RichTextToolbarProps {
 export function RichTextToolbar({ editor, onImagePicked, status }: RichTextToolbarProps) {
   const { t } = useTranslation();
   return (
-    <div className="format-toolbar flex w-full min-h-10 items-center gap-1 overflow-x-auto border-b border-border bg-bg-secondary px-2 py-1.5">
+    <div className="format-toolbar flex w-full min-h-10 items-center gap-1 overflow-x-auto border-b border-border bg-bg-secondary/60 px-6">
       {editor ? (
         <div className="flex shrink-0 items-center gap-0.5">
           <HeadingSelector editor={editor} />
@@ -31,13 +30,22 @@ export function RichTextToolbar({ editor, onImagePicked, status }: RichTextToolb
           <ToolbarDivider />
           <ToolbarCommandGroup editor={editor} commands={BLOCK_COMMANDS} />
           <ToolbarDivider />
-          <ToolbarCommandGroup editor={editor} commands={INSERT_COMMANDS} />
-          {onImagePicked ? <ImagePickerButton label={t("richtext.image")} onPicked={onImagePicked} /> : null}
+          <InsertMenu editor={editor} onImagePicked={onImagePicked} />
         </div>
       ) : null}
       <ToolbarHistoryGroup editor={editor} status={status} />
     </div>
   );
+}
+
+/** 插入类块级命令（代码块 / 表格 / 分割线 / 图片）：低频，收进「插入」下拉菜单。 */
+function InsertMenu({ editor, onImagePicked }: { editor: Editor; onImagePicked?: ((files: File[]) => void) | undefined }) {
+  const { t } = useTranslation();
+  const items: ToolbarMenuItem[] = [
+    ...INSERT_COMMANDS.map(({ key, icon, labelKey, isActive, run }) => ({ key, label: t(labelKey), icon, active: Boolean(isActive?.(editor)), onSelect: () => run(editor) })),
+    ...(onImagePicked ? [{ key: "image", label: t("richtext.image"), icon: ImageIcon, accept: "image/*", onPickFiles: onImagePicked }] : []),
+  ];
+  return <ToolbarMenu variant="format" icon={Plus} label={t("richtext.insert")} tooltipPortal entries={items} />;
 }
 
 /** 格式刷：单击复制当前格式，随后选中目标文本即自动套用；待刷态再次单击取消。 */
@@ -57,23 +65,7 @@ function HeadingSelector({ editor }: { editor: Editor }) {
   const { t } = useTranslation();
   const activeCommand = getActiveHeadingCommand(editor);
   const items = HEADING_ITEMS(editor, t);
-  return <ToolbarPopover label={t("note.headingLevel")} text={activeCommand.key === "paragraph" ? t(activeCommand.labelKey) : activeCommand.key.toUpperCase()} active={activeCommand.key !== "paragraph"} tooltipPortal items={items} />;
-}
-
-function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (files: File[]) => void }) {
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
-    if (files.length > 0) onPicked(files);
-  };
-  return (
-    <Tooltip content={label} placement="bottom" portal>
-      <label aria-label={label} className="inline-flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-md border border-transparent text-text-secondary transition-[background-color,border-color,color,transform] duration-150 hover:border-border hover:bg-bg-tertiary hover:text-text-primary active:scale-[0.96]">
-        <ImageIcon size={16} strokeWidth={1.9} aria-hidden="true" />
-        <input type="file" accept="image/*" multiple className="hidden" onChange={handleChange} />
-      </label>
-    </Tooltip>
-  );
+  return <ToolbarMenu variant="format" label={t("note.headingLevel")} text={activeCommand.key === "paragraph" ? t(activeCommand.labelKey) : activeCommand.key.toUpperCase()} active={activeCommand.key !== "paragraph"} tooltipPortal entries={items} />;
 }
 
 /** 右侧只放编辑历史：阅读主题与 AI 入口统一收在顶部工具栏（EditorToolbar），两种笔记类型保持同一位置。 */
@@ -95,6 +87,7 @@ function HEADING_ITEMS(editor: Editor, t: ReturnType<typeof useTranslation>["t"]
     label: t(labelKey),
     icon,
     active: Boolean(isActive?.(editor)),
+    role: "menuitemradio" as const,
     onSelect: () => run(editor),
   }));
 }

@@ -60,6 +60,12 @@ describe("EditorToolbar", () => {
     expect(screen.getByRole("status").textContent).toContain("有未保存修改");
   });
 
+  it("干净保存态静默：不渲染状态文案", () => {
+    renderToolbar();
+    expect(screen.queryByText("已保存")).toBeNull();
+    expect(screen.queryByRole("status")).toBeNull();
+  });
+
   it("保存进行中优先显示保存中", () => {
     renderToolbar({ saving: true, dirty: true });
     expect(screen.getByRole("status").textContent).toContain("保存中…");
@@ -133,33 +139,50 @@ describe("EditorToolbar / 更多菜单", () => {
     expect(screen.queryByRole("menuitem")).toBeNull();
   });
 
-  it("历史 / 双链按钮通过 aria-label 可访问", () => {
+  it("主题 / 历史 / 双链 / AI 收进「更多」菜单，顶栏不再常驻", () => {
     renderToolbar();
-    expect(screen.getByRole("button", { name: "版本历史" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "双链与标签" })).toBeTruthy();
+    expect(screen.queryByRole("button", { name: "笔记历史" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "双链与标签" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "笔记主题" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "更多" }));
+    expect(screen.getByRole("menuitem", { name: "笔记历史" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "双链与标签" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "笔记主题" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "AI" })).toBeTruthy();
   });
+});
 
-  it("富文本模式隐藏视图切换与「转换为富文本」，主题入口保留（与 Markdown 同一位置）", () => {
+describe("EditorToolbar / 更多菜单 / 工具入口", () => {
+  it("富文本模式隐藏视图切换与「转换为富文本」，工具入口仍在「更多」菜单（与 Markdown 同一位置）", () => {
     renderToolbar({ richText: true });
     expect(screen.queryByText("写作")).toBeNull();
-    expect(screen.getByRole("button", { name: "笔记主题" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "双链与标签" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "更多" }));
+    expect(screen.getByRole("menuitem", { name: "笔记主题" })).toBeTruthy();
+    expect(screen.getByRole("menuitem", { name: "双链与标签" })).toBeTruthy();
     expect(screen.queryByRole("menuitem", { name: "转换为富文本" })).toBeNull();
     expect(screen.getByRole("menuitem", { name: "移动笔记" })).toBeTruthy();
   });
 
-  it("加密笔记：版本历史入口禁用并说明原因（决策④）", () => {
-    renderToolbar({ historyBlocked: true });
-    expect(screen.queryByRole("button", { name: "版本历史" })).toBeNull();
-    expect(screen.getByRole("button", { name: "加密笔记不提供版本历史" })).toBeTruthy();
+  it("加密笔记：笔记历史菜单项禁用并说明原因，点击不触发（决策④）", () => {
+    const onHistory = vi.fn();
+    renderToolbar({ historyBlocked: true, onHistory });
+    fireEvent.click(screen.getByRole("button", { name: "更多" }));
+    const item = screen.getByRole("menuitem", { name: "笔记历史" }) as HTMLButtonElement;
+    expect(item.disabled).toBe(true);
+    expect(item.title).toBe("加密笔记不提供笔记历史");
+    fireEvent.click(item);
+    expect(onHistory).not.toHaveBeenCalled();
   });
 
-  it("加密笔记：AI 入口禁用并说明原因（决策③）", () => {
-    renderToolbar({ aiBlocked: true });
-    expect(screen.getByRole("button", { name: "加密笔记不支持 AI 功能" })).toBeTruthy();
+  it("加密笔记：AI 菜单项禁用并说明原因（决策③）", () => {
+    const onAi = vi.fn();
+    renderToolbar({ aiBlocked: true, onAi });
+    fireEvent.click(screen.getByRole("button", { name: "更多" }));
+    const item = screen.getByRole("menuitem", { name: "AI" }) as HTMLButtonElement;
+    expect(item.disabled).toBe(true);
+    expect(item.title).toBe("加密笔记不支持 AI 功能");
     // 双链与标签不受影响
-    expect(screen.getByRole("button", { name: "双链与标签" })).toBeTruthy();
+    expect((screen.getByRole("menuitem", { name: "双链与标签" }) as HTMLButtonElement).disabled).toBe(false);
   });
 
   it("解锁态提供「加密此笔记」入口", () => {
@@ -179,15 +202,17 @@ describe("EditorToolbar / 更多菜单", () => {
 });
 
 describe("EditorToolbar / 中频工具入口位置", () => {
-  it("AI 入口在两种笔记类型下都位于顶部工具栏", () => {
+  it("AI 入口在两种笔记类型下都收在「更多」菜单", () => {
     const onAi = vi.fn();
     const first = renderToolbar({ onAi });
-    fireEvent.click(screen.getByRole("button", { name: "AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "更多" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "AI" }));
     expect(onAi).toHaveBeenCalledTimes(1);
     first.unmount();
 
     renderToolbar({ richText: true, onAi });
-    fireEvent.click(screen.getByRole("button", { name: "AI" }));
+    fireEvent.click(screen.getByRole("button", { name: "更多" }));
+    fireEvent.click(screen.getByRole("menuitem", { name: "AI" }));
     expect(onAi).toHaveBeenCalledTimes(2);
   });
 });

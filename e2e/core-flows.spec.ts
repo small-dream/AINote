@@ -69,7 +69,7 @@ test.describe("AINote 桌面核心流程", () => {
     const labels = await page
       .locator(".workspace-nav-rail button")
       .evaluateAll((nodes) => nodes.map((node) => node.getAttribute("aria-label")));
-    expect(labels.slice(0, 6)).toEqual(["立即同步", "笔记", "待办", "最近", "收藏", "标签"]);
+    expect(labels.slice(0, 7)).toEqual(["立即同步", "笔记", "待办", "最近", "收藏", "标签", "版本"]);
   });
 
   test("导航轨：功能组组内 6px / 分组 12px，回收站与设置贴底", async ({ page }) => {
@@ -84,11 +84,11 @@ test.describe("AINote 桌面核心流程", () => {
       }),
     );
     const gaps = rects.slice(0, -1).map((rect, index) => (rects[index + 1]?.top ?? 0) - rect.bottom);
-    // 同步 | 笔记 待办 最近 收藏 标签 | 提交版本 丢弃改动 Git 历史 …：分组处多 6px
-    expect(gaps.slice(0, 8)).toEqual([12, 6, 6, 6, 6, 12, 6, 6]);
+    // 同步 | 笔记 待办 最近 收藏 标签 | 版本 …：分组处多 6px
+    expect(gaps.slice(0, 6)).toEqual([12, 6, 6, 6, 6, 12]);
     // 「回收站/设置」系统组由 mt-auto 顶到导轨底部：与上一组拉开距离，组内仍 6px
-    expect(gaps[8]).toBeGreaterThan(12);
-    expect(gaps[9]).toBe(6);
+    expect(gaps[6]).toBeGreaterThan(12);
+    expect(gaps[7]).toBe(6);
     const settings = rects[rects.length - 1];
     expect(Math.round(railBox.y + railBox.height - (settings?.bottom ?? 0))).toBeLessThanOrEqual(16);
   });
@@ -150,7 +150,7 @@ test.describe("AINote 桌面核心流程", () => {
     await expect(page.locator(".cm-content").first()).not.toContainText("这是第一份内容");
   });
 
-  test("自动保存：变更后 3s 内自动写盘并回到已保存状态", async ({ page }) => {
+  test("自动保存：变更后 3s 内自动写盘，干净保存态静默", async ({ page }) => {
     await openWorkspace(page, baseState([{ path: "auto.md", content: "# 自动保存\n" }]));
     await openNote(page, "auto", "自动保存");
     const editor = page.locator(".cm-content").first();
@@ -158,13 +158,14 @@ test.describe("AINote 桌面核心流程", () => {
     await page.keyboard.press("End");
     await page.keyboard.type("草稿标记行");
     await expect(page.getByText("有未保存修改").first()).toBeVisible();
-    await expect(page.getByText("已保存").first()).toBeVisible({ timeout: 8_000 });
+    // 干净保存态不渲染状态文案：等「有未保存修改」消失即为落盘完成
+    await expect(page.getByText("有未保存修改")).toHaveCount(0, { timeout: 8_000 });
     const updates = (await calls(page)).filter((call) => call.cmd === "update_note");
     expect(updates.length).toBeGreaterThan(0);
     expect(String(updates.at(-1)?.args.content ?? "")).toContain("草稿标记行");
   });
 
-  test("历史恢复：打开版本历史并恢复旧版本", async ({ page }) => {
+  test("历史恢复：打开笔记历史并恢复旧版本", async ({ page }) => {
     const state = baseState([{ path: "hist.md", content: "# 当前版\n\n最新内容" }]);
     state.versions = {
       "hist.md": [
@@ -174,8 +175,9 @@ test.describe("AINote 桌面核心流程", () => {
     };
     await openWorkspace(page, state);
     await openNote(page, "hist", "最新内容");
-    await page.getByRole("button", { name: "版本历史" }).click();
-    await page.getByRole("dialog", { name: "版本历史" }).waitFor();
+    await page.getByRole("button", { name: "更多" }).click();
+    await page.getByRole("menuitem", { name: "笔记历史" }).click();
+    await page.getByRole("dialog", { name: "笔记历史" }).waitFor();
     await page.getByRole("button", { name: "初始版" }).click();
     await page.getByRole("button", { name: "恢复此版本" }).click();
     await page.getByRole("button", { name: "确认恢复" }).click();

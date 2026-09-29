@@ -5,7 +5,7 @@ import type { TranslationKey } from "@/i18n/messages";
 
 const STATE_META: Record<VaultState, { icon: LucideIcon; labelKey: TranslationKey; tone: string }> = {
   absent: { icon: ShieldCheck, labelKey: "vault.stateAbsent", tone: "text-text-tertiary" },
-  locked: { icon: Lock, labelKey: "vault.stateLocked", tone: "text-amber-500" },
+  locked: { icon: Lock, labelKey: "vault.stateLocked", tone: "text-warning" },
   unlocked: { icon: LockOpen, labelKey: "vault.stateUnlocked", tone: "text-accent" },
 };
 

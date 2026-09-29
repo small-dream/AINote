@@ -1,4 +1,4 @@
-import { type ChangeEvent, type RefObject } from "react";
+import { type RefObject } from "react";
 import type { EditorState } from "@codemirror/state";
 import type { EditorView } from "@codemirror/view";
 import {
@@ -11,6 +11,7 @@ import {
   ListChecks,
   ListOrdered,
   Minus,
+  Plus,
   SquareCode,
   Strikethrough,
   Table,
@@ -25,9 +26,9 @@ import { insertCodeBlock, insertDivider, insertImage, insertTable } from "../uti
 import { useFormatCommands } from "../hooks/useFormatCommands";
 import { DiagnosticsToolbarButton } from "@/features/diagnostics/components/DiagnosticsToolbarButton";
 import type { DiagnosticIssue } from "@/features/diagnostics/utils/diagnostics";
-import { Tooltip } from "@/components/atoms/Tooltip";
 import { ToolbarButton } from "./ToolbarButton";
 import { HeadingDropdown } from "./HeadingDropdown";
+import { ToolbarMenu, type ToolbarMenuEntry } from "@/components/molecules/ToolbarMenu";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 
@@ -37,7 +38,7 @@ interface FormatToolbarProps {
   canUndo?: boolean;
   canRedo?: boolean;
   onLinkInput?: (() => void) | undefined;
-  /** 提供时图片按钮改为本地文件选择器（P1-4 图片/附件管理） */
+  /** 提供时图片菜单项改为本地文件选择器（P1-4 图片/附件管理） */
   onImagePicked?: (files: File[]) => void;
   /** 资产导入瞬时状态提示（成功 / 失败） */
   status?: string | null;
@@ -59,7 +60,6 @@ interface RenderButtonsOptions {
   t: (key: TranslationKey, values?: Record<string, string | number>) => string;
   active: Set<string>;
   run: (fn: (s: EditorState) => FormatResult) => void;
-  onImagePicked?: ((files: File[]) => void) | undefined;
 }
 
 const INLINE_BUTTONS: ButtonSpec[] = [
@@ -76,6 +76,7 @@ const BLOCK_BUTTONS: ButtonSpec[] = [
   { icon: ListChecks, labelKey: "note.taskList", activeKey: "task", command: (s) => toggleBlock(s, "task") },
 ];
 
+/** 插入类块级命令：低频，收进「插入」下拉菜单，图片项在提供选择器时渲染为文件选择器 */
 const INSERT_BUTTONS: ButtonSpec[] = [
   { icon: Image, labelKey: "note.image", command: insertImage },
   { icon: SquareCode, labelKey: "note.codeBlock", command: insertCodeBlock },
@@ -83,46 +84,33 @@ const INSERT_BUTTONS: ButtonSpec[] = [
   { icon: Minus, labelKey: "note.divider", command: insertDivider },
 ];
 
-/** 图片按钮的文件选择器形态：label 原生触发隐藏 input，无需 ref 编程点击 */
-function ImagePickerButton({ label, onPicked }: { label: string; onPicked: (files: File[]) => void }) {
-  const handleChange = (event: ChangeEvent<HTMLInputElement>) => {
-    const files = Array.from(event.target.files ?? []);
-    event.target.value = "";
-    if (files.length > 0) onPicked(files);
-  };
-  return (
-    <Tooltip content={label} placement="bottom">
-      <label aria-label={label} className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-md transition-colors duration-120 text-text-secondary hover:bg-bg-tertiary hover:text-text-primary">
-        <Image size={16} />
-        <input type="file" multiple className="hidden" onChange={handleChange} />
-      </label>
-    </Tooltip>
+function insertEntries(t: RenderButtonsOptions["t"], run: RenderButtonsOptions["run"], onImagePicked: FormatToolbarProps["onImagePicked"]): ToolbarMenuEntry[] {
+  return INSERT_BUTTONS.map((b) =>
+    b.labelKey === "note.image" && onImagePicked
+      ? { key: b.labelKey, icon: b.icon, label: t(b.labelKey), accept: "image/*", onPickFiles: onImagePicked }
+      : { key: b.labelKey, icon: b.icon, label: t(b.labelKey), onSelect: () => run(b.command) }
   );
 }
 
-/** 分组按钮渲染：图片按钮在提供选择器时渲染为文件选择器 */
+/** 分组按钮渲染 */
 function renderButtons(buttons: ButtonSpec[], opts: RenderButtonsOptions) {
-  return buttons.map((b) =>
-    b.labelKey === "note.image" && opts.onImagePicked ? (
-      <ImagePickerButton key={b.labelKey} label={opts.t(b.labelKey)} onPicked={opts.onImagePicked} />
-    ) : (
-      <ToolbarButton
-        key={b.labelKey}
-        icon={b.icon}
-        label={opts.t(b.labelKey)}
-        shortcut={b.shortcut}
-        active={b.activeKey !== undefined && opts.active.has(b.activeKey)}
-        onClick={() => opts.run(b.command)}
-      />
-    )
-  );
+  return buttons.map((b) => (
+    <ToolbarButton
+      key={b.labelKey}
+      icon={b.icon}
+      label={opts.t(b.labelKey)}
+      shortcut={b.shortcut}
+      active={b.activeKey !== undefined && opts.active.has(b.activeKey)}
+      onClick={() => opts.run(b.command)}
+    />
+  ));
 }
 
 /** Markdown 格式工具栏：按编辑任务分组，紧凑且保持键盘焦点。 */
 export function FormatToolbar({ viewRef, active, canUndo = false, canRedo = false, onLinkInput, onImagePicked, status, diagnostics, diagnosticsOpen, onDiagnosticsToggle, onDiagnosticsSelect }: FormatToolbarProps) {
   const { t } = useTranslation();
   const { run, runLink } = useFormatCommands(viewRef, onLinkInput);
-  const opts = { t, active, run, onImagePicked };
+  const opts = { t, active, run };
   return (
     <div className="format-toolbar flex h-10 items-center gap-1 border-b border-border bg-bg-secondary/60 px-6">
       <div className="flex items-center gap-0.5">{renderButtons(INLINE_BUTTONS, opts)}</div>
@@ -134,7 +122,7 @@ export function FormatToolbar({ viewRef, active, canUndo = false, canRedo = fals
       <Divider />
       <div className="flex items-center gap-0.5">
         <ToolbarButton icon={Link} label={t("note.link")} shortcut="⌘K" onClick={runLink} />
-        {renderButtons(INSERT_BUTTONS, opts)}
+        <ToolbarMenu variant="format" icon={Plus} label={t("note.insert")} entries={insertEntries(t, run, onImagePicked)} />
       </div>
       <div className="ml-auto flex min-w-0 items-center gap-2">
         {status ? (

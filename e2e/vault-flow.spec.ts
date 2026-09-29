@@ -120,13 +120,13 @@ test.describe("加密笔记（E2）", () => {
     await expect(page.getByText("已锁定", { exact: true })).toBeVisible();
   });
 
-  test("边界说明在建库前就可见：不记住口令、无恢复码、不支持 AI 与版本历史", async ({ page }) => {
+  test("边界说明在建库前就可见：不记住口令、无恢复码、不支持 AI 与笔记历史", async ({ page }) => {
     await openWorkspace(page, baseState());
     await openVaultSettings(page);
 
     await expect(page.getByText(/默认不记住口令/)).toBeVisible();
     await expect(page.getByText(/不会生成恢复码/)).toBeVisible();
-    await expect(page.getByText(/也不提供版本历史/)).toBeVisible();
+    await expect(page.getByText(/也不提供笔记历史/)).toBeVisible();
   });
 
   test("逐篇加密：加密后锁定显示解锁遮罩，解锁后正文重新装载", async ({ page }) => {

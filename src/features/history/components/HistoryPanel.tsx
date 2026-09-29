@@ -17,7 +17,7 @@ interface HistoryPanelProps {
   onRestored: () => void;
 }
 
-/** 版本历史面板：提交列表 + 选中提交 diff + 恢复此版本（P1-1） */
+/** 笔记历史面板：提交列表 + 选中提交 diff + 恢复此版本（P1-1） */
 export function HistoryPanel({ repoPath, path, open, onClose, onRestored }: HistoryPanelProps) {
   const { t } = useTranslation();
   const history = useFileHistory({ repoPath, path, open, onClose, onRestored });

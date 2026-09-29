@@ -72,7 +72,7 @@ export interface NoteEditorContentProps {
   pdf: ReturnType<typeof usePdfExport>;
   linkOverlay?: LinkOverlayRequest | null | undefined;
   markdownLinkInput?: LinkPopoverRequest | null | undefined;
-  /** 是否为加密笔记：关闭 AI 与版本历史入口，并提供逐篇加密开关 */
+  /** 是否为加密笔记：关闭 AI 与笔记历史入口，并提供逐篇加密开关 */
   encrypted: boolean;
 }
 
@@ -124,7 +124,7 @@ export function useHistoryRequest(requestPath: string | null, notePath: string |
   const { t } = useTranslation();
   useEffect(() => {
     if (requestPath !== notePath || !notePath) return;
-    // 加密笔记不提供版本历史（决策④）：给出原因而不是打开空面板
+    // 加密笔记不提供笔记历史（决策④）：给出原因而不是打开空面板
     if (blocked) useToastStore.getState().push(t("vault.historyDisabled"), "info");
     else openHistory();
     onHandled?.();

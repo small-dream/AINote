@@ -1,12 +1,9 @@
-import { Code, Eye, History, Split, SquarePen, Tags, type LucideIcon } from "lucide-react";
-import { IconButton } from "@/components/atoms/IconButton";
+import { Code, Eye, Split, SquarePen, type LucideIcon } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
-import { NoteThemePicker } from "./NoteThemePicker";
 import { NoteTitleField } from "./NoteTitleField";
-import { AiToolbarButton } from "@/features/ai/components/AiToolbarButton";
 import { ToolbarOverflowMenu } from "./ToolbarOverflowMenu";
-import { saveFailureHintKey } from "../utils/saveFailure";
+import { SaveErrorMessage, SaveStatus } from "./EditorSaveStatus";
 
 export type ViewMode = "edit" | "source" | "split" | "preview";
 
@@ -34,7 +31,7 @@ interface EditorToolbarProps {
   onAi?: () => void;
   /** 加密笔记：AI 入口禁用并说明原因（决策③） */
   aiBlocked: boolean;
-  /** 加密笔记：版本历史入口禁用并说明原因（决策④） */
+  /** 加密笔记：笔记历史入口禁用并说明原因（决策④） */
   historyBlocked: boolean;
   /** 逐篇加密开关（E4）；不传表示当前不可用 */
   onToggleEncryption?: (() => void) | undefined;
@@ -63,7 +60,7 @@ const COMPACT_MODE_TABS: ModeTab[] = [
 
 const MODE_ICONS: Record<ViewMode, LucideIcon> = { edit: SquarePen, source: Code, split: Split, preview: Eye };
 
-/** 笔记操作栏：左侧标题锚点，右侧按「视图切换（仅 Markdown）→ 中频工具 → 低频文件操作」分层分组。 */
+/** 笔记操作栏：左侧标题锚点，右侧常驻只有视图切换（仅 Markdown）与「⋯」溢出菜单，低频控件收进菜单保持内容优先。 */
 export function EditorToolbar({ path, mode, compact = false, richText = false, saving = false, dirty = false, saveError, saveErrorCode, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onAi, aiBlocked, historyBlocked, onToggleEncryption, encryptionAction, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
   return (
     <div
@@ -119,9 +116,8 @@ interface ToolbarActionsProps {
   onToggleEncryption?: (() => void) | undefined;
 }
 
-/** 右侧操作分组：中频工具（主题 / 历史 / 双链 / AI，两种笔记类型同一顺序） → 低频文件操作。 */
+/** 右侧操作分组：常驻只有视图切换（仅 Markdown）与「⋯」溢出菜单；主题 / 历史 / 双链 / AI 与文件操作统一收进菜单。 */
 function ToolbarActions({ mode, compact, richText, aiBlocked, historyBlocked, encryptionAction, onModeChange, onHistory, onWiki, onAi, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onMove, onToggleEncryption }: ToolbarActionsProps) {
-  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-1">
       {!richText ? (
@@ -130,20 +126,15 @@ function ToolbarActions({ mode, compact, richText, aiBlocked, historyBlocked, en
           <ToolbarDivider />
         </>
       ) : null}
-      <NoteThemePicker />
-      <ToolbarIconButton
-        icon={History}
-        label={historyBlocked ? t("vault.historyDisabled") : t("history.title")}
-        onClick={historyBlocked ? () => undefined : onHistory}
-        disabled={historyBlocked}
-      />
-      <ToolbarIconButton icon={Tags} label={t("wiki.title")} onClick={onWiki} />
-      {onAi ? <AiToolbarButton onOpen={onAi} disabled={aiBlocked} disabledReason={t("vault.aiDisabled")} /> : null}
-      <ToolbarDivider />
       <ToolbarOverflowMenu
         richText={richText}
         hasConvert={Boolean(onConvertToRichText)}
         isPdfAvailable={Boolean(onExportPdf)}
+        onHistory={onHistory}
+        onWiki={onWiki}
+        onAi={onAi}
+        aiBlocked={aiBlocked}
+        historyBlocked={historyBlocked}
         onExportPdf={onExportPdf}
         onExportMarkdown={onExportMarkdown}
         onConvert={onConvertToRichText}
@@ -156,43 +147,8 @@ function ToolbarActions({ mode, compact, richText, aiBlocked, historyBlocked, en
   );
 }
 
-function SaveStatus({ saving, dirty }: { saving: boolean; dirty: boolean }) {
-  const { t } = useTranslation();
-  const label = saving ? t("common.saving") : dirty ? t("note.unsaved") : t("note.saved");
-  const tone = saving ? "text-text-secondary" : dirty ? "text-warning" : "text-success";
-  return (
-    <span role="status" aria-live="polite" className={`inline-flex shrink-0 items-center gap-1 whitespace-nowrap text-xs ${tone}`}>
-      <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current" />
-      {label}
-    </span>
-  );
-}
-
-/**
- * 工具条图标按钮：统一直观尺寸，整套图标选用近似笔画/占位深度的字形，观感一致。
- */
-function ToolbarIconButton({ icon, label, onClick, disabled = false }: { icon: LucideIcon; label: string; onClick: () => void; disabled?: boolean }) {
-  return <IconButton icon={icon} label={label} tooltipPlacement="bottom" onClick={onClick} disabled={disabled} />;
-}
-
 function ToolbarDivider() {
   return <span aria-hidden="true" className="mx-1 h-5 w-px bg-border" />;
-}
-
-function SaveErrorMessage({ message, code, onRetry }: { message: string | null | undefined; code: string | null | undefined; onRetry: () => void }) {
-  const { t } = useTranslation();
-  if (!message) return null;
-  return (
-    <span role="status" className="flex max-w-72 flex-col items-end gap-0.5 text-xs text-danger">
-      <span className="flex max-w-full items-center gap-2">
-        <span className="truncate" title={message}>{message}</span>
-        <button type="button" className="shrink-0 underline underline-offset-2 hover:no-underline focus-visible:outline-2 focus-visible:outline-offset-2" onClick={onRetry}>
-          {t("note.retrySave")}
-        </button>
-      </span>
-      <span className="text-text-tertiary">{t(saveFailureHintKey(code))}</span>
-    </span>
-  );
 }
 
 function ModeTabs({ mode, compact, onChange }: { mode: ViewMode; compact: boolean; onChange: (m: ViewMode) => void }) {

@@ -29,7 +29,8 @@ test.describe("丢弃本地改动（P1）", () => {
   test("桌面：全选 → 勾选确认 → 调用 git_discard_changes 并按选定路径清空变更", async ({ page }) => {
     await openWorkspace(page, pendingState());
 
-    await page.getByRole("button", { name: "丢弃本地改动" }).click();
+    await page.getByRole("button", { name: "版本", exact: true }).click();
+    await page.getByRole("menuitem", { name: "丢弃本地改动" }).click();
     const dialog = page.getByRole("dialog", { name: "丢弃本地改动" });
     await expect(dialog.locator("li", { hasText: "daily/a.md" })).toBeVisible();
     await expect(dialog.getByText("已选 0 / 2 个文件")).toBeVisible();
@@ -50,7 +51,8 @@ test.describe("丢弃本地改动（P1）", () => {
     expect(discardCalls[0].args.paths).toEqual(["daily/a.md", "new.md"]);
 
     // 变更已清空：重新打开面板是空态
-    await page.getByRole("button", { name: "丢弃本地改动" }).click();
+    await page.getByRole("button", { name: "版本", exact: true }).click();
+    await page.getByRole("menuitem", { name: "丢弃本地改动" }).click();
     await expect(page.getByText("没有可丢弃的改动")).toBeVisible();
   });
 
