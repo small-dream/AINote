@@ -37,6 +37,46 @@ test.describe("移动端可编辑控件字号（防 iOS 聚焦缩放）", () => 
   });
 });
 
+test.describe("移动端编辑器工具栏", () => {
+  test.use({ viewport: { width: 375, height: 667 } });
+
+  test("标题、视图切换与「⋯」共用一行，格式工具栏不出现滑轨", async ({ page }) => {
+    await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "toolbar.md", content: "## 标题\n\n正文\n" }] });
+    await openNote(page, "toolbar", "标题");
+
+    const layout = await page.evaluate(() => {
+      const toolbar = document.querySelector<HTMLElement>(".workspace-toolbar");
+      const format = document.querySelector<HTMLElement>(".format-toolbar");
+      const input = document.querySelector<HTMLElement>(".note-title-input");
+      const tabs = toolbar?.querySelector<HTMLElement>('[role="tablist"]');
+      const content = document.querySelector<HTMLElement>(".cm-content");
+      const [titleRow, actionsRow] = Array.from(toolbar?.children ?? []);
+      if (!toolbar || !format || !input || !tabs || !content || !titleRow || !actionsRow) throw new Error("编辑器工具栏未渲染");
+      const box = (el: Element) => el.getBoundingClientRect();
+      return {
+        toolbarHeight: box(toolbar).height,
+        titleRowTop: box(titleRow).top,
+        actionsRowTop: box(actionsRow).top,
+        titleRight: box(input).right,
+        tabsLeft: box(tabs).left,
+        formatOverflowY: getComputedStyle(format).overflowY,
+        formatScrollbar: getComputedStyle(format).scrollbarWidth,
+        contentTop: box(content).top,
+      };
+    });
+
+    // 收成一行：两组同一水平线，工具栏不再占两行（改动前 76px）
+    expect(layout.actionsRowTop).toBeCloseTo(layout.titleRowTop, 0);
+    expect(layout.toolbarHeight).toBeLessThan(56);
+    // 标题吃掉剩余宽度，但不得压到视图切换上
+    expect(layout.titleRight).toBeLessThanOrEqual(layout.tabsLeft);
+    // 内联 tooltip 曾把格式工具栏撑成可纵向滚动，滑轨也一直可见
+    expect(layout.formatOverflowY).toBe("hidden");
+    expect(layout.formatScrollbar).toBe("none");
+    expect(layout.contentTop).toBeLessThan(160);
+  });
+});
+
 test.describe("桌面端可编辑控件字号不受影响", () => {
   test("桌面视口不套用移动端 16px 下限", async ({ page }) => {
     await openWorkspace(page, baseState());

@@ -89,6 +89,12 @@ describe("MobileWorkspaceShell", () => {
     expect(editorRef.current?.flush).toHaveBeenCalled();
   });
 
+  it("编辑器页顶栏显示仓库名，不再重复下方的笔记名", () => {
+    renderShell({ currentNotePath: "Product/note.md", openEditorSignal: 1 });
+    expect(screen.getByRole("heading", { name: "mock-repo" })).toBeTruthy();
+    expect(screen.queryByRole("heading", { name: "note" })).toBeNull();
+  });
+
   it("shows list filters and opens the command palette", () => {
     renderShell();
     screen.getByRole("tab", { name: "标签" }).click();
@@ -103,6 +109,7 @@ describe("MobileWorkspaceShell", () => {
     fireEvent.click(screen.getByRole("button", { name: "待办" }));
     expect(useUiStore.getState().sidebarTab).toBe("todo");
     expect(screen.getByRole("button", { name: "待办" })).toBeTruthy();
+    expect(screen.getByRole("heading", { name: "待办" })).toBeTruthy();
   });
 
   it("opens the conflict resolver from the sync pill", async () => {

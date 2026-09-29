@@ -83,23 +83,34 @@
 .mobile-sidebar-pane .tree-file,
 .mobile-sidebar-pane .tree-folder { width: 20px; height: 20px; }
 .mobile-sidebar-pane .tree-create-trigger { width: 44px; height: 44px; }
-.mobile-editor-pane .workspace-toolbar { min-height: 52px; padding: 6px 12px; }
-.mobile-editor-pane .workspace-toolbar { flex-wrap: wrap; gap: 4px; padding: 4px 8px; }
-.mobile-editor-pane .workspace-toolbar > div:first-child { width: 100%; }
-.mobile-editor-pane .workspace-toolbar > div:last-child { width: 100%; justify-content: flex-start; overflow: visible; }
-.mobile-editor-pane .workspace-toolbar > div:last-child > div { flex-wrap: wrap; gap: 2px; }
+/* 编辑器工具栏在手机上收成一行：标题吃掉剩余宽度，视图切换与「⋯」贴右端。
+   `flex: 1 1 0` 让换行只取决于右组宽度——标题再长也只截断，不会把右组挤到第二行；
+   只有保存失败需要整行说明时（右组多出 role="status"），才退回上下两行。 */
+.mobile-editor-pane .workspace-toolbar { min-height: 44px; flex-wrap: wrap; gap: 4px; padding: 4px 8px; }
+.mobile-editor-pane .workspace-toolbar > div:first-child { flex: 1 1 0; width: auto; min-width: 0; }
+.mobile-editor-pane .workspace-toolbar > div:last-child { flex: 0 1 auto; width: auto; min-width: 0; justify-content: flex-start; overflow: visible; }
+.mobile-editor-pane .workspace-toolbar > div:last-child > div { flex-wrap: nowrap; gap: 2px; }
+.mobile-editor-pane .workspace-toolbar:has(> div:last-child > span[role="status"]) > div:first-child,
+.mobile-editor-pane .workspace-toolbar:has(> div:last-child > span[role="status"]) > div:last-child { flex: 0 0 100%; width: 100%; }
+/* 保存失败要能读全：让错误信息在右组里独占一行（右组同时启用换行），
+   不再和视图切换、⋯ 抢那点宽度被省略号截断。 */
+.mobile-editor-pane .workspace-toolbar:has(> div:last-child > span[role="status"]) > div:last-child { flex-wrap: wrap; }
+.mobile-editor-pane .workspace-toolbar > div:last-child > span[role="status"] { flex-basis: 100%; min-width: 0; align-items: flex-start; }
 .mobile-editor-pane .workspace-toolbar [role="tablist"] button { width: 36px; justify-content: center; padding: 0; }
 .mobile-editor-pane .workspace-toolbar [role="tablist"] .mode-tab-label { display: none; }
 .mobile-editor-pane .workspace-toolbar .inline-flex { width: 36px; height: 36px; }
-.mobile-editor-pane .format-toolbar { gap: 0; padding: 0 8px; }
+/* 标题输入框跟随剩余宽度（自身仍按内容伸缩），行高抬到 36px 只为触控更好点 */
+.mobile-editor-pane .workspace-toolbar > div:first-child > div:first-child { flex: 1 1 auto; min-width: 0; }
+.mobile-editor-pane .note-title-input { max-width: 100%; min-height: 36px; }
+.mobile-editor-pane .workspace-toolbar #note-title-error { max-width: 100%; }
+/* 格式工具栏只横向滑动：tooltip 内联挂在按钮下方（absolute），会撑出 27px 纵向滚动区，
+   手机上竖划就会误滚工具栏；滑轨也一并隐藏，和列表标签页、冲突分页签保持一致。 */
+.mobile-editor-pane .format-toolbar { height: auto; min-height: 48px; gap: 0; padding: 4px 8px; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.mobile-editor-pane .format-toolbar::-webkit-scrollbar { display: none; }
 .mobile-editor-pane .format-toolbar > div { flex-shrink: 0; gap: 0; }
 .mobile-editor-pane .format-toolbar button,
 .mobile-editor-pane .format-toolbar label { width: 36px; height: 36px; }
-.mobile-editor-pane .format-toolbar .relative > button { min-width: 36px; white-space: nowrap; padding: 0 4px; font-size: 11px; }
-.mobile-editor-pane .note-title-input { max-width: min(60vw, 220px); }
-.mobile-editor-pane .format-toolbar { height: auto; min-height: 48px; padding: 4px 8px; overflow-x: auto; }
-.mobile-editor-pane .format-toolbar button { height: 36px; width: 36px; }
-.mobile-editor-pane .format-toolbar .relative > button { min-height: 36px; }
+.mobile-editor-pane .format-toolbar .relative > button { min-width: 36px; min-height: 36px; white-space: nowrap; padding: 0 4px; font-size: 11px; }
 .mobile-editor-pane .note-outline-floating { left: auto; right: 12px; }
 .mobile-editor-pane .note-outline-floating-trigger { width: 40px; height: 40px; }
 .mobile-editor-pane .note-outline-floating-panel { left: auto; right: 0; }

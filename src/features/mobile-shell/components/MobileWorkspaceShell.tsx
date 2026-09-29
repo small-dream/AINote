@@ -48,7 +48,8 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
     onBackToList,
     onFlush: () => editorRef.current?.flush(),
   });
-  const title = currentNotePath?.split(/[\\/]/).pop() ?? t(MOBILE_LIST_TITLES[sidebarTab]);
+  /** 顶栏标题：列表页是当前分组名；编辑器页是仓库名——笔记名就在下方工具栏里可编辑，重复没有意义 */
+  const title = showEditor ? (repoDisplayName(repoPath) ?? t("app.notes")) : t(MOBILE_LIST_TITLES[sidebarTab]);
   useMobileKeyboardInsets();
 
   return (
@@ -92,6 +93,11 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
       <span className="sr-only" aria-live="polite">{failure ? `${failure.title} · ${failure.suggestion}` : status.conflicted ? t("sync.conflict") : status.hasUncommitted ? t("sync.unsaved") : null}</span>
     </div>
   );
+}
+
+/** 仓库目录末段作为展示名（`/a/b/notes` → `notes`） */
+function repoDisplayName(repoPath: string | null): string | null {
+  return repoPath?.split(/[\\/]/).filter(Boolean).pop() ?? null;
 }
 
 const MOBILE_LIST_TITLES: Record<SidebarTab, TranslationKey> = {
@@ -166,7 +172,8 @@ function MobileHeader({ repoPath, showEditor, title, online, label, tone, isSync
   return (
     <header className="mobile-workspace-header flex min-h-14 shrink-0 items-center gap-2 border-b border-border bg-bg-primary px-3 pt-[env(safe-area-inset-top)]">
       {showEditor ? <MobileIconButton label={t("mobile.backToList")} icon={ArrowLeft} onClick={onBack} /> : null}
-      <h1 className="min-w-0 flex-1 truncate text-lg font-semibold">{showEditor ? title : t("app.notes")}</h1>
+      {/* 编辑器页标题让位给下方可编辑的笔记标题：顶栏只留仓库名做定位，视觉上也降一级 */}
+      <h1 className={`min-w-0 flex-1 truncate font-semibold ${showEditor ? "text-sm font-medium text-text-secondary" : "text-lg"}`}>{title}</h1>
       {conflicted ? (
         <button type="button" className={`mobile-sync-pill is-${tone}`} title={label} onClick={onOpenConflict}>
           <span className={`mobile-status-dot ${online ? "is-online" : ""}`} aria-hidden="true" />
