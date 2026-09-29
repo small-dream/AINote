@@ -59,6 +59,22 @@ test.describe("AINote 软渲染光标落点", () => {
     await expect(line.locator(".cm-sr-strong")).toHaveText(/rules新$/);
   });
 
+  test("光标停在无序列表标记处：高度等于行高，不被放大圆点撑高", async ({ page }) => {
+    await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "caret-list.md", content: "- 第一项\n- 第二项\n" }] });
+    await openNote(page, "caret-list", "第一项");
+
+    const line = visibleLine(page);
+    await line.click();
+    await page.keyboard.press("Home");
+
+    // 圆点的放大 transform 只作用于内层 .cm-sr-bullet-dot；widget 根节点保持行盒高度，
+    // 否则 CodeMirror 用 widget 矩形算出的「标记处光标」会变成行高的 1.7 倍并压到相邻行。
+    const lineHeight = await line.evaluate((node) => node.getBoundingClientRect().height);
+    expect(await cursorHeight(page)).toBeCloseTo(lineHeight, 0);
+    const dotHeight = await page.locator(".cm-content:visible").first().locator(".cm-sr-bullet-dot").first().evaluate((node) => node.getBoundingClientRect().height);
+    expect(dotHeight).toBeGreaterThan(lineHeight * 1.5);
+  });
+
   test("工具栏加粗：光标在加粗末尾时点按钮取消加粗且不留残渣", async ({ page }) => {
     await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "caret-toolbar.md", content: "**加粗**\n" }] });
     await openNote(page, "caret-toolbar", "加粗");

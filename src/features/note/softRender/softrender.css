@@ -82,9 +82,16 @@
   user-select: none;
 }
 .cm-sr-bullet {
-  /* 圆点视觉上放大，但收窄占位，避免标记与正文之间留下过宽空隙。 */
+  /* 圆点视觉上放大，但收窄占位，避免标记与正文之间留下过宽空隙。
+     放大放在 .cm-sr-bullet-dot 内层：根节点若被 scale，会同时撑高 CodeMirror
+     用 widget 矩形算出的「标记处光标」高度（行高 ×1.7），光标会压到上下两行。 */
   min-width: 1em;
   margin-right: -0.15em;
+}
+.cm-sr-bullet-dot {
+  /* 与根节点同宽：缩放中心与改动前保持一致，圆点视觉位置不变 */
+  display: inline-block;
+  min-width: 1em;
   transform: scale(1.7);
   transform-origin: center;
 }

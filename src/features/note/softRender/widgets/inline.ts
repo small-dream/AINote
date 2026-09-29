@@ -14,7 +14,13 @@ export class BulletWidget extends WidgetType {
   toDOM(): HTMLElement {
     const span = document.createElement("span");
     span.className = "cm-sr-bullet";
-    span.textContent = "•";
+    // 放大圆点的 transform 必须落在内层 dot 上：CodeMirror 取 widget 根节点的
+    // getBoundingClientRect 作为「光标停在列表标记处」的几何，根节点一旦被 scale
+    // 撑高到行高的 1.7 倍，光标就会比行盒高一截并压到相邻行。
+    const dot = document.createElement("span");
+    dot.className = "cm-sr-bullet-dot";
+    dot.textContent = "•";
+    span.appendChild(dot);
     markRange(span, this.from, this.to);
     return span;
   }
