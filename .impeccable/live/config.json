@@ -1,6 +1,0 @@
-{
-  "files": ["index.html"],
-  "insertBefore": "</body>",
-  "commentSyntax": "<!-- {comment} -->",
-  "cspChecked": true
-}
