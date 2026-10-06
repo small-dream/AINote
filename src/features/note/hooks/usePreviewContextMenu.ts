@@ -1,5 +1,5 @@
 import { useCallback, useState, type MouseEvent, type RefObject } from "react";
-import { openExternalLink } from "@/platform/open-link";
+import { isExternalHttpUrl, openExternalLink } from "@/platform/open-link";
 import { WIKI_PROTOCOL, decodeWikiHref } from "@/features/wiki/utils/wiki";
 
 interface PreviewContextMenuState {
@@ -7,6 +7,8 @@ interface PreviewContextMenuState {
   y: number;
   selection: string;
   href: string | null;
+  /** 该链接是否有可执行的「打开」动作：双链或白名单内 http(s)。 */
+  openable: boolean;
 }
 
 interface PreviewContextMenuOptions {
@@ -24,7 +26,8 @@ export function usePreviewContextMenu({ onOpenWiki, previewRef }: PreviewContext
     const link = target instanceof Element ? target.closest("a") : null;
     const href = link?.getAttribute("href") ?? null;
     const selection = selectedText(previewRef?.current ?? null);
-    setState({ x, y, selection, href });
+    const openable = href ? href.startsWith(WIKI_PROTOCOL) || isExternalHttpUrl(href) : false;
+    setState({ x, y, selection, href, openable });
   }, [previewRef]);
 
   const handleContextMenu = useCallback((event: MouseEvent<HTMLElement>) => {
@@ -84,6 +87,6 @@ function openHref(href: string, onOpenWiki: ((name: string) => void) | undefined
     onOpenWiki?.(decodeWikiHref(href));
     return;
   }
-  if (!/^https?:\/\//i.test(href)) return;
+  if (!isExternalHttpUrl(href)) return;
   void openExternalLink(href).catch(() => undefined);
 }

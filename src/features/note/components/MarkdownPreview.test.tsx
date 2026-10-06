@@ -11,8 +11,8 @@ beforeEach(() => {
 });
 
 vi.mock("@/api", () => ({ assetUrl: assetUrlMock }));
-vi.mock("@/platform/open-link", () => ({
-  isExternalHttpUrl: (url?: string | null) => typeof url === "string" && /^https?:\/\//i.test(url),
+vi.mock("@/platform/open-link", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/platform/open-link")>()),
   openExternalLink: openLinkMock,
 }));
 
@@ -67,14 +67,18 @@ describe("MarkdownPreview 外链打开（与编辑区一致）", () => {
     expect(openLinkMock).toHaveBeenCalledWith("https://example.com/a");
   });
 
-  it("非 http 链接保持原生链接行为，不触发系统浏览器", () => {
-    const { container } = render(<MarkdownPreview content={"[邮件](mailto:a@example.com)"} />);
-    const link = container.querySelector("a");
-    expect(link?.getAttribute("target")).toBe("_blank");
-
-    fireEvent.click(link as Element);
-
+  it("邮箱链接：无浮层时保持原生链接，接入浮层时拦截原生导航", () => {
+    const bare = render(<MarkdownPreview content={"[邮件](mailto:a@example.com)"} />);
+    const nativeLink = bare.container.querySelector("a");
+    expect(nativeLink?.getAttribute("target")).toBe("_blank");
+    fireEvent.click(nativeLink as Element);
     expect(openLinkMock).not.toHaveBeenCalled();
+    bare.unmount();
+
+    const onLinkAction = vi.fn();
+    const { container } = render(<MarkdownPreview content={"[邮件](mailto:a@example.com)"} onLinkAction={onLinkAction} />);
+    expect(fireEvent.click(container.querySelector("a") as Element)).toBe(false);
+    expect(onLinkAction).toHaveBeenCalledWith(expect.objectContaining({ href: "mailto:a@example.com" }));
   });
 });
 

@@ -45,7 +45,9 @@ function linkItems(menu: PreviewMenu, t: ContextMenuTranslator): ContextMenuItem
   const href = menu.position?.href ?? "";
   const isWiki = href.startsWith(WIKI_PROTOCOL);
   return [
-    action(isWiki ? "open-wiki" : "open-link", SquareArrowOutUpRight, isWiki ? t("preview.openWiki") : t("preview.openLink"), menu.openLink),
+    ...(menu.position?.openable
+      ? [action(isWiki ? "open-wiki" : "open-link", SquareArrowOutUpRight, isWiki ? t("preview.openWiki") : t("preview.openLink"), menu.openLink)]
+      : []),
     action("copy-link", ClipboardCopy, t("preview.copyLink"), menu.copyLink),
   ];
 }

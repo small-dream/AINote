@@ -33,7 +33,7 @@ export function normalizeLinkInput(raw: string): string | null {
 export function displayableLinkUrl(href: string): string {
   try {
     const url = new URL(href);
-    if (url.protocol === "mailto:") return href;
+    if (url.protocol === "mailto:") return decodeURIComponent(url.pathname);
     return url.hostname + url.pathname + url.search + url.hash;
   } catch {
     return href;

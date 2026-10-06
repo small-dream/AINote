@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { ClipboardCopy, ExternalLink, Pencil } from "lucide-react";
 import { useTranslation } from "@/i18n";
 import { displayableLinkUrl } from "@/platform/links";
+import { isMailtoUrl } from "@/platform/open-link";
 import { WIKI_PROTOCOL, decodeWikiHref } from "@/features/wiki/utils/wiki";
 
 const WIDTH = 300;
@@ -40,14 +41,17 @@ export function LinkOverlay({ request }: { request: LinkOverlayRequest | null })
 
   if (!request) return null;
   const wiki = request.href.startsWith(WIKI_PROTOCOL);
+  const mailto = isMailtoUrl(request.href);
   const target = wiki ? decodeWikiHref(request.href) : displayableLinkUrl(request.href);
   return createPortal(
     <div ref={ref} role="dialog" aria-label={t("link.title")} style={position(request.point)} className="note-theme-surface fixed z-[70] w-[300px] rounded-xl border border-border bg-bg-primary p-3 shadow-xl">
       <p className="truncate text-xs text-text-secondary" title={target}>{target}</p>
       <div className="mt-2 flex items-center gap-1">
-        <OverlayButton label={t("link.copy")} icon={ClipboardCopy} onClick={request.onCopyLink} />
+        {mailto ? null : <OverlayButton label={t("link.copy")} icon={ClipboardCopy} onClick={request.onCopyLink} />}
         {request.onEditLink ? <OverlayButton label={t("link.edit")} icon={Pencil} onClick={request.onEditLink} /> : null}
-        <OverlayButton label={t("link.open")} icon={ExternalLink} onClick={() => { request.onOpenLink(); request.onClose(); }} primary />
+        {mailto
+          ? <OverlayButton label={t("link.copyEmail")} icon={ClipboardCopy} onClick={request.onCopyLink} primary />
+          : <OverlayButton label={t("link.open")} icon={ExternalLink} onClick={() => { request.onOpenLink(); request.onClose(); }} primary />}
       </div>
     </div>,
     document.body,

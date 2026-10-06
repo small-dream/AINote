@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { isExternalHttpUrl, openExternalLink } from "./open-link";
+import { isExternalHttpUrl, isMailtoUrl, openExternalLink } from "./open-link";
 
 const mocks = vi.hoisted(() => ({
   openExternal: vi.fn(() => Promise.resolve()),
@@ -23,6 +23,17 @@ describe("isExternalHttpUrl", () => {
     expect(isExternalHttpUrl("mailto:a@example.com")).toBe(false);
     expect(isExternalHttpUrl("javascript:alert(1)")).toBe(false);
     expect(isExternalHttpUrl(undefined)).toBe(false);
+  });
+});
+
+describe("isMailtoUrl", () => {
+  it("只接受带地址的 mailto 链接", () => {
+    expect(isMailtoUrl("mailto:a@example.com")).toBe(true);
+    expect(isMailtoUrl("mailto:a@example.com?subject=hi")).toBe(true);
+    expect(isMailtoUrl("mailto:")).toBe(false);
+    expect(isMailtoUrl("mailto:not-an-address")).toBe(false);
+    expect(isMailtoUrl("https://example.com")).toBe(false);
+    expect(isMailtoUrl(null)).toBe(false);
   });
 });
 

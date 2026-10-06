@@ -67,7 +67,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const pdf = usePdfExport({ notePath, kind, repoPath, flush });
     const softRenderEnabled = usesSoftRender(mode);
     const handleLinkAction = useCallback((request: { point: { x: number; y: number }; href: string; onOpenLink: () => void }) => setLinkOverlay({ ...request, onCopyLink: () => void navigator.clipboard.writeText(request.href).catch(() => undefined), onEditLink: () => { setLinkOverlay(null); openMarkdownLinkForHref(request.href, request.point); }, onClose: () => setLinkOverlay(null) }), [openMarkdownLinkForHref]);
-    const onLinkAction = useCallback((href: string, point: { x: number; y: number }) => handleLinkAction({ href, point, onOpenLink: () => void openExternalLink(href).catch(() => undefined) }), [handleLinkAction]);
+    const onLinkAction = useCallback((href: string, point: { x: number; y: number }) => handleLinkAction({ href, point, onOpenLink: () => void openExternalLink(href).catch(reportToastError) }), [handleLinkAction]);
     const { extensions, activeFormats, canUndo, canRedo } = useEditorExtensions({ notes: wiki.notes, repoPath, onOpenWiki: wiki.handleOpenWiki, onLinkAction, onLinkInput: openMarkdownLink, softRenderEnabled });
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
     const outline = useMemo(() => extractOutline(draft), [draft]);

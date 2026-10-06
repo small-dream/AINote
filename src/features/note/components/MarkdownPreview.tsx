@@ -25,7 +25,7 @@ import { MarkdownProperties } from "./MarkdownProperties";
 import { MermaidBlock } from "./MermaidBlock";
 import { toggleTaskAtLine } from "../utils/task";
 import { PreviewImage } from "./PreviewImage";
-import { isExternalHttpUrl, openExternalLink } from "@/platform/open-link";
+import { isExternalHttpUrl, isMailtoUrl, openExternalLink } from "@/platform/open-link";
 import { reportToastError } from "@/stores/toast.store";
 
 export interface MarkdownPreviewProps {
@@ -176,7 +176,8 @@ export function MarkdownPreview({ content, repoPath, onOpenWiki, wikiNotes, onCh
         return <WikiLink href={href} onOpenWiki={onOpenWiki} resolved={resolved}>{children}</WikiLink>;
       }
       // 外链统一交给系统浏览器（与编辑区一致）：壳内 target=_blank 不会打开任何窗口。
-      if (isExternalHttpUrl(href)) {
+      // 邮箱链接同样接入动作浮层（白名单不含 mailto，浮层只给复制，不给「访问」）。
+      if (isExternalHttpUrl(href) || (isMailtoUrl(href) && onLinkAction)) {
         return (
           <a
             href={href}

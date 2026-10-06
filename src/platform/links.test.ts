@@ -12,7 +12,7 @@ describe("platform links", () => {
 
   it("shows a compact url without leaking non-http schemes into display", () => {
     expect(displayableLinkUrl("https://example.com/very/long/path?x=1#top")).toBe("example.com/very/long/path?x=1#top");
-    expect(displayableLinkUrl("mailto:a@example.com")).toBe("mailto:a@example.com");
+    expect(displayableLinkUrl("mailto:a@example.com")).toBe("a@example.com");
     expect(displayableLinkUrl("not a url")).toBe("not a url");
   });
 

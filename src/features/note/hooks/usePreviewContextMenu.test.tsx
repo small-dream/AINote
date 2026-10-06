@@ -72,6 +72,18 @@ describe("usePreviewContextMenu", () => {
     expect(onOpenWiki).toHaveBeenCalledWith("项目");
     expect(openExternalLink).not.toHaveBeenCalled();
   });
+
+  it("邮箱链接标记为不可打开，菜单不暴露打开动作", () => {
+    document.body.innerHTML = `<a href="mailto:a@example.com">邮件</a>`;
+    const { result } = renderHook(() => usePreviewContextMenu());
+    act(() => result.current.handleContextMenu(createEvent("a")));
+
+    expect(result.current.position?.openable).toBe(false);
+
+    act(() => result.current.openLink());
+
+    expect(openExternalLink).not.toHaveBeenCalled();
+  });
 });
 
 function createEvent(selector: string) {
