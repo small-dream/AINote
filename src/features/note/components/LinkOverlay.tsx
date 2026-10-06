@@ -43,25 +43,35 @@ export function LinkOverlay({ request }: { request: LinkOverlayRequest | null })
   const wiki = request.href.startsWith(WIKI_PROTOCOL);
   const mailto = isMailtoUrl(request.href);
   const target = wiki ? decodeWikiHref(request.href) : displayableLinkUrl(request.href);
+  const copyLink = () => {
+    request.onCopyLink();
+    request.onClose();
+  };
   return createPortal(
     <div ref={ref} role="dialog" aria-label={t("link.title")} style={position(request.point)} className="note-theme-surface fixed z-[70] w-[300px] rounded-xl border border-border bg-bg-primary p-3 shadow-xl">
       <p className="truncate text-xs text-text-secondary" title={target}>{target}</p>
       <div className="mt-2 flex items-center gap-1">
-        {mailto ? null : <OverlayButton label={t("link.copy")} icon={ClipboardCopy} onClick={request.onCopyLink} />}
-        {request.onEditLink ? <OverlayButton label={t("link.edit")} icon={Pencil} onClick={request.onEditLink} /> : null}
+        {mailto ? null : <OverlayButton label={t("link.copy")} icon={ClipboardCopy} onClick={copyLink} />}
+        {request.onEditLink ? <OverlayButton label={t("link.edit")} icon={Pencil} variant={mailto ? "secondary" : "icon"} onClick={request.onEditLink} /> : null}
         {mailto
-          ? <OverlayButton label={t("link.copyEmail")} icon={ClipboardCopy} onClick={request.onCopyLink} primary />
-          : <OverlayButton label={t("link.open")} icon={ExternalLink} onClick={() => { request.onOpenLink(); request.onClose(); }} primary />}
+          ? <OverlayButton label={t("link.copyEmail")} icon={ClipboardCopy} onClick={copyLink} variant="primary" />
+          : <OverlayButton label={t("link.open")} icon={ExternalLink} onClick={() => { request.onOpenLink(); request.onClose(); }} variant="primary" />}
       </div>
     </div>,
     document.body,
   );
 }
 
-function OverlayButton({ label, icon: Icon, onClick, primary = false }: { label: string; icon: typeof ClipboardCopy; onClick: () => void; primary?: boolean }) {
+const BUTTON_STYLES = {
+  icon: "inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-bg-tertiary hover:text-text-primary",
+  secondary: "inline-flex h-8 items-center gap-1.5 rounded-md border border-border px-3 text-sm text-text-secondary hover:bg-bg-tertiary hover:text-text-primary",
+  primary: "ml-auto inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-sm text-white shadow-sm hover:brightness-95",
+} as const;
+
+function OverlayButton({ label, icon: Icon, onClick, variant = "icon" }: { label: string; icon: typeof ClipboardCopy; onClick: () => void; variant?: keyof typeof BUTTON_STYLES }) {
   return (
-    <button type="button" onClick={onClick} aria-label={label} title={label} className={primary ? "ml-auto inline-flex h-8 items-center gap-1.5 rounded-md bg-accent px-3 text-sm text-white shadow-sm hover:brightness-95" : "inline-flex h-8 w-8 items-center justify-center rounded-md text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"}>
-      <Icon size={15} aria-hidden />{primary ? label : null}
+    <button type="button" onClick={onClick} aria-label={label} title={label} className={BUTTON_STYLES[variant]}>
+      <Icon size={15} aria-hidden />{variant === "icon" ? null : label}
     </button>
   );
 }

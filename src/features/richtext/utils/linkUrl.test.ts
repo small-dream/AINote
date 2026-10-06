@@ -15,6 +15,7 @@ describe("normalizeLinkUrl", () => {
 
   it("允许 mailto、锚点与站内相对路径", () => {
     expect(normalizeLinkUrl("mailto:a@b.co")).toBe("mailto:a@b.co");
+    expect(normalizeLinkUrl("a@b.co")).toBe("mailto:a@b.co");
     expect(normalizeLinkUrl("#section")).toBe("#section");
     expect(normalizeLinkUrl("/docs/readme.md")).toBe("/docs/readme.md");
     expect(normalizeLinkUrl("../other.md")).toBe("../other.md");

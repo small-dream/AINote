@@ -1,6 +1,6 @@
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { LinkOverlay } from "./LinkOverlay";
 
 const base = {
@@ -9,6 +9,10 @@ const base = {
   onEditLink: vi.fn(),
   onClose: vi.fn(),
 };
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
 
 describe("LinkOverlay", () => {
   it("renders mobile friendly actions from a request object", () => {
@@ -25,5 +29,14 @@ describe("LinkOverlay", () => {
     expect(screen.getByRole("button", { name: "复制邮箱" })).toBeTruthy();
     expect(screen.getByRole("button", { name: "编辑" })).toBeTruthy();
     expect(screen.queryByRole("button", { name: "访问" })).toBeNull();
+  });
+
+  it("复制后关闭浮层，访问与复制同口径", () => {
+    render(<LinkOverlay request={{ ...base, point: { x: 100, y: 100 }, href: "mailto:someone@example.com" }} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "复制邮箱" }));
+
+    expect(base.onCopyLink).toHaveBeenCalledTimes(1);
+    expect(base.onClose).toHaveBeenCalledTimes(1);
   });
 });

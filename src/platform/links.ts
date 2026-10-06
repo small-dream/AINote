@@ -20,13 +20,21 @@ export function createLinkActions(): LinkActions {
 
 const URL_PATTERN = /^(https?:\/\/|mailto:|\/|#|\.\/|\.\.\/)/i;
 const BARE_DOMAIN_PATTERN = /^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/;
+const BARE_EMAIL_PATTERN = /^[\w.+-]+@[\w-]+(\.[\w-]+)+$/;
 
-/** 空值视为解除链接；其余交给统一 URL 规范化。 */
+/** 空值视为解除链接；裸邮箱补 mailto:，其余交给统一 URL 规范化。 */
 export function normalizeLinkInput(raw: string): string | null {
   const url = raw.trim();
   if (!url) return null;
   if (URL_PATTERN.test(url)) return url;
+  if (BARE_EMAIL_PATTERN.test(url)) return `mailto:${url}`;
   return BARE_DOMAIN_PATTERN.test(url) ? `https://${url}` : null;
+}
+
+/** 链接编辑框的回显值：邮箱去掉 `mailto:` 前缀，提交时再由 normalizeLinkInput 补回。 */
+export function linkInputValue(href: string): string {
+  const address = href.replace(/^mailto:/i, "");
+  return /^mailto:/i.test(href) && BARE_EMAIL_PATTERN.test(address) ? address : href;
 }
 
 /** 右键 / 长按只能看到 URL；编辑层选中当前链接后可继续修改或移除。 */

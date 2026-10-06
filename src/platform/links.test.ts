@@ -1,13 +1,20 @@
 import { describe, expect, it, vi } from "vitest";
 
-import { createLinkActions, displayableLinkUrl, normalizeLinkInput } from "./links";
+import { createLinkActions, displayableLinkUrl, linkInputValue, normalizeLinkInput } from "./links";
 
 describe("platform links", () => {
   it("normalizes urls and preserves internal paths", () => {
     expect(normalizeLinkInput("example.com/a")).toBe("https://example.com/a");
     expect(normalizeLinkInput("mailto:a@example.com")).toBe("mailto:a@example.com");
+    expect(normalizeLinkInput("a@example.com")).toBe("mailto:a@example.com");
     expect(normalizeLinkInput("/assets/photo.png")).toBe("/assets/photo.png");
     expect(normalizeLinkInput("javascript:alert(1)")).toBeNull();
+  });
+
+  it("链接编辑框回显邮箱时去掉 mailto: 前缀", () => {
+    expect(linkInputValue("mailto:a@example.com")).toBe("a@example.com");
+    expect(linkInputValue("mailto:a@example.com?subject=hi")).toBe("mailto:a@example.com?subject=hi");
+    expect(linkInputValue("https://example.com/a")).toBe("https://example.com/a");
   });
 
   it("shows a compact url without leaking non-http schemes into display", () => {

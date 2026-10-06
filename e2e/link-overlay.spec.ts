@@ -27,6 +27,16 @@ for (const { name, viewport } of [
       await expect(dialog).toContainText("someone@example.com");
       await expect(dialog.getByRole("button", { name: "复制邮箱" })).toBeVisible();
       await expect(dialog.getByRole("button", { name: "访问" })).toHaveCount(0);
+
+      // 编辑入口与复制按钮同款（带文字），且回显去掉 mailto: 前缀
+      await dialog.getByRole("button", { name: "编辑" }).click();
+      await expect(page.locator("#link-popover-url")).toHaveValue("someone@example.com");
+      await page.keyboard.press("Escape");
+
+      // 复制后浮层关闭
+      await autolink(page, "someone@example.com").click();
+      await dialog.getByRole("button", { name: "复制邮箱" }).click();
+      await expect(dialog).toHaveCount(0);
     });
 
     test("http 外链仍提供访问", async ({ page }) => {

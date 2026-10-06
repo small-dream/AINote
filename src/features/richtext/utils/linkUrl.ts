@@ -13,6 +13,8 @@ const FULL_URL = /^https?:\/\/\S+$/i;
 const ALLOWED_SCHEME = /^(mailto:[^\s]+|#|\/|\.\/|\.\.\/)/;
 /** 裸域名（example.com/path）自动补 https:// */
 const BARE_DOMAIN = /^[\w-]+(\.[\w-]+)+(:\d+)?(\/\S*)?$/;
+/** 裸邮箱（someone@example.com）自动补 mailto: */
+const BARE_EMAIL = /^[\w.+-]+@[\w-]+(\.[\w-]+)+$/;
 
 /**
  * 规范化用户输入的链接：合法则返回可写入 href 的值，非法返回 null。
@@ -22,6 +24,7 @@ export function normalizeLinkUrl(raw: string): string | null {
   const url = raw.trim();
   if (!url) return null;
   if (FULL_URL.test(url) || ALLOWED_SCHEME.test(url)) return url;
+  if (BARE_EMAIL.test(url)) return `mailto:${url}`;
   if (BARE_DOMAIN.test(url)) return `https://${url}`;
   return null;
 }

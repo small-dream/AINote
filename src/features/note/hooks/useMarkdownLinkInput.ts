@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import type { EditorView } from "@codemirror/view";
 import type { LinkPopoverRequest } from "@/components/molecules/LinkPopover";
-import { normalizeLinkInput } from "@/platform/links";
+import { linkInputValue, normalizeLinkInput } from "@/platform/links";
 import { dispatchFormat } from "./useFormatCommands";
 import { findMarkdownLink, insertLink, removeMarkdownLink, replaceMarkdownLinkUrl, type MarkdownLinkTarget } from "../utils/insert";
 
@@ -21,12 +21,12 @@ export function useMarkdownLinkInput(viewRef: React.RefObject<EditorView | null>
     const rect = view.dom.getBoundingClientRect();
     const fallback = { x: rect.left + rect.width / 2, y: rect.top + 24 };
     const target = findMarkdownLink(view.state);
-    setState({ point: point ?? fallback, value: target?.href ?? "", target });
+    setState({ point: point ?? fallback, value: linkInputValue(target?.href ?? ""), target });
   }, [viewRef]);
   const openForHref = useCallback((href: string, point: { x: number; y: number }) => {
     const view = viewRef.current;
     if (!view) return;
-    setState({ point, value: href, target: findMarkdownLink(view.state) });
+    setState({ point, value: linkInputValue(href), target: findMarkdownLink(view.state) });
   }, [viewRef]);
   const remove = useCallback(() => {
     const view = viewRef.current;
