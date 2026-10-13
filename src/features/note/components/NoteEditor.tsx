@@ -13,7 +13,6 @@ import { useMarkdownContextMenu } from "../hooks/useMarkdownContextMenu";
 import { usePreviewContextMenu } from "../hooks/usePreviewContextMenu";
 import { MarkdownContextMenu } from "./MarkdownContextMenu";
 import { type MarkdownEditorSurfaceProps } from "./MarkdownEditorSurface";
-import type { ViewMode } from "./EditorToolbar";
 import { extractOutline, type OutlineItem } from "../utils/outline";
 import { useEditorPreferences } from "../hooks/useEditorPreferences";
 import { dispatchFormat } from "../hooks/useFormatCommands";
@@ -78,7 +77,6 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const encryption = useNoteEncryption(repoPath, notePath, encrypted);
     const markdownMenu = useMarkdownContextMenu({ viewRef, onOpenAi: ai.openMenu, onLinkInput: openMarkdownLink });
     const previewMenu = usePreviewContextMenu({ onOpenWiki: wiki.handleOpenWiki, previewRef });
-    const handleLongPress = longPressForMode(mode, previewMenu.openAt, markdownMenu.openAt);
     useEditorScrollPersistence(readyView, previewRef, mode, { editorScrollTop, previewScrollTop, setEditorScrollTop, setPreviewScrollTop });
     useKeyboardCaretIntoView(readyView, isCompact);
     useSyncScroll(readyView, previewRef, mode);
@@ -102,11 +100,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
 
     const placeholder = editorPlaceholder(notePath, loadError, locked);
     if (placeholder !== null) return placeholder;
-    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, canUndo, canRedo, onImagePicked: asset.handleFiles, assetStatus: asset.status, onContextMenu: markdownMenu.handleContextMenu, onLongPress: handleLongPress, contextMenu: <MarkdownContextMenu menu={markdownMenu} noteTheme={noteTheme} aiBlocked={encrypted} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />, previewContextMenu: { onContextMenu: previewMenu.handleContextMenu, onLongPress: previewMenu.openAt }, softRender: softRenderEnabled, onLinkAction: handleLinkAction, onLinkInput: openMarkdownLink };
+    const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, canUndo, canRedo, onImagePicked: asset.handleFiles, assetStatus: asset.status, onContextMenu: markdownMenu.handleContextMenu, contextMenu: <MarkdownContextMenu menu={markdownMenu} noteTheme={noteTheme} aiBlocked={encrypted} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />, previewContextMenu: { onContextMenu: previewMenu.handleContextMenu }, softRender: softRenderEnabled, onLinkAction: handleLinkAction, onLinkInput: openMarkdownLink };
     return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} previewMenu={previewMenu} noteTheme={noteTheme} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} encrypted={encrypted} linkOverlay={linkOverlay} markdownLinkInput={markdownLinkInput} />;
   },
 );
-
-function longPressForMode(mode: ViewMode, previewOpen: (point: { x: number; y: number }) => void, markdownOpen: (point: { x: number; y: number }) => void): (point: { x: number; y: number }) => void {
-  return mode === "preview" ? previewOpen : markdownOpen;
-}

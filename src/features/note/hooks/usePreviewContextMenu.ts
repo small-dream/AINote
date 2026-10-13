@@ -1,6 +1,7 @@
 import { useCallback, useState, type MouseEvent, type RefObject } from "react";
 import { isExternalHttpUrl, openExternalLink } from "@/platform/open-link";
 import { WIKI_PROTOCOL, decodeWikiHref } from "@/features/wiki/utils/wiki";
+import { usesNativeTextContextMenu } from "@/platform/text-context-menu";
 
 interface PreviewContextMenuState {
   x: number;
@@ -31,15 +32,14 @@ export function usePreviewContextMenu({ onOpenWiki, previewRef }: PreviewContext
   }, [previewRef]);
 
   const handleContextMenu = useCallback((event: MouseEvent<HTMLElement>) => {
-    event.preventDefault();
     event.stopPropagation();
+    if (usesNativeTextContextMenu(event.nativeEvent)) {
+      close();
+      return;
+    }
+    event.preventDefault();
     open(event.clientX, event.clientY, event.target);
-  }, [open]);
-
-  const openAt = useCallback((point: { x: number; y: number }) => {
-    const target = document.elementFromPoint(point.x, point.y);
-    open(point.x, point.y, target);
-  }, [open]);
+  }, [close, open]);
 
   const copySelection = useCallback(() => {
     const text = state?.selection;
@@ -72,7 +72,7 @@ export function usePreviewContextMenu({ onOpenWiki, previewRef }: PreviewContext
     globalThis.getSelection()?.addRange(range);
   }, [close, previewRef]);
 
-  return { position: state, hasSelection: Boolean(state?.selection), handleContextMenu, openAt, close, copySelection, copyLink, openLink, selectAll };
+  return { position: state, hasSelection: Boolean(state?.selection), handleContextMenu, close, copySelection, copyLink, openLink, selectAll };
 }
 
 function selectedText(root: HTMLElement | null): string {

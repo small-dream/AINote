@@ -5,7 +5,6 @@ import { RichTextToolbar } from "./RichTextToolbar";
 import { RichTextBubbleMenu } from "./RichTextBubbleMenu";
 import { RichTextContextMenu } from "./RichTextContextMenu";
 import { useRichTextContextMenu } from "../hooks/useRichTextContextMenu";
-import { useLongPressContextMenu } from "@/hooks/useLongPressContextMenu";
 import { useRichTextEditor } from "../hooks/useRichTextEditor";
 import { useRichTextOutline } from "../hooks/useRichTextOutline";
 import { useUiStore } from "@/stores/ui.store";
@@ -53,7 +52,6 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
     onApply: (text) => applyToTipTapEditor(editor, text),
     onApplyFull: (text) => applyToTipTapDocument(editor, text),
   });
-  const longPressProps = useLongPressContextMenu((point) => contextMenu.openAt(point, editor));
 
   // AI 入口统一收在顶部工具栏：把最新触发器交给宿主，宿主未提供时（如独立挂载）不注册。
   useEffect(() => {
@@ -64,7 +62,7 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
   }, [aiTriggerRef, ai.openMenu]);
 
   return (
-    <div data-note-theme={noteTheme} style={emptyTaskPlaceholder(t)} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" {...longPressProps} onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)} onContextMenu={(event) => contextMenu.handleContextMenu(event, editor)}>
+    <div data-note-theme={noteTheme} style={emptyTaskPlaceholder(t)} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)} onContextMenu={(event) => contextMenu.handleContextMenu(event, editor)}>
       <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} />
       <RichTextBubbleMenu editor={editor} />
       <RichTextContextMenu position={contextMenu.position} editor={editor} hasSelection={contextMenu.hasSelection} onOpenAi={() => { contextMenu.close(); ai.openMenu(); }} onClose={contextMenu.close} noteTheme={noteTheme} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />

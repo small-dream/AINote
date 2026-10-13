@@ -66,7 +66,7 @@ function createProps(overrides: Partial<NoteEditorContentProps> = {}): NoteEdito
     setOutlineOpen: vi.fn(),
     outlineOpen: false,
     surfaceProps: createSurfaceProps(),
-    previewMenu: { position: null, hasSelection: false, handleContextMenu: vi.fn(), openAt: vi.fn(), close: vi.fn(), copySelection: vi.fn(), copyLink: vi.fn(), openLink: vi.fn(), selectAll: vi.fn() },
+    previewMenu: { position: null, hasSelection: false, handleContextMenu: vi.fn(), close: vi.fn(), copySelection: vi.fn(), copyLink: vi.fn(), openLink: vi.fn(), selectAll: vi.fn() },
     noteTheme: "classic",
     richTextDialog: { open: false, losses: [], converting: false },
     onRequestConvertToRichText: vi.fn(),

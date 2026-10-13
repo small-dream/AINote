@@ -1,5 +1,13 @@
 # 更新日志
 
+## v0.58.5 — 2026-10-13（修复：移动端长按复制菜单重叠）
+
+- Markdown 写作 / 源码 / 预览及富文本正文移除长按自动打开应用菜单的计时器；触摸 / 触笔的上下文事件交给系统选择与剪贴板菜单，避免遮挡选区手柄。旧版移动 WebView 无输入来源时同样优先保留系统菜单。
+- **Desktop Impact**：鼠标右键继续打开应用菜单，包括触屏设备外接鼠标；本次为既有交互缺陷修复，因此修改共享菜单接线并移除失效长按 Hook，未新增业务功能。
+- **Mobile Impact**：触屏长按保留系统选区和复制菜单，格式、AI 与加密操作保留工具栏入口；平台输入来源策略集中在 `src/platform/text-context-menu.ts`。
+- 验证：`pnpm build`、`pnpm test`（1420 passed，1 skipped）、`pnpm lint` 与 `cargo test --locked` 发布门禁通过；全量 Playwright 151 passed，包含四种移动视图及三种桌面视图菜单回归。新增平台策略单测覆盖旧 WebView 与外接鼠标。
+- 原生构建：Android arm64 Release APK 与 iOS arm64 模拟器无签名 Release Archive 通过；未修改 Rust。Playwright 使用触屏模拟及合成上下文事件，不覆盖系统浮动菜单本身；尚需 Android / iOS 真机验证长按选词、拖动手柄扩选与实际复制，iOS 真机签名 Archive 尚未验证。
+
 ## v0.58.4 — 2026-10-06（优化：链接浮层地址字段化，动作行重心摆正）
 
 ### 优化

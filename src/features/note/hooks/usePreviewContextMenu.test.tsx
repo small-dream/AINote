@@ -89,6 +89,7 @@ describe("usePreviewContextMenu", () => {
 function createEvent(selector: string) {
   const target = document.body.querySelector(selector) as Element;
   return {
+    nativeEvent: new MouseEvent("contextmenu"),
     preventDefault: vi.fn(),
     stopPropagation: vi.fn(),
     clientX: 20,

@@ -3,6 +3,7 @@ import type { EditorView } from "@codemirror/view";
 import { selectAll } from "@codemirror/commands";
 import { dispatchFormat, dispatchLink } from "../hooks/useFormatCommands";
 import { toggleInline } from "../utils/format";
+import { usesNativeTextContextMenu } from "@/platform/text-context-menu";
 
 interface MarkdownContextMenuOptions {
   viewRef: RefObject<EditorView | null>;
@@ -15,19 +16,17 @@ export function useMarkdownContextMenu({ viewRef, onOpenAi, onLinkInput }: Markd
   const [state, setState] = useState<{ x: number; y: number; hasSelection: boolean } | null>(null);
 
   const close = useCallback(() => setState(null), []);
-  const openAt = useCallback((point: { x: number; y: number }) => {
-    const view = viewRef.current;
-    if (!view) return;
-    const { from, to } = view.state.selection.main;
-    setState({ x: point.x, y: point.y, hasSelection: from !== to });
-  }, [viewRef]);
   const handleContextMenu = useCallback((event: MouseEvent<HTMLElement>) => {
+    if (usesNativeTextContextMenu(event.nativeEvent)) {
+      close();
+      return;
+    }
     const view = viewRef.current;
     if (!view) return;
     event.preventDefault();
     const { from, to } = view.state.selection.main;
     setState({ x: event.clientX, y: event.clientY, hasSelection: from !== to });
-  }, [viewRef]);
+  }, [close, viewRef]);
 
   const runInline = useCallback((format: Parameters<typeof toggleInline>[1]) => {
     const view = viewRef.current;
@@ -73,7 +72,7 @@ export function useMarkdownContextMenu({ viewRef, onOpenAi, onLinkInput }: Markd
     }).catch(() => undefined);
   }, [close, viewRef]);
 
-  return { position: state, handleContextMenu, openAt, close, runInline, runClipboard, runSelectAll, runLink, runPaste, openAi: () => { close(); onOpenAi(); } };
+  return { position: state, handleContextMenu, close, runInline, runClipboard, runSelectAll, runLink, runPaste, openAi: () => { close(); onOpenAi(); } };
 }
 
 function runLinkAction(view: EditorView, point: { x: number; y: number } | undefined, onLinkInput: ((point: { x: number; y: number }) => void) | undefined): void {

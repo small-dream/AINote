@@ -8,7 +8,6 @@ function createMenu(): Menu {
   return {
     position: { x: 10, y: 10, hasSelection: true },
     handleContextMenu: vi.fn(),
-    openAt: vi.fn(),
     close: vi.fn(),
     runInline: vi.fn(),
     runClipboard: vi.fn(),
