@@ -12,7 +12,9 @@ fn allows_only_official_release_apk_urls() {
     assert!(!apk_download_url_allowed(
         "https://github.com/small-dream/AINote/releases/download/v0.26.2/AINote.exe"
     ));
-    assert!(!apk_download_url_allowed("http://github.com/small-dream/AINote/releases/download/v0.26.2/x.apk"));
+    assert!(!apk_download_url_allowed(
+        "http://github.com/small-dream/AINote/releases/download/v0.26.2/x.apk"
+    ));
 }
 
 #[test]
@@ -52,8 +54,14 @@ fn install_path_requires_updates_dir_and_apk_name() {
     let dir = Path::new("/cache/updates");
     assert!(install_path_allowed(dir, &dir.join("ainote-0.27.0.apk")));
     assert!(!install_path_allowed(dir, &dir.join("evil.apk")));
-    assert!(!install_path_allowed(dir, &dir.join("ainote-0.27.0.apk.part")));
-    assert!(!install_path_allowed(dir, Path::new("/etc/ainote-0.27.0.apk")));
+    assert!(!install_path_allowed(
+        dir,
+        &dir.join("ainote-0.27.0.apk.part")
+    ));
+    assert!(!install_path_allowed(
+        dir,
+        Path::new("/etc/ainote-0.27.0.apk")
+    ));
     assert!(!install_path_allowed(
         dir,
         &dir.join("sub").join("ainote-0.27.0.apk")
@@ -63,7 +71,10 @@ fn install_path_requires_updates_dir_and_apk_name() {
 #[test]
 fn apk_file_name_accepts_semver_like_versions() {
     assert_eq!(apk_file_name("0.27.0").unwrap(), "ainote-0.27.0.apk");
-    assert_eq!(apk_file_name("1.0-beta.2").unwrap(), "ainote-1.0-beta.2.apk");
+    assert_eq!(
+        apk_file_name("1.0-beta.2").unwrap(),
+        "ainote-1.0-beta.2.apk"
+    );
 }
 
 /// 版本号拼路径前必须拒绝路径分隔符与空白等字符，防穿越出 updates 目录。

@@ -36,6 +36,11 @@ function Toast({ item, onDismiss, closeLabel }: { item: ToastItem; onDismiss: ()
     <div role={item.tone === "error" ? "alert" : "status"} className={`pointer-events-auto flex items-start gap-2 rounded-md border px-3 py-2 text-sm shadow-sm ${TONE_CLASS[item.tone]}`}>
       <Icon size={16} className="mt-0.5 shrink-0" aria-hidden="true" />
       <span className="min-w-0 flex-1 break-words">{messageOf(item.message)}</span>
+      {item.action ? (
+        <button type="button" onClick={() => { item.action?.run(); onDismiss(); }} className="shrink-0 rounded px-1.5 py-0.5 text-xs font-medium underline underline-offset-2 hover:opacity-80">
+          {item.action.label}
+        </button>
+      ) : null}
       <Tooltip content={closeLabel}>
         <button type="button" aria-label={closeLabel} onClick={onDismiss} className="shrink-0 rounded p-0.5 opacity-75 hover:opacity-100">
           <X size={15} />

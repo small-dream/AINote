@@ -105,8 +105,8 @@ pub fn unwrap_master_key(
 ) -> Result<Zeroizing<[u8; MASTER_KEY_LEN]>, AppError> {
     let failed = |detail: &str| AppError::VaultUnlockFailed(detail.to_string());
     let nonce = b64_decode(&wrap.nonce, "nonce")?;
-    let nonce = <[u8; NONCE_LEN]>::try_from(nonce.as_slice())
-        .map_err(|_| failed("仓库密钥文件已损坏"))?;
+    let nonce =
+        <[u8; NONCE_LEN]>::try_from(nonce.as_slice()).map_err(|_| failed("仓库密钥文件已损坏"))?;
     let ciphertext = b64_decode(&wrap.ciphertext, "主密钥密文")?;
     if ciphertext.len() != MASTER_KEY_LEN + GCM_TAG_LEN {
         return Err(failed("仓库密钥文件已损坏"));
@@ -140,8 +140,7 @@ pub fn encrypt_note(master: &[u8; MASTER_KEY_LEN], plaintext: &str) -> Result<St
 /// 解密笔记正文：输入完整信封文本，输出明文。任何格式/校验失败都视为密文损坏。
 pub fn decrypt_note(master: &[u8; MASTER_KEY_LEN], text: &str) -> Result<String, AppError> {
     let corrupt = |detail: &str| AppError::VaultCorrupt(detail.to_string());
-    let payload =
-        envelope_payload(text).ok_or_else(|| corrupt("该文件不是有效的加密笔记信封"))?;
+    let payload = envelope_payload(text).ok_or_else(|| corrupt("该文件不是有效的加密笔记信封"))?;
     let raw = b64_decode(&payload, "笔记密文").map_err(|_| corrupt("笔记密文不是合法的 base64"))?;
     if raw.len() < SIV_TAG_LEN {
         return Err(corrupt("笔记密文长度不足"));

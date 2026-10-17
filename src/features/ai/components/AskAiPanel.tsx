@@ -6,12 +6,14 @@ import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useTranslation } from "@/i18n";
 import { useBackHandler } from "@/platform/back-navigation";
-import { useAskAi } from "../hooks/useAskAi";
+import { useAskAi, type AskAiMessage } from "../hooks/useAskAi";
 import { useAiConfig } from "../hooks/useAiConfig";
 import { usableAiModels } from "../utils/models";
 import { AiModelSelect } from "./AiModelSelect";
 import { useUiStore } from "@/stores/ui.store";
 import type { AskScope } from "../utils/prompts";
+import type { ContextSnippet } from "@/api/types";
+import { AiCitationList } from "./AiCitationList";
 
 interface AskAiPanelProps {
   open: boolean;
@@ -20,10 +22,11 @@ interface AskAiPanelProps {
   canInsert?: boolean;
   onClose: () => void;
   onInsert: (text: string) => void;
+  onOpenCitation: (citation: ContextSnippet) => void;
 }
 
 /** AI 问答侧栏：基于当前笔记（可选全库检索上下文）提问，回答可插入笔记（P0-AI-4） */
-export function AskAiPanel({ open, noteContent, canInsert = true, onClose, onInsert }: AskAiPanelProps) {
+export function AskAiPanel({ open, noteContent, canInsert = true, onClose, onInsert, onOpenCitation }: AskAiPanelProps) {
   const ai = useAskAi({ noteContent });
   const { data } = useAiConfig();
   const noteTheme = useUiStore((state) => state.noteTheme);
@@ -38,7 +41,7 @@ export function AskAiPanel({ open, noteContent, canInsert = true, onClose, onIns
       </div>
       <ScopeTabs scope={ai.scope} onChange={ai.setScope} />
       {configured ? null : <AiNotConfigured />}
-      <AskAiMessages history={ai.history} streaming={ai.streaming} loading={ai.loading} error={ai.error} canInsert={canInsert} onInsert={onInsert} />
+      <AskAiMessages history={ai.history} streaming={ai.streaming} streamingCitations={ai.streamingCitations} loading={ai.loading} error={ai.error} canInsert={canInsert} onInsert={onInsert} onOpenCitation={onOpenCitation} />
       <AskAiComposer input={ai.input} loading={ai.loading} onChange={ai.setInput} onSend={() => void ai.send()} />
     </aside>
   );
@@ -104,19 +107,19 @@ function ScopeTabs({ scope, onChange }: { scope: AskScope; onChange: (s: AskScop
   );
 }
 
-function AskAiMessages({ history, streaming, loading, error, canInsert, onInsert }: { history: { role: string; content: string }[]; streaming: string; loading: boolean; error: string | null; canInsert: boolean; onInsert: (text: string) => void }) {
+function AskAiMessages({ history, streaming, streamingCitations, loading, error, canInsert, onInsert, onOpenCitation }: { history: AskAiMessage[]; streaming: string; streamingCitations: ContextSnippet[]; loading: boolean; error: string | null; canInsert: boolean; onInsert: (text: string) => void; onOpenCitation: (citation: ContextSnippet) => void }) {
   const { t } = useTranslation();
   const pending = streaming !== "" || loading;
-  const items: { role: string; content: string; pending?: boolean }[] = pending
-    ? [...history.map((m) => ({ ...m, pending: false })), { role: "assistant", content: streaming, pending: true }]
-    : history.map((m) => ({ ...m, pending: false }));
+  const items: (AskAiMessage & { pending?: boolean })[] = pending
+    ? [...history.map((message) => ({ ...message, pending: false })), { role: "assistant", content: streaming, citations: streamingCitations, pending: true }]
+    : history.map((message) => ({ ...message, pending: false }));
   return (
     <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
       {items.length === 0 ? (
         <p className="mt-8 text-center text-sm text-text-tertiary">{t("ai.emptyAsk")}</p>
       ) : (
         items.map((message, index) => (
-          <MessageBubble key={index} message={message} pending={message.pending === true} onInsert={canInsert && message.role === "assistant" && message.pending !== true ? onInsert : undefined} />
+          <MessageBubble key={index} message={message} pending={message.pending === true} onInsert={canInsert && message.role === "assistant" && message.pending !== true ? onInsert : undefined} onOpenCitation={onOpenCitation} />
         ))
       )}
       {error ? <p className="text-xs text-danger">{error}</p> : null}
@@ -124,31 +127,27 @@ function AskAiMessages({ history, streaming, loading, error, canInsert, onInsert
   );
 }
 
-function MessageBubble({ message, pending, onInsert }: { message: { role: string; content: string; pending?: boolean }; pending?: boolean; onInsert?: ((text: string) => void) | undefined }) {
+function MessageBubble({ message, pending, onInsert, onOpenCitation }: { message: AskAiMessage; pending?: boolean; onInsert?: ((text: string) => void) | undefined; onOpenCitation: (citation: ContextSnippet) => void }) {
   const { t } = useTranslation();
   const isUser = message.role === "user";
+  const citations = message.citations ?? [];
   return (
     <div className={`flex flex-col gap-1 ${isUser ? "items-end" : "items-start"}`}>
       <div className={`max-w-full rounded-lg px-3 py-2 text-sm leading-relaxed ${isUser ? "bg-accent/15 text-text-primary" : "border border-border bg-bg-primary"}`}>
         {isUser ? (
           <p className="whitespace-pre-wrap break-words">{message.content}</p>
+        ) : pending && message.content === "" ? (
+          <span className="flex items-center gap-2 text-xs text-text-secondary"><Loader2 size={13} className="animate-spin" />{t("ai.generating")}</span>
         ) : (
-          pending && message.content === "" ? (
-            <span className="flex items-center gap-2 text-xs text-text-secondary">
-              <Loader2 size={13} className="animate-spin" />
-              {t("ai.generating")}
-            </span>
-          ) : (
-            <div className="prose prose-sm max-w-none break-words [&_pre]:overflow-x-auto [&_code]:break-all">
-              <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
-            </div>
-          )
+          <div className="prose prose-sm max-w-none break-words [&_pre]:overflow-x-auto [&_code]:break-all">
+            <ReactMarkdown remarkPlugins={[remarkGfm]}>{message.content}</ReactMarkdown>
+          </div>
         )}
       </div>
+      {!isUser && !pending && citations.length > 0 ? <AiCitationList answer={message.content} citations={citations} onOpen={onOpenCitation} /> : null}
       {!isUser && onInsert ? (
         <Button variant="ghost" className="inline-flex items-center gap-1 px-2 py-1 text-xs" onClick={() => onInsert(message.content)}>
-          <CornerDownLeft size={13} />
-          {t("ai.insertAnswer")}
+          <CornerDownLeft size={13} />{t("ai.insertAnswer")}
         </Button>
       ) : null}
     </div>

@@ -18,6 +18,7 @@ import { useEditorPreferences } from "../hooks/useEditorPreferences";
 import { dispatchFormat } from "../hooks/useFormatCommands";
 import { insertCallout } from "../utils/insert";
 import { useUiStore } from "@/stores/ui.store";
+import { useSessionStore } from "@/stores/session.store";
 import { useNoteConversion } from "../hooks/useNoteConversion";
 import { EditorView } from "@codemirror/view";
 import { usePdfExport } from "@/features/export/hooks/usePdfExport";
@@ -31,7 +32,9 @@ import { resolveViewMode, usesSoftRender } from "../utils/viewMode";
 import { useNoteEncryption } from "@/features/vault/hooks/useNoteEncryption";
 import type { LinkOverlayRequest } from "./LinkOverlay";
 import { useMarkdownLinkInput } from "../hooks/useMarkdownLinkInput";
+import { useMarkdownNavigation } from "../hooks/useMarkdownNavigation";
 import { openExternalLink } from "@/platform/open-link";
+import type { NoteNavigationTarget } from "@/stores/session.store";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -39,7 +42,7 @@ interface NoteEditorProps {
   repoPath: string | null;
   notePath: string | null;
   onMove: (from: string) => void;
-  onOpenNote: (path: string) => void;
+  onOpenNote: (path: string, target?: NoteNavigationTarget) => void;
   createdPath?: string | null;
   focusTitleOnLoad?: boolean;
   historyRequestPath?: string | null;
@@ -54,12 +57,14 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const [outlineOpen, setOutlineOpen] = useState(false);
     const [diagnosticsOpen, setDiagnosticsOpen] = useState(false);
     const [linkOverlay, setLinkOverlay] = useState<LinkOverlayRequest | null>(null);
-    const { draft, kind, onChange, flush, saving, dirty, loadError, saveError, locked, encrypted } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
+    const { draft, kind, onChange, flush, saving, dirty, loaded, loadError, saveError, locked, encrypted } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
     const preferences = useEditorPreferences(repoPath, notePath);
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
     const { request: markdownLinkInput, open: openMarkdownLink, openForHref: openMarkdownLinkForHref } = useMarkdownLinkInput(viewRef);
     const wiki = useEditorWiki(repoPath, onOpenNote);
     const noteTheme = useUiStore((state) => state.noteTheme);
+    const navigationTarget = useSessionStore((state) => state.navigationTarget);
+    const navigationNonce = useSessionStore((state) => state.navigationNonce);
     const { preferences: { mode: preferredMode, editorScrollTop, previewScrollTop, ratio }, setMode, setRatio, setEditorScrollTop, setPreviewScrollTop } = preferences;
     const isCompact = useIsMobileViewport();
     const mode = resolveViewMode(preferredMode, isCompact);
@@ -81,6 +86,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     useKeyboardCaretIntoView(readyView, isCompact);
     useSyncScroll(readyView, previewRef, mode);
     useHistoryRequest(historyRequestPath, notePath, onHistoryRequestHandled, history.openHistory, encrypted);
+    useMarkdownNavigation({ kind, loaded: loaded(), navigationTarget, navigationNonce, notePath, readyView, viewRef, draft });
     useImperativeHandle(ref, () => ({ flush, setMode, openHistory: history.openHistory, insertCallout: () => { if (viewRef.current) dispatchFormat(viewRef.current, insertCallout); viewRef.current?.focus(); } }), [flush, setMode, history.openHistory, viewRef]);
     const diagnostics = useMarkdownDiagnostics(repoPath, draft);
     const handleDiagnosticsSelect = (issue: DiagnosticIssue) => {
@@ -101,6 +107,6 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const placeholder = editorPlaceholder(notePath, loadError, locked);
     if (placeholder !== null) return placeholder;
     const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, canUndo, canRedo, onImagePicked: asset.handleFiles, assetStatus: asset.status, onContextMenu: markdownMenu.handleContextMenu, contextMenu: <MarkdownContextMenu menu={markdownMenu} noteTheme={noteTheme} aiBlocked={encrypted} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />, previewContextMenu: { onContextMenu: previewMenu.handleContextMenu }, softRender: softRenderEnabled, onLinkAction: handleLinkAction, onLinkInput: openMarkdownLink };
-    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} previewMenu={previewMenu} noteTheme={noteTheme} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} encrypted={encrypted} linkOverlay={linkOverlay} markdownLinkInput={markdownLinkInput} />;
+    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} previewMenu={previewMenu} noteTheme={noteTheme} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} encrypted={encrypted} navigationTarget={navigationTarget} navigationNonce={navigationNonce} linkOverlay={linkOverlay} markdownLinkInput={markdownLinkInput} />;
   },
 );

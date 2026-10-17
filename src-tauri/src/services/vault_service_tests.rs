@@ -30,9 +30,13 @@ fn status_is_absent_before_the_repo_has_a_vault() {
 fn encrypted_note_count_only_reads_file_headers() {
     let tmp = repo();
     let root = tmp.path();
-    write_note(root, "plain.md", "# 明文笔记\n" );
+    write_note(root, "plain.md", "# 明文笔记\n");
     write_note(root, "sub/enc.md", &format!("{ENVELOPE_MAGIC}\nQUJD\n"));
-    write_note(root, "sub/rich.ainote", &format!("{ENVELOPE_MAGIC}\nREVG\n"));
+    write_note(
+        root,
+        "sub/rich.ainote",
+        &format!("{ENVELOPE_MAGIC}\nREVG\n"),
+    );
     write_note(root, "assets/pic.bin", "not a note");
 
     assert_eq!(count_encrypted_notes(root).unwrap(), 2);
@@ -68,7 +72,10 @@ fn create_unlock_lock_and_change_passphrase_lifecycle() {
     assert_eq!(status(root).unwrap().state, VaultState::Locked);
 
     // 正确口令解锁后能取回同一把主密钥
-    assert_eq!(unlock(root, passphrase).unwrap().state, VaultState::Unlocked);
+    assert_eq!(
+        unlock(root, passphrase).unwrap().state,
+        VaultState::Unlocked
+    );
     let master = session_master(root).unwrap();
 
     // 改口令：只换封装与盐，不重写笔记文件
@@ -78,7 +85,10 @@ fn create_unlock_lock_and_change_passphrase_lifecycle() {
     let changed = change_passphrase(root, passphrase, "another good passphrase").unwrap();
     assert_eq!(changed.state, VaultState::Unlocked);
     assert_eq!(session_master(root).unwrap().as_ref(), master.as_ref());
-    assert!(change_passphrase(root, passphrase, "yet another passphrase").is_err(), "旧口令已失效");
+    assert!(
+        change_passphrase(root, passphrase, "yet another passphrase").is_err(),
+        "旧口令已失效"
+    );
     assert_eq!(
         std::fs::read(root.join("secret.md")).unwrap(),
         note_before,
@@ -112,7 +122,10 @@ fn create_rejects_weak_passphrase_and_existing_vault() {
 
     create(root, "correct horse battery").unwrap();
     assert!(
-        matches!(create(root, "correct horse battery"), Err(AppError::VaultInvalid(_))),
+        matches!(
+            create(root, "correct horse battery"),
+            Err(AppError::VaultInvalid(_))
+        ),
         "重复建库必须报错，避免覆盖既有密钥"
     );
 }

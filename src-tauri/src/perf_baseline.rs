@@ -8,13 +8,19 @@ mod tests {
 
     use crate::repositories::git2_backend::Git2Backend;
     use crate::repositories::git_backend::GitBackend;
-    use crate::services::{asset_service, note_service, search_service, sync_service, wiki_service};
+    use crate::services::{
+        asset_service, note_service, search_service, sync_service, wiki_service,
+    };
 
     fn write_fixture(root: &Path, count: usize) {
         for index in 0..count {
             let path = format!("notes/{index:04}.md");
-            note_service::update_note(root, &path, &format!("# Note {index}\n\n#tag-{index}\ncontent {index}"))
-                .unwrap();
+            note_service::update_note(
+                root,
+                &path,
+                &format!("# Note {index}\n\n#tag-{index}\ncontent {index}"),
+            )
+            .unwrap();
         }
     }
 
@@ -26,7 +32,11 @@ mod tests {
         git2::Repository::init(root).unwrap();
         let backend = Git2Backend;
         for index in 0..commits {
-            std::fs::write(root.join(format!("commit-{index:04}.md")), format!("{index}\n")).unwrap();
+            std::fs::write(
+                root.join(format!("commit-{index:04}.md")),
+                format!("{index}\n"),
+            )
+            .unwrap();
             backend
                 .commit_all(root.to_str().unwrap(), &format!("perf {index}"))
                 .unwrap();
@@ -49,14 +59,18 @@ mod tests {
 
         assert_eq!(results.len(), 1);
         assert_eq!(index.len(), 1_000);
-        eprintln!("AINote baseline: search_1000={search_ms:.1}ms first_wiki_index_1000={index_ms:.1}ms");
+        eprintln!(
+            "AINote baseline: search_1000={search_ms:.1}ms first_wiki_index_1000={index_ms:.1}ms"
+        );
     }
 
     #[test]
     #[ignore = "manual performance baseline"]
     fn perf_baseline_5000_line_note_read() {
         let fixture = tempfile::tempdir().unwrap();
-        let content = (0..5_000).map(|line| format!("line {line}\n")).collect::<String>();
+        let content = (0..5_000)
+            .map(|line| format!("line {line}\n"))
+            .collect::<String>();
         let started = Instant::now();
         note_service::update_note(fixture.path(), "large.md", &content).unwrap();
         let read = note_service::read_note(fixture.path(), "large.md").unwrap();
@@ -71,11 +85,19 @@ mod tests {
         let fixture = tempfile::tempdir().unwrap();
         let started = Instant::now();
         for index in 0..1_000 {
-            note_service::import_note(fixture.path(), "imports", &format!("note-{index}.md"), "# Imported\n")
-                .unwrap();
+            note_service::import_note(
+                fixture.path(),
+                "imports",
+                &format!("note-{index}.md"),
+                "# Imported\n",
+            )
+            .unwrap();
         }
         let elapsed_ms = ms(started);
-        assert_eq!(note_service::list_notes(fixture.path()).unwrap().len(), 1_000);
+        assert_eq!(
+            note_service::list_notes(fixture.path()).unwrap().len(),
+            1_000
+        );
         eprintln!("AINote baseline: batch_import_1000={elapsed_ms:.1}ms");
     }
 
@@ -104,7 +126,11 @@ mod tests {
         let tree = note_service::list_tree(fixture.path()).unwrap();
         let elapsed_ms = ms(started);
 
-        let notes_folder = tree.children.iter().find(|node| node.name == "notes").unwrap();
+        let notes_folder = tree
+            .children
+            .iter()
+            .find(|node| node.name == "notes")
+            .unwrap();
         assert_eq!(notes_folder.children.len(), 1_000);
         eprintln!("AINote baseline: tree_1000_notes={elapsed_ms:.1}ms");
     }

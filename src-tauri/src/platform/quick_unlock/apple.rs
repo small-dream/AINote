@@ -19,9 +19,9 @@ use block2::RcBlock;
 use objc2::runtime::Bool;
 #[cfg(target_os = "macos")]
 use objc2_foundation::{NSError, NSString};
-use objc2_local_authentication::{LAContext, LABiometryType, LAPolicy};
 #[cfg(target_os = "macos")]
 use objc2_local_authentication::LAError;
+use objc2_local_authentication::{LABiometryType, LAContext, LAPolicy};
 use security_framework::access_control::{ProtectionMode, SecAccessControl};
 use security_framework::base::Error as SecurityError;
 use security_framework::passwords::{
@@ -68,7 +68,8 @@ impl DeviceKeyStore for AppleDeviceKeyStore {
             }
             // 没有生物识别（或未录入）时退回设备凭证：macOS 是登录密码，iOS 是设备密码。
             let owner =
-                unsafe { context.canEvaluatePolicy_error(LAPolicy::DeviceOwnerAuthentication) }.is_ok();
+                unsafe { context.canEvaluatePolicy_error(LAPolicy::DeviceOwnerAuthentication) }
+                    .is_ok();
             if owner {
                 return DeviceSupport::available(QuickUnlockKind::DeviceCredential);
             }
@@ -206,7 +207,11 @@ fn authenticate_in_pool(reason: &str) -> Result<(), AppError> {
     });
     let reason = NSString::from_str(reason);
     unsafe {
-        context.evaluatePolicy_localizedReason_reply(LAPolicy::DeviceOwnerAuthentication, &reason, &reply);
+        context.evaluatePolicy_localizedReason_reply(
+            LAPolicy::DeviceOwnerAuthentication,
+            &reason,
+            &reply,
+        );
     }
     match receiver.recv_timeout(AUTH_TIMEOUT) {
         Ok((true, _)) => Ok(()),
@@ -329,7 +334,9 @@ mod tests {
             .expect("设备条目应能写入（必要时回退登录钥匙串）");
         let stored = read_item(account, false).expect("登录钥匙串条目应可读回");
         assert_eq!(String::from_utf8_lossy(&stored), payload);
-        AppleDeviceKeyStore::new().delete(account).expect("删除条目");
+        AppleDeviceKeyStore::new()
+            .delete(account)
+            .expect("删除条目");
         assert!(read_item(account, false).is_err(), "删除后不应再读到条目");
     }
 }

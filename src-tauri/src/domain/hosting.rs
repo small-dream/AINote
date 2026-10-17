@@ -154,21 +154,39 @@ mod tests {
 
     #[test]
     fn provider_from_id_is_case_insensitive() {
-        assert_eq!(HostingProvider::from_id("GitHub"), Some(HostingProvider::GitHub));
-        assert_eq!(HostingProvider::from_id(" gitee "), Some(HostingProvider::Gitee));
+        assert_eq!(
+            HostingProvider::from_id("GitHub"),
+            Some(HostingProvider::GitHub)
+        );
+        assert_eq!(
+            HostingProvider::from_id(" gitee "),
+            Some(HostingProvider::Gitee)
+        );
         assert_eq!(HostingProvider::from_id("gitlab"), None);
     }
 
     #[test]
     fn host_of_handles_https_ssh_and_scp_forms() {
-        assert_eq!(host_of("https://github.com/u/r.git").as_deref(), Some("github.com"));
+        assert_eq!(
+            host_of("https://github.com/u/r.git").as_deref(),
+            Some("github.com")
+        );
         assert_eq!(
             host_of("https://user:pass@gitee.com:443/u/r.git").as_deref(),
             Some("gitee.com")
         );
-        assert_eq!(host_of("ssh://git@github.com:22/u/r.git").as_deref(), Some("github.com"));
-        assert_eq!(host_of("git@gitee.com:u/r.git").as_deref(), Some("gitee.com"));
-        assert_eq!(host_of("HTTPS://WWW.GitHub.com/u/r.git").as_deref(), Some("github.com"));
+        assert_eq!(
+            host_of("ssh://git@github.com:22/u/r.git").as_deref(),
+            Some("github.com")
+        );
+        assert_eq!(
+            host_of("git@gitee.com:u/r.git").as_deref(),
+            Some("gitee.com")
+        );
+        assert_eq!(
+            host_of("HTTPS://WWW.GitHub.com/u/r.git").as_deref(),
+            Some("github.com")
+        );
     }
 
     #[test]
@@ -197,8 +215,14 @@ mod tests {
             Some(HostingProvider::GitHub)
         );
         // 自建 GitLab 与其它托管不得被误判为已支持平台。
-        assert_eq!(HostingProvider::from_remote_url("https://gitlab.com/u/r.git"), None);
-        assert_eq!(HostingProvider::from_remote_url("https://gitee.com.evil.io/u/r.git"), None);
+        assert_eq!(
+            HostingProvider::from_remote_url("https://gitlab.com/u/r.git"),
+            None
+        );
+        assert_eq!(
+            HostingProvider::from_remote_url("https://gitee.com.evil.io/u/r.git"),
+            None
+        );
     }
 
     #[test]
@@ -216,8 +240,14 @@ mod tests {
 
     #[test]
     fn credential_user_prefers_login_for_gitee() {
-        assert_eq!(HostingProvider::GitHub.credential_user(Some("alice")), "x-access-token");
-        assert_eq!(HostingProvider::Gitee.credential_user(Some("alice")), "alice");
+        assert_eq!(
+            HostingProvider::GitHub.credential_user(Some("alice")),
+            "x-access-token"
+        );
+        assert_eq!(
+            HostingProvider::Gitee.credential_user(Some("alice")),
+            "alice"
+        );
         // 账号名未知（历史凭证 / 尚未校验）时回退 Gitee 的 OAuth 克隆约定。
         assert_eq!(HostingProvider::Gitee.credential_user(None), "oauth2");
         assert_eq!(HostingProvider::Gitee.credential_user(Some("  ")), "oauth2");

@@ -7,6 +7,7 @@ export { authApi } from "./auth.api";
 export { aiApi } from "./ai.api";
 export { assetApi, assetUrl, onDropPaths } from "./asset.api";
 export { wikiApi } from "./wiki.api";
+export { captureApi } from "./capture.api";
 export { historyApi } from "./history.api";
 export { searchApi } from "./search.api";
 export { updateApi } from "./update.api";
@@ -39,8 +40,13 @@ export type {
   AiProviderDto,
   AiModelDto,
   AiProvider,
+  AiChatReply,
+  AiChatStreamEvent,
   AiReply,
   AiStreamChunk,
+  CaptureInput,
+  CaptureSettings,
+  ContextSnippet,
   AssetInfo,
   AuthStatusDto,
   BackupExportDto,
@@ -62,6 +68,11 @@ export type {
   NoteContent,
   NoteMeta,
   NoteWikiDto,
+  SharedCapture,
+  UnlinkedMention,
+  UnlinkedMentionRef,
+  WikiHeading,
+  WikiLinkContext,
   RepoInfo,
   RepoPathDto,
   RestoreResultDto,

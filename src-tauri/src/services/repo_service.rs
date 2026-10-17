@@ -207,7 +207,10 @@ mod tests {
             strip_userinfo("https://github.com/a/b.git"),
             "https://github.com/a/b.git"
         );
-        assert_eq!(strip_userinfo("git@github.com:u/r.git"), "git@github.com:u/r.git");
+        assert_eq!(
+            strip_userinfo("git@github.com:u/r.git"),
+            "git@github.com:u/r.git"
+        );
     }
 
     #[test]
@@ -218,7 +221,10 @@ mod tests {
         bind_repo(&mock, "https://token@github.com/u/r.git", &dest, &cred()).unwrap();
         assert_eq!(
             mock.recorded(),
-            vec!["ls_remote:https://github.com/u/r.git", "clone:https://github.com/u/r.git"],
+            vec![
+                "ls_remote:https://github.com/u/r.git",
+                "clone:https://github.com/u/r.git"
+            ],
             "凭证不得写进传给 git 的 URL"
         );
     }

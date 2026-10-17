@@ -104,8 +104,16 @@ mod tests {
         )
         .unwrap();
 
-        assert_eq!(report.restored, vec!["a.md", "b.md"], "按路径排序后传给 Repository");
-        assert_eq!(report.skipped, vec!["gone.md"], "已不是变更的路径只记录不执行");
+        assert_eq!(
+            report.restored,
+            vec!["a.md", "b.md"],
+            "按路径排序后传给 Repository"
+        );
+        assert_eq!(
+            report.skipped,
+            vec!["gone.md"],
+            "已不是变更的路径只记录不执行"
+        );
         assert_eq!(
             mock.recorded(),
             vec!["changed_files", "discard:a.md,b.md"],
@@ -118,12 +126,19 @@ mod tests {
         let mock = MockGitBackend::default();
         let report = discard(&mock, &root(), &["a.md".into()]).unwrap();
 
-        assert_eq!(report, DiscardReport {
-            restored: Vec::new(),
-            deleted: Vec::new(),
-            skipped: vec!["a.md".into()],
-        });
-        assert_eq!(mock.recorded(), vec!["changed_files"], "无 dirty 路径时不执行丢弃");
+        assert_eq!(
+            report,
+            DiscardReport {
+                restored: Vec::new(),
+                deleted: Vec::new(),
+                skipped: vec!["a.md".into()],
+            }
+        );
+        assert_eq!(
+            mock.recorded(),
+            vec!["changed_files"],
+            "无 dirty 路径时不执行丢弃"
+        );
     }
 
     #[test]
@@ -181,7 +196,11 @@ mod tests {
         let report = discard(
             &mock,
             &root(),
-            &[".ainote/todos.json".into(), ".gitignore".into(), ".gitignore".into()],
+            &[
+                ".ainote/todos.json".into(),
+                ".gitignore".into(),
+                ".gitignore".into(),
+            ],
         )
         .unwrap();
         assert_eq!(

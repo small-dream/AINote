@@ -92,7 +92,10 @@ mod tests {
     fn rejects_escaping_paths() {
         for path in ["../secret", "/etc/passwd/../x", "daily//a.md", "..", ""] {
             assert!(
-                matches!(build_entries(&[conflict(path)]), Err(AppError::InvalidPath(_))),
+                matches!(
+                    build_entries(&[conflict(path)]),
+                    Err(AppError::InvalidPath(_))
+                ),
                 "path {path} should be rejected"
             );
         }

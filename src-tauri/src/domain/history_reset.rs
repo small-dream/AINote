@@ -83,7 +83,10 @@ mod tests {
 
     #[test]
     fn message_is_trimmed() {
-        assert_eq!(normalize_message("  note: reset  "), Some("note: reset".into()));
+        assert_eq!(
+            normalize_message("  note: reset  "),
+            Some("note: reset".into())
+        );
     }
 
     #[test]

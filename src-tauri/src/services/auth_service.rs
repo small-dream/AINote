@@ -17,8 +17,7 @@ pub fn store(app: &AppHandle) -> Result<AuthStore, AppError> {
 
 /// 解析 IPC 传入的平台 id；未知 id 返回可读错误。
 pub fn parse_provider(id: &str) -> Result<HostingProvider, AppError> {
-    HostingProvider::from_id(id)
-        .ok_or_else(|| AppError::Repo(format!("未知的托管平台: {id}")))
+    HostingProvider::from_id(id).ok_or_else(|| AppError::Repo(format!("未知的托管平台: {id}")))
 }
 
 /// 指定平台的远端凭证（令牌 + 平台约定的用户名）。
@@ -93,7 +92,11 @@ mod tests {
             err.to_string(),
             "auth error: 尚未配置 Gitee 的访问令牌，请先登录 Gitee 账号"
         );
-        let AppError::AuthLoginRequired { provider, display_name } = err else {
+        let AppError::AuthLoginRequired {
+            provider,
+            display_name,
+        } = err
+        else {
             panic!("应为可引导登录的认证错误");
         };
         assert_eq!(provider, "gitee");

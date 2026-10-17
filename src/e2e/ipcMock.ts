@@ -1,11 +1,12 @@
 /** 仅测试环境使用（dev + ?e2e）：安装浏览器端 Tauri IPC mock，驱动真实 UI 流程。 */
 import { handleCommand } from "./backend";
+import { registerE2eCallback, unregisterE2eCallback } from "./events";
 
 interface TauriInternals {
   invoke: (cmd: string, args: Record<string, unknown>) => Promise<unknown>;
   convertFileSrc: (filePath: string) => string;
-  transformCallback: () => number;
-  unregisterCallback: () => void;
+  transformCallback: (callback: (message: unknown) => void, once?: boolean) => number;
+  unregisterCallback: (id: number) => void;
   metadata: { currentWindow: { label: string }; currentWebview: { label: string } };
 }
 
@@ -38,8 +39,8 @@ export function installE2eIpcMock(): void {
   const internals: TauriInternals = {
     invoke: (cmd, args) => { record(cmd, args); return handleCommand(cmd, args); },
     convertFileSrc: (filePath) => assetDataUri(filePath),
-    transformCallback: () => 1,
-    unregisterCallback: () => undefined,
+    transformCallback: (callback, once) => registerE2eCallback(callback, once === true),
+    unregisterCallback: (id) => unregisterE2eCallback(id),
     metadata: { currentWindow: { label: "main" }, currentWebview: { label: "main" } },
   };
   window.__TAURI_INTERNALS__ = internals;
@@ -47,7 +48,7 @@ export function installE2eIpcMock(): void {
   // 否则平台判定（如 Android 更新提示）在 e2e 中永远为假。
   window.isTauri = true;
   window.__TAURI_EVENT_PLUGIN_INTERNALS__ = {
-    unregisterListener: () => undefined,
+    unregisterListener: (_event: string, id: number) => unregisterE2eCallback(id),
     registerListener: () => undefined,
   };
 }

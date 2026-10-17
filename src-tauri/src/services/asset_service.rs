@@ -10,11 +10,15 @@ const MAX_ASSET_BYTES: u64 = 20 * 1024 * 1024;
 pub fn import_asset(repo_path: &Path, source_path: &str) -> Result<AssetInfo, AppError> {
     let source = Path::new(source_path);
     if !source.is_file() {
-        return Err(AppError::InvalidPath(format!("asset not found: {source_path}")));
+        return Err(AppError::InvalidPath(format!(
+            "asset not found: {source_path}"
+        )));
     }
     let size = source.metadata()?.len();
     if size > MAX_ASSET_BYTES {
-        return Err(AppError::InvalidPath(format!("asset too large: {size} bytes")));
+        return Err(AppError::InvalidPath(format!(
+            "asset too large: {size} bytes"
+        )));
     }
     asset_files::import_from_path(repo_path, source)
 }
@@ -103,7 +107,14 @@ mod tests {
         fs::create_dir_all(root.join("assets")).unwrap();
         fs::write(root.join("assets/pic.png"), b"png").unwrap();
         assert_eq!(
-            asset_exists(root, &["assets/pic.png".into(), "assets/missing.png".into(), "../etc/passwd".into()]),
+            asset_exists(
+                root,
+                &[
+                    "assets/pic.png".into(),
+                    "assets/missing.png".into(),
+                    "../etc/passwd".into()
+                ]
+            ),
             vec![true, false, false]
         );
     }

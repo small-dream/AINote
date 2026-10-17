@@ -17,7 +17,13 @@ fn with_installer<T>(
     f: impl FnOnce(&mut JNIEnv, &JObject, &JClass) -> Result<T, AppError>,
 ) -> Result<T, AppError> {
     with_application_context(action, &AppError::UpdateInstall, |env, context| {
-        let class = app_class(env, context, INSTALLER_CLASS, action, &AppError::UpdateInstall)?;
+        let class = app_class(
+            env,
+            context,
+            INSTALLER_CLASS,
+            action,
+            &AppError::UpdateInstall,
+        )?;
         f(env, context, &class)
     })
 }

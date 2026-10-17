@@ -18,7 +18,7 @@ import type { OutlineItem } from "../utils/outline";
 import type { useEditorWiki } from "@/features/wiki/hooks/useEditorWiki";
 import type { useNoteHistory } from "@/features/history/hooks/useNoteHistory";
 import type { usePdfExport } from "@/features/export/hooks/usePdfExport";
-import type { AppError } from "@/api";
+import type { AppError, ContextSnippet } from "@/api";
 import { VaultLockedNote } from "@/features/vault/components/VaultLockedNote";
 import { useNoteEncryption } from "@/features/vault/hooks/useNoteEncryption";
 import { useToastStore } from "@/stores/toast.store";
@@ -28,6 +28,8 @@ import { LinkOverlay, type LinkOverlayRequest } from "./LinkOverlay";
 import { LinkPopover } from "@/components/molecules/LinkPopover";
 import type { LinkPopoverRequest } from "@/components/molecules/LinkPopover";
 import { useTranslation } from "@/i18n";
+import type { NoteNavigationTarget } from "@/stores/session.store";
+import { citationQuote } from "../utils/navigation";
 
 const LazyRichTextEditor = lazy(() => import("@/features/richtext/components/RichTextEditor").then(({ RichTextEditor }) => ({ default: RichTextEditor })));
 const LazyHistoryPanel = lazy(() => import("@/features/history/components/HistoryPanel").then(({ HistoryPanel }) => ({ default: HistoryPanel })));
@@ -41,7 +43,7 @@ export interface NoteEditorContentProps {
   draft: string;
   onChange: (value: string) => void;
   onMove: (path: string) => void;
-  onOpenNote: (path: string) => void;
+  onOpenNote: (path: string, target?: NoteNavigationTarget) => void;
   createdPath?: string | null;
   mode: ViewMode;
   compact: boolean;
@@ -74,13 +76,23 @@ export interface NoteEditorContentProps {
   markdownLinkInput?: LinkPopoverRequest | null | undefined;
   /** 是否为加密笔记：关闭 AI 与笔记历史入口，并提供逐篇加密开关 */
   encrypted: boolean;
+  navigationTarget?: NoteNavigationTarget | null | undefined;
+  navigationNonce?: number | undefined;
 }
 
-export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, previewMenu, noteTheme, richTextDialog, onRequestConvertToRichText, onConfirmConvertToRichText, onCancelConvertToRichText, onConvertToMarkdown, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf, encrypted, linkOverlay = null, markdownLinkInput = null }: NoteEditorContentProps) {
+export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, previewMenu, noteTheme, richTextDialog, onRequestConvertToRichText, onConfirmConvertToRichText, onCancelConvertToRichText, onConvertToMarkdown, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf, encrypted, linkOverlay = null, markdownLinkInput = null, navigationTarget = null, navigationNonce = 0 }: NoteEditorContentProps) {
   const richText = kind === "richText";
   // 富文本的 AI 菜单触发器由 RichTextEditor 注册上来（AI 按钮统一在顶部工具栏，两种笔记类型同一位置）。
   const richTextAiTrigger = useRef<(() => void) | null>(null);
   const encryption = useNoteEncryption(repoPath, notePath, encrypted);
+  const openCitation = (citation: ContextSnippet) => {
+    void flush().catch(() => undefined).then(() => onOpenNote(citation.path, {
+      path: citation.path,
+      heading: citation.heading,
+      line: citation.line,
+      quote: citationQuote(citation.text),
+    }));
+  };
   // 首次打开后才挂载（触发懒加载分块），之后保持挂载以保留问答历史。
   const [askAiMounted, setAskAiMounted] = useState(askAiOpen);
   ensureAskAiMounted(askAiOpen, askAiMounted, setAskAiMounted);
@@ -91,12 +103,11 @@ export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, o
   return <div className="flex h-full min-h-0 flex-col bg-bg-primary">
     <EditorToolbar path={notePath} mode={mode} compact={compact} richText={richText} saving={saving} dirty={dirty} saveError={saveError} saveErrorCode={saveErrorCode} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={onRequestConvertToRichText} onConvertToMarkdown={onConvertToMarkdown} onExportPdf={() => void pdf.request()} onExportMarkdown={onExportMarkdown} onAi={richText ? () => richTextAiTrigger.current?.() : ai.openMenu} aiBlocked={encrypted} historyBlocked={encrypted} onToggleEncryption={encryption.available ? encryption.toggle : undefined} encryptionAction={encryption.action} isNewNote={notePath === createdPath} draft={draft} onTitleChange={onChange} onFlush={flush} onRenamed={onOpenNote} />
     <ConvertNoteDialog open={richTextDialog.open} losses={richTextDialog.losses} converting={richTextDialog.converting} onCancel={onCancelConvertToRichText} onConfirm={onConfirmConvertToRichText} />
-    <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} encrypted={encrypted} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} aiTriggerRef={richTextAiTrigger} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
+    <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} encrypted={encrypted} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} aiTriggerRef={richTextAiTrigger} navigationTarget={navigationTarget} navigationNonce={navigationNonce} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
     <PreviewContextMenu menu={previewMenu} noteTheme={noteTheme} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />
     <LinkOverlay request={linkOverlay} />
     <LinkPopover request={markdownLinkInput} />
-    {encrypted ? null : <AiWriteControls ai={ai} canSummarize={!richText} canSuggest={!richText} suggest={suggest} />}
-    {!encrypted && askAiMounted ? <Suspense fallback={null}><LazyAskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} /></Suspense> : null}
+    <EditorAiOverlays encrypted={encrypted} askAiMounted={askAiMounted} askAiOpen={askAiOpen} ai={ai} suggest={suggest} richText={richText} draft={draft} insertAnswer={insertAnswer} closeAskAi={closeAskAi} openCitation={openCitation} />
     {history.open ? <Suspense fallback={null}><LazyHistoryPanel repoPath={repoPath} path={notePath} open onClose={history.closeHistory} onRestored={history.onRestored} /></Suspense> : null}
     <WikiPanel
       repoPath={repoPath}
@@ -110,6 +121,29 @@ export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, o
     />
     {pdf.open ? <Suspense fallback={null}><LazyPdfExportOverlay open title={pdf.title} kind={kind} content={draft} repoPath={repoPath} onClose={pdf.close} /></Suspense> : null}
   </div>;
+}
+
+interface EditorAiOverlaysProps {
+  encrypted: boolean;
+  askAiMounted: boolean;
+  askAiOpen: boolean;
+  ai: NoteEditorContentProps["ai"];
+  suggest: NoteEditorContentProps["suggest"];
+  richText: boolean;
+  draft: string;
+  insertAnswer: (text: string) => void;
+  closeAskAi: () => void;
+  openCitation: (citation: ContextSnippet) => void;
+}
+
+function EditorAiOverlays({ encrypted, askAiMounted, askAiOpen, ai, suggest, richText, draft, insertAnswer, closeAskAi, openCitation }: EditorAiOverlaysProps) {
+  if (encrypted) return null;
+  return (
+    <>
+      <AiWriteControls ai={ai} canSummarize={!richText} canSuggest={!richText} suggest={suggest} />
+      {askAiMounted ? <Suspense fallback={null}><LazyAskAiPanel open={askAiOpen} noteContent={draft} canInsert={!richText} onInsert={insertAnswer} onClose={closeAskAi} onOpenCitation={openCitation} /></Suspense> : null}
+    </>
+  );
 }
 
 function ensureAskAiMounted(open: boolean, mounted: boolean, setMounted: (value: boolean) => void): void {

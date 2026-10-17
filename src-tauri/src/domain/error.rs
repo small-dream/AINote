@@ -49,6 +49,12 @@ pub enum AppError {
     DiscardBlocked(String),
     #[error("io error: {0}")]
     Io(String),
+    /// 快速捕捉：快捷键注册失败或捕获请求非法（可操作错误，消息直接展示）。
+    #[error("{0}")]
+    Capture(String),
+    /// 双链转换：索引已过期或目标文本已变化，需要刷新后重试。
+    #[error("wiki conflict: {0}")]
+    WikiConflict(String),
     /// AI 配置缺失 / Provider 调用失败（不可自动重试）
     #[error("ai error: {0}")]
     Ai(String),
@@ -145,7 +151,12 @@ impl AppErrorDto {
     }
 
     /// 附加同步定位信息（E4-T4）：`stage` 为空表示无法归因，`files` 为空表示无法定位到文件。
-    pub fn with_sync_context(mut self, stage: Option<SyncStage>, files: Vec<String>, hint: &str) -> Self {
+    pub fn with_sync_context(
+        mut self,
+        stage: Option<SyncStage>,
+        files: Vec<String>,
+        hint: &str,
+    ) -> Self {
         self.stage = stage;
         self.files = files;
         self.hint = Some(hint.to_string());
@@ -171,6 +182,8 @@ impl From<AppError> for AppErrorDto {
             AppError::SyncBusy(_) => ("SYNC_4005", ErrorKind::Conflict, true),
             AppError::DiscardBlocked(_) => ("SYNC_4006", ErrorKind::Conflict, true),
             AppError::Io(_) => ("IO_5001", ErrorKind::Io, true),
+            AppError::Capture(_) => ("CAPTURE_10001", ErrorKind::Conflict, false),
+            AppError::WikiConflict(_) => ("WIKI_10001", ErrorKind::Conflict, true),
             AppError::Ai(_) => ("AI_6001", ErrorKind::Unknown, false),
             AppError::AiNetwork(_) => ("AI_6002", ErrorKind::Unknown, true),
             AppError::UpdateDownload(_) => ("UPDATE_7001", ErrorKind::Network, true),
@@ -248,9 +261,11 @@ mod tests {
 
     #[test]
     fn sync_context_accepts_unknown_stage() {
-        let json = serde_json::to_value(
-            dto(AppError::Git("boom".into())).with_sync_context(None, Vec::new(), "retry"),
-        )
+        let json = serde_json::to_value(dto(AppError::Git("boom".into())).with_sync_context(
+            None,
+            Vec::new(),
+            "retry",
+        ))
         .unwrap();
         assert!(json.get("stage").is_none(), "无法归因时不写 stage");
         assert!(json.get("files").is_none());
@@ -284,13 +299,25 @@ mod tests {
         let discard_blocked = dto(AppError::DiscardBlocked("存在未解决的合并冲突".into()));
         assert_eq!(discard_blocked.code, "SYNC_4006");
         assert!(discard_blocked.retriable, "解决冲突后可重试");
-        assert_eq!(discard_blocked.message, "存在未解决的合并冲突", "消息不带英文前缀");
+        assert_eq!(
+            discard_blocked.message, "存在未解决的合并冲突",
+            "消息不带英文前缀"
+        );
         assert_eq!(dto(AppError::Io("i".into())).code, "IO_5001");
         assert_eq!(dto(AppError::Ai("no key".into())).code, "AI_6001");
         assert_eq!(dto(AppError::AiNetwork("down".into())).code, "AI_6002");
-        assert_eq!(dto(AppError::UpdateDownload("net".into())).code, "UPDATE_7001");
-        assert_eq!(dto(AppError::UpdateChecksum("bad".into())).code, "UPDATE_7002");
-        assert_eq!(dto(AppError::UpdateInstall("bridge".into())).code, "UPDATE_7003");
+        assert_eq!(
+            dto(AppError::UpdateDownload("net".into())).code,
+            "UPDATE_7001"
+        );
+        assert_eq!(
+            dto(AppError::UpdateChecksum("bad".into())).code,
+            "UPDATE_7002"
+        );
+        assert_eq!(
+            dto(AppError::UpdateInstall("bridge".into())).code,
+            "UPDATE_7003"
+        );
         let update_busy = dto(AppError::UpdateBusy("下载中".into()));
         assert_eq!(update_busy.code, "UPDATE_7004");
         assert!(update_busy.retriable, "防重入错误稍后重试即可");
@@ -301,7 +328,10 @@ mod tests {
         assert_eq!(backup_busy.message, "备份中");
         assert_eq!(dto(AppError::TaskNotFound("t".into())).code, "TASK_8001");
         assert_eq!(dto(AppError::TaskInvalid("bad".into())).code, "TASK_8003");
-        assert_eq!(dto(AppError::VaultLocked("locked".into())).code, "VAULT_9001");
+        assert_eq!(
+            dto(AppError::VaultLocked("locked".into())).code,
+            "VAULT_9001"
+        );
         assert_eq!(
             dto(AppError::VaultUnlockFailed("bad passphrase".into())).code,
             "VAULT_9002"
@@ -310,8 +340,14 @@ mod tests {
             dto(AppError::VaultHistoryUnavailable("encrypted".into())).code,
             "VAULT_9003"
         );
-        assert_eq!(dto(AppError::VaultInvalid("weak".into())).code, "VAULT_9004");
-        assert_eq!(dto(AppError::VaultCorrupt("tampered".into())).code, "VAULT_9005");
+        assert_eq!(
+            dto(AppError::VaultInvalid("weak".into())).code,
+            "VAULT_9004"
+        );
+        assert_eq!(
+            dto(AppError::VaultCorrupt("tampered".into())).code,
+            "VAULT_9005"
+        );
         assert_eq!(
             dto(AppError::VaultQuickUnlockUnavailable("stale".into())).code,
             "VAULT_9006"
@@ -432,7 +468,10 @@ mod tests {
         // 非认证错误不写平台，避免误导用户去登录。
         let untouched = dto(AppError::Git("boom".into())).with_auth_provider("gitee");
         assert!(untouched.provider.is_none());
-        assert!(serde_json::to_value(untouched).unwrap().get("provider").is_none());
+        assert!(serde_json::to_value(untouched)
+            .unwrap()
+            .get("provider")
+            .is_none());
     }
 
     #[test]

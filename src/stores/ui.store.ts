@@ -11,7 +11,7 @@ export interface RecentNoteEntry {
   openedAt: number;
 }
 /** 设置页左侧分类导航的激活项 */
-export type SettingsTab = "repositories" | "vault" | "appearance" | "language" | "ai" | "updates" | "support" | "account";
+export type SettingsTab = "general" | "repositories" | "vault" | "appearance" | "language" | "ai" | "updates" | "support" | "account";
 
 /** 空闲自动锁定时长（分钟）；0 = 从不自动锁定。档位从 30 分钟起：短档位在「离开电脑」场景只会制造频繁解锁 */
 export type VaultAutoLockMinutes = 0 | 30 | 60 | 120;

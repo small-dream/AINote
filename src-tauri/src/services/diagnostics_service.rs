@@ -82,14 +82,17 @@ pub(crate) fn build_summary(input: &DiagnosticsInput) -> DiagnosticsSummary {
         repo_count: input.config.repo_count,
         has_active_repo: input.config.has_active_repo,
         has_token: input.config.has_token,
-        sync: input.sync.as_ref().map_or_else(DiagnosticsSyncSummary::default, |status| {
-            DiagnosticsSyncSummary {
-                ahead: status.ahead,
-                behind: status.behind,
-                has_uncommitted: status.has_uncommitted,
-                conflicted: status.conflicted,
-            }
-        }),
+        sync: input
+            .sync
+            .as_ref()
+            .map_or_else(DiagnosticsSyncSummary::default, |status| {
+                DiagnosticsSyncSummary {
+                    ahead: status.ahead,
+                    behind: status.behind,
+                    has_uncommitted: status.has_uncommitted,
+                    conflicted: status.conflicted,
+                }
+            }),
         repo_size_bytes: input.repo_size_bytes,
         error_counts: count_error_codes(&input.log_text),
         log_lines: input.log_text.lines().count(),
@@ -163,8 +166,14 @@ mod tests {
         assert_eq!(
             counts,
             vec![
-                DiagnosticsErrorCount { code: "GIT_4001".into(), count: 1 },
-                DiagnosticsErrorCount { code: "SYNC_4002".into(), count: 2 },
+                DiagnosticsErrorCount {
+                    code: "GIT_4001".into(),
+                    count: 1
+                },
+                DiagnosticsErrorCount {
+                    code: "SYNC_4002".into(),
+                    count: 2
+                },
             ]
         );
     }

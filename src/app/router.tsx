@@ -1,7 +1,8 @@
-import { createBrowserRouter, Navigate } from "react-router";
+import { createBrowserRouter, Navigate, Outlet } from "react-router";
 import { lazy, Suspense } from "react";
 import { useSessionStore } from "@/stores/session.store";
 import { useTranslation } from "@/i18n";
+import { CaptureRoot } from "@/features/capture/components/CaptureRoot";
 
 const LazySetupPage = lazy(() => import("@/pages/setup").then(({ SetupPage }) => ({ default: SetupPage })));
 const LazyWorkspacePage = lazy(() => import("@/pages/workspace").then(({ WorkspacePage }) => ({ default: WorkspacePage })));
@@ -21,8 +22,17 @@ function RouteLoading() {
   );
 }
 
+function RootLayout() {
+  return <><Outlet /><CaptureRoot /></>;
+}
+
 export const router = createBrowserRouter([
-  { path: "/setup", element: <Suspense fallback={<RouteLoading />}><LazySetupPage /></Suspense> },
-  { path: "/workspace", element: <Suspense fallback={<RouteLoading />}><WorkspaceRoute /></Suspense> },
-  { path: "*", element: <Navigate to="/workspace" replace /> },
+  {
+    element: <RootLayout />,
+    children: [
+      { path: "/setup", element: <Suspense fallback={<RouteLoading />}><LazySetupPage /></Suspense> },
+      { path: "/workspace", element: <Suspense fallback={<RouteLoading />}><WorkspaceRoute /></Suspense> },
+      { path: "*", element: <Navigate to="/workspace" replace /> },
+    ],
+  },
 ]);

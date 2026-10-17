@@ -135,7 +135,12 @@ mod tests {
 
     fn cfg() -> AppConfig {
         let mut cfg = AppConfig::default();
-        register_cfg(&mut cfg, "工作", "/a/work", Some("https://github.com/u/work.git".into()));
+        register_cfg(
+            &mut cfg,
+            "工作",
+            "/a/work",
+            Some("https://github.com/u/work.git".into()),
+        );
         register_cfg(&mut cfg, "生活", "/b/life", None);
         cfg
     }

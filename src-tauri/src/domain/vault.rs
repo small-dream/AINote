@@ -117,7 +117,8 @@ impl VaultFile {
         {
             return Err(invalid("密钥派生参数超出允许范围"));
         }
-        if self.kdf.salt.is_empty() || self.wrap.nonce.is_empty() || self.wrap.ciphertext.is_empty() {
+        if self.kdf.salt.is_empty() || self.wrap.nonce.is_empty() || self.wrap.ciphertext.is_empty()
+        {
             return Err(invalid("仓库密钥文件缺少必要字段"));
         }
         Ok(())
@@ -178,9 +179,7 @@ pub fn check_passphrase_strength(passphrase: &str, context: &[&str]) -> Result<(
         ));
     }
     if lowered.chars().all(|c| c.is_ascii_digit()) {
-        return Err(AppError::VaultInvalid(
-            "口令不能是纯数字".to_string(),
-        ));
+        return Err(AppError::VaultInvalid("口令不能是纯数字".to_string()));
     }
     Ok(())
 }
@@ -271,14 +270,13 @@ mod tests {
     #[test]
     fn passphrase_strength_enforces_minimum_and_context() {
         assert!(check_passphrase_strength("short", &[]).is_err());
-        assert!(check_passphrase_strength("123456", &[]).is_err(), "纯数字拒绝");
+        assert!(
+            check_passphrase_strength("123456", &[]).is_err(),
+            "纯数字拒绝"
+        );
         assert!(check_passphrase_strength("correct horse battery", &[]).is_ok());
         assert!(
-            check_passphrase_strength(
-                "Jake@example.com",
-                &["jake@example.com"],
-            )
-            .is_err(),
+            check_passphrase_strength("Jake@example.com", &["jake@example.com"],).is_err(),
             "不得与账号上下文相同"
         );
         assert!(check_passphrase_strength("Jake@example.com", &[""]).is_ok());

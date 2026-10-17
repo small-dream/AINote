@@ -6,15 +6,21 @@ import { useUiStore } from "@/stores/ui.store";
 
 export type ToastTone = "error" | "success" | "info";
 
+export interface ToastAction {
+  label: string;
+  run: () => void;
+}
+
 export interface ToastItem {
   id: string;
   tone: ToastTone;
   message: string;
+  action?: ToastAction;
 }
 
 interface ToastState {
   items: ToastItem[];
-  push: (message: string, tone?: ToastTone, durationMs?: number) => void;
+  push: (message: string, tone?: ToastTone, durationMs?: number, action?: ToastAction) => void;
   dismiss: (id: string) => void;
   clear: () => void;
 }
@@ -23,9 +29,9 @@ let nextToastId = 0;
 
 export const useToastStore = create<ToastState>((set) => ({
   items: [],
-  push: (message, tone = "error", durationMs = 6000) => {
+  push: (message, tone = "error", durationMs = 6000, action) => {
     const id = `toast-${nextToastId += 1}`;
-    set((state) => ({ items: [...state.items.slice(-4), { id, tone, message }] }));
+    set((state) => ({ items: [...state.items.slice(-4), { id, tone, message, ...(action ? { action } : {}) }] }));
     if (durationMs > 0) {
       globalThis.setTimeout(() => set((state) => ({ items: state.items.filter((item) => item.id !== id) })), durationMs);
     }

@@ -9,10 +9,15 @@ use crate::domain::history::{CommitInfo, DiffLine, DiffLineKind, FileDiff};
 use super::git2_backend::{blob_is_envelope, open, to_git};
 
 /// 指定文件（相对仓库根）的提交历史：仅含修改过该文件的提交，按时间倒序。
-pub fn file_history(repo_path: &str, file: &str, limit: usize) -> Result<Vec<CommitInfo>, AppError> {
+pub fn file_history(
+    repo_path: &str,
+    file: &str,
+    limit: usize,
+) -> Result<Vec<CommitInfo>, AppError> {
     let repo = open(repo_path)?;
     let mut walk = repo.revwalk().map_err(to_git)?;
-    walk.set_sorting(Sort::TIME | Sort::TOPOLOGICAL).map_err(to_git)?;
+    walk.set_sorting(Sort::TIME | Sort::TOPOLOGICAL)
+        .map_err(to_git)?;
     walk.push_head().map_err(to_git)?;
     let mut out = Vec::new();
     for oid in walk {
@@ -74,14 +79,19 @@ pub fn restore_file(repo_path: &str, file: &str, commit_id: &str) -> Result<(), 
 pub fn history_contains_envelope(repo_path: &str, file: &str) -> Result<bool, AppError> {
     let repo = open(repo_path)?;
     let mut walk = repo.revwalk().map_err(to_git)?;
-    walk.set_sorting(Sort::TIME | Sort::TOPOLOGICAL).map_err(to_git)?;
+    walk.set_sorting(Sort::TIME | Sort::TOPOLOGICAL)
+        .map_err(to_git)?;
     if walk.push_head().is_err() {
         return Ok(false); // unborn HEAD：无历史即无信封
     }
     let mut last: Option<git2::Oid> = None;
     for oid in walk {
         let commit = repo.find_commit(oid.map_err(to_git)?).map_err(to_git)?;
-        let entry = commit.tree().map_err(to_git)?.get_path(Path::new(file)).ok();
+        let entry = commit
+            .tree()
+            .map_err(to_git)?
+            .get_path(Path::new(file))
+            .ok();
         let blob_id = entry
             .filter(|e| e.kind() == Some(git2::ObjectType::Blob))
             .map(|e| e.id());

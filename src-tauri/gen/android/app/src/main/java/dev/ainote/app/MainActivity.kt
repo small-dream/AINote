@@ -1,5 +1,6 @@
 package dev.ainote.app
 
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.enableEdgeToEdge
 import io.crates.keyring.Keyring
@@ -11,6 +12,13 @@ class MainActivity : TauriActivity() {
     QuickUnlock.attach(this)
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
+    ShareIntake.accept(this, intent)
+  }
+
+  override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    setIntent(intent)
+    ShareIntake.accept(this, intent)
   }
 
   override fun onDestroy() {

@@ -29,7 +29,9 @@ fn session() -> &'static Mutex<Option<UnlockedVault>> {
 
 /// 锁中毒（持锁线程 panic）时取回内部值：会话只是内存状态，恢复比继续 panic 更合理。
 fn session_guard() -> MutexGuard<'static, Option<UnlockedVault>> {
-    session().lock().unwrap_or_else(|poison| poison.into_inner())
+    session()
+        .lock()
+        .unwrap_or_else(|poison| poison.into_inner())
 }
 
 /// 用例：读取仓库加密状态（未建库 / 已锁定 / 已解锁 + 加密笔记数量）。

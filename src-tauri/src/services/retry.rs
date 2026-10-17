@@ -220,8 +220,16 @@ mod tests {
         assert_eq!(
             reports,
             vec![
-                RetryAttempt { retry: 1, max_retries: 3, delay_ms: 100 },
-                RetryAttempt { retry: 2, max_retries: 3, delay_ms: 200 },
+                RetryAttempt {
+                    retry: 1,
+                    max_retries: 3,
+                    delay_ms: 100
+                },
+                RetryAttempt {
+                    retry: 2,
+                    max_retries: 3,
+                    delay_ms: 200
+                },
             ]
         );
     }
@@ -231,7 +239,11 @@ mod tests {
         let cancel = AtomicBool::new(false);
         let mut calls = 0;
         let result = {
-            let mut ctx = RetryContext { cancel: &cancel, sleep: None, report: None };
+            let mut ctx = RetryContext {
+                cancel: &cancel,
+                sleep: None,
+                report: None,
+            };
             with_retry(policy(), &mut ctx, || -> Result<(), AppError> {
                 calls += 1;
                 Err(net("仍然超时"))
@@ -247,7 +259,11 @@ mod tests {
         let cancel = AtomicBool::new(false);
         let mut calls = 0;
         let result = {
-            let mut ctx = RetryContext { cancel: &cancel, sleep: None, report: None };
+            let mut ctx = RetryContext {
+                cancel: &cancel,
+                sleep: None,
+                report: None,
+            };
             with_retry(policy(), &mut ctx, || -> Result<(), AppError> {
                 calls += 1;
                 Err(AppError::SyncAuth("401".into()))

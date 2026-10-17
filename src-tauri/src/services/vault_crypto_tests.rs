@@ -78,8 +78,11 @@ fn wrap_and_unwrap_round_trip_with_correct_passphrase() {
 #[test]
 fn unwrap_fails_for_wrong_passphrase_and_tampered_wrap() {
     let kdf = cheap_kdf();
-    let wrapped = wrap_master_key(&derive_kek("correct horse battery", &kdf).unwrap(), &master())
-        .unwrap();
+    let wrapped = wrap_master_key(
+        &derive_kek("correct horse battery", &kdf).unwrap(),
+        &master(),
+    )
+    .unwrap();
 
     let wrong = derive_kek("correct horse batterz", &kdf).unwrap();
     assert!(matches!(
@@ -92,7 +95,10 @@ fn unwrap_fails_for_wrong_passphrase_and_tampered_wrap() {
     raw[0] ^= 0x01;
     tampered.ciphertext = b64_encode(&raw);
     assert!(matches!(
-        unwrap_master_key(&derive_kek("correct horse battery", &kdf).unwrap(), &tampered),
+        unwrap_master_key(
+            &derive_kek("correct horse battery", &kdf).unwrap(),
+            &tampered
+        ),
         Err(AppError::VaultUnlockFailed(_))
     ));
 }
@@ -157,7 +163,10 @@ fn decrypt_rejects_wrong_key_tampering_and_plain_text() {
     raw[last] ^= 0x01;
     let tampered = encode_envelope(&b64_encode(&raw));
     assert!(
-        matches!(decrypt_note(&master, &tampered), Err(AppError::VaultCorrupt(_))),
+        matches!(
+            decrypt_note(&master, &tampered),
+            Err(AppError::VaultCorrupt(_))
+        ),
         "篡改密文必须被 SIV 校验拒绝"
     );
 }

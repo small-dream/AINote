@@ -9,8 +9,8 @@ use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager};
 
 use crate::domain::error::AppError;
-use crate::domain::metrics::{MetricEvent, MetricsDto, MetricsSnapshot, DAILY_WINDOW_DAYS};
 use crate::domain::metrics::MetricsExportDto;
+use crate::domain::metrics::{MetricEvent, MetricsDto, MetricsSnapshot, DAILY_WINDOW_DAYS};
 
 const METRICS_FILE: &str = "metrics.json";
 
@@ -254,13 +254,19 @@ mod tests {
             "关闭后不应创建任何文件"
         );
         assert_eq!(
-            store.snapshot().expect("读取").total(MetricEvent::AppLaunched),
+            store
+                .snapshot()
+                .expect("读取")
+                .total(MetricEvent::AppLaunched),
             0
         );
 
         record_if_enabled(&store, true, MetricEvent::AppLaunched).expect("开启后写入");
         assert_eq!(
-            store.snapshot().expect("读取").total(MetricEvent::AppLaunched),
+            store
+                .snapshot()
+                .expect("读取")
+                .total(MetricEvent::AppLaunched),
             1
         );
     }
@@ -277,14 +283,24 @@ mod tests {
         let (dir, store) = store();
         store.record(MetricEvent::RepoBound).expect("记录绑定");
 
-        let json = export(&store, &dir.path().join("metrics.json"), MetricsFormat::Json, true)
-            .expect("导出 JSON");
+        let json = export(
+            &store,
+            &dir.path().join("metrics.json"),
+            MetricsFormat::Json,
+            true,
+        )
+        .expect("导出 JSON");
         assert!(json.bytes > 0);
         let json_text = fs::read_to_string(&json.path).expect("读取 JSON");
         assert!(json_text.contains("\"repo_bound\": 1"));
 
-        let csv = export(&store, &dir.path().join("metrics.csv"), MetricsFormat::Csv, true)
-            .expect("导出 CSV");
+        let csv = export(
+            &store,
+            &dir.path().join("metrics.csv"),
+            MetricsFormat::Csv,
+            true,
+        )
+        .expect("导出 CSV");
         let csv_text = fs::read_to_string(&csv.path).expect("读取 CSV");
         assert!(csv_text.contains("repo_bound,1,"));
         assert!(csv_text.contains("platform,"));

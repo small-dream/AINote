@@ -85,7 +85,11 @@ mod tests {
         File::create(root.join("daily/c.ainote")).unwrap();
         File::create(root.join(".git/x.md")).unwrap();
         File::create(root.join("note.txt")).unwrap();
-        fs::write(root.join("daily/secret.md"), format!("{ENVELOPE_MAGIC}\nQUJD\n")).unwrap();
+        fs::write(
+            root.join("daily/secret.md"),
+            format!("{ENVELOPE_MAGIC}\nQUJD\n"),
+        )
+        .unwrap();
 
         let tree = list_tree(root).unwrap();
         assert_eq!(tree.node_type, NodeKind::Dir);
@@ -96,7 +100,10 @@ mod tests {
         assert!(!tree.children[0].children[0].encrypted);
         assert_eq!(tree.children[0].children[1].path, "daily/c.ainote");
         assert_eq!(tree.children[0].children[2].path, "daily/secret.md");
-        assert!(tree.children[0].children[2].encrypted, "信封文件必须标记为加密");
+        assert!(
+            tree.children[0].children[2].encrypted,
+            "信封文件必须标记为加密"
+        );
         assert_eq!(tree.children[1].name, "b.md");
         assert!(!tree.children[1].encrypted);
     }

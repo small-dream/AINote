@@ -38,7 +38,11 @@ pub fn severity_for(code: &str) -> IssueSeverity {
 }
 
 /// 按错误码自动带上严重度构造问题。
-pub fn issue(code: &str, message: impl Into<String>, fix_hint: impl Into<String>) -> IntegrityIssue {
+pub fn issue(
+    code: &str,
+    message: impl Into<String>,
+    fix_hint: impl Into<String>,
+) -> IntegrityIssue {
     IntegrityIssue {
         code: code.to_string(),
         severity: severity_for(code),

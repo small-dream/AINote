@@ -135,9 +135,9 @@ impl PlatformOutcome {
             Self::Stale(detail) => AppError::VaultQuickUnlockUnavailable(format!(
                 "{detail}，请用仓库口令解锁后重新开启设备级快速解锁"
             )),
-            Self::Failed(detail) => {
-                AppError::VaultDeviceAuthFailed(format!("{action}失败：{detail}，请重试或用仓库口令解锁"))
-            }
+            Self::Failed(detail) => AppError::VaultDeviceAuthFailed(format!(
+                "{action}失败：{detail}，请重试或用仓库口令解锁"
+            )),
             Self::Ok(_) => AppError::VaultDeviceAuthFailed(format!("{action}未返回结果")),
         }
     }
@@ -179,7 +179,10 @@ mod tests {
 
     #[test]
     fn platform_outcome_parses_android_protocol() {
-        assert_eq!(PlatformOutcome::parse("ok"), PlatformOutcome::Ok(String::new()));
+        assert_eq!(
+            PlatformOutcome::parse("ok"),
+            PlatformOutcome::Ok(String::new())
+        );
         assert_eq!(
             PlatformOutcome::parse("ok:{\"version\":1}"),
             PlatformOutcome::Ok("{\"version\":1}".to_string()),

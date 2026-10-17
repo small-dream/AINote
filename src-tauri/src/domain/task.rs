@@ -85,7 +85,9 @@ pub fn validate_reminder(
     remind_at: &Option<String>,
 ) -> Result<(), AppError> {
     if remind_at.is_some() && due_at.is_none() {
-        return Err(AppError::TaskInvalid("提醒时间需要搭配截止时间".to_string()));
+        return Err(AppError::TaskInvalid(
+            "提醒时间需要搭配截止时间".to_string(),
+        ));
     }
     Ok(())
 }
@@ -172,7 +174,13 @@ fn due_sort_key(value: &str) -> (&str, &str) {
 mod tests {
     use super::*;
 
-    fn task(id: &str, done: bool, due: Option<&str>, priority: TaskPriority, created: &str) -> TaskItem {
+    fn task(
+        id: &str,
+        done: bool,
+        due: Option<&str>,
+        priority: TaskPriority,
+        created: &str,
+    ) -> TaskItem {
         TaskItem {
             id: id.to_string(),
             title: id.to_string(),
@@ -196,7 +204,11 @@ mod tests {
 
     #[test]
     fn reminder_requires_due_date() {
-        assert!(validate_reminder(&Some("2026-09-20".into()), &Some("2026-09-20T09:00:00+08:00".into())).is_ok());
+        assert!(validate_reminder(
+            &Some("2026-09-20".into()),
+            &Some("2026-09-20T09:00:00+08:00".into())
+        )
+        .is_ok());
         assert!(validate_reminder(&None, &None).is_ok());
         assert!(validate_reminder(&None, &Some("2026-09-20T09:00:00+08:00".into())).is_err());
     }
@@ -216,9 +228,27 @@ mod tests {
     #[test]
     fn same_day_datetime_sorts_after_date_only() {
         let mut tasks = vec![
-            task("datetime", false, Some("2026-09-20T09:00"), TaskPriority::None, "2026-09-01T00:00:00Z"),
-            task("date-only", false, Some("2026-09-20"), TaskPriority::None, "2026-09-01T00:00:00Z"),
-            task("next-day", false, Some("2026-09-21"), TaskPriority::None, "2026-09-01T00:00:00Z"),
+            task(
+                "datetime",
+                false,
+                Some("2026-09-20T09:00"),
+                TaskPriority::None,
+                "2026-09-01T00:00:00Z",
+            ),
+            task(
+                "date-only",
+                false,
+                Some("2026-09-20"),
+                TaskPriority::None,
+                "2026-09-01T00:00:00Z",
+            ),
+            task(
+                "next-day",
+                false,
+                Some("2026-09-21"),
+                TaskPriority::None,
+                "2026-09-01T00:00:00Z",
+            ),
         ];
         sort_tasks(&mut tasks);
         let ids: Vec<&str> = tasks.iter().map(|t| t.id.as_str()).collect();
@@ -227,10 +257,19 @@ mod tests {
 
     #[test]
     fn toggle_flips_done_and_maintains_timestamps() {
-        let mut item = task("t1", false, None, TaskPriority::None, "2026-09-15T08:00:00+08:00");
+        let mut item = task(
+            "t1",
+            false,
+            None,
+            TaskPriority::None,
+            "2026-09-15T08:00:00+08:00",
+        );
         toggle_task(&mut item, "2026-09-15T09:00:00+08:00");
         assert!(item.done);
-        assert_eq!(item.completed_at.as_deref(), Some("2026-09-15T09:00:00+08:00"));
+        assert_eq!(
+            item.completed_at.as_deref(),
+            Some("2026-09-15T09:00:00+08:00")
+        );
         assert_eq!(item.updated_at, "2026-09-15T09:00:00+08:00");
 
         toggle_task(&mut item, "2026-09-15T10:00:00+08:00");
@@ -242,12 +281,48 @@ mod tests {
     #[test]
     fn sort_orders_open_first_then_due_then_priority_then_created() {
         let mut tasks = vec![
-            task("done-old", true, Some("2026-09-01"), TaskPriority::High, "2026-09-01T00:00:00Z"),
-            task("no-due", false, None, TaskPriority::High, "2026-09-01T00:00:00Z"),
-            task("due-late", false, Some("2026-09-30"), TaskPriority::High, "2026-09-01T00:00:00Z"),
-            task("due-early-low", false, Some("2026-09-10"), TaskPriority::Low, "2026-09-01T00:00:00Z"),
-            task("due-early-high-new", false, Some("2026-09-10"), TaskPriority::High, "2026-09-02T00:00:00Z"),
-            task("due-early-high-old", false, Some("2026-09-10"), TaskPriority::High, "2026-09-01T00:00:00Z"),
+            task(
+                "done-old",
+                true,
+                Some("2026-09-01"),
+                TaskPriority::High,
+                "2026-09-01T00:00:00Z",
+            ),
+            task(
+                "no-due",
+                false,
+                None,
+                TaskPriority::High,
+                "2026-09-01T00:00:00Z",
+            ),
+            task(
+                "due-late",
+                false,
+                Some("2026-09-30"),
+                TaskPriority::High,
+                "2026-09-01T00:00:00Z",
+            ),
+            task(
+                "due-early-low",
+                false,
+                Some("2026-09-10"),
+                TaskPriority::Low,
+                "2026-09-01T00:00:00Z",
+            ),
+            task(
+                "due-early-high-new",
+                false,
+                Some("2026-09-10"),
+                TaskPriority::High,
+                "2026-09-02T00:00:00Z",
+            ),
+            task(
+                "due-early-high-old",
+                false,
+                Some("2026-09-10"),
+                TaskPriority::High,
+                "2026-09-01T00:00:00Z",
+            ),
         ];
         sort_tasks(&mut tasks);
         let ids: Vec<&str> = tasks.iter().map(|t| t.id.as_str()).collect();
@@ -276,8 +351,14 @@ mod tests {
 
     #[test]
     fn priority_serializes_lowercase() {
-        assert_eq!(serde_json::to_string(&TaskPriority::None).unwrap(), "\"none\"");
-        assert_eq!(serde_json::to_string(&TaskPriority::High).unwrap(), "\"high\"");
+        assert_eq!(
+            serde_json::to_string(&TaskPriority::None).unwrap(),
+            "\"none\""
+        );
+        assert_eq!(
+            serde_json::to_string(&TaskPriority::High).unwrap(),
+            "\"high\""
+        );
         assert_eq!(
             serde_json::from_str::<TaskPriority>("\"medium\"").unwrap(),
             TaskPriority::Medium

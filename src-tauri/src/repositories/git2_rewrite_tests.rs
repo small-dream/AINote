@@ -28,13 +28,16 @@ fn commit_file(repo: &git2::Repository, path: &str, content: &str, msg: &str) ->
     fs::create_dir_all(target.parent().unwrap()).unwrap();
     fs::write(&target, content).unwrap();
     let mut index = repo.index().unwrap();
-    index.add_all(["*"], git2::IndexAddOption::DEFAULT, None).unwrap();
+    index
+        .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+        .unwrap();
     index.write().unwrap();
     let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
     let sig = repo.signature().unwrap();
     let parent = repo.head().ok().and_then(|h| h.peel_to_commit().ok());
     let parents: Vec<&git2::Commit> = parent.iter().collect();
-    repo.commit(Some("HEAD"), &sig, &sig, msg, &tree, &parents).unwrap()
+    repo.commit(Some("HEAD"), &sig, &sig, msg, &tree, &parents)
+        .unwrap()
 }
 
 fn commit_count(dir: &Path) -> usize {
@@ -149,7 +152,10 @@ fn restore_backup_brings_old_history_back() {
     restore_backup(&dir).unwrap();
 
     let repo = git2::Repository::open(&dir).unwrap();
-    assert_eq!(repo.head().unwrap().peel_to_commit().unwrap().id(), old_head);
+    assert_eq!(
+        repo.head().unwrap().peel_to_commit().unwrap().id(),
+        old_head
+    );
     assert_eq!(commit_count(&dir), 3);
     assert!(!backup_dir(&dir).unwrap().exists());
     assert_eq!(pending_count(&repo), 0);
@@ -228,6 +234,7 @@ fn force_push_replaces_remote_history_with_single_commit() {
 
 fn remote_commit_count(bare: &git2::Repository) -> usize {
     let mut walk = bare.revwalk().unwrap();
-    walk.push(bare.refname_to_id("refs/heads/main").unwrap()).unwrap();
+    walk.push(bare.refname_to_id("refs/heads/main").unwrap())
+        .unwrap();
     walk.count()
 }

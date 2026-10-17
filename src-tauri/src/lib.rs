@@ -17,8 +17,8 @@ mod recovery_drill;
 #[cfg(test)]
 mod encrypted_notes_drill;
 
-pub use services::auth_store::AuthStore;
 pub use domain::hosting::HostingProvider;
+pub use services::auth_store::AuthStore;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -42,6 +42,10 @@ pub fn run() {
     );
     #[cfg(desktop)]
     let builder = builder.manage(platform::tray::TrayState::default());
+    #[cfg(desktop)]
+    let builder = builder
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .manage(platform::capture_shortcut::CaptureShortcutState::default());
     builder
         .manage(commands::repo::backup::BackupState::default())
         .manage(commands::update::UpdateDownloadState::default())
@@ -88,6 +92,12 @@ pub fn run() {
                         "托盘初始化失败，关闭按钮保持退出行为: {error}"
                     );
                 }
+                match config::capture_shortcut(_app.handle()) {
+                    Ok(shortcut) => platform::capture_shortcut::init(_app.handle(), &shortcut),
+                    Err(error) => {
+                        log::warn!(target: "ainote::capture", "读取快速捕捉快捷键失败: {error}")
+                    }
+                }
             }
             #[cfg(target_os = "android")]
             {
@@ -109,6 +119,12 @@ pub fn run() {
             commands::ai::models::ai_fetch_models,
             commands::ai::chat::ai_chat,
             commands::ai::chat_stream::ai_chat_stream,
+            commands::capture::settings::capture_get_settings,
+            commands::capture::settings::capture_set_shortcut,
+            commands::capture::settings::capture_reset_shortcut,
+            commands::capture::create::capture_create,
+            commands::capture::share::capture_pending_share,
+            commands::capture::share::capture_ack_share,
             commands::note::create::create_note,
             commands::note::import::import_note,
             commands::note::convert::convert_note,
@@ -124,6 +140,8 @@ pub fn run() {
             commands::note::toggle_favorite::toggle_note_favorite,
             commands::note::search::search_notes,
             commands::note::wiki::wiki_index,
+            commands::note::wiki::wiki_unlinked_mentions,
+            commands::note::wiki::wiki_convert_mentions,
             commands::git::commit::git_commit,
             commands::git::pull::git_pull,
             commands::git::push::git_push,

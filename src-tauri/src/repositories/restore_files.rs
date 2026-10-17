@@ -103,7 +103,8 @@ pub(crate) fn extract_repo(path: &Path, dest: &Path) -> Result<usize, AppError> 
 }
 
 fn open(path: &Path) -> Result<ZipArchive<File>, AppError> {
-    ZipArchive::new(File::open(path)?).map_err(|err| AppError::Repo(format!("无法读取备份包：{err}")))
+    ZipArchive::new(File::open(path)?)
+        .map_err(|err| AppError::Repo(format!("无法读取备份包：{err}")))
 }
 
 fn by_index(archive: &mut ZipArchive<File>, index: usize) -> Result<ZipFile<'_, File>, AppError> {
@@ -224,7 +225,10 @@ mod tests {
         let tmp = tempdir().unwrap();
         let zip = tmp.path().join("evil.zip");
         write_zip(&zip, &[("repo/../escape.md", b"x", None)]);
-        assert!(matches!(extract_repo(&zip, tmp.path()), Err(AppError::Repo(_))));
+        assert!(matches!(
+            extract_repo(&zip, tmp.path()),
+            Err(AppError::Repo(_))
+        ));
     }
 
     #[test]
@@ -244,8 +248,17 @@ mod tests {
             r#"{{"schemaVersion":1,"appVersion":"0","repoName":"notes","createdAt":"now","fileCount":1,"totalBytes":3,"sha256":"{}","includesAssets":true}}"#,
             "0".repeat(64)
         );
-        write_zip(&zip, &[("repo/a.md", b"abc", None), ("manifest.json", manifest.as_bytes(), None)]);
-        assert!(matches!(verify_digest(&zip, &"0".repeat(64)), Err(AppError::Repo(_))));
+        write_zip(
+            &zip,
+            &[
+                ("repo/a.md", b"abc", None),
+                ("manifest.json", manifest.as_bytes(), None),
+            ],
+        );
+        assert!(matches!(
+            verify_digest(&zip, &"0".repeat(64)),
+            Err(AppError::Repo(_))
+        ));
     }
 
     #[test]

@@ -11,9 +11,7 @@ use crate::services::{quick_unlock_service, vault_service};
 /// Controller：用设备级认证（Touch ID / Face ID / 指纹 / 设备密码）解锁，不经过口令。
 /// 系统认证可能持续数秒，必须在后台线程等待。
 #[tauri::command]
-pub async fn vault_unlock_with_device(
-    app: AppHandle,
-) -> Result<VaultStatusResponse, AppErrorDto> {
+pub async fn vault_unlock_with_device(app: AppHandle) -> Result<VaultStatusResponse, AppErrorDto> {
     let root = config::require_repo_path(&app)?;
     let context = support::context(&app, &root)?;
     let (status, quick) = blocking::run(move || {

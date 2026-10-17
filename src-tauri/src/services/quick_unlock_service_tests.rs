@@ -85,7 +85,9 @@ impl DeviceKeyStore for MockStore {
     fn load(&self, _account: &str, _reason: &str) -> Result<String, AppError> {
         match self.read.lock().unwrap().clone() {
             ReadBehaviour::Entry => self.entry().ok_or_else(|| stale("设备条目不存在")),
-            ReadBehaviour::Cancel => Err(AppError::VaultDeviceAuthCancelled("已取消设备认证".into())),
+            ReadBehaviour::Cancel => {
+                Err(AppError::VaultDeviceAuthCancelled("已取消设备认证".into()))
+            }
             ReadBehaviour::Stale => Err(stale("快速解锁密钥已失效")),
             ReadBehaviour::Fail => Err(AppError::VaultDeviceAuthFailed("设备认证失败".into())),
         }
@@ -133,7 +135,11 @@ fn status_reflects_platform_support_and_marker_without_prompting() {
     let unsupported_status = status(&unsupported.ctx, &unsupported.store);
     assert!(!unsupported_status.supported);
     assert!(!unsupported_status.enabled);
-    assert_eq!(unsupported.store.store_calls(), 0, "只查状态不得写入任何东西");
+    assert_eq!(
+        unsupported.store.store_calls(),
+        0,
+        "只查状态不得写入任何东西"
+    );
 
     let supported = fixture(true);
     let supported_status = status(&supported.ctx, &supported.store);
@@ -156,7 +162,11 @@ fn enable_requires_an_unlocked_session_and_writes_nothing_when_locked() {
 
     let err = enable(&fixture.ctx, &fixture.store).unwrap_err();
     assert!(matches!(err, AppError::VaultLocked(_)));
-    assert_eq!(fixture.store.store_calls(), 0, "锁定态不得把密钥写进设备存储");
+    assert_eq!(
+        fixture.store.store_calls(),
+        0,
+        "锁定态不得把密钥写进设备存储"
+    );
     assert!(!marker_path(&fixture).exists());
 }
 
@@ -169,12 +179,17 @@ fn enable_then_device_unlock_restores_the_same_master_key() {
     enable(&fixture.ctx, &fixture.store).unwrap();
 
     vault_service::lock(&fixture.repo).unwrap();
-    assert!(status(&fixture.ctx, &fixture.store).enabled, "锁定不影响设备条目");
+    assert!(
+        status(&fixture.ctx, &fixture.store).enabled,
+        "锁定不影响设备条目"
+    );
 
     let unlocked = unlock(&fixture.ctx, &fixture.store).unwrap();
     assert!(unlocked.enabled);
     assert_eq!(
-        vault_service::session_master(&fixture.repo).unwrap().as_slice(),
+        vault_service::session_master(&fixture.repo)
+            .unwrap()
+            .as_slice(),
         master.as_slice(),
         "设备解锁必须恢复同一把主密钥"
     );
@@ -197,7 +212,10 @@ fn device_unlock_rejects_entries_sealed_for_another_vault_generation() {
     vault_service::lock(&fixture.repo).unwrap();
 
     let err = unlock(&fixture.ctx, &fixture.store).unwrap_err();
-    assert!(matches!(err, AppError::VaultQuickUnlockUnavailable(_)), "应提示重新开启");
+    assert!(
+        matches!(err, AppError::VaultQuickUnlockUnavailable(_)),
+        "应提示重新开启"
+    );
     assert!(fixture.store.entry().is_none(), "失效条目必须删除");
     assert!(!marker_path(&fixture).exists(), "失效标记必须删除");
     assert!(!vault_service::is_unlocked(&fixture.repo));
@@ -249,7 +267,10 @@ fn transient_platform_failure_keeps_the_entry() {
         unlock(&fixture.ctx, &fixture.store).unwrap_err(),
         AppError::VaultDeviceAuthFailed(_)
     ));
-    assert!(fixture.store.entry().is_some(), "瞬时失败必须保留条目供重试");
+    assert!(
+        fixture.store.entry().is_some(),
+        "瞬时失败必须保留条目供重试"
+    );
     assert!(marker_path(&fixture).exists());
 
     // 重试即可成功（用户手动再点一次）。
@@ -289,7 +310,10 @@ fn rewritten_vault_reseals_the_entry_or_falls_back_to_passphrase_only() {
     let resealed = after_vault_rewritten(&fixture.ctx, &fixture.store);
     assert!(resealed.enabled, "已开启时改口令后自动重新封装");
     vault_service::lock(&fixture.repo).unwrap();
-    assert!(unlock(&fixture.ctx, &fixture.store).is_ok(), "重新封装后仍可设备解锁");
+    assert!(
+        unlock(&fixture.ctx, &fixture.store).is_ok(),
+        "重新封装后仍可设备解锁"
+    );
 
     // 平台写入失败时降级为纯口令，不把用户卡在不可用的开关上。
     fixture.store.set_fail_store(true);

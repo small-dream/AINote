@@ -6,13 +6,14 @@ import { WorkspaceColumns } from "./WorkspaceColumns";
 import { useSync } from "@/features/sync/hooks/useSync";
 import { SyncNotice } from "@/features/sync/components/SyncNotice";
 import { DesktopUpdateDialog } from "@/features/update/components/DesktopUpdateDialog";
+import type { NoteNavigationTarget } from "@/stores/session.store";
 
 export interface WorkspaceContentProps {
   repoPath: string | null;
   currentNotePath: string | null;
   editorRef: RefObject<NoteEditorHandle | null>;
   actions: WorkspaceActions;
-  onSelect: (path: string) => void;
+  onSelect: (path: string, target?: NoteNavigationTarget) => void;
   historyRequestPath: string | null;
   setHistoryRequestPath: (path: string | null) => void;
 }

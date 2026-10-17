@@ -20,6 +20,16 @@ export async function calls(page: Page): Promise<Array<{ cmd: string; args: Reco
   });
 }
 
+/** 触发 Tauri 事件（E2E mock 的事件总线保留真实 listen/emit 语义）。 */
+export async function emitAppEvent(page: Page, event: string, payload: unknown = null): Promise<void> {
+  await page.evaluate(async ({ name, body }) => {
+    const internals = (globalThis as unknown as {
+      __TAURI_INTERNALS__?: { invoke: (cmd: string, args: Record<string, unknown>) => Promise<unknown> };
+    }).__TAURI_INTERNALS__;
+    await internals?.invoke("plugin:event|emit", { event: name, payload: body, target: { kind: "Any" } });
+  }, { name: event, body: payload });
+}
+
 /** 在目录树中打开指定文件名（不含扩展名）的笔记并等待编辑器就绪。 */
 export async function openNote(page: Page, fileName: string, marker: string): Promise<void> {
   await page.getByRole("button", { name: fileName, exact: true }).first().click();

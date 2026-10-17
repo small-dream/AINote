@@ -85,6 +85,7 @@ export function useNoteEditor(repoPath: string | null, notePath: string | null, 
     dirty,
     loadError: contentQuery.error as AppError | null,
     saveError,
+    loaded: isLoaded,
     locked,
     encrypted,
   };

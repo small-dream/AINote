@@ -57,7 +57,10 @@ mod tests {
     fn debug_never_prints_the_token() {
         let cred = RemoteCredential::new("alice", "ghp_super_secret");
         let rendered = format!("{cred:?}");
-        assert!(!rendered.contains("ghp_super_secret"), "凭证不得出现在 Debug 输出中");
+        assert!(
+            !rendered.contains("ghp_super_secret"),
+            "凭证不得出现在 Debug 输出中"
+        );
         assert!(rendered.contains("***"));
     }
 }

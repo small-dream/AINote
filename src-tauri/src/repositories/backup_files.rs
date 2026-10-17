@@ -143,9 +143,12 @@ impl BackupWriter {
         self.writer
             .start_file(MANIFEST_NAME, Self::options())
             .map_err(|err| AppError::Io(err.to_string()))?;
-        let json = serde_json::to_vec_pretty(manifest).map_err(|err| AppError::Io(err.to_string()))?;
+        let json =
+            serde_json::to_vec_pretty(manifest).map_err(|err| AppError::Io(err.to_string()))?;
         self.writer.write_all(&json)?;
-        self.writer.finish().map_err(|err| AppError::Io(err.to_string()))?;
+        self.writer
+            .finish()
+            .map_err(|err| AppError::Io(err.to_string()))?;
         Ok(fs::metadata(&self.dest)?.len())
     }
 
@@ -192,7 +195,14 @@ mod tests {
 
         let files = collect_files(root.path(), true, None).unwrap();
         let names: Vec<_> = files.iter().map(|f| f.relative.clone()).collect();
-        assert_eq!(names, vec![".git/HEAD".to_string(), "b.md".to_string(), "notes/a.md".to_string()]);
+        assert_eq!(
+            names,
+            vec![
+                ".git/HEAD".to_string(),
+                "b.md".to_string(),
+                "notes/a.md".to_string()
+            ]
+        );
     }
 
     #[test]
@@ -212,17 +222,23 @@ mod tests {
 
         let dest_a = root.path().join("a.zip");
         let mut writer = BackupWriter::create(&dest_a).unwrap();
-        writer.append_file(&files[0], &root.path().join("a.md")).unwrap();
+        writer
+            .append_file(&files[0], &root.path().join("a.md"))
+            .unwrap();
         let first = writer.digest();
 
         let dest_b = root.path().join("b.zip");
         let mut writer = BackupWriter::create(&dest_b).unwrap();
-        writer.append_file(&files[0], &root.path().join("a.md")).unwrap();
+        writer
+            .append_file(&files[0], &root.path().join("a.md"))
+            .unwrap();
         assert_eq!(first, writer.digest());
 
         write(&root.path().join("a.md"), "world");
         let mut writer = BackupWriter::create(&root.path().join("c.zip")).unwrap();
-        writer.append_file(&files[0], &root.path().join("a.md")).unwrap();
+        writer
+            .append_file(&files[0], &root.path().join("a.md"))
+            .unwrap();
         assert_ne!(first, writer.digest());
     }
 }

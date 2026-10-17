@@ -84,7 +84,8 @@ pub fn enable(
     let master = vault_service::session_master(&ctx.repo)?;
     let file = load_vault_file(ctx)?;
     let fingerprint = vault_crypto::vault_fingerprint(&file);
-    let payload = QuickUnlockPayload::new(fingerprint.clone(), vault_crypto::b64_encode(&master[..]));
+    let payload =
+        QuickUnlockPayload::new(fingerprint.clone(), vault_crypto::b64_encode(&master[..]));
     let serialized = serde_json::to_string(&payload)
         .map_err(|error| AppError::Io(format!("序列化设备快速解锁条目失败: {error}")))?;
     store.store(&ctx.account, &serialized)?;
@@ -145,7 +146,10 @@ pub fn unlock(
 /// 密钥库被改写（建库 / 改口令）后的收尾：
 /// 指纹随 `vault.json` 变化，已开启的快速解锁必须重新封装；失败则关闭并降级为纯口令。
 /// 返回收尾后的状态（本函数不对外报错：口令相关操作已经成功）。
-pub fn after_vault_rewritten(ctx: &QuickUnlockContext, store: &dyn DeviceKeyStore) -> QuickUnlockStatus {
+pub fn after_vault_rewritten(
+    ctx: &QuickUnlockContext,
+    store: &dyn DeviceKeyStore,
+) -> QuickUnlockStatus {
     if quick_unlock_files::load(&ctx.config_root, &ctx.account).is_none() {
         // 未开启：顺手清掉可能残留的条目（例如建库前遗留）。
         let _ = store.delete(&ctx.account);

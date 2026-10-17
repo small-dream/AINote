@@ -30,7 +30,9 @@ impl UpdateDownloadState {
             .map_err(|_| AppError::Io("更新下载状态锁不可用".into()))?;
         if let Some(current) = guard.as_ref() {
             if !current.load(Ordering::SeqCst) {
-                return Err(AppError::UpdateBusy("已有下载任务进行中，请稍后再试".into()));
+                return Err(AppError::UpdateBusy(
+                    "已有下载任务进行中，请稍后再试".into(),
+                ));
             }
         }
         let flag = Arc::new(AtomicBool::new(false));
@@ -42,7 +44,10 @@ impl UpdateDownloadState {
     /// 避免先完成者把仍在下载任务的取消标志清掉（取消后重下的新任务同样受此保护）。
     fn release(&self, flag: &Arc<AtomicBool>) {
         if let Ok(mut guard) = self.0.lock() {
-            if guard.as_ref().is_some_and(|current| Arc::ptr_eq(current, flag)) {
+            if guard
+                .as_ref()
+                .is_some_and(|current| Arc::ptr_eq(current, flag))
+            {
                 *guard = None;
             }
         }
@@ -146,8 +151,10 @@ mod tests {
         let stale = Arc::new(AtomicBool::new(false));
         state.release(&stale);
         assert!(state.acquire().is_err(), "别人的 flag 不得清理槽位");
-        assert!(state.current().is_some_and(|f| Arc::ptr_eq(&f, &current)),
-            "取消标志仍归属当前任务");
+        assert!(
+            state.current().is_some_and(|f| Arc::ptr_eq(&f, &current)),
+            "取消标志仍归属当前任务"
+        );
         state.release(&current);
         assert!(state.current().is_none());
     }

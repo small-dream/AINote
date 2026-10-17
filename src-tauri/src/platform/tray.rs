@@ -20,6 +20,7 @@ use crate::commands::close_guard;
 const MAIN_WINDOW_LABEL: &str = "main";
 const TRAY_ID: &str = "ainote-tray";
 const MENU_SHOW_ID: &str = "ainote-tray-show";
+const MENU_CAPTURE_ID: &str = "ainote-tray-capture";
 const MENU_QUIT_ID: &str = "ainote-tray-quit";
 
 /// 托盘可用性：`setup` 成功创建托盘后置位；创建失败时关闭按钮退回旧的关闭语义。
@@ -42,6 +43,7 @@ impl TrayState {
 #[derive(Debug, PartialEq, Eq)]
 pub enum TrayAction {
     Show,
+    Capture,
     Quit,
 }
 
@@ -50,6 +52,7 @@ impl TrayAction {
     pub fn from_menu_id(id: &str) -> Option<Self> {
         match id {
             MENU_SHOW_ID => Some(TrayAction::Show),
+            MENU_CAPTURE_ID => Some(TrayAction::Capture),
             MENU_QUIT_ID => Some(TrayAction::Quit),
             _ => None,
         }
@@ -59,20 +62,24 @@ impl TrayAction {
 /// 创建托盘图标与菜单（应用启动时调用一次）。
 pub fn setup(app: &AppHandle) -> tauri::Result<()> {
     let show = MenuItem::with_id(app, MENU_SHOW_ID, "显示主窗口", true, None::<&str>)?;
+    let capture = MenuItem::with_id(app, MENU_CAPTURE_ID, "快速捕捉", true, None::<&str>)?;
     let quit = MenuItem::with_id(app, MENU_QUIT_ID, "退出 AINote", true, None::<&str>)?;
-    let menu = Menu::with_items(app, &[&show, &quit])?;
+    let menu = Menu::with_items(app, &[&show, &capture, &quit])?;
 
     let mut builder = TrayIconBuilder::with_id(TRAY_ID)
         .menu(&menu)
         .tooltip("AINote")
         // 左键恢复窗口、右键出菜单（桌面习惯）；Linux 不支持该开关。
         .show_menu_on_left_click(false)
-        .on_menu_event(|app, event| match TrayAction::from_menu_id(event.id().as_ref()) {
-            Some(TrayAction::Show) => reveal_main_window(app),
-            // 退出仍由事件循环的 ExitRequested 守卫统一裁决（见 handle_exit_requested）。
-            Some(TrayAction::Quit) => app.exit(0),
-            None => {}
-        })
+        .on_menu_event(
+            |app, event| match TrayAction::from_menu_id(event.id().as_ref()) {
+                Some(TrayAction::Show) => reveal_main_window(app),
+                Some(TrayAction::Capture) => open_capture(app),
+                // 退出仍由事件循环的 ExitRequested 守卫统一裁决（见 handle_exit_requested）。
+                Some(TrayAction::Quit) => app.exit(0),
+                None => {}
+            },
+        )
         .on_tray_icon_event(|tray, event| {
             if let TrayIconEvent::Click {
                 button: MouseButton::Left,
@@ -91,6 +98,12 @@ pub fn setup(app: &AppHandle) -> tauri::Result<()> {
     app.state::<TrayState>().mark_ready();
     log::info!(target: "ainote::tray", "托盘图标已就绪：关闭按钮将把窗口收进托盘");
     Ok(())
+}
+
+/// 恢复窗口并打开快速捕捉框（托盘与全局快捷键共用）。
+pub fn open_capture(app: &AppHandle) {
+    reveal_main_window(app);
+    let _ = app.emit("capture:open", ());
 }
 
 /// 关闭按钮：托盘可用时隐藏窗口到托盘，托盘不可用时退回旧的关闭语义。
@@ -159,8 +172,18 @@ mod tests {
 
     #[test]
     fn maps_known_menu_ids_only() {
-        assert_eq!(TrayAction::from_menu_id(MENU_SHOW_ID), Some(TrayAction::Show));
-        assert_eq!(TrayAction::from_menu_id(MENU_QUIT_ID), Some(TrayAction::Quit));
+        assert_eq!(
+            TrayAction::from_menu_id(MENU_SHOW_ID),
+            Some(TrayAction::Show)
+        );
+        assert_eq!(
+            TrayAction::from_menu_id(MENU_CAPTURE_ID),
+            Some(TrayAction::Capture)
+        );
+        assert_eq!(
+            TrayAction::from_menu_id(MENU_QUIT_ID),
+            Some(TrayAction::Quit)
+        );
         assert_eq!(TrayAction::from_menu_id("close-window"), None);
         assert_eq!(TrayAction::from_menu_id(""), None);
     }

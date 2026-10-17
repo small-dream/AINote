@@ -120,7 +120,4 @@ export const noteCommandHandlers: Record<string, NoteCommandHandler> = {
     return metaOf(path, { content, kind });
   },
   note_tree: (_args, ctx) => treeOf(ctx.store.notes),
-  wiki_index: (_args, ctx) => [...ctx.store.notes.entries()].map(([path, note]) => ({
-    path, title: titleOf(note.content, displayName(path)), tags: [], links: [], linkContexts: [],
-  })),
 };

@@ -1,21 +1,15 @@
 //! AI 用例层：读取配置与 Key、校验启用态、组装上下文并调用 LLM Provider。
 //! 上下文拼接（全库关键词检索）在 Rust 侧完成，原始笔记内容不泄漏到前端日志。
 
-use std::path::Path;
-
 use tauri::AppHandle;
 
-use crate::domain::ai::{AiChatMessage, AiConfig, AiProvider};
+use crate::domain::ai::{AiChatMessage, AiChatReplyDto, AiConfig, AiProvider, ContextSnippet};
 use crate::domain::ai_settings::{AiApiKeyInput, AiSettings, AiSettingsDto};
 use crate::domain::error::AppError;
 use crate::repositories::llm::{LlmClient, OpenAiCompatClient};
 
+use super::ai_context::{render_context, retrieve_context, MAX_CONTEXT_RESULTS};
 use super::ai_store::AiStore;
-use super::note_content;
-use super::search_service;
-
-const MAX_CONTEXT_RESULTS: usize = 5;
-const MAX_PARAGRAPH_CHARS: usize = 1200;
 
 pub fn config(app: &AppHandle) -> Result<AiSettingsDto, AppError> {
     AiStore::from_app(app)?.dto()
@@ -100,56 +94,60 @@ pub fn generate_stream(
     complete_stream(&client, app, &messages, on_delta, model_id.as_deref())
 }
 
-/// 问答：messages 为完整对话；repo_query 非空时检索全库段落并入上下文。
+/// 问答：messages 为完整对话；repo_query 非空时检索全库来源并返回引用。
 pub fn chat(
     app: &AppHandle,
     mut messages: Vec<AiChatMessage>,
     repo_query: Option<String>,
     model_id: Option<String>,
-) -> Result<String, AppError> {
+) -> Result<AiChatReplyDto, AppError> {
     let client = OpenAiCompatClient;
-    inject_context(app, &mut messages, repo_query)?;
-    complete(&client, app, &messages, model_id.as_deref())
+    let citations = inject_context(app, &mut messages, repo_query)?;
+    let text = complete(&client, app, &messages, model_id.as_deref())?;
+    Ok(AiChatReplyDto { text, citations })
 }
 
-/// 问答（流式）：同上，增量回调给前端渲染。
+/// 问答（流式）：来源事件先于首个增量发送，返回完整回答与本次全部来源。
 pub fn chat_stream(
     app: &AppHandle,
     mut messages: Vec<AiChatMessage>,
     repo_query: Option<String>,
     model_id: Option<String>,
+    on_citations: impl FnOnce(&[ContextSnippet]),
     on_delta: impl FnMut(&str) + Send,
-) -> Result<String, AppError> {
+) -> Result<AiChatReplyDto, AppError> {
     let client = OpenAiCompatClient;
-    inject_context(app, &mut messages, repo_query)?;
-    complete_stream(&client, app, &messages, on_delta, model_id.as_deref())
+    let citations = inject_context(app, &mut messages, repo_query)?;
+    on_citations(&citations);
+    let text = complete_stream(&client, app, &messages, on_delta, model_id.as_deref())?;
+    Ok(AiChatReplyDto { text, citations })
 }
 
+/// 把编号来源注入 system prompt；仅“全库”范围（repo_query=Some）产生引用。
 fn inject_context(
     app: &AppHandle,
     messages: &mut Vec<AiChatMessage>,
     repo_query: Option<String>,
-) -> Result<(), AppError> {
+) -> Result<Vec<ContextSnippet>, AppError> {
     let Some(query) = repo_query else {
-        return Ok(());
+        return Ok(Vec::new());
     };
     let query = query.trim();
     if query.is_empty() || messages.len() > 24 {
-        return Ok(());
+        return Ok(Vec::new());
     }
     let root = crate::config::require_repo_path(app)?;
-    let context = retrieve_context(&root, query, MAX_CONTEXT_RESULTS)?;
-    if !context.is_empty() {
-        let sys = format!("以下是笔记库中与“{query}”相关的段落，优先依据它们回答，注意区分事实与推测：\n\n{context}");
+    let citations = retrieve_context(&root, query, MAX_CONTEXT_RESULTS)?;
+    if !citations.is_empty() {
         messages.insert(
             0,
             AiChatMessage {
                 role: "system".into(),
-                content: sys,
+                content: render_context(query, &citations),
             },
         );
     }
-    Ok(())
+    Ok(citations)
 }
 
 fn complete(
@@ -195,68 +193,4 @@ fn resolve_request(
         return Err(AppError::Ai("所选 Provider 未配置 API Key".into()));
     }
     Ok((AiSettings::runtime_config(&provider, &model), key))
-}
-
-/// 全库关键词检索：取 top_k 命中笔记，提取命中行段落拼成上下文块（纯逻辑，可单测）。
-pub fn retrieve_context(root: &Path, query: &str, top_k: usize) -> Result<String, AppError> {
-    let results = search_service::search_notes(root, query)?;
-    let mut blocks = Vec::new();
-    for result in results.into_iter().take(top_k) {
-        let Ok(read) = note_content::read_file(root, &root.join(&result.path)) else {
-            continue;
-        };
-        // 加密笔记永不进入 AI 上下文（解锁态也不进）：决策③ 的 Rust 侧兜底。
-        if read.encrypted {
-            continue;
-        }
-        let Some(content) = read.text else {
-            continue;
-        };
-        let para = paragraph_around(&content, result.line, MAX_PARAGRAPH_CHARS);
-        blocks.push(format!("【笔记：{}】\n{}", result.path, para));
-    }
-    Ok(blocks.join("\n\n"))
-}
-
-/// 纯函数：取指定行（1 起）为中心的连续文本块，总长不超过 max_chars。
-pub fn paragraph_around(content: &str, line: u32, max_chars: usize) -> String {
-    let start = if line > 1 { line - 1 } else { 1 };
-    let slice: Vec<&str> = content.lines().skip((start - 1) as usize).take(6).collect();
-    let joined = slice.join("\n").trim().to_string();
-    if joined.chars().count() <= max_chars {
-        joined
-    } else {
-        let truncated: String = joined.chars().take(max_chars - 1).collect();
-        format!("{truncated}…")
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn paragraph_extracts_around_line() {
-        let content = "line one\nline two\nline three\nline four\nline five\nline six\nline seven";
-        let para = paragraph_around(content, 3, 1200);
-        assert!(para.contains("line two"));
-        assert!(para.contains("line three"));
-        assert!(para.contains("line four"));
-        assert!(!para.contains("line one"));
-    }
-
-    #[test]
-    fn paragraph_truncates_when_too_long() {
-        let content = "abcdefghijklmnopqrstuvwxyz";
-        let para = paragraph_around(content, 1, 10);
-        assert!(para.ends_with('…'));
-        assert!(para.chars().count() <= 10);
-    }
-
-    #[test]
-    fn paragraph_clamps_start_line() {
-        let content = "first\nsecond";
-        let para = paragraph_around(content, 1, 1200);
-        assert!(para.starts_with("first"));
-    }
 }

@@ -238,7 +238,10 @@ mod tests {
         save(dir.path(), "github", "ghp_secret").unwrap();
         save(dir.path(), "github", "ghp_secret_2").unwrap();
         for name in [KEY_FILE, "auth.github.token"] {
-            let mode = fs::metadata(dir.path().join(name)).unwrap().permissions().mode();
+            let mode = fs::metadata(dir.path().join(name))
+                .unwrap()
+                .permissions()
+                .mode();
             assert_eq!(mode & 0o777, 0o600, "{name} 必须为 0600");
         }
     }

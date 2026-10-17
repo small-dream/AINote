@@ -15,6 +15,9 @@ import { useAiWrite } from "@/features/ai/hooks/useAiWrite";
 import { AiWriteControls } from "@/features/ai/components/AiWriteControls";
 import { getTipTapSelection, applyToTipTapEditor, applyToTipTapDocument } from "@/features/ai/utils/editorAdapters";
 import { useNoteEncryption } from "@/features/vault/hooks/useNoteEncryption";
+import { useSessionStore, type NoteNavigationTarget } from "@/stores/session.store";
+import { useToastStore } from "@/stores/toast.store";
+import { normalizeWikiHeading } from "@/features/wiki/utils/wiki";
 
 interface RichTextEditorProps {
   /** TipTap JSON 字符串（.ainote 文件内容） */
@@ -34,12 +37,14 @@ interface RichTextEditorProps {
   onOutlineToggle?: () => void;
   /** 顶部工具栏的 AI 入口：AI 按钮统一收在 EditorToolbar，这里把富文本侧的菜单触发器注册给宿主 */
   aiTriggerRef?: RefObject<(() => void) | null> | undefined;
+  navigationTarget?: NoteNavigationTarget | null;
+  navigationNonce?: number;
 }
 
 /** 真富文本所见即所得编辑器：TipTap 读写 TipTap JSON。
  * 支持图片/表格/任务列表、斜杠命令、双链与标签 mark。
  * 通过父组件 key 重挂载以切换笔记；异步加载的 content 会由 hook 同步到编辑器。 */
-export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, encrypted = false, outlineOpen = false, onOutlineToggle = () => undefined, aiTriggerRef }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, encrypted = false, outlineOpen = false, onOutlineToggle = () => undefined, aiTriggerRef, navigationTarget = null, navigationNonce = 0 }: RichTextEditorProps) {
   const { t } = useTranslation();
   const { editor, handleFiles, status } = useRichTextEditor({ content, onChange, repoPath });
   const contextMenu = useRichTextContextMenu();
@@ -52,6 +57,18 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
     onApply: (text) => applyToTipTapEditor(editor, text),
     onApplyFull: (text) => applyToTipTapDocument(editor, text),
   });
+
+  useEffect(() => {
+    if (!editor || !navigationTarget || navigationTarget.path !== notePath) return;
+    const range = richTextNavigationRange(editor, navigationTarget);
+    if (range) {
+      editor.chain().focus().setTextSelection(range).run();
+      editor.view.dispatch(editor.state.tr.scrollIntoView());
+    } else if (navigationTarget.heading) {
+      useToastStore.getState().push(t("wiki.headingMissing", { heading: navigationTarget.heading }), "info");
+    }
+    useSessionStore.getState().clearNavigation(navigationNonce);
+  }, [editor, navigationTarget, navigationNonce, notePath, t]);
 
   // AI 入口统一收在顶部工具栏：把最新触发器交给宿主，宿主未提供时（如独立挂载）不注册。
   useEffect(() => {
@@ -97,6 +114,33 @@ function handleEditorClick(event: MouseEvent<HTMLDivElement>, onOpenWiki?: (name
   const tagElement = element.closest("[data-tag]");
   const tag = tagElement?.getAttribute("data-tag");
   if (tag) openTagIndex?.(tag);
+}
+
+/** 引用片段优先，其次标题；找不到时返回 null（打开笔记顶部）。 */
+function richTextNavigationRange(editor: Editor, target: NoteNavigationTarget): { from: number; to: number } | null {
+  const quote = target.quote?.trim();
+  let found: { from: number; to: number } | null = null;
+  editor.state.doc.descendants((node, pos) => {
+    if (found) return false;
+    if (quote && node.isText && node.text?.includes(quote)) {
+      const offset = node.text.indexOf(quote);
+      found = { from: pos + offset, to: pos + offset + quote.length };
+      return false;
+    }
+    return true;
+  });
+  if (found) return found;
+  const heading = target.heading ? normalizeWikiHeading(target.heading) : "";
+  if (!heading) return null;
+  editor.state.doc.descendants((node, pos) => {
+    if (found) return false;
+    if (node.type.name === "heading" && normalizeWikiHeading(node.textContent) === heading) {
+      found = { from: pos + 1, to: pos + 1 };
+      return false;
+    }
+    return true;
+  });
+  return found;
 }
 
 /** 大纲点击：定位到对应标题并聚焦编辑器。 */

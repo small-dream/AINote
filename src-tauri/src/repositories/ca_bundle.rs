@@ -9,10 +9,10 @@
 //! 构建侧要求见 `build.rs` 与 `scripts/openssl-src-perl-wrapper.sh`。
 
 use crate::domain::error::AppError;
-#[cfg(any(test, target_os = "android"))]
-use std::path::PathBuf;
 #[cfg(target_os = "android")]
 use std::path::Path;
+#[cfg(any(test, target_os = "android"))]
+use std::path::PathBuf;
 #[cfg(target_os = "android")]
 use std::sync::OnceLock;
 
@@ -62,12 +62,14 @@ fn bundle_path() -> Result<PathBuf, String> {
 
 #[cfg(target_os = "android")]
 fn build_android_bundle() -> Result<String, String> {
-    let dirs: Vec<PathBuf> =
-        ["/apex/com.android.conscrypt/cacerts", "/system/etc/security/cacerts"]
-            .into_iter()
-            .map(PathBuf::from)
-            .filter(|path| path.is_dir())
-            .collect();
+    let dirs: Vec<PathBuf> = [
+        "/apex/com.android.conscrypt/cacerts",
+        "/system/etc/security/cacerts",
+    ]
+    .into_iter()
+    .map(PathBuf::from)
+    .filter(|path| path.is_dir())
+    .collect();
     if dirs.is_empty() {
         return Err("未找到 Android 系统 CA 证书目录".into());
     }

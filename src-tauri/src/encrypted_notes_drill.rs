@@ -6,7 +6,7 @@ use std::fs;
 use std::path::{Path, PathBuf};
 
 use crate::domain::note::{NoteKind, NoteMeta};
-use crate::services::{ai_service, note_service, search_service, vault_service, wiki_service};
+use crate::services::{ai_context, note_service, search_service, vault_service, wiki_service};
 
 const PASSPHRASE: &str = "correct horse battery";
 
@@ -68,12 +68,18 @@ fn encrypted_note_is_unreadable_on_disk_but_readable_when_unlocked() {
     assert_eq!(hits[0].path, "sub/secret.md");
 
     let wiki = wiki_service::wiki_index(&root).unwrap();
-    let secret = wiki.iter().find(|note| note.path == "sub/secret.md").unwrap();
+    let secret = wiki
+        .iter()
+        .find(|note| note.path == "sub/secret.md")
+        .unwrap();
     assert!(secret.tags.iter().any(|tag| tag == "tag"));
 
     // AI 全库上下文：即使已解锁，加密笔记也不进入上下文（决策③）
-    let context = ai_service::retrieve_context(&root, "机密正文", 5).unwrap();
-    assert!(!context.contains("机密正文"), "加密笔记不得进入 AI 上下文");
+    let context = ai_context::retrieve_context(&root, "机密正文", 5).unwrap();
+    assert!(
+        !context.iter().any(|item| item.text.contains("机密正文")),
+        "加密笔记不得进入 AI 上下文"
+    );
 
     vault_service::lock(&root).unwrap();
 }
@@ -95,14 +101,23 @@ fn locked_vault_hides_content_everywhere_without_breaking_scans() {
     assert_eq!(content.content, "");
 
     // 搜索 / wiki：静默跳过，明文笔记照常
-    assert!(search_service::search_notes(&root, "机密正文").unwrap().is_empty());
-    assert_eq!(search_service::search_notes(&root, "rustlang").unwrap().len(), 1);
+    assert!(search_service::search_notes(&root, "机密正文")
+        .unwrap()
+        .is_empty());
+    assert_eq!(
+        search_service::search_notes(&root, "rustlang")
+            .unwrap()
+            .len(),
+        1
+    );
     let wiki = wiki_service::wiki_index(&root).unwrap();
     assert!(wiki.iter().all(|note| note.path != "sub/secret.md"));
     assert!(wiki.iter().any(|note| note.path == "open.md"));
 
     // AI 上下文同样不含加密笔记
-    assert_eq!(ai_service::retrieve_context(&root, "机密正文", 5).unwrap(), "");
+    assert!(ai_context::retrieve_context(&root, "机密正文", 5)
+        .unwrap()
+        .is_empty());
 }
 
 #[test]
@@ -113,10 +128,18 @@ fn corrupt_ciphertext_is_reported_instead_of_looking_locked() {
     write(&root, "sub/secret.md", "AINOTE-ENC-v1\nQUJD\n");
 
     let err = note_service::read_note(&root, "sub/secret.md").unwrap_err();
-    assert_eq!(crate::domain::error::AppErrorDto::from(err).code, "VAULT_9005");
+    assert_eq!(
+        crate::domain::error::AppErrorDto::from(err).code,
+        "VAULT_9005"
+    );
 
     // 扫描路径仍然容错：坏文件不影响其余笔记
-    assert!(search_service::search_notes(&root, "rustlang").unwrap().len() == 1);
+    assert!(
+        search_service::search_notes(&root, "rustlang")
+            .unwrap()
+            .len()
+            == 1
+    );
     vault_service::lock(&root).unwrap();
 }
 
@@ -135,7 +158,10 @@ fn converting_note_kind_keeps_the_note_encrypted() {
     .unwrap();
 
     let converted = fs::read_to_string(root.join("sub/secret.ainote")).unwrap();
-    assert!(converted.starts_with("AINOTE-ENC-v1"), "类型转换不得把内容降级为明文");
+    assert!(
+        converted.starts_with("AINOTE-ENC-v1"),
+        "类型转换不得把内容降级为明文"
+    );
     let read = note_service::read_note(&root, "sub/secret.ainote").unwrap();
     assert!(!read.locked);
     assert_eq!(read.kind, NoteKind::RichText);

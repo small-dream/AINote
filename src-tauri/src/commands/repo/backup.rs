@@ -25,7 +25,9 @@ impl BackupState {
             .lock()
             .map_err(|_| AppError::Io("备份状态锁不可用".into()))?;
         if guard.is_some() {
-            return Err(AppError::BackupBusy("已有备份任务进行中，请稍后再试".into()));
+            return Err(AppError::BackupBusy(
+                "已有备份任务进行中，请稍后再试".into(),
+            ));
         }
         let flag = Arc::new(AtomicBool::new(false));
         *guard = Some(flag.clone());
@@ -36,7 +38,10 @@ impl BackupState {
     /// 避免先完成者把仍在备份任务的取消标志清掉。
     fn release(&self, flag: &Arc<AtomicBool>) {
         if let Ok(mut guard) = self.0.lock() {
-            if guard.as_ref().is_some_and(|current| Arc::ptr_eq(current, flag)) {
+            if guard
+                .as_ref()
+                .is_some_and(|current| Arc::ptr_eq(current, flag))
+            {
                 *guard = None;
             }
         }
@@ -133,8 +138,10 @@ mod tests {
         let stale = Arc::new(AtomicBool::new(false));
         state.release(&stale);
         assert!(state.acquire().is_err(), "别人的 flag 不得清理槽位");
-        assert!(state.current().is_some_and(|f| Arc::ptr_eq(&f, &current)),
-            "取消标志仍归属当前任务");
+        assert!(
+            state.current().is_some_and(|f| Arc::ptr_eq(&f, &current)),
+            "取消标志仍归属当前任务"
+        );
         state.release(&current);
         assert!(state.current().is_none());
     }

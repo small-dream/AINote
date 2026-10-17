@@ -1,6 +1,6 @@
 # AINote — 架构文档 (ARCHITECTURE)
 
-> 版本：v0.1 · 状态：已确认 · 维护：架构师
+> 版本：v0.2 · 状态：已确认 · 维护：架构师
 > 本文档为活文档。任何技术选型或分层规则的变更必须先更新本文档。
 
 ## 0. 工程基线
@@ -147,8 +147,9 @@ AINote/
 │   │   ├── history/             # Git 版本历史 / Diff / 回滚
 │   │   ├── search/              # 全文搜索 + Cmd+K 命令面板
 │   │   ├── asset/               # 图片/附件导入 + 光标插入引用
-│   │   ├── wiki/                # 标签系统 + [[双链]]（预览跳转 / 反链面板 / 标签索引）
-│   │   ├── ai/                  # AI 写作动作 + 问答面板（P0-AI-1 ~ P0-AI-4）
+│   │   ├── capture/             # 快速捕捉：全局事件入口 + 捕获框 + 快捷键设置 + Android 分享确认
+│   │   ├── wiki/                # 标签系统 + 双链 2.0（标题/别名解析、别名编辑、未链接提及转换）
+│   │   ├── ai/                  # AI 写作动作 + 问答面板 + 结构化引用芯片（P0-AI-1 ~ P0-AI-5）
 │   │   ├── export/              # 导出 PDF：打印预览 overlay + TipTap JSON → HTML
 │   │   ├── auth/                 # 登录（Token 校验/保存）
 │   │   ├── repo/                 # 绑定/创建仓库
@@ -172,9 +173,10 @@ AINote/
 │   ├── api/                      # IPC Client, 一领域一文件
 │   │   ├── client.ts             # invoke 薄封装 + 错误统一转换
 │   │   ├── types.ts              # 与 Rust DTO 结构一致的镜像类型
+│   │   ├── task.types.ts         # 长耗时任务相关 DTO 镜像（与 types.ts 分文件避免循环依赖）
 │   │   ├── error.ts              # AppErrorDto 反序列化与错误码类型
 │   │   ├── index.ts              # 统一导出
-│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts / asset.api.ts / wiki.api.ts / search.api.ts / history.api.ts / ai.api.ts / support.api.ts / task.api.ts / trash.api.ts / favorite.api.ts / vault.api.ts / metrics.api.ts / update.api.ts / release.api.ts / mobile-update.api.ts / app.api.ts / back-button.api.ts / close-guard.api.ts
+│   │   ├── note.api.ts / repo.api.ts / sync.api.ts / auth.api.ts / asset.api.ts / wiki.api.ts / search.api.ts / history.api.ts / ai.api.ts / capture.api.ts / support.api.ts / task.api.ts / trash.api.ts / favorite.api.ts / vault.api.ts / metrics.api.ts / update.api.ts / release.api.ts / mobile-update.api.ts / app.api.ts / back-button.api.ts / close-guard.api.ts
 │   ├── stores/                   # Zustand, 按领域切片（session / ui / command-palette …）
 │   ├── queries/                  # TanStack Query hooks (服务端/Git 状态)
 │   ├── hooks/                    # 跨领域通用 hooks（useNetworkStatus 等）
@@ -193,18 +195,24 @@ AINote/
 │   │   │   ├── repo/             # bind.rs / create.rs / list.rs / rename.rs / remove.rs / switch.rs / validate.rs / path.rs / backup.rs / restore.rs / integrity.rs / size.rs / reset_history.rs
 │   │   │   ├── auth/             # save_token.rs / validate.rs / status.rs / logout.rs
 │   │   │   ├── ai/               # config.rs（get/save）/ models.rs / generate.rs / generate_stream.rs / chat.rs / chat_stream.rs
+│   │   │   ├── capture/          # create.rs（写 inbox/）/ settings.rs（快捷键读写与注册状态）/ share.rs（Android intake 读取与 ack）
 │   │   │   ├── trash/            # list.rs / restore.rs / delete.rs / empty.rs
 │   │   │   ├── task/             # board.rs / create.rs / update.rs / toggle.rs / delete.rs
 │   │   │   ├── vault/            # create.rs / unlock.rs / unlock_with_device.rs / lock.rs / change_passphrase.rs / set_note_encryption.rs / status.rs / support.rs / quick_unlock_enable.rs / quick_unlock_disable.rs
 │   │   │   ├── metrics/          # export.rs（本机计数导出）等
 │   │   │   ├── support/          # log_frontend.rs / export.rs（诊断包）
 │   │   │   └── 顶层单文件：# app.rs / close_guard.rs（退出确认与草稿上报）/ print.rs（系统打印）/ save_file.rs（保存对话框）/ update.rs（移动端更新下载与安装）/ blocking.rs（阻塞任务桥）
-│   │   ├── services/             # 一用例一模块（含 note / note_content / note_favorite / search / wiki / asset / trash / task / history / history_reset / sync / retry（退避纯函数）/ discard / repo / backup / restore / maintenance / conflict_export / diagnostics / metrics / update / ai / ai_store / secure_store / auth_service + auth_store（按平台分槽）/ vault_service / vault_crypto（纯密码学原语）/ quick_unlock_service / hosting（平台 REST 适配））
+│   │   ├── services/             # 一用例一模块（含 note / note_content / note_favorite / search / wiki / wiki_parser / wiki_mention_*（提及扫描、掩码、替换）/ capture_service / capture_content（文件名、标题、Markdown 组合纯函数）/ ai / ai_context（结构化检索）/ asset / trash / task / history / history_reset / sync / retry（退避纯函数）/ discard / repo / backup / restore / maintenance / conflict_export / diagnostics / metrics / update / ai_store / secure_store / auth_service + auth_store（按平台分槽）/ vault_service / vault_crypto（纯密码学原语）/ quick_unlock_service / hosting（平台 REST 适配））
 │   │   ├── repositories/         # trait + 实现分离（git_backend（trait）/ git2_backend / git2_remote / git2_history / git2_graph / git2_discard / git2_rewrite / git2_maintenance / git2_error + repo_maintenance / repo_rewrite（trait） / file_storage / note_files / file_tree / asset_files / trash_files / task_files / favorite_files / vault_files / quick_unlock_files / diagnostics_files / backup_files / restore_files / repo_size / ca_bundle / llm + llm_stream）
-│   │   ├── domain/               # 实体、值对象、AppError（含 note / search / history / history_reset / asset / wiki / trash / task / favorite / commit / discard / sync / remote / hosting / rich_text / ai / ai_settings / backup / diagnostics / maintenance / metrics / update / quick_unlock / vault / dto）
+│   │   ├── domain/               # 实体、值对象、AppError（含 note / search / history / history_reset / asset / wiki / capture（CaptureSettingsDto / CaptureInputDto / SharedCaptureDto）/ trash / task / favorite / commit / discard / sync / remote / hosting / rich_text / ai / ai_settings / backup / diagnostics / maintenance / metrics / update / quick_unlock / vault / dto）
 │   │   ├── config/            # mod.rs（持久化）+ repos.rs（仓库注册表纯逻辑）+ logging.rs（结构化日志与脱敏）
-│   │   └── platform/          # 平台差异收敛点：android_bridge.rs / android_jni.rs（JNI 桥）+ tray.rs（桌面托盘与窗口生命周期）+ fallback.rs（非 Android 桩）+ quick_unlock/（apple.rs / android.rs / unsupported.rs，设备级快速解锁的钥匙串 / Keystore 实现）
+│   │   └── platform/          # 平台差异收敛点：android_bridge.rs / android_jni.rs（JNI 桥）+ capture_shortcut.rs（桌面全局快捷键注册/替换/状态）+ tray.rs（桌面托盘与窗口生命周期）+ fallback.rs（非 Android 桩）+ quick_unlock/（apple.rs / android.rs / unsupported.rs，设备级快速解锁的钥匙串 / Keystore 实现）
 │   └── Cargo.toml
+├── src/e2e/                     # 浏览器内 IPC mock（命令策略表 + 安装器 + note/wiki/ai/capture 夹具）
+├── e2e/                         # Playwright spec（桌面与 390px 移动布局）
+├── src-tauri/gen/android/app/src/main/java/dev/ainote/app/
+│   ├── MainActivity.kt          # ACTION_SEND 冷启动与 onNewIntent 入口
+│   └── ShareIntake.kt           # 文本/图片原子写入 app cache（图片 ≤ 20MB）
 ├── package.json / tsconfig.json (strict: true)
 └── 根级配置 (eslint / prettier / tailwind)
 ```
@@ -254,6 +262,18 @@ AINote/
 - **端到端测试**：`e2e/`（Playwright）+ `src/e2e/`（浏览器内 IPC mock：`backend.ts` 命令策略表 + `ipcMock.ts` 安装器）。运行方式：`pnpm test:e2e`（自动启动 Vite dev，浏览器走 `?e2e` 启用 mock，仅 `import.meta.env.DEV` 生效，生产构建不包含）；完整 Tauri WebDriver 运行需 `cargo install tauri-driver` 并在真实 `tauri dev`/打包应用上执行同一批 spec（IPC 边界一致，断言无需改动）。
 - **首屏体积**：KaTeX 从静态导入改为 `math.ts` 内懒加载（`import("katex")` + 样式并行，渲染前先显示源码占位、异步替换）；入口不静态依赖 katex/mermaid/lowlight/TipTap，重依赖均按动态分块加载。Rust/其余依赖与工具链无新增。
 - **wiki 反链与出链增强**：`WikiLinkContext` 增加行号并改为逐行多条（单目标 ≤ 20 防 DTO 膨胀），`wiki_service::extract_link_contexts` 用逐行目标提取 + HashMap 计数；前端 `backlinkContextsOf` 过滤解析到当前笔记的上下文，反链按笔记分组展示多条带行号摘要。出链对未创建目标提供一键创建：`wikiCreatePath`（纯函数，清理保留字与非法段）→ `create_note`（内容 `# 目标名`，标题即目标，创建后 wiki 索引失效重取即变为可跳转）。笔记创建/更新/删除/移动/转换/导入 mutation 均失效 `["wiki"]` 索引，保证双链即时解析。
+
+- **快速捕捉（`features/capture`，Desktop + Android）**：桌面端 `tauri-plugin-global-shortcut` 只由 Rust 注册，前端不直接持有全局快捷键权限。`platform/capture_shortcut.rs` 维护「当前实际注册值 + 错误」状态：启动注册失败只记日志并标记不可用；设置页修改时先注册新组合，成功才写入 `ainote.json > captureShortcut`，失败恢复旧组合并返回 `CAPTURE_10001`。快捷键与托盘「快速捕捉」统一 `reveal_main_window` 后发送 `capture:open`，前端 `CaptureRoot` 挂在工作区壳层并打开唯一捕获框。保存走 `capture_create`：Rust 侧 `capture_content` 负责首行标题、80 字上限、32 字 slug、`inbox/YYYY-MM-DD-HHmmss-<slug>.md` 与重名序号，`capture_service` 组合 `title` frontmatter、原始正文、链接、图片与去重后的 `#tag` 行；正文不自动整形，失败返回错误但前端保留输入。写入是纯本地文件操作，不触发网络，也不建立独立同步队列——未提交变更继续走既有 Git 状态与「一键同步」兜底提交。
+
+- **Android 分享 intake（`features/capture` + `ShareIntake.kt`）**：`MainActivity` 在 `onCreate` 与 `onNewIntent` 都调用 `ShareIntake.accept`，只接受单条 `ACTION_SEND` 的 `EXTRA_TEXT` 与单张 `EXTRA_STREAM`。Kotlin 侧把文本/主题/图片元数据写入 `cacheDir/ainote-share/<id>.json`（临时文件 + `fsync` + rename），`content://` 图片流式复制到同目录并限制 20MB，全部成功后才落清单；同一 Intent 用私有 extra 标记避免重入。前端在启动与窗口重新聚焦时调用 `capture_pending_share` 读取最旧一条，确认后才 `capture_create`（以 `share_intake_id` 导入图片到仓库 `assets/`），成功或明确取消再 `capture_ack_share`；无仓库或保存失败时不 ack，下次启动仍可恢复。前端不发原图字节，Rust 只读取 cache 内且 canonical path 校验通过的清单/图片。
+
+- **双链 2.0（`features/wiki` + `services/wiki_parser`）**：`NoteWiki` 增加 `aliases` 与 `headings`，`WikiLinkContext` 增加 `heading`。Markdown 侧从 frontmatter 解析 YAML 数组、内联数组与单个字符串别名，标题扫描跳过 frontmatter 与围栏代码并剥离行内 Markdown；`.ainote` 从 TipTap JSON 的 heading 节点提取标题。前端 `parseWikiTarget` 统一拆出名称与标题，`resolveWikiTarget` / `resolveWikiTargetByIndex` 按「标题 → 别名 → 文件名」忽略大小写解析；标题命中后由 `findWikiHeading` 定位，Markdown 跳源码行，富文本按标题节点序号兜底。别名编辑只写 Markdown frontmatter（`features/wiki/utils/aliases.ts`，YAML round-trip，富文本不提供别名编辑）；`[[笔记#` 补全从同一 wiki 索引取标题。
+
+- **未链接提及与转换（按需扫描）**：`wiki_unlinked_mentions(path)` 只在双链面板打开时调用，不扩大常规 `wiki_index`。Rust 以目标笔记的标题、别名和文件名为候选词，最长优先、拉丁词要求边界、候选词至少 2 字符；Markdown 先用 `wiki_mention_mask` 掩掉 frontmatter、围栏/行内代码、URL、Markdown 链接和已有 `[[双链]]`，富文本逐文本节点用同一套行内掩码。结果带 `sourcePath / sourceTitle / term / line / snippet / occurrence`，单篇最多 100 条，排除目标自身。`wiki_convert_mentions` 接收 `{sourcePath, term, occurrence, targetPath}` 数组，先重新扫描所有来源校验每个 occurrence；任一失效返回 `WIKI_10001` 且整批不写。校验通过后 Markdown 从后往前替换原文，富文本按文本节点路径从后往前替换，最后统一写盘；前端 mutation 成功后等待 `note-content` 重取再结束，并失效笔记、目录、wiki 索引与未链接提及查询，避免编辑器回显旧内容。逐条与「全部转换」（二次确认）共用同一命令。
+
+- **AI 结构化引用（`features/ai` + `services/ai_context`）**：`retrieve_context` 返回 `Vec<ContextSnippet { index, path, heading, line, text }>`，仍保持 top 5、单段 1200 字、加密笔记强制跳过；Markdown 用命中行前方最近标题补 `heading`，`.ainote` 用纯文本行号并在同一份纯文本上截取上下文。只有「全库」范围检索并产生引用，「当前笔记」返回空数组。`render_context` 为来源编号并要求模型用 `[1]`、`[2]` 标注；`ai_chat_stream` 先发 `citations` 事件再逐块发 `delta`，最终 `AiChatReplyDto { text, citations }` 与事件携带同一份来源。前端 `useAskAi` 把 citations 随每轮 assistant 消息保存（发给 Rust 的历史仍只有 `role/content`）；`citedIndices` 只保留回答中实际出现且落在来源范围内的编号，`AiCitationList` 展示已引用芯片与「本次全部来源」折叠区，漏标时提示但绝不隐藏来源。点击芯片先 `flush()` 当前草稿，再经 `session.store.navigateTo` 打开目标：Markdown 优先 `line`、其次标题；富文本优先 `quote` 在 TipTap 文本节点中定位，标题兜底。跨端共用同一 `NoteNavigationTarget { path, heading?, line?, quote? }`，桌面与移动只负责各自的滚动/聚焦实现。
+
+- **Desktop Impact / Mobile Impact（本轮）**：Desktop 新增全局快捷键插件、托盘入口、设置页「通用」分组与统一捕获框，并复用既有三栏工作区；Mobile 新增 Android 分享入口、cache intake 与启动/回焦确认流程，继续使用单栏壳与既有保存链路。共享层（capture API/DTO、wiki 解析与面板、AI citations 与导航）保持平台中立，两端差异只落在 `platform/capture_shortcut.rs`、`ShareIntake.kt` 与前端壳层挂载点；iOS 分享扩展与 `ACTION_SEND_MULTIPLE` 不在本轮范围。
 
 ## 6. Android HTTPS 信任链（平台专属）
 

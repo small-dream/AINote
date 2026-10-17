@@ -35,7 +35,10 @@ pub fn save_secret(root: &Path, name: &str, secret: &str) -> Result<(), AppError
     let ciphertext = cipher
         .encrypt(&Nonce::from(nonce), secret.as_bytes())
         .map_err(|e| AppError::Io(e.to_string()))?;
-    write_secure(&cred_path(root, name), encode_cred_record(&nonce, &ciphertext))?;
+    write_secure(
+        &cred_path(root, name),
+        encode_cred_record(&nonce, &ciphertext),
+    )?;
     Ok(())
 }
 
@@ -205,7 +208,10 @@ mod tests {
     fn roundtrip_secret() {
         let dir = tmp();
         save_secret(dir.path(), "ai", "sk-secret-123").unwrap();
-        assert_eq!(read_secret(dir.path(), "ai").unwrap().as_deref(), Some("sk-secret-123"));
+        assert_eq!(
+            read_secret(dir.path(), "ai").unwrap().as_deref(),
+            Some("sk-secret-123")
+        );
     }
 
     #[test]
@@ -219,7 +225,10 @@ mod tests {
         let dir = tmp();
         save_secret(dir.path(), "ai", "first").unwrap();
         save_secret(dir.path(), "ai", "second").unwrap();
-        assert_eq!(read_secret(dir.path(), "ai").unwrap().as_deref(), Some("second"));
+        assert_eq!(
+            read_secret(dir.path(), "ai").unwrap().as_deref(),
+            Some("second")
+        );
         delete_secret(dir.path(), "ai").unwrap();
         assert_eq!(read_secret(dir.path(), "ai").unwrap(), None);
     }
@@ -233,7 +242,10 @@ mod tests {
         save_secret(dir.path(), "ai", "sk-secret-123").unwrap();
         save_secret(dir.path(), "ai", "sk-secret-456").unwrap();
         for name in ["ai.key", "ai.cred"] {
-            let mode = fs::metadata(dir.path().join(name)).unwrap().permissions().mode();
+            let mode = fs::metadata(dir.path().join(name))
+                .unwrap()
+                .permissions()
+                .mode();
             assert_eq!(mode & 0o777, 0o600, "{name} 必须为 0600");
         }
     }

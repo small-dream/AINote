@@ -56,7 +56,13 @@ fn diff_returns_added_and_removed_lines() {
     let repo = init_repo(&dir);
     commit_file(&repo, "a.md", "line one\nline two\n", "first");
     commit_file(&repo, "a.md", "line one\nline three\n", "third");
-    let id = repo.head().unwrap().peel_to_commit().unwrap().id().to_string();
+    let id = repo
+        .head()
+        .unwrap()
+        .peel_to_commit()
+        .unwrap()
+        .id()
+        .to_string();
 
     let diff = file_diff(dir.to_str().unwrap(), "a.md", &id).unwrap();
     let texts: Vec<&str> = diff.lines.iter().map(|l| l.text.as_str()).collect();
@@ -85,7 +91,13 @@ fn restore_file_writes_historical_content() {
     fs::create_dir_all(&dir).unwrap();
     let repo = init_repo(&dir);
     commit_file(&repo, "a.md", "v1 content", "first");
-    let first_id = repo.head().unwrap().peel_to_commit().unwrap().id().to_string();
+    let first_id = repo
+        .head()
+        .unwrap()
+        .peel_to_commit()
+        .unwrap()
+        .id()
+        .to_string();
     commit_file(&repo, "a.md", "v2 content", "second");
 
     restore_file(dir.to_str().unwrap(), "a.md", &first_id).unwrap();

@@ -69,11 +69,7 @@ fn changed_paths(
     let mut files = Vec::new();
     diff.foreach(
         &mut |delta, _score| {
-            if let Some(path) = delta
-                .new_file()
-                .path()
-                .or_else(|| delta.old_file().path())
-            {
+            if let Some(path) = delta.new_file().path().or_else(|| delta.old_file().path()) {
                 files.push(ChangedFile {
                     path: path.to_string_lossy().to_string(),
                     status: delta_status(delta.status()),

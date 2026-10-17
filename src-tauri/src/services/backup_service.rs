@@ -25,7 +25,11 @@ pub(crate) fn export(
     cancel: &AtomicBool,
     mut progress: impl FnMut(BackupProgressDto),
 ) -> Result<Option<BackupExportDto>, AppError> {
-    progress(BackupProgressDto { phase: BackupPhase::Scanning, processed: 0, total: 0 });
+    progress(BackupProgressDto {
+        phase: BackupPhase::Scanning,
+        processed: 0,
+        total: 0,
+    });
     let files = backup_files::collect_files(root, options.exclude_assets, Some(dest))?;
     let outcome = write_backup(root, dest, options, cancel, &files, &mut progress);
     if outcome.is_err() || matches!(outcome, Ok(None)) {
@@ -51,7 +55,11 @@ fn write_backup(
         writer.append_file(file, &root.join(&file.relative))?;
         let processed = index + 1;
         if processed % PROGRESS_STEP == 0 || processed == total {
-            progress(BackupProgressDto { phase: BackupPhase::Writing, processed, total });
+            progress(BackupProgressDto {
+                phase: BackupPhase::Writing,
+                processed,
+                total,
+            });
         }
     }
     let (file_count, total_bytes) = writer.stats();
@@ -123,7 +131,9 @@ mod tests {
     }
 
     fn options() -> BackupOptions {
-        BackupOptions { exclude_assets: false }
+        BackupOptions {
+            exclude_assets: false,
+        }
     }
 
     #[test]
@@ -152,7 +162,9 @@ mod tests {
         let dest = root.path().join("backup.zip");
 
         let cancel = AtomicBool::new(false);
-        let result = export(root.path(), &dest, &options(), &cancel, |_| {}).unwrap().unwrap();
+        let result = export(root.path(), &dest, &options(), &cancel, |_| {})
+            .unwrap()
+            .unwrap();
         assert_eq!(result.file_count, 2);
         assert!(result.bytes > 0);
 
@@ -160,7 +172,11 @@ mod tests {
         assert!(archive.by_name("repo/notes/a.md").is_ok());
         assert!(archive.by_name("repo/.git/HEAD").is_ok());
         let mut manifest_text = String::new();
-        archive.by_name("manifest.json").unwrap().read_to_string(&mut manifest_text).unwrap();
+        archive
+            .by_name("manifest.json")
+            .unwrap()
+            .read_to_string(&mut manifest_text)
+            .unwrap();
         let manifest: BackupManifest = serde_json::from_str(&manifest_text).unwrap();
         assert_eq!(manifest.file_count, 2);
         assert_eq!(manifest.total_bytes, 8);
@@ -178,7 +194,9 @@ mod tests {
         let result = export(
             root.path(),
             &dest,
-            &BackupOptions { exclude_assets: true },
+            &BackupOptions {
+                exclude_assets: true,
+            },
             &cancel,
             |_| {},
         )
@@ -190,7 +208,11 @@ mod tests {
         assert!(archive.by_name("repo/a.md").is_ok());
         assert!(archive.by_name("repo/assets/big.bin").is_err());
         let mut manifest_text = String::new();
-        archive.by_name("manifest.json").unwrap().read_to_string(&mut manifest_text).unwrap();
+        archive
+            .by_name("manifest.json")
+            .unwrap()
+            .read_to_string(&mut manifest_text)
+            .unwrap();
         let manifest: BackupManifest = serde_json::from_str(&manifest_text).unwrap();
         assert!(!manifest.includes_assets);
     }

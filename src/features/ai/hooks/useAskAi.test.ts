@@ -11,11 +11,12 @@ vi.mock("@/api", () => ({
   messageOf: (err: unknown) => (err instanceof Error ? err.message : String(err)),
 }));
 
-function mockStream(text: string) {
+function mockStream(text: string, citations: unknown[] = []) {
   aiApiMock.chatStream.mockImplementation(
-    async (_messages: unknown, _repoQuery: string | null, onChunk: (delta: string) => void) => {
-      onChunk(text);
-      return text;
+    async (_messages: unknown, _repoQuery: string | null, onEvent: (event: unknown) => void) => {
+      onEvent({ kind: "citations", citations });
+      onEvent({ kind: "delta", delta: text });
+      return { text, citations };
     },
   );
 }
@@ -39,7 +40,7 @@ describe("useAskAi 对话与上下文", () => {
     });
     await waitFor(() => expect(result.current.history.length).toBe(2));
     expect(result.current.history[0]).toEqual({ role: "user", content: "今天做了什么？" });
-    expect(result.current.history[1]).toEqual({ role: "assistant", content: "这是回答" });
+    expect(result.current.history[1]).toEqual({ role: "assistant", content: "这是回答", citations: [] });
     expect(result.current.input).toBe("");
   });
 

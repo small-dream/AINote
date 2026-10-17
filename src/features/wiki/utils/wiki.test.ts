@@ -19,14 +19,15 @@ import {
 } from "./wiki";
 
 const NOTES: NoteWikiDto[] = [
-  { path: "a.md", title: "A 笔记", tags: ["x", "y"], links: ["B 笔记"] },
-  { path: "sub/b.md", title: "B 笔记", tags: ["y"], links: ["A 笔记", "missing"] },
-  { path: "c.md", title: "C 笔记", tags: ["x"], links: ["A 笔记"] },
+  { path: "a.md", title: "A 笔记", aliases: [], headings: [], tags: ["x", "y"], links: ["B 笔记"] },
+  { path: "sub/b.md", title: "B 笔记", aliases: [], headings: [], tags: ["y"], links: ["A 笔记", "missing"] },
+  { path: "c.md", title: "C 笔记", aliases: [], headings: [], tags: ["x"], links: ["A 笔记"] },
 ];
 
 describe("wikiNameOf", () => {
   it("取文件名去 .md，忽略目录", () => {
     expect(wikiNameOf("daily/我的笔记.md")).toBe("我的笔记");
+    expect(wikiNameOf("daily/富文本笔记.ainote")).toBe("富文本笔记");
     expect(wikiNameOf("a.md")).toBe("a");
     expect(wikiNameOf("noext")).toBe("noext");
   });
@@ -95,18 +96,18 @@ describe("noteTitle / tagsOf", () => {
 
 describe("backlinkContextsOf", () => {
   const notes = [
-    { path: "a.md", title: "A", tags: [], links: ["B"], linkContexts: [
+    { path: "a.md", title: "A", aliases: [], headings: [], tags: [], links: ["B"], linkContexts: [
       { target: "B", line: 2, snippet: "见 [[B]] 前文" },
       { target: "B", line: 9, snippet: "再次 [[B]]" },
       { target: "C", line: 4, snippet: "其它 [[C]]" },
     ] },
-    { path: "b.md", title: "B", tags: [], links: [], linkContexts: [] },
+    { path: "b.md", title: "B", aliases: [], headings: [], tags: [], links: [], linkContexts: [] },
   ] as NoteWikiDto[];
 
   it("返回解析到目标的多条上下文并带行号", () => {
     expect(backlinkContextsOf(notes[0] as NoteWikiDto, notes, "b.md")).toEqual([
-      { line: 2, snippet: "见 [[B]] 前文" },
-      { line: 9, snippet: "再次 [[B]]" },
+      { line: 2, snippet: "见 [[B]] 前文", heading: null },
+      { line: 9, snippet: "再次 [[B]]", heading: null },
     ]);
   });
 
@@ -146,11 +147,11 @@ describe("名称索引（buildWikiNameIndex）与线性扫描等价", () => {
 
   it("backlinkContextsByIndex 与 backlinkContextsOf 结果一致", () => {
     const notes = [
-      { path: "a.md", title: "A", tags: [], links: ["B"], linkContexts: [
+      { path: "a.md", title: "A", aliases: [], headings: [], tags: [], links: ["B"], linkContexts: [
         { target: "B", line: 2, snippet: "见 [[B]]" },
         { target: "missing", line: 5, snippet: "[[missing]]" },
       ] },
-      { path: "b.md", title: "B", tags: [], links: [], linkContexts: [] },
+      { path: "b.md", title: "B", aliases: [], headings: [], tags: [], links: [], linkContexts: [] },
     ] as NoteWikiDto[];
     const index = buildWikiNameIndex(notes);
     expect(backlinkContextsByIndex(notes[0] as NoteWikiDto, index, "b.md"))
@@ -161,8 +162,8 @@ describe("名称索引（buildWikiNameIndex）与线性扫描等价", () => {
 
   it("标题重名时保留首个匹配（与 find 语义一致）", () => {
     const dup = [
-      { path: "x.md", title: "同名", tags: [], links: [] },
-      { path: "y.md", title: "同名", tags: [], links: [] },
+      { path: "x.md", title: "同名", aliases: [], headings: [], tags: [], links: [] },
+      { path: "y.md", title: "同名", aliases: [], headings: [], tags: [], links: [] },
     ] as NoteWikiDto[];
     expect(resolveWikiTargetByIndex(buildWikiNameIndex(dup), "同名")).toBe("x.md");
     expect(resolveWikiTarget(dup, "同名")).toBe("x.md");

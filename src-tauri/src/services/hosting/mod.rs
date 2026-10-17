@@ -44,6 +44,9 @@ mod tests {
         let err = create_repo(HostingProvider::Gitee, "tok", "notes", true).unwrap_err();
         let message = err.to_string();
         assert!(message.contains("Gitee"), "错误信息需指明平台：{message}");
-        assert!(message.contains("建仓"), "错误信息需说明能力缺失：{message}");
+        assert!(
+            message.contains("建仓"),
+            "错误信息需说明能力缺失：{message}"
+        );
     }
 }

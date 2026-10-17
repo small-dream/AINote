@@ -59,8 +59,8 @@ pub fn parse_sha256_file(content: &str) -> Option<String> {
 
 /// 流式计算文件 SHA-256（十六进制小写）。
 pub fn sha256_hex(path: &Path) -> Result<String, AppError> {
-    let mut file = fs::File::open(path)
-        .map_err(|err| AppError::io_context("读取更新包失败", path, err))?;
+    let mut file =
+        fs::File::open(path).map_err(|err| AppError::io_context("读取更新包失败", path, err))?;
     let mut hasher = Sha256::new();
     let mut buffer = [0u8; CHUNK_SIZE];
     loop {
@@ -245,8 +245,7 @@ fn fetch_expected_sha256(sha256_url: &str) -> Result<String, AppError> {
         .body_mut()
         .read_to_string()
         .map_err(|err| AppError::UpdateDownload(format!("读取校验和失败: {err}")))?;
-    parse_sha256_file(&content)
-        .ok_or_else(|| AppError::UpdateChecksum("校验和文件格式无效".into()))
+    parse_sha256_file(&content).ok_or_else(|| AppError::UpdateChecksum("校验和文件格式无效".into()))
 }
 
 #[cfg(test)]

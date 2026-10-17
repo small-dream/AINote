@@ -5,11 +5,9 @@
 use jni::objects::{JString, JValue};
 
 use crate::domain::error::AppError;
-use crate::platform::android_jni::{app_class, with_application_context};
-use crate::platform::quick_unlock::{
-    parse_probe, DeviceKeyStore, DeviceSupport, PlatformOutcome,
-};
 use crate::domain::quick_unlock::QuickUnlockUnsupportedReason;
+use crate::platform::android_jni::{app_class, with_application_context};
+use crate::platform::quick_unlock::{parse_probe, DeviceKeyStore, DeviceSupport, PlatformOutcome};
 
 const QUICK_UNLOCK_CLASS: &str = "dev/ainote/app/QuickUnlock";
 const PROBE_SIG: &str = "(Landroid/content/Context;)Ljava/lang/String;";
@@ -41,7 +39,12 @@ impl DeviceKeyStore for AndroidDeviceKeyStore {
     }
 
     fn store(&self, account: &str, payload: &str) -> Result<(), AppError> {
-        let raw = call_text("store", STORE_SIG, "开启设备级快速解锁", &[account, payload])?;
+        let raw = call_text(
+            "store",
+            STORE_SIG,
+            "开启设备级快速解锁",
+            &[account, payload],
+        )?;
         match PlatformOutcome::parse(&raw) {
             PlatformOutcome::Ok(_) => Ok(()),
             other => Err(other.into_error("开启设备级快速解锁")),
@@ -51,9 +54,11 @@ impl DeviceKeyStore for AndroidDeviceKeyStore {
     fn load(&self, account: &str, reason: &str) -> Result<String, AppError> {
         let raw = call_text("read", READ_SIG, "设备认证", &[account, reason])?;
         match PlatformOutcome::parse(&raw) {
-            PlatformOutcome::Ok(payload) if payload.is_empty() => Err(AppError::VaultQuickUnlockUnavailable(
-                "设备上没有可用的快速解锁条目，请用仓库口令解锁后重新开启".to_string(),
-            )),
+            PlatformOutcome::Ok(payload) if payload.is_empty() => {
+                Err(AppError::VaultQuickUnlockUnavailable(
+                    "设备上没有可用的快速解锁条目，请用仓库口令解锁后重新开启".to_string(),
+                ))
+            }
             PlatformOutcome::Ok(payload) => Ok(payload),
             other => Err(other.into_error("设备认证")),
         }
@@ -65,35 +70,43 @@ impl DeviceKeyStore for AndroidDeviceKeyStore {
     }
 }
 
-fn call_text(method: &str, signature: &str, action: &str, strings: &[&str]) -> Result<String, AppError> {
-    with_application_context(action, &AppError::VaultQuickUnlockUnavailable, |env, context| {
-        let class = app_class(
-            env,
-            context,
-            QUICK_UNLOCK_CLASS,
-            action,
-            &AppError::VaultQuickUnlockUnavailable,
-        )?;
-        let mut args: Vec<JValue> = Vec::with_capacity(strings.len() + 1);
-        args.push(JValue::Object(context));
-        let owned: Vec<JString> = strings
-            .iter()
-            .map(|value| {
-                env.new_string(value)
-                    .map_err(|err| AppError::VaultQuickUnlockUnavailable(format!("{action}: {err}")))
-            })
-            .collect::<Result<_, _>>()?;
-        args.extend(owned.iter().map(|value| JValue::Object(value)));
-        let value = env
-            .call_static_method(&class, method, signature, &args)
-            .map_err(|err| AppError::VaultQuickUnlockUnavailable(format!("{action}: {err}")))?;
-        let text = JString::from(
-            value
-                .l()
-                .map_err(|err| AppError::VaultQuickUnlockUnavailable(format!("{action}: {err}")))?,
-        );
-        env.get_string(&text)
-            .map(|value| value.into())
-            .map_err(|err| AppError::VaultQuickUnlockUnavailable(format!("{action}: {err}")))
-    })
+fn call_text(
+    method: &str,
+    signature: &str,
+    action: &str,
+    strings: &[&str],
+) -> Result<String, AppError> {
+    with_application_context(
+        action,
+        &AppError::VaultQuickUnlockUnavailable,
+        |env, context| {
+            let class = app_class(
+                env,
+                context,
+                QUICK_UNLOCK_CLASS,
+                action,
+                &AppError::VaultQuickUnlockUnavailable,
+            )?;
+            let mut args: Vec<JValue> = Vec::with_capacity(strings.len() + 1);
+            args.push(JValue::Object(context));
+            let owned: Vec<JString> = strings
+                .iter()
+                .map(|value| {
+                    env.new_string(value).map_err(|err| {
+                        AppError::VaultQuickUnlockUnavailable(format!("{action}: {err}"))
+                    })
+                })
+                .collect::<Result<_, _>>()?;
+            args.extend(owned.iter().map(|value| JValue::Object(value)));
+            let value = env
+                .call_static_method(&class, method, signature, &args)
+                .map_err(|err| AppError::VaultQuickUnlockUnavailable(format!("{action}: {err}")))?;
+            let text = JString::from(value.l().map_err(|err| {
+                AppError::VaultQuickUnlockUnavailable(format!("{action}: {err}"))
+            })?);
+            env.get_string(&text)
+                .map(|value| value.into())
+                .map_err(|err| AppError::VaultQuickUnlockUnavailable(format!("{action}: {err}")))
+        },
+    )
 }

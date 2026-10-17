@@ -1,6 +1,6 @@
 /** E2E 种子与记录类型（src/e2e/ipcMock.ts 与 e2e/ 测试共享）。 */
 
-import type { RepoInfo, TaskBoardDto } from "@/api/types";
+import type { RepoInfo, SharedCapture, TaskBoardDto } from "@/api/types";
 
 export interface E2eNoteSeed {
   path: string;
@@ -78,6 +78,10 @@ export interface E2eState {
   syncRetry?: { retry: number; maxRetries: number; delayMs: number };
   /** Todo 看板种子（默认空看板） */
   taskBoard?: TaskBoardDto;
+  /** Android 冷启动/唤起时待确认的系统分享 */
+  pendingShare?: SharedCapture | null;
+  /** 注入捕获保存或快捷键注册失败 */
+  captureFailure?: { code?: string; message?: string } | null;
 }
 
 export interface E2eRecord {

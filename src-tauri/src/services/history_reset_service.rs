@@ -17,9 +17,8 @@ pub fn reset<B: RepoRewriteBackend>(
     cred: Option<&RemoteCredential>,
     message: &str,
 ) -> Result<HistoryResetReport, AppError> {
-    let message = normalize_message(message).ok_or_else(|| {
-        AppError::Repo("提交说明不能为空，且不超过 200 个字符".into())
-    })?;
+    let message = normalize_message(message)
+        .ok_or_else(|| AppError::Repo("提交说明不能为空，且不超过 200 个字符".into()))?;
     let snapshot = backend.snapshot(repo_path)?;
     if let Some(reason) = blocking_reason(&snapshot) {
         return Err(AppError::Repo(reason.into()));
@@ -27,7 +26,12 @@ pub fn reset<B: RepoRewriteBackend>(
     let Some(url) = snapshot.remote_url.as_deref() else {
         // 本地仓库没有远端：只重建，不涉及推送
         let built = backend.rebuild(repo_path, &message, &snapshot)?;
-        return Ok(report(&snapshot, &built, false, cleanup(backend, repo_path)));
+        return Ok(report(
+            &snapshot,
+            &built,
+            false,
+            cleanup(backend, repo_path),
+        ));
     };
     let cred = cred.ok_or_else(|| {
         AppError::Repo("未能读取远端凭证，请先在「设置 → 账户」登录后再重置历史".into())

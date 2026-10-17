@@ -23,7 +23,10 @@ fn soft_delete_moves_note_into_trash_and_records_original() {
     assert_eq!(item.path, "daily/a.md");
     assert_eq!(item.title, "标题A");
     assert!(!root.join("daily/a.md").exists());
-    assert!(root.join(".trash").join(format!("{}.md", item.id)).is_file());
+    assert!(root
+        .join(".trash")
+        .join(format!("{}.md", item.id))
+        .is_file());
     let listed = list(&root).unwrap();
     assert_eq!(listed.len(), 1);
     assert_eq!(listed[0].path, "daily/a.md");
@@ -36,7 +39,10 @@ fn restore_puts_note_back_at_original_path() {
     let item = soft_delete_note(&root, "a.md").unwrap();
     let restored = restore(&root, &item.id).unwrap();
     assert_eq!(restored, "a.md");
-    assert_eq!(fs::read_to_string(root.join("a.md")).unwrap(), "# 标题A\n正文");
+    assert_eq!(
+        fs::read_to_string(root.join("a.md")).unwrap(),
+        "# 标题A\n正文"
+    );
     assert!(list(&root).unwrap().is_empty());
 }
 
@@ -104,8 +110,7 @@ fn same_path_deleted_twice_gets_distinct_ids() {
     assert_ne!(first.id, second.id, "同路径二次删除的回收站 id 必须不同");
     let items = list(&root).unwrap();
     assert_eq!(items.len(), 2);
-    let by_id: std::collections::HashMap<_, _> =
-        items.iter().map(|i| (i.id.as_str(), i)).collect();
+    let by_id: std::collections::HashMap<_, _> = items.iter().map(|i| (i.id.as_str(), i)).collect();
     assert_eq!(by_id[first.id.as_str()].path, "a.md");
     assert_eq!(by_id[second.id.as_str()].path, "a.md");
     // 两份正文都在，恢复先删的那份拿到的是第一版内容
@@ -126,8 +131,14 @@ fn folder_with_non_note_files_is_refused_and_nothing_is_lost() {
     let AppError::FolderHasNonNoteFiles(message) = err else {
         panic!("应为 FolderHasNonNoteFiles");
     };
-    assert!(message.contains("pic.png"), "错误消息应列出文件名: {message}");
-    assert!(message.contains("manual.pdf"), "子目录文件也应列出: {message}");
+    assert!(
+        message.contains("pic.png"),
+        "错误消息应列出文件名: {message}"
+    );
+    assert!(
+        message.contains("manual.pdf"),
+        "子目录文件也应列出: {message}"
+    );
     // 任何文件都不得被删除或移入回收站
     assert!(root.join("f/a.md").is_file());
     assert!(root.join("f/sub/b.md").is_file());
@@ -224,7 +235,10 @@ fn permanent_delete_rejects_traversal_id() {
         permanent_delete(&root, "../../outside/victim"),
         Err(AppError::InvalidPath(_))
     ));
-    assert_eq!(fs::read_to_string(outside.join("victim.md")).unwrap(), "keep me");
+    assert_eq!(
+        fs::read_to_string(outside.join("victim.md")).unwrap(),
+        "keep me"
+    );
 }
 
 /// S1：清空回收站跳过非法 id，正常条目照常清理（一键操作不得成为任意删除入口）。
@@ -246,8 +260,14 @@ fn empty_skips_malicious_ids_and_still_clears_valid_ones() {
     );
 
     empty(&root).unwrap();
-    assert_eq!(fs::read_to_string(outside.join("victim.md")).unwrap(), "keep me");
-    assert!(!root.join(".trash/1700000000-abcdef.md").exists(), "正常条目仍应被清理");
+    assert_eq!(
+        fs::read_to_string(outside.join("victim.md")).unwrap(),
+        "keep me"
+    );
+    assert!(
+        !root.join(".trash/1700000000-abcdef.md").exists(),
+        "正常条目仍应被清理"
+    );
     assert!(!root.join(".trash/manifest.json").exists());
 }
 
@@ -269,5 +289,8 @@ fn restore_rejects_traversal_path_before_creating_dirs() {
         Err(AppError::InvalidPath(_))
     ));
     assert!(!tmp.path().join("outside").exists(), "不得在仓库外创建目录");
-    assert!(root.join(".trash/1700000000-abcdef.md").is_file(), "失败时正文原样保留");
+    assert!(
+        root.join(".trash/1700000000-abcdef.md").is_file(),
+        "失败时正文原样保留"
+    );
 }

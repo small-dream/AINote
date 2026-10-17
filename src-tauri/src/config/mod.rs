@@ -1,8 +1,8 @@
 //! 应用配置持久化：仓库注册表与非敏感认证状态存于 app config dir 下的 ainote.json。
 //! 注册表纯逻辑见 config/repos.rs（可单测）。
 
-pub(crate) mod repos;
 pub(crate) mod logging;
+pub(crate) mod repos;
 
 use std::fs;
 use std::path::PathBuf;
@@ -30,6 +30,9 @@ pub(crate) struct AppConfig {
     /// 本地指标开关；None 视为开启（D4：本地计数默认开启、不含笔记内容）。
     #[serde(default)]
     pub(crate) metrics_enabled: Option<bool>,
+    /// 桌面快速捕捉快捷键；None 使用平台默认 CommandOrControl+Shift+Space。
+    #[serde(default)]
+    pub(crate) capture_shortcut: Option<String>,
     /// 各托管平台的账号名（非敏感，仅用于设置页展示用户名）；键为平台 id。
     #[serde(default)]
     pub(crate) provider_logins: std::collections::BTreeMap<String, String>,
@@ -41,7 +44,9 @@ pub(crate) struct AppConfig {
 impl AppConfig {
     /// 兼容旧版单仓库配置：将 repoPath 迁移为首个仓库并设为活动仓库。
     fn migrate(&mut self) {
-        let Some(path) = self.legacy_repo_path.take() else { return };
+        let Some(path) = self.legacy_repo_path.take() else {
+            return;
+        };
         if !self.repos.is_empty() {
             return;
         }
@@ -123,6 +128,20 @@ pub fn set_metrics_enabled(app: &AppHandle, enabled: bool) -> Result<(), AppErro
     save_config(app, &cfg)
 }
 
+/// 快速捕捉快捷键；未设置时返回默认值。
+pub fn capture_shortcut(app: &AppHandle) -> Result<String, AppError> {
+    Ok(load_config(app)?
+        .capture_shortcut
+        .unwrap_or_else(|| "CommandOrControl+Shift+Space".to_string()))
+}
+
+/// 持久化快速捕捉快捷键。
+pub fn set_capture_shortcut(app: &AppHandle, shortcut: &str) -> Result<(), AppError> {
+    let mut cfg = load_config(app)?;
+    cfg.capture_shortcut = Some(shortcut.to_string());
+    save_config(app, &cfg)
+}
+
 /// 读取活动仓库路径，未绑定时报 REPO_3001（供各 Command 统一前置校验）。
 pub fn require_repo_path(app: &AppHandle) -> Result<PathBuf, AppError> {
     repos::active_path(app)?
@@ -143,11 +162,7 @@ pub fn provider_login(app: &AppHandle, provider_id: &str) -> Result<Option<Strin
 }
 
 /// 记录某平台的账号名（非敏感展示信息）。
-pub fn set_provider_login(
-    app: &AppHandle,
-    provider_id: &str,
-    login: &str,
-) -> Result<(), AppError> {
+pub fn set_provider_login(app: &AppHandle, provider_id: &str, login: &str) -> Result<(), AppError> {
     let mut cfg = load_config(app)?;
     cfg.provider_logins
         .insert(provider_id.to_string(), login.to_string());

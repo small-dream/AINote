@@ -28,18 +28,19 @@ pub async fn bind_repo(app: AppHandle, repo_url: String) -> Result<RepoPathDto, 
         AppErrorDto::from(err).with_auth_provider(provider.id())
     })?;
     let notes = config::notes_dir(&app)?;
-    fs::create_dir_all(&notes).map_err(AppError::from).map_err(AppErrorDto::from)?;
+    fs::create_dir_all(&notes)
+        .map_err(AppError::from)
+        .map_err(AppErrorDto::from)?;
     let name = repo_service::derive_name(&repo_url);
     let dest = repo_service::unique_clone_dir(&notes, &name)?;
     let backend = Git2Backend;
     let url = repo_url.clone();
-    let repo_path =
-        blocking::run(move || repo_service::bind_repo(&backend, &url, &dest, &cred))
-            .await
-            .map_err(|err| {
-                log::error!(target: "ainote::repo", "绑定仓库失败 error={err}");
-                AppErrorDto::from(err).with_auth_provider(provider.id())
-            })?;
+    let repo_path = blocking::run(move || repo_service::bind_repo(&backend, &url, &dest, &cred))
+        .await
+        .map_err(|err| {
+            log::error!(target: "ainote::repo", "绑定仓库失败 error={err}");
+            AppErrorDto::from(err).with_auth_provider(provider.id())
+        })?;
     let id = config::repos::register(&app, &name, &repo_path, Some(repo_url))?;
     config::repos::switch_to(&app, &id)?;
     log::info!(

@@ -66,16 +66,28 @@ fn redaction_rules() -> &'static [(Regex, &'static str)] {
                 Regex::new(r"(?i)(authorization\s*[:=]\s*)(?:bearer\s+|token\s+)?\S+").unwrap(),
                 "${1}***",
             ),
-            (Regex::new(r"(?i)\bbearer\s+[A-Za-z0-9._\-]+").unwrap(), "Bearer ***"),
-            (Regex::new(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b").unwrap(), "***"),
-            (Regex::new(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b").unwrap(), "***"),
+            (
+                Regex::new(r"(?i)\bbearer\s+[A-Za-z0-9._\-]+").unwrap(),
+                "Bearer ***",
+            ),
+            (
+                Regex::new(r"\bgh[pousr]_[A-Za-z0-9]{20,}\b").unwrap(),
+                "***",
+            ),
+            (
+                Regex::new(r"\bgithub_pat_[A-Za-z0-9_]{20,}\b").unwrap(),
+                "***",
+            ),
             (Regex::new(r"\bsk-[A-Za-z0-9_\-]{16,}\b").unwrap(), "***"),
             (
                 Regex::new(r#"(?i)\b(api[_-]?key|token|password|secret)\b"?\s*[:=]\s*"?[^"\s,}]+"#)
                     .unwrap(),
                 "${1}: ***",
             ),
-            (Regex::new(r"https?://[^/\s:@]+(?::[^/\s@]*)?@").unwrap(), "https://***@"),
+            (
+                Regex::new(r"https?://[^/\s:@]+(?::[^/\s@]*)?@").unwrap(),
+                "https://***@",
+            ),
             (Regex::new(r"/Users/[^/\s]+").unwrap(), "~"),
             (Regex::new(r"/home/[^/\s]+").unwrap(), "~"),
             (Regex::new(r"(?i)[A-Za-z]:\\Users\\[^\\\s]+").unwrap(), "~"),
@@ -96,8 +108,14 @@ mod tests {
 
     #[test]
     fn redacts_authorization_header() {
-        assert_eq!(redact("Authorization: Bearer abc.def-123"), "Authorization: ***");
-        assert_eq!(redact("authorization=token ghp_secret"), "authorization=***");
+        assert_eq!(
+            redact("Authorization: Bearer abc.def-123"),
+            "Authorization: ***"
+        );
+        assert_eq!(
+            redact("authorization=token ghp_secret"),
+            "authorization=***"
+        );
     }
 
     #[test]

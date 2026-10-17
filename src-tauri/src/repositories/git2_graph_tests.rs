@@ -81,7 +81,10 @@ fn repo_history_lists_newest_first_with_changed_files() {
     let first_files = &history[3].files;
     assert_eq!(file_status(first_files, "a.md"), ChangedFileStatus::Added);
     assert_eq!(history[2].files.len(), 1, "second 只改 b.md");
-    assert_eq!(file_status(&history[2].files, "b.md"), ChangedFileStatus::Added);
+    assert_eq!(
+        file_status(&history[2].files, "b.md"),
+        ChangedFileStatus::Added
+    );
     assert_eq!(
         file_status(&history[1].files, "a.md"),
         ChangedFileStatus::Modified

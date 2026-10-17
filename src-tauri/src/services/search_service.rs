@@ -119,7 +119,13 @@ mod tests {
 
     #[test]
     fn match_finds_content_case_insensitive() {
-        let r = match_note("a.md", "标题", "Body about RustLang.\nSecond line.", "rustlang").unwrap();
+        let r = match_note(
+            "a.md",
+            "标题",
+            "Body about RustLang.\nSecond line.",
+            "rustlang",
+        )
+        .unwrap();
         assert_eq!(r.path, "a.md");
         assert_eq!(r.line, 1);
         assert!(r.snippet.contains("RustLang"));
@@ -140,7 +146,8 @@ mod tests {
 
     #[test]
     fn match_matches_filename_and_path() {
-        let by_name = match_note("daily/新项目初次开发模板.md", "角色设定", "body", "新项目").unwrap();
+        let by_name =
+            match_note("daily/新项目初次开发模板.md", "角色设定", "body", "新项目").unwrap();
         assert_eq!(by_name.path, "daily/新项目初次开发模板.md");
         assert_eq!(by_name.line, 1);
         assert_eq!(by_name.snippet, "角色设定");
@@ -148,7 +155,6 @@ mod tests {
         let by_dir = match_note("AI/notes.md", "标题", "body", "ai").unwrap();
         assert_eq!(by_dir.path, "AI/notes.md");
     }
-
 
     #[test]
     fn snippet_truncates_long_lines() {
@@ -165,7 +171,11 @@ mod tests {
         fs::create_dir_all(root.join("sub")).unwrap();
         fs::create_dir_all(root.join(".git")).unwrap();
         fs::write(root.join("sub/body.md"), "notes about Rust here").unwrap();
-        fs::write(root.join("alpha.md"), "---\ntitle: Rust Guide\n---\ncontent").unwrap();
+        fs::write(
+            root.join("alpha.md"),
+            "---\ntitle: Rust Guide\n---\ncontent",
+        )
+        .unwrap();
         fs::write(root.join(".git/hidden.md"), "hidden rust file").unwrap();
 
         let results = search_notes(root, "rust").unwrap();
@@ -213,7 +223,11 @@ mod tests {
         let tmp = setup();
         let root = tmp.path();
         vault_service::create(root, PASSPHRASE).unwrap();
-        fs::write(root.join("secret.md"), note_content::encrypt_text(root, "机密 token abc").unwrap()).unwrap();
+        fs::write(
+            root.join("secret.md"),
+            note_content::encrypt_text(root, "机密 token abc").unwrap(),
+        )
+        .unwrap();
         fs::write(root.join("plain.md"), "明文 token abc").unwrap();
 
         let results = search_notes(root, "abc").unwrap();
@@ -221,9 +235,12 @@ mod tests {
             .iter()
             .map(|r| (r.path.as_str(), r.encrypted))
             .collect();
-        assert_eq!(encrypted_by_path.get("secret.md"), Some(&true), "解锁态加密笔记需标记加密");
+        assert_eq!(
+            encrypted_by_path.get("secret.md"),
+            Some(&true),
+            "解锁态加密笔记需标记加密"
+        );
         assert_eq!(encrypted_by_path.get("plain.md"), Some(&false));
         vault_service::lock(root).unwrap();
     }
-
 }

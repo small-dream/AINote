@@ -58,7 +58,11 @@ pub fn restore_file<B: GitBackend>(
 /// 工作区文件是信封时直接拒绝；未命中（已删除/重命名，或当前是明文）时兜底查历史——
 /// 任一历史版本的 blob 是信封同样拒绝，防止把加密前的明文版本 restore 回工作区（§6）。
 /// 历史里从未出现信封（纯明文笔记）时放行，不误伤正当的历史功能。
-fn reject_encrypted<B: GitBackend>(backend: &B, repo_path: &Path, file: &str) -> Result<(), AppError> {
+fn reject_encrypted<B: GitBackend>(
+    backend: &B,
+    repo_path: &Path,
+    file: &str,
+) -> Result<(), AppError> {
     if vault_files::is_envelope_file(&repo_path.join(file)) {
         return Err(history_unavailable(file));
     }
@@ -74,7 +78,9 @@ fn history_unavailable(file: &str) -> AppError {
 
 /// 相对路径校验（拒绝穿越与隐藏段），返回规范化的字符串路径。
 fn validate_file(file: &str) -> Result<String, AppError> {
-    Ok(note_files::validate_rel_path(file)?.to_string_lossy().into_owned())
+    Ok(note_files::validate_rel_path(file)?
+        .to_string_lossy()
+        .into_owned())
 }
 
 /// 提交 id 校验：非空、长度受限、全十六进制（允许短 id）。
@@ -85,7 +91,9 @@ fn validate_commit(commit_id: &str) -> Result<(), AppError> {
     if valid {
         Ok(())
     } else {
-        Err(AppError::InvalidPath(format!("invalid commit: {commit_id}")))
+        Err(AppError::InvalidPath(format!(
+            "invalid commit: {commit_id}"
+        )))
     }
 }
 

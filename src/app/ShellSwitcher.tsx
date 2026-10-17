@@ -11,6 +11,7 @@ import type { WorkspaceActions } from "@/pages/workspace/useWorkspaceActions";
 import { useUiStore } from "@/stores/ui.store";
 import { useIsMobileViewport } from "@/hooks/useIsMobileViewport";
 import { useVaultAutoLock } from "@/features/vault/hooks/useVaultAutoLock";
+import type { NoteNavigationTarget } from "@/stores/session.store";
 import { VaultUnlockDialog } from "@/features/vault/components/VaultUnlockDialog";
 import { MobileWorkspaceContent } from "./MobileWorkspaceContent";
 
@@ -24,8 +25,8 @@ export interface WorkspaceShellProps {
   currentNotePath: string | null;
   editorRef: RefObject<NoteEditorHandle | null>;
   actions: WorkspaceActions;
-  onSelect: (path: string) => void;
-  onMoved: (to: string) => void;
+  onSelect: (path: string, target?: NoteNavigationTarget) => void;
+  onMoved: (to: string, target?: NoteNavigationTarget) => void;
 }
 
 /** 壳切换：组装层唯一的双壳交汇点，按视口选择桌面三栏壳或移动单栏壳（双壳互不 import）。 */
@@ -50,7 +51,7 @@ export function WorkspaceShellSwitcher({ repoPath, startupSyncing, currentNotePa
   );
 }
 
-function WorkspaceDialogs({ repoPath, actions, onMoved }: { repoPath: string | null; actions: WorkspaceActions; onMoved: (path: string) => void }) {
+function WorkspaceDialogs({ repoPath, actions, onMoved }: { repoPath: string | null; actions: WorkspaceActions; onMoved: (path: string, target?: NoteNavigationTarget) => void }) {
   return <>
     <NewFolderDialog key={`new-folder:${actions.folderDialog.open ? actions.folderDialog.dir : "closed"}`} open={actions.folderDialog.open} dir={actions.folderDialog.dir} existingDirs={actions.existingDirs} onClose={actions.closeFolder} onCreate={actions.handleCreateFolder} />
     <MoveNoteDialog key={`move:${actions.moveTarget ?? "none"}`} repoPath={repoPath} path={actions.moveTarget} onClose={() => actions.setMoveTarget(null)} onMoved={onMoved} />
@@ -58,7 +59,7 @@ function WorkspaceDialogs({ repoPath, actions, onMoved }: { repoPath: string | n
   </>;
 }
 
-function WorkspaceOverlays({ repoPath, actions, editorRef, onOpenNote }: { repoPath: string | null; actions: WorkspaceActions; editorRef: RefObject<NoteEditorHandle | null>; onOpenNote: (path: string) => void }) {
+function WorkspaceOverlays({ repoPath, actions, editorRef, onOpenNote }: { repoPath: string | null; actions: WorkspaceActions; editorRef: RefObject<NoteEditorHandle | null>; onOpenNote: (path: string, target?: NoteNavigationTarget) => void }) {
   const settingsOpen = useUiStore((state) => state.settingsOpen);
   const [commitOpen, setCommitOpen] = useState(false);
   const [graphOpen, setGraphOpen] = useState(false);

@@ -1,8 +1,8 @@
 use std::fs;
 use std::path::Path;
 
-use crate::domain::favorite::{FavoriteIndex, FAVORITE_SCHEMA_VERSION};
 use crate::domain::error::AppError;
+use crate::domain::favorite::{FavoriteIndex, FAVORITE_SCHEMA_VERSION};
 
 pub const FAVORITES_FILE: &str = ".ainote/favorites.json";
 

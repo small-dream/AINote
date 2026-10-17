@@ -7,13 +7,14 @@ import { TodoWorkspace } from "@/features/todo/components/TodoWorkspace";
 import { useUiStore } from "@/stores/ui.store";
 import { useTranslation } from "@/i18n";
 import { getDirectoryPath } from "@/features/file-tree/utils/path";
+import type { NoteNavigationTarget } from "@/stores/session.store";
 
 export interface WorkspaceColumnsProps {
   repoPath: string | null;
   currentNotePath: string | null;
   createdPath: string | null;
   editorRef: RefObject<NoteEditorHandle | null>;
-  onSelect: (path: string) => void;
+  onSelect: (path: string, target?: NoteNavigationTarget) => void;
   onRequestHistory: (path: string) => void;
   historyRequestPath: string | null;
   onHistoryRequestHandled: () => void;

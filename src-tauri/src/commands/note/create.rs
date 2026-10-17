@@ -16,9 +16,10 @@ pub async fn create_note(
     content: Option<String>,
 ) -> Result<NoteMeta, AppErrorDto> {
     let root = config::require_repo_path(&app)?;
-    let meta = blocking::run(move || note_service::create_note(&root, &path, kind, content.as_deref()))
-        .await
-        .map_err(AppErrorDto::from)?;
+    let meta =
+        blocking::run(move || note_service::create_note(&root, &path, kind, content.as_deref()))
+            .await
+            .map_err(AppErrorDto::from)?;
     crate::services::metrics_service::record_best_effort(&app, MetricEvent::NoteCreated);
     Ok(meta)
 }

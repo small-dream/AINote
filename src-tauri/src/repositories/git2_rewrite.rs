@@ -6,8 +6,8 @@ use git2::{IndexAddOption, Repository, RepositoryInitOptions};
 use crate::domain::error::AppError;
 use crate::domain::history_reset::{RebuiltCommit, RepoSnapshot};
 use crate::domain::remote::RemoteCredential;
-use crate::repositories::git_backend::GitBackend;
 use crate::repositories::git2_backend::{current_branch, open, signature, to_git, Git2Backend};
+use crate::repositories::git_backend::GitBackend;
 
 use super::git2_remote;
 use super::repo_rewrite::RepoRewriteBackend;

@@ -19,7 +19,15 @@ pub async fn task_update(
 ) -> Result<TaskItem, AppErrorDto> {
     let root = config::require_repo_path(&app)?;
     blocking::run(move || {
-        task_service::update_task(&root, &task_id, &title, description, due_at, priority, remind_at)
+        task_service::update_task(
+            &root,
+            &task_id,
+            &title,
+            description,
+            due_at,
+            priority,
+            remind_at,
+        )
     })
     .await
     .map_err(AppErrorDto::from)

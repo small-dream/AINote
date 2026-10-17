@@ -91,19 +91,37 @@ mod tests {
 
     #[test]
     fn classifies_auth_errors() {
-        assert_eq!(classify(ErrorClass::Ssh, "ssh key rejected"), SyncErrorKind::Auth);
-        assert_eq!(classify(ErrorClass::Callback, "credentials callback failed"), SyncErrorKind::Auth);
-        assert_eq!(classify(ErrorClass::Http, "401 Unauthorized"), SyncErrorKind::Auth);
         assert_eq!(
-            classify(ErrorClass::None, "Authentication failed for 'https://github.com/x/y'"),
+            classify(ErrorClass::Ssh, "ssh key rejected"),
+            SyncErrorKind::Auth
+        );
+        assert_eq!(
+            classify(ErrorClass::Callback, "credentials callback failed"),
+            SyncErrorKind::Auth
+        );
+        assert_eq!(
+            classify(ErrorClass::Http, "401 Unauthorized"),
+            SyncErrorKind::Auth
+        );
+        assert_eq!(
+            classify(
+                ErrorClass::None,
+                "Authentication failed for 'https://github.com/x/y'"
+            ),
             SyncErrorKind::Auth
         );
     }
 
     #[test]
     fn classifies_rejected_errors() {
-        assert_eq!(classify(ErrorClass::Http, "403 Forbidden"), SyncErrorKind::Rejected);
-        assert_eq!(classify(ErrorClass::Reference, "non-fast-forward"), SyncErrorKind::Rejected);
+        assert_eq!(
+            classify(ErrorClass::Http, "403 Forbidden"),
+            SyncErrorKind::Rejected
+        );
+        assert_eq!(
+            classify(ErrorClass::Reference, "non-fast-forward"),
+            SyncErrorKind::Rejected
+        );
         assert_eq!(
             classify(ErrorClass::None, "pre-receive hook declined"),
             SyncErrorKind::Rejected
@@ -112,18 +130,30 @@ mod tests {
 
     #[test]
     fn classifies_network_errors() {
-        assert_eq!(classify(ErrorClass::Net, "unable to connect"), SyncErrorKind::Network);
-        assert_eq!(classify(ErrorClass::Ssl, "handshake failed"), SyncErrorKind::Network);
+        assert_eq!(
+            classify(ErrorClass::Net, "unable to connect"),
+            SyncErrorKind::Network
+        );
+        assert_eq!(
+            classify(ErrorClass::Ssl, "handshake failed"),
+            SyncErrorKind::Network
+        );
         assert_eq!(
             classify(ErrorClass::None, "Could not resolve host: github.com"),
             SyncErrorKind::Network
         );
-        assert_eq!(classify(ErrorClass::None, "operation timed out"), SyncErrorKind::Network);
+        assert_eq!(
+            classify(ErrorClass::None, "operation timed out"),
+            SyncErrorKind::Network
+        );
     }
 
     #[test]
     fn keeps_unknown_as_git_error() {
-        assert_eq!(classify(ErrorClass::Repository, "object not found"), SyncErrorKind::Other);
+        assert_eq!(
+            classify(ErrorClass::Repository, "object not found"),
+            SyncErrorKind::Other
+        );
     }
 
     #[test]

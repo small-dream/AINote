@@ -51,7 +51,10 @@ pub(crate) fn restore(archive_path: &Path, notes_dir: &Path) -> Result<RestoreRe
 fn extract_and_check(archive_path: &Path, temp: &Path) -> Result<usize, AppError> {
     let file_count = restore_files::extract_repo(archive_path, temp)?;
     let issues = Git2Maintenance.check_integrity(temp)?;
-    if let Some(problem) = issues.iter().find(|item| item.severity == IssueSeverity::Error) {
+    if let Some(problem) = issues
+        .iter()
+        .find(|item| item.severity == IssueSeverity::Error)
+    {
         return Err(AppError::Repo(format!(
             "备份内容未通过完整性检查（{}）：{}",
             problem.code, problem.message
@@ -64,7 +67,13 @@ fn extract_and_check(archive_path: &Path, temp: &Path) -> Result<usize, AppError
 fn sanitize_name(seed: &str) -> String {
     let mut name: String = seed
         .chars()
-        .map(|c| if c.is_ascii_alphanumeric() || c == '-' || c == '_' { c } else { '-' })
+        .map(|c| {
+            if c.is_ascii_alphanumeric() || c == '-' || c == '_' {
+                c
+            } else {
+                '-'
+            }
+        })
         .collect();
     name = name.trim_matches('-').trim_matches('_').to_string();
     if name.is_empty() || name == "." || name == ".." {
@@ -97,11 +106,14 @@ mod tests {
         }
         fs::write(path.join("note.md"), "hello").unwrap();
         let mut index = repo.index().unwrap();
-        index.add_all(["*"], git2::IndexAddOption::DEFAULT, None).unwrap();
+        index
+            .add_all(["*"], git2::IndexAddOption::DEFAULT, None)
+            .unwrap();
         index.write().unwrap();
         let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
         let sig = repo.signature().unwrap();
-        repo.commit(Some("HEAD"), &sig, &sig, "init", &tree, &[]).unwrap();
+        repo.commit(Some("HEAD"), &sig, &sig, "init", &tree, &[])
+            .unwrap();
     }
 
     #[test]
@@ -122,9 +134,17 @@ mod tests {
         let zip_dir = tempdir().unwrap();
         let zip = zip_dir.path().join("backup.zip");
         let cancel = AtomicBool::new(false);
-        backup_service::export(repo_dir.path(), &zip, &BackupOptions { exclude_assets: false }, &cancel, |_| {})
-            .unwrap()
-            .unwrap();
+        backup_service::export(
+            repo_dir.path(),
+            &zip,
+            &BackupOptions {
+                exclude_assets: false,
+            },
+            &cancel,
+            |_| {},
+        )
+        .unwrap()
+        .unwrap();
 
         let notes = tempdir().unwrap();
         let result = restore(&zip, notes.path()).unwrap();
@@ -141,13 +161,29 @@ mod tests {
         let zip_dir = tempdir().unwrap();
         let zip = zip_dir.path().join("backup.zip");
         let cancel = AtomicBool::new(false);
-        backup_service::export(repo_dir.path(), &zip, &BackupOptions { exclude_assets: false }, &cancel, |_| {})
-            .unwrap()
-            .unwrap();
+        backup_service::export(
+            repo_dir.path(),
+            &zip,
+            &BackupOptions {
+                exclude_assets: false,
+            },
+            &cancel,
+            |_| {},
+        )
+        .unwrap()
+        .unwrap();
 
         let notes = tempdir().unwrap();
-        let name = repo_dir.path().file_name().unwrap().to_string_lossy().into_owned();
+        let name = repo_dir
+            .path()
+            .file_name()
+            .unwrap()
+            .to_string_lossy()
+            .into_owned();
         fs::create_dir_all(notes.path().join(sanitize_name(&name))).unwrap();
-        assert!(matches!(restore(&zip, notes.path()), Err(AppError::Repo(_))));
+        assert!(matches!(
+            restore(&zip, notes.path()),
+            Err(AppError::Repo(_))
+        ));
     }
 }

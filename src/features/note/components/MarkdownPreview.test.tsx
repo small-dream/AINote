@@ -142,7 +142,7 @@ describe("MarkdownPreview 双链渲染（P1-5）", () => {
 
   it("根据索引标记未解析双链并提供状态提示", () => {
     const { container } = render(
-      <MarkdownPreview content={"[[已存在]] [[待创建]]"} wikiNotes={[{ path: "exists.md", title: "已存在", tags: [], links: [] }]} />
+      <MarkdownPreview content={"[[已存在]] [[待创建]]"} wikiNotes={[{ path: "exists.md", title: "已存在", aliases: [], headings: [], tags: [], links: [] }]} />
     );
     expect(container.querySelector(".wiki-link:not(.wiki-link-unresolved)")?.textContent).toBe("已存在");
     const unresolved = container.querySelector(".wiki-link-unresolved");

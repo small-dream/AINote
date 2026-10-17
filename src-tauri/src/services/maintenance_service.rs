@@ -10,7 +10,9 @@ pub fn check<B: RepoMaintenanceBackend>(
     repo_path: &Path,
 ) -> Result<IntegrityReport, AppError> {
     let issues = backend.check_integrity(repo_path)?;
-    let ok = !issues.iter().any(|item| item.severity == IssueSeverity::Error);
+    let ok = !issues
+        .iter()
+        .any(|item| item.severity == IssueSeverity::Error);
     Ok(IntegrityReport { ok, issues })
 }
 

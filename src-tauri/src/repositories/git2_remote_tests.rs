@@ -145,7 +145,10 @@ fn fast_forward_keeps_local_modification_instead_of_overwriting_it() {
 
     let error = pull(&local.to_string_lossy(), &cred()).unwrap_err();
 
-    assert!(matches!(error, AppError::Git(_)), "检出冲突报错而不是静默覆盖");
+    assert!(
+        matches!(error, AppError::Git(_)),
+        "检出冲突报错而不是静默覆盖"
+    );
     assert_eq!(
         std::fs::read_to_string(local.join("seed.md")).unwrap(),
         "local-change",
@@ -153,7 +156,12 @@ fn fast_forward_keeps_local_modification_instead_of_overwriting_it() {
     );
     let repo = git2::Repository::open(&local).unwrap();
     assert_eq!(
-        repo.head().unwrap().peel_to_commit().unwrap().message().unwrap(),
+        repo.head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .message()
+            .unwrap(),
         "seed",
         "检出失败时分支引用保持原状，不留下半完成状态"
     );
@@ -165,7 +173,12 @@ const ENVELOPE_THEIRS: &str = "AINOTE-ENC-v1\nVEhFSVJTCg==\n";
 
 /// 夹具：base/本地/远端三侧内容各不相同，merge 必然在 `file` 上产生冲突。
 /// 返回时仓库处于合并中状态，工作区 note.md 为冲突标记文本。
-fn merge_conflict_repo_on(file: &str, base: &str, ours: &str, theirs: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+fn merge_conflict_repo_on(
+    file: &str,
+    base: &str,
+    ours: &str,
+    theirs: &str,
+) -> (tempfile::TempDir, std::path::PathBuf) {
     let tmp = tempfile::tempdir().unwrap();
     let dir = tmp.path().join("repo");
     std::fs::create_dir_all(&dir).unwrap();
@@ -186,12 +199,17 @@ fn merge_conflict_repo_on(file: &str, base: &str, ours: &str, theirs: &str) -> (
     let annotated = repo.find_annotated_commit(ours_oid).unwrap();
     let mut checkout = git2::build::CheckoutBuilder::new();
     checkout.force();
-    repo.merge(&[&annotated], None, Some(&mut checkout)).unwrap();
+    repo.merge(&[&annotated], None, Some(&mut checkout))
+        .unwrap();
     assert!(repo.index().unwrap().has_conflicts(), "夹具必须制造冲突");
     (tmp, dir)
 }
 
-fn merge_conflict_repo(base: &str, ours: &str, theirs: &str) -> (tempfile::TempDir, std::path::PathBuf) {
+fn merge_conflict_repo(
+    base: &str,
+    ours: &str,
+    theirs: &str,
+) -> (tempfile::TempDir, std::path::PathBuf) {
     merge_conflict_repo_on("note.md", base, ours, theirs)
 }
 
@@ -202,7 +220,12 @@ fn resolve_conflict_accepts_repository_internal_path() {
     let ours = "{\n  \"tasks\": [\"本地\"]\n}\n";
     let theirs = "{\n  \"tasks\": [\"远端\"]\n}\n";
     let merged = "{\n  \"tasks\": [\"本地\", \"远端\"]\n}\n";
-    let (_tmp, dir) = merge_conflict_repo_on(".ainote/todos.json", "{\n  \"tasks\": []\n}\n", ours, theirs);
+    let (_tmp, dir) = merge_conflict_repo_on(
+        ".ainote/todos.json",
+        "{\n  \"tasks\": []\n}\n",
+        ours,
+        theirs,
+    );
 
     resolve_conflict_file(dir.to_str().unwrap(), ".ainote/todos.json", merged).unwrap();
 
@@ -218,9 +241,18 @@ fn resolve_conflict_rejects_path_outside_conflict_list() {
     let (_tmp, dir) = merge_conflict_repo("base\n", "ours\n", "theirs\n");
     let repo = dir.to_str().unwrap();
 
-    for path in [".git/config", ".ainote/todos.json", "other.md", "../escape.md", ""] {
+    for path in [
+        ".git/config",
+        ".ainote/todos.json",
+        "other.md",
+        "../escape.md",
+        "",
+    ] {
         assert!(
-            matches!(resolve_conflict_file(repo, path, "x").unwrap_err(), AppError::InvalidPath(_)),
+            matches!(
+                resolve_conflict_file(repo, path, "x").unwrap_err(),
+                AppError::InvalidPath(_)
+            ),
             "{path} 不在冲突清单里，必须拒绝"
         );
     }
@@ -242,8 +274,12 @@ fn resolve_conflict_rejects_plaintext_over_envelope_sides() {
     // M2：冲突三方是信封（工作区为冲突标记），命令层直接 invoke 传入合并明文 → 拒绝。
     let (_tmp, dir) = merge_conflict_repo(ENVELOPE_BASE, ENVELOPE_OURS, ENVELOPE_THEIRS);
     let before = std::fs::read_to_string(dir.join("note.md")).unwrap();
-    let err = resolve_conflict_file(dir.to_str().unwrap(), "note.md", "# 合并出的明文\n").unwrap_err();
-    assert!(matches!(err, AppError::VaultInvalid(_)), "应返回 VAULT_9004");
+    let err =
+        resolve_conflict_file(dir.to_str().unwrap(), "note.md", "# 合并出的明文\n").unwrap_err();
+    assert!(
+        matches!(err, AppError::VaultInvalid(_)),
+        "应返回 VAULT_9004"
+    );
     assert!(err.to_string().contains("加密笔记"));
     assert_eq!(
         std::fs::read_to_string(dir.join("note.md")).unwrap(),
@@ -257,7 +293,8 @@ fn resolve_conflict_rejects_plaintext_over_envelope_worktree() {
     // 冲突侧是明文、但工作区文件当前是信封：同样拒绝（工作区判定路径）。
     let (_tmp, dir) = merge_conflict_repo("base\n", "ours\n", "theirs\n");
     std::fs::write(dir.join("note.md"), ENVELOPE_OURS).unwrap();
-    let err = resolve_conflict_file(dir.to_str().unwrap(), "note.md", "plain merged\n").unwrap_err();
+    let err =
+        resolve_conflict_file(dir.to_str().unwrap(), "note.md", "plain merged\n").unwrap_err();
     assert!(matches!(err, AppError::VaultInvalid(_)));
 }
 
@@ -266,7 +303,10 @@ fn resolve_conflict_keeps_plaintext_flow_untouched() {
     // 明文笔记冲突：保持现状放行，合并结果正常落盘。
     let (_tmp, dir) = merge_conflict_repo("base\n", "ours\n", "theirs\n");
     resolve_conflict_file(dir.to_str().unwrap(), "note.md", "merged\n").unwrap();
-    assert_eq!(std::fs::read_to_string(dir.join("note.md")).unwrap(), "merged\n");
+    assert_eq!(
+        std::fs::read_to_string(dir.join("note.md")).unwrap(),
+        "merged\n"
+    );
 }
 
 #[test]
@@ -289,16 +329,33 @@ fn resolve_conflicts_rejects_plaintext_local_over_envelope_remote() {
     // 本地明文 / 远端信封 + 保留本地 → 整批拒绝：不产生 merge commit，冲突保持未解决。
     let (_tmp, dir) = merge_conflict_repo(ENVELOPE_BASE, ENVELOPE_THEIRS, "local plain\n");
     let err = resolve_conflicts(dir.to_str().unwrap(), true).unwrap_err();
-    assert!(matches!(err, AppError::VaultInvalid(_)), "应返回 VAULT_9004");
-    assert!(err.to_string().contains("note.md"), "错误消息须列出违规文件");
+    assert!(
+        matches!(err, AppError::VaultInvalid(_)),
+        "应返回 VAULT_9004"
+    );
+    assert!(
+        err.to_string().contains("note.md"),
+        "错误消息须列出违规文件"
+    );
     let repo = git2::Repository::open(&dir).unwrap();
     assert_eq!(
-        repo.head().unwrap().peel_to_commit().unwrap().message().unwrap(),
+        repo.head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .message()
+            .unwrap(),
         "theirs",
         "拒绝时不得产生 merge commit"
     );
-    assert!(repo.path().join("MERGE_HEAD").exists(), "拒绝时合并状态必须保留");
-    assert!(repo.index().unwrap().has_conflicts(), "拒绝时冲突必须保持未解决");
+    assert!(
+        repo.path().join("MERGE_HEAD").exists(),
+        "拒绝时合并状态必须保留"
+    );
+    assert!(
+        repo.index().unwrap().has_conflicts(),
+        "拒绝时冲突必须保持未解决"
+    );
 }
 
 #[test]
@@ -309,7 +366,10 @@ fn resolve_conflicts_rejects_plaintext_remote_over_envelope_local() {
     assert!(matches!(err, AppError::VaultInvalid(_)));
     assert!(err.to_string().contains("note.md"));
     let repo = git2::Repository::open(&dir).unwrap();
-    assert!(repo.index().unwrap().has_conflicts(), "拒绝时冲突必须保持未解决");
+    assert!(
+        repo.index().unwrap().has_conflicts(),
+        "拒绝时冲突必须保持未解决"
+    );
 }
 
 #[test]
@@ -332,7 +392,17 @@ fn resolve_conflicts_keeps_plaintext_flow_untouched() {
     // 回归：两侧都明文时行为不变，保留本地侧并正常落盘提交。
     let (_tmp, dir) = merge_conflict_repo("base\n", "remote\n", "local\n");
     resolve_conflicts(dir.to_str().unwrap(), true).unwrap();
-    assert_eq!(std::fs::read_to_string(dir.join("note.md")).unwrap(), "local\n");
+    assert_eq!(
+        std::fs::read_to_string(dir.join("note.md")).unwrap(),
+        "local\n"
+    );
     let repo = git2::Repository::open(&dir).unwrap();
-    assert_eq!(repo.head().unwrap().peel_to_commit().unwrap().parent_count(), 2);
+    assert_eq!(
+        repo.head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .parent_count(),
+        2
+    );
 }

@@ -202,10 +202,29 @@ export interface AiChatMessage {
   content: string;
 }
 
+/** 全库问答的检索来源：编号从 1 起，与回答中的 [n] 一致。 */
+export interface ContextSnippet {
+  index: number;
+  path: string;
+  heading: string | null;
+  line: number;
+  text: string;
+}
+
 /** ai_generate / ai_chat 返回 */
 export interface AiReply {
   text: string;
 }
+
+/** ai_chat 返回：回答 + 本次检索来源。 */
+export interface AiChatReply extends AiReply {
+  citations: ContextSnippet[];
+}
+
+/** ai_chat_stream 的事件：来源先于首个 delta 下发。 */
+export type AiChatStreamEvent =
+  | { kind: "citations"; citations: ContextSnippet[] }
+  | { kind: "delta"; delta: string };
 
 /** ai_generate_stream / ai_chat_stream 的增量块（Tauri Channel 下发） */
 export interface AiStreamChunk {
@@ -283,17 +302,68 @@ export interface NoteWikiDto {
   title: string;
   /** 内容中提取的标签（已去重、小写归一化） */
   tags: string[];
+  /** Markdown frontmatter aliases（富文本恒为空） */
+  aliases: string[];
   /** 内容中 [[双链]] 目标（已去重，保留原始书写） */
   links: string[];
   /** 双链所在行的简短上下文，用于反向链接预览。 */
   linkContexts?: WikiLinkContext[];
+  /** 标题索引：Markdown 为源码行号，富文本为标题节点序号。 */
+  headings: WikiHeading[];
 }
 
 export interface WikiLinkContext {
   target: string;
+  heading?: string | null;
   /** 双链所在行号（1 起） */
   line: number;
   snippet: string;
+}
+
+export interface WikiHeading {
+  text: string;
+  level: number;
+  line: number;
+}
+
+/** 当前笔记被其他笔记正文提及但尚未链接的记录。 */
+export interface UnlinkedMention {
+  sourcePath: string;
+  sourceTitle: string;
+  term: string;
+  line: number;
+  snippet: string;
+  occurrence: number;
+}
+
+export interface UnlinkedMentionRef {
+  sourcePath: string;
+  term: string;
+  occurrence: number;
+}
+
+/** 快速捕捉设置与快捷键注册状态。 */
+export interface CaptureSettings {
+  shortcut: string;
+  defaultShortcut: string;
+  registered: boolean;
+  error: string | null;
+}
+
+export interface CaptureInput {
+  text: string;
+  tags: string[];
+  link: string | null;
+  shareIntakeId: string | null;
+}
+
+/** Android 系统分享暂存项；图片只在 app cache 中。 */
+export interface SharedCapture {
+  id: string;
+  text: string;
+  subject: string | null;
+  imagePath: string | null;
+  imageName: string | null;
 }
 
 /** list_repos 返回的单仓库信息 */
@@ -397,26 +467,4 @@ export interface RestoreResultDto {
   fileCount: number;
 }
 
-/** 任务优先级（与 Rust domain/task.rs 一致） */
-export type TaskPriority = "none" | "low" | "medium" | "high";
-
-/** 单条任务；dueAt 为 YYYY-MM-DD（当天结束前）或 YYYY-MM-DDTHH:mm（本地具体时刻），时间戳为 RFC3339 */
-export interface TaskItemDto {
-  id: string;
-  title: string;
-  description: string;
-  done: boolean;
-  priority: TaskPriority;
-  dueAt: string | null;
-  remindAt: string | null;
-  sortOrder: number;
-  createdAt: string;
-  updatedAt: string;
-  completedAt: string | null;
-}
-
-/** task_board 返回的整块 Todo 看板（todos.json 快照） */
-export interface TaskBoardDto {
-  schemaVersion: number;
-  tasks: TaskItemDto[];
-}
+export type { TaskBoardDto, TaskItemDto, TaskPriority } from "./task.types";

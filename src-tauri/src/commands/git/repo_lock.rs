@@ -35,7 +35,10 @@ impl RepoWriteLock {
     /// 任务结束释放槽位：只有槽位里仍是自己的 flag 才清理，避免误清后来的任务。
     pub(crate) fn release(&self, repo: &str, flag: &Arc<AtomicBool>) {
         if let Ok(mut guard) = self.0.lock() {
-            if guard.get(repo).is_some_and(|current| Arc::ptr_eq(current, flag)) {
+            if guard
+                .get(repo)
+                .is_some_and(|current| Arc::ptr_eq(current, flag))
+            {
                 guard.remove(repo);
             }
         }

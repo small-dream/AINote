@@ -52,7 +52,9 @@ impl MetricEvent {
 
     /// 解析事件名；不在白名单内返回 None（调用方应忽略并记日志，不写入任何内容）。
     pub fn parse(value: &str) -> Option<Self> {
-        Self::all().into_iter().find(|event| event.as_str() == value)
+        Self::all()
+            .into_iter()
+            .find(|event| event.as_str() == value)
     }
 
     fn all() -> [Self; METRIC_EVENTS.len()] {
@@ -233,7 +235,11 @@ impl MetricsSnapshot {
         for name in METRIC_EVENTS {
             let event = MetricEvent::parse(name).expect("白名单事件");
             let first_seen = self.first_seen.get(name).cloned().unwrap_or_default();
-            lines.push(format!("{name},{},{}", self.total(event), csv_cell(&first_seen)));
+            lines.push(format!(
+                "{name},{},{}",
+                self.total(event),
+                csv_cell(&first_seen)
+            ));
         }
         lines.push(String::new());
         lines.push("summary".to_string());
@@ -241,7 +247,10 @@ impl MetricsSnapshot {
         lines.push(format!("platform,{}", csv_cell(&self.platform)));
         lines.push(format!("app_version,{}", csv_cell(&self.app_version)));
         lines.push(format!("enabled,{enabled}"));
-        lines.push(format!("active_days_7d,{}", self.active_days(WEEK_WINDOW_DAYS)));
+        lines.push(format!(
+            "active_days_7d,{}",
+            self.active_days(WEEK_WINDOW_DAYS)
+        ));
         lines.push(format!(
             "sync_success_rate_7d,{}",
             match self.sync_success_rate(WEEK_WINDOW_DAYS) {
@@ -396,7 +405,10 @@ mod tests {
     fn sync_success_rate_is_none_without_samples() {
         let snapshot = recorded(&[("2026-09-05", MetricEvent::AppLaunched)]);
         assert_eq!(snapshot.sync_success_rate(7), None);
-        assert_eq!(MetricsSnapshot::new("macos", "0.25.0").sync_success_rate(7), None);
+        assert_eq!(
+            MetricsSnapshot::new("macos", "0.25.0").sync_success_rate(7),
+            None
+        );
     }
 
     #[test]
@@ -405,11 +417,17 @@ mod tests {
         let dto = snapshot.to_dto(true);
         assert!(dto.enabled);
         assert_eq!(
-            dto.totals.iter().map(|item| item.event.clone()).collect::<Vec<_>>(),
+            dto.totals
+                .iter()
+                .map(|item| item.event.clone())
+                .collect::<Vec<_>>(),
             METRIC_EVENTS.to_vec()
         );
         assert_eq!(dto.totals[1].count, 1);
-        assert_eq!(dto.totals[1].first_seen.as_deref(), Some("2026-09-09T10:00:00Z"));
+        assert_eq!(
+            dto.totals[1].first_seen.as_deref(),
+            Some("2026-09-09T10:00:00Z")
+        );
         assert_eq!(dto.active_days, 1);
         assert_eq!(dto.platform, "macos");
     }

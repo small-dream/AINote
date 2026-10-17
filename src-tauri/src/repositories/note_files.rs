@@ -56,7 +56,8 @@ pub fn read_note(root: &Path, rel: &str) -> Result<String, AppError> {
 pub fn write_note(root: &Path, rel: &str, content: &str) -> Result<(), AppError> {
     let path = resolve_within_root(root, &validate_rel_path(rel)?)?;
     if let Some(parent) = path.parent() {
-        fs::create_dir_all(parent).map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
+        fs::create_dir_all(parent)
+            .map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
     }
     fs::write(&path, content).map_err(|err| AppError::io_context("写入失败", &path, err))
 }
@@ -91,7 +92,8 @@ pub fn move_note(root: &Path, from: &str, to: &str) -> Result<(), AppError> {
         return Err(AppError::NoteNotFound(from.to_string()));
     }
     if let Some(parent) = dst.parent() {
-        fs::create_dir_all(parent).map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
+        fs::create_dir_all(parent)
+            .map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
     }
     fs::rename(&src, &dst).map_err(|err| AppError::io_context("移动失败", &src, err))
 }
@@ -105,7 +107,8 @@ pub fn convert_note(root: &Path, from: &str, to: &str, content: &str) -> Result<
         return Err(AppError::NoteNotFound(from.to_string()));
     }
     if let Some(parent) = dst.parent() {
-        fs::create_dir_all(parent).map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
+        fs::create_dir_all(parent)
+            .map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
     }
     fs::write(&dst, content).map_err(|err| AppError::io_context("写入失败", &dst, err))?;
     // 回收站失败时回滚新文件，避免新旧两份并存造成内容分叉

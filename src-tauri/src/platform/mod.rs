@@ -20,3 +20,6 @@ pub mod quick_unlock;
 
 #[cfg(desktop)]
 pub mod tray;
+
+#[cfg(desktop)]
+pub mod capture_shortcut;

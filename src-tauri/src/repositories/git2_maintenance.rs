@@ -174,7 +174,8 @@ mod tests {
         index.write().unwrap();
         let tree = repo.find_tree(index.write_tree().unwrap()).unwrap();
         let sig = repo.signature().unwrap();
-        repo.commit(Some("HEAD"), &sig, &sig, "init", &tree, &[]).unwrap();
+        repo.commit(Some("HEAD"), &sig, &sig, "init", &tree, &[])
+            .unwrap();
     }
 
     fn codes(issues: &[IntegrityIssue]) -> Vec<String> {
@@ -187,7 +188,9 @@ mod tests {
         init_repo(tmp.path());
 
         let issues = Git2Maintenance.check_integrity(tmp.path()).unwrap();
-        assert!(!issues.iter().any(|item| item.severity == crate::domain::maintenance::IssueSeverity::Error));
+        assert!(!issues
+            .iter()
+            .any(|item| item.severity == crate::domain::maintenance::IssueSeverity::Error));
         assert!(codes(&issues).contains(&"REPO_3104".to_string()));
     }
 
@@ -198,7 +201,10 @@ mod tests {
 
         let issues = Git2Maintenance.check_integrity(tmp.path()).unwrap();
         let origin = issues.iter().find(|item| item.code == "REPO_3104").unwrap();
-        assert_eq!(origin.severity, crate::domain::maintenance::IssueSeverity::Warning);
+        assert_eq!(
+            origin.severity,
+            crate::domain::maintenance::IssueSeverity::Warning
+        );
         assert!(!origin.fix_hint.is_empty());
     }
 
@@ -210,7 +216,10 @@ mod tests {
 
         let issues = Git2Maintenance.check_integrity(tmp.path()).unwrap();
         let corrupt = issues.iter().find(|item| item.code == "REPO_3102").unwrap();
-        assert_eq!(corrupt.severity, crate::domain::maintenance::IssueSeverity::Error);
+        assert_eq!(
+            corrupt.severity,
+            crate::domain::maintenance::IssueSeverity::Error
+        );
         assert!(!corrupt.fix_hint.is_empty());
     }
 

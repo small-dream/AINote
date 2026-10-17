@@ -187,7 +187,10 @@ mod tests {
         let raw = serde_json::to_string(&marker).unwrap();
         assert_eq!(QuickUnlockMarker::parse(&raw).unwrap(), marker);
         assert!(QuickUnlockMarker::parse("{}").is_none());
-        assert!(QuickUnlockMarker::parse(r#"{"version":9,"vaultFingerprint":"f","kind":"faceId"}"#).is_none());
+        assert!(QuickUnlockMarker::parse(
+            r#"{"version":9,"vaultFingerprint":"f","kind":"faceId"}"#
+        )
+        .is_none());
     }
 
     #[test]
@@ -195,10 +198,18 @@ mod tests {
         let json = serde_json::to_value(QuickUnlockStatus::new(true, false, None)).unwrap();
         assert_eq!(json["supported"], true);
         assert_eq!(json["enabled"], false);
-        assert!(json["kind"].is_null(), "kind 恒下发，前端无需处理 undefined");
+        assert!(
+            json["kind"].is_null(),
+            "kind 恒下发，前端无需处理 undefined"
+        );
         assert!(json["reason"].is_null());
 
-        let supported = serde_json::to_value(QuickUnlockStatus::new(true, true, Some(QuickUnlockKind::TouchId))).unwrap();
+        let supported = serde_json::to_value(QuickUnlockStatus::new(
+            true,
+            true,
+            Some(QuickUnlockKind::TouchId),
+        ))
+        .unwrap();
         assert_eq!(supported["kind"], "touchId");
         let unsupported = serde_json::to_value(QuickUnlockStatus::unsupported(
             QuickUnlockUnsupportedReason::NoDeviceLock,

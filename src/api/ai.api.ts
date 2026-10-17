@@ -1,6 +1,16 @@
 import { Channel } from "@tauri-apps/api/core";
 import { call } from "./client";
-import type { AiChatMessage, AiProvider, AiReply, AiSettings, AiSettingsDto, AiStreamChunk } from "./types";
+import type {
+  AiChatMessage,
+  AiChatReply,
+  AiChatStreamEvent,
+  AiProvider,
+  AiReply,
+  AiSettings,
+  AiSettingsDto,
+  AiStreamChunk,
+  ContextSnippet,
+} from "./types";
 
 /** AI 能力（P0-AI-1 ~ P0-AI-4 / P1-AI-1）。repoPath 由 Rust 侧 config 读取。 */
 export const aiApi = {
@@ -17,21 +27,20 @@ export const aiApi = {
     call<AiReply>("ai_generate", { system, prompt, modelId: modelId ?? null }),
   /** 编辑器写作动作（流式）：每收到增量回调 onChunk，resolve 时输出完整文本 */
   generateStream: (system: string, prompt: string, onChunk: (delta: string) => void, modelId?: string | null) =>
-    streamRequest("ai_generate_stream", { system, prompt, modelId: modelId ?? null }, onChunk),
-  /** 问答；repoQuery 非空时由 Rust 侧检索全库段落并入上下文 */
+    streamGenerate("ai_generate_stream", { system, prompt, modelId: modelId ?? null }, onChunk),
+  /** 问答；repoQuery 非空时由 Rust 侧检索全库来源并返回引用 */
   chat: (messages: AiChatMessage[], repoQuery: string | null, modelId?: string | null) =>
-    call<AiReply>("ai_chat", { messages, repoQuery, modelId: modelId ?? null }),
-  /** 问答（流式） */
+    call<AiChatReply>("ai_chat", { messages, repoQuery, modelId: modelId ?? null }),
+  /** 问答（流式）：先收到来源，再逐块收到正文，最终返回完整回答与来源 */
   chatStream: (
     messages: AiChatMessage[],
     repoQuery: string | null,
-    onChunk: (delta: string) => void,
+    onEvent: (event: AiChatStreamEvent) => void,
     modelId?: string | null,
-  ) => streamRequest("ai_chat_stream", { messages, repoQuery, modelId: modelId ?? null }, onChunk),
+  ) => streamChat({ messages, repoQuery, modelId: modelId ?? null }, onEvent),
 };
 
-/** 流式请求封装：Tauri Channel 逐块回调；Command 成功后 resolve 拼接的完整文本 */
-function streamRequest(command: string, args: Record<string, unknown>, onChunk: (delta: string) => void): Promise<string> {
+function streamGenerate(command: string, args: Record<string, unknown>, onChunk: (delta: string) => void): Promise<string> {
   const channel = new Channel<AiStreamChunk>();
   let full = "";
   channel.onmessage = (chunk) => {
@@ -39,4 +48,19 @@ function streamRequest(command: string, args: Record<string, unknown>, onChunk: 
     onChunk(chunk.delta);
   };
   return call<null>(command, { ...args, onEvent: channel }).then(() => full);
+}
+
+function streamChat(args: Record<string, unknown>, onEvent: (event: AiChatStreamEvent) => void): Promise<AiChatReply> {
+  const channel = new Channel<AiChatStreamEvent>();
+  let text = "";
+  let citations: ContextSnippet[] = [];
+  channel.onmessage = (event) => {
+    if (event.kind === "citations") citations = event.citations;
+    else text += event.delta;
+    onEvent(event);
+  };
+  return call<AiChatReply>("ai_chat_stream", { ...args, onEvent: channel }).then((reply) => ({
+    text: reply.text || text,
+    citations: reply.citations ?? citations,
+  }));
 }

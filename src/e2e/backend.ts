@@ -3,21 +3,20 @@ import type { E2eConflictSeed, E2eState } from "./types";
 import { markWorkspaceDirty } from "./dirty";
 import { E2E_PROVIDERS, E2E_REPOS } from "./fixtures";
 import { needNote, noteCommandHandlers } from "./notes";
+import { emitE2eEvent, listenE2eEvent, unlistenE2eEvent } from "./events";
+import { captureCommandHandlers, type CaptureStore } from "./capture";
+import { wikiCommandHandlers } from "./wiki";
+import { metricsCommandHandlers, type MetricsStore } from "./metrics";
+import { aiCommandHandlers } from "./ai";
 import { taskCommandHandlers, type TaskStore } from "./tasks";
 import { vaultCommandHandlers, type VaultStore } from "./vault";
 
-interface MockStore extends TaskStore, VaultStore {
+interface MockStore extends TaskStore, VaultStore, CaptureStore, MetricsStore {
   notes: Map<string, { content: string; kind: string }>;
   conflicted: boolean;
   conflicts: E2eConflictSeed[];
   /** 挂起中的同步（模拟退避等待）：取消时用最后一次状态收尾 */
   pendingSync: ((status: unknown) => void) | null;
-  /** 本地指标开关与计数（模拟 metrics.json） */
-  metricsEnabled: boolean;
-  metricsCounts: Record<string, number>;
-  /** 近 7 天活跃天数与同步成功率（模拟窗口指标） */
-  activeDays: number;
-  syncSuccessRate: number | null;
   /** 待提交变更（手动提交入口与面板用） */
   uncommitted: boolean;
   changedFiles: Array<{ path: string; status: "added" | "modified" | "deleted" }>;
@@ -29,17 +28,6 @@ export interface E2eCommandContext {
 }
 
 type CommandHandler = (args: Record<string, unknown>, ctx: E2eCommandContext) => unknown;
-
-/** 与 Rust `domain/metrics.rs` 的 METRIC_EVENTS 一致的事件白名单。 */
-const METRIC_EVENT_NAMES = [
-  "app_launched",
-  "repo_bound",
-  "note_created",
-  "sync_succeeded",
-  "sync_failed",
-  "ai_action_confirmed",
-  "update_checked",
-];
 
 function appError(message: string): { code: string; kind: string; message: string; retriable: boolean } {
   return { code: "UNKNOWN_9001", kind: "Unknown", message, retriable: false };
@@ -62,6 +50,9 @@ function createStore(state: E2eState): MockStore {
     vaultState: "absent",
     passphrase: null,
     quickUnlockEnabled: false,
+    pendingShare: state.pendingShare ? { ...state.pendingShare } : null,
+    captureSeq: 0,
+    captureShortcut: "CommandOrControl+Shift+Space",
   };
 }
 
@@ -162,6 +153,8 @@ const commandHandlers: Record<string, CommandHandler> = {
   },
   git_repo_history: (_args, ctx) => repoHistoryOf(ctx),
   ...noteCommandHandlers,
+  ...captureCommandHandlers,
+  ...wikiCommandHandlers,
   search_notes: () => [],
   create_folder: () => null,
   asset_exists: (args, ctx) => {
@@ -220,36 +213,8 @@ const commandHandlers: Record<string, CommandHandler> = {
     markWorkspaceDirty(ctx.store, file);
     return null;
   },
-  "plugin:event|listen": () => 1,
+  "plugin:event|listen": (args) => listenE2eEvent(String(args.event ?? ""), Number(args.handler ?? 0)),
   "plugin:app|version": (_args, ctx) => ctx.state.appVersion ?? "0.24.12",
-  metrics_record: (args, ctx) => {
-    const event = String(args.event ?? "");
-    if (ctx.store.metricsEnabled) ctx.store.metricsCounts[event] = (ctx.store.metricsCounts[event] ?? 0) + 1;
-    return null;
-  },
-  metrics_clear: (_args, ctx) => {
-    ctx.store.metricsCounts = {};
-    return null;
-  },
-  metrics_set_enabled: (args, ctx) => {
-    ctx.store.metricsEnabled = args.enabled !== false;
-    return null;
-  },
-  metrics_read: (_args, ctx) => ({
-    enabled: ctx.store.metricsEnabled,
-    platform: "android",
-    appVersion: ctx.state.appVersion ?? "0.24.12",
-    updatedAt: "",
-    totals: METRIC_EVENT_NAMES.map((event) => ({ event, count: ctx.store.metricsCounts[event] ?? 0, firstSeen: null })),
-    activeDays: ctx.store.activeDays,
-    syncSuccessRate: ctx.store.syncSuccessRate,
-  }),
-  metrics_export: (args, ctx) => {
-    if (ctx.state.metricsExportCanceled) return null;
-    const format = String(args.format ?? "");
-    if (format !== "json" && format !== "csv") throw appError(`unsupported format: ${format}`);
-    return { path: `/tmp/ainote-metrics-0.24.12.${format}`, bytes: 1536 };
-  },
   open_external: () => null,
   download_update: (args, ctx) => {
     if (ctx.state.updateDownloadFails) throw appError("update download failed");
@@ -265,12 +230,20 @@ const commandHandlers: Record<string, CommandHandler> = {
   cancel_update_download: () => null,
   install_update: () => ({ needsPermission: false }),
   print_current_page: () => null,
-  "plugin:event|register_listener": () => 1,
-  "plugin:event|unlisten": () => null,
-  "plugin:event|emit": () => null,
+  "plugin:event|register_listener": (args) => listenE2eEvent(String(args.event ?? ""), Number(args.handler ?? 0)),
+  "plugin:event|unlisten": (args) => {
+    unlistenE2eEvent(String(args.event ?? ""), Number(args.eventId ?? 0));
+    return null;
+  },
+  "plugin:event|emit": (args) => {
+    emitE2eEvent(String(args.event ?? ""), args.payload);
+    return null;
+  },
   "plugin:event|emit_to": () => null,
   ...taskCommandHandlers,
   ...vaultCommandHandlers,
+  ...metricsCommandHandlers,
+  ...aiCommandHandlers,
 };
 
 let session: E2eCommandContext | null = null;

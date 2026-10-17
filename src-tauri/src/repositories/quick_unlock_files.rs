@@ -83,7 +83,10 @@ mod tests {
         assert!(load(dir.path(), "vault-abc").is_none());
         save(dir.path(), "vault-abc", &marker()).unwrap();
         assert_eq!(load(dir.path(), "vault-abc").unwrap(), marker());
-        assert!(!dir.path().join("quick-unlock/vault-abc.tmp").exists(), "临时文件不残留");
+        assert!(
+            !dir.path().join("quick-unlock/vault-abc.tmp").exists(),
+            "临时文件不残留"
+        );
     }
 
     #[test]

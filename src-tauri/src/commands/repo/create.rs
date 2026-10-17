@@ -22,7 +22,9 @@ pub async fn create_repo(
     let cred = auth_service::credential_for_provider(&app, provider)
         .map_err(|err| AppErrorDto::from(err).with_auth_provider(provider.id()))?;
     let notes = config::notes_dir(&app)?;
-    fs::create_dir_all(&notes).map_err(AppError::from).map_err(AppErrorDto::from)?;
+    fs::create_dir_all(&notes)
+        .map_err(AppError::from)
+        .map_err(AppErrorDto::from)?;
     let display_name = name.trim().to_string();
     let dest = repo_service::unique_clone_dir(&notes, &display_name)?;
     let backend = Git2Backend;

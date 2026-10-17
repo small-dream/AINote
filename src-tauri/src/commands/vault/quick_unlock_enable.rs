@@ -11,9 +11,7 @@ use crate::services::{quick_unlock_service, vault_service};
 /// Controller：在本机开启设备级快速解锁。
 /// 要求仓库已解锁（主密钥在内存里），并会触发一次系统认证；认证在后台线程等待，不阻塞前端。
 #[tauri::command]
-pub async fn vault_quick_unlock_enable(
-    app: AppHandle,
-) -> Result<VaultStatusResponse, AppErrorDto> {
+pub async fn vault_quick_unlock_enable(app: AppHandle) -> Result<VaultStatusResponse, AppErrorDto> {
     let root = config::require_repo_path(&app)?;
     let context = support::context(&app, &root)?;
     let (status, quick) = blocking::run(move || {

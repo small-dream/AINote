@@ -111,9 +111,8 @@ fn ensure_vault_ready(repo_path: &Path, encrypted: bool) -> Result<(), AppError>
 /// 取笔记明文；加密笔记在锁定态会在此被拦截（`VAULT_9001`）。
 fn plaintext_of(repo_path: &Path, file: &Path) -> Result<String, AppError> {
     let read = note_content::read_file(repo_path, file)?;
-    read.text.ok_or_else(|| {
-        AppError::VaultLocked("加密笔记需要先解锁仓库密钥".to_string())
-    })
+    read.text
+        .ok_or_else(|| AppError::VaultLocked("加密笔记需要先解锁仓库密钥".to_string()))
 }
 
 /// 用例：更新笔记内容（加密笔记继续以密文落盘）
@@ -207,8 +206,14 @@ mod tests {
     #[test]
     fn extract_title_uses_frontmatter_or_file_name() {
         assert_eq!(extract_title("# 正文标题\nbody", "note"), "note");
-        assert_eq!(extract_title("---\ntitle: 元数据标题\n---\n# 标题", "n"), "元数据标题");
-        assert_eq!(extract_title("---\ntitle: \"Quoted\"\n---\nbody", "a"), "Quoted");
+        assert_eq!(
+            extract_title("---\ntitle: 元数据标题\n---\n# 标题", "n"),
+            "元数据标题"
+        );
+        assert_eq!(
+            extract_title("---\ntitle: \"Quoted\"\n---\nbody", "a"),
+            "Quoted"
+        );
         assert_eq!(extract_title("body", "fallback"), "fallback");
     }
 
@@ -316,7 +321,10 @@ mod tests {
         assert_eq!(meta.path, "README.md");
         assert_eq!(meta.kind, NoteKind::Markdown);
         assert_eq!(meta.title, "README");
-        assert_eq!(read_note(root, "README.md").unwrap().content, "# 导入\n正文");
+        assert_eq!(
+            read_note(root, "README.md").unwrap().content,
+            "# 导入\n正文"
+        );
         // 重名自动加序号
         let second = import_note(root, "", "README.md", "other").unwrap();
         assert_eq!(second.path, "README-1.md");

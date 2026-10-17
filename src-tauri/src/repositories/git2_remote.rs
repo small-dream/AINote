@@ -79,7 +79,12 @@ pub fn force_push(path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
     ca_bundle::configure_ssl_certificates()?;
     let repo = open(path)?;
     let branch = current_branch(&repo)?;
-    let head = repo.head().map_err(to_git)?.peel_to_commit().map_err(to_git)?.id();
+    let head = repo
+        .head()
+        .map_err(to_git)?
+        .peel_to_commit()
+        .map_err(to_git)?
+        .id();
     let refspec = format!("+refs/heads/{branch}:refs/heads/{branch}");
     let mut po = PushOptions::new();
     po.remote_callbacks(callbacks(cred));
@@ -178,9 +183,8 @@ fn envelope_violations(repo: &Repository, use_ours: bool) -> Result<Vec<String>,
             .as_ref()
             .or(entry.their.as_ref())
             .map(|e| String::from_utf8_lossy(&e.path).into_owned());
-        let side_is_envelope = |side: Option<git2::IndexEntry>| {
-            side.map(|e| blob_is_envelope(repo, e.id)).transpose()
-        };
+        let side_is_envelope =
+            |side: Option<git2::IndexEntry>| side.map(|e| blob_is_envelope(repo, e.id)).transpose();
         let our_env = side_is_envelope(entry.our)?.unwrap_or(false);
         let their_env = side_is_envelope(entry.their)?.unwrap_or(false);
         let selected_env = if use_ours { our_env } else { their_env };

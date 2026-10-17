@@ -72,9 +72,7 @@ pub fn save(root: &Path, file: &VaultFile) -> Result<(), AppError> {
 fn replace_file(temporary: &Path, path: &Path) -> Result<(), AppError> {
     match fs::rename(temporary, path) {
         Ok(()) => Ok(()),
-        Err(err) if !path.exists() => {
-            Err(AppError::io_context("替换仓库密钥文件失败", path, err))
-        }
+        Err(err) if !path.exists() => Err(AppError::io_context("替换仓库密钥文件失败", path, err)),
         Err(_) => {
             let backup = path.with_extension("bak");
             fs::rename(path, &backup)
@@ -96,7 +94,10 @@ fn replace_file(temporary: &Path, path: &Path) -> Result<(), AppError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::domain::vault::{KdfParams, WrapParams, ARGON2_ITERATIONS, ARGON2_M_KIB, KDF_ALG, VAULT_SCHEMA_VERSION, WRAP_ALG};
+    use crate::domain::vault::{
+        KdfParams, WrapParams, ARGON2_ITERATIONS, ARGON2_M_KIB, KDF_ALG, VAULT_SCHEMA_VERSION,
+        WRAP_ALG,
+    };
 
     fn sample() -> VaultFile {
         VaultFile {
@@ -143,8 +144,14 @@ mod tests {
         rewrapped.wrap.ciphertext = "Y2lwaGVycmV3cmFw".to_string();
         save(tmp.path(), &rewrapped).unwrap();
         assert_eq!(load(tmp.path()).unwrap().unwrap(), rewrapped);
-        assert!(!tmp.path().join(".ainote/vault.tmp").exists(), "临时文件不残留");
-        assert!(!tmp.path().join(".ainote/vault.bak").exists(), "备份文件不残留");
+        assert!(
+            !tmp.path().join(".ainote/vault.tmp").exists(),
+            "临时文件不残留"
+        );
+        assert!(
+            !tmp.path().join(".ainote/vault.bak").exists(),
+            "备份文件不残留"
+        );
     }
 
     #[test]
@@ -169,7 +176,10 @@ mod tests {
 
         fs::write(&path, r#"{"schemaVersion":1,"kdf":{"alg":"pbkdf2","salt":"x","memoryKiB":65536,"iterations":3,"parallelism":1},"wrap":{"alg":"aes-256-gcm","nonce":"n","ciphertext":"c"}}"#).unwrap();
         let err = load(tmp.path()).unwrap_err();
-        assert!(matches!(err, AppError::VaultInvalid(_)), "非法算法必须显式报错");
+        assert!(
+            matches!(err, AppError::VaultInvalid(_)),
+            "非法算法必须显式报错"
+        );
     }
 
     #[test]

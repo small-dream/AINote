@@ -2,15 +2,15 @@ use std::path::Path;
 
 use git2::{Repository, Signature, StatusOptions};
 
-use crate::domain::error::AppError;
 use crate::domain::discard::DiscardReport;
+use crate::domain::error::AppError;
 use crate::domain::history::{CommitInfo, FileDiff, RepoCommit};
 use crate::domain::remote::RemoteCredential;
 use crate::domain::sync::{ChangedFile, ChangedFileStatus};
 
-use super::git2_history;
-use super::git2_graph;
 use super::git2_discard;
+use super::git2_graph;
+use super::git2_history;
 use super::git2_remote;
 use super::git_backend::GitBackend;
 
@@ -28,9 +28,9 @@ pub(crate) fn open(path: &str) -> Result<Repository, AppError> {
 /// 读取 blob 并判定首行是否为加密信封 magic（复用 domain 纯函数，只认首行）。
 pub(crate) fn blob_is_envelope(repo: &Repository, oid: git2::Oid) -> Result<bool, AppError> {
     let blob = repo.find_blob(oid).map_err(to_git)?;
-    Ok(crate::domain::vault::is_envelope(
-        &String::from_utf8_lossy(blob.content()),
-    ))
+    Ok(crate::domain::vault::is_envelope(&String::from_utf8_lossy(
+        blob.content(),
+    )))
 }
 
 /// 提交签名：优先读仓库 config，缺省回退到应用内置身份。
@@ -199,11 +199,19 @@ impl GitBackend for Git2Backend {
         git2_remote::resolve_conflicts(path, false)
     }
 
-    fn conflict_files(&self, path: &str) -> Result<Vec<crate::domain::sync::ConflictFile>, AppError> {
+    fn conflict_files(
+        &self,
+        path: &str,
+    ) -> Result<Vec<crate::domain::sync::ConflictFile>, AppError> {
         git2_remote::conflict_files(path)
     }
 
-    fn resolve_conflict_file(&self, path: &str, rel: &str, content: &str) -> Result<bool, AppError> {
+    fn resolve_conflict_file(
+        &self,
+        path: &str,
+        rel: &str,
+        content: &str,
+    ) -> Result<bool, AppError> {
         git2_remote::resolve_conflict_file(path, rel, content)
     }
 
@@ -211,7 +219,12 @@ impl GitBackend for Git2Backend {
         git2_remote::complete_merge(path, message)
     }
 
-    fn file_history(&self, path: &str, file: &str, limit: usize) -> Result<Vec<CommitInfo>, AppError> {
+    fn file_history(
+        &self,
+        path: &str,
+        file: &str,
+        limit: usize,
+    ) -> Result<Vec<CommitInfo>, AppError> {
         git2_history::file_history(path, file, limit)
     }
 

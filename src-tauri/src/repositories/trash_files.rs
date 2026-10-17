@@ -40,13 +40,15 @@ pub fn read_manifest(root: &Path) -> Result<Vec<TrashItem>, AppError> {
     if !path.is_file() {
         return Ok(Vec::new());
     }
-    let raw = fs::read_to_string(&path).map_err(|err| AppError::io_context("读取回收站清单失败", &path, err))?;
+    let raw = fs::read_to_string(&path)
+        .map_err(|err| AppError::io_context("读取回收站清单失败", &path, err))?;
     serde_json::from_str(&raw).map_err(|e| AppError::Io(e.to_string()))
 }
 
 fn write_manifest(root: &Path, items: &[TrashItem]) -> Result<(), AppError> {
     let dir = root.join(TRASH_DIR);
-    fs::create_dir_all(&dir).map_err(|err| AppError::io_context("创建回收站目录失败", &dir, err))?;
+    fs::create_dir_all(&dir)
+        .map_err(|err| AppError::io_context("创建回收站目录失败", &dir, err))?;
     let raw = serde_json::to_string_pretty(items).map_err(|e| AppError::Io(e.to_string()))?;
     let path = root.join(MANIFEST);
     fs::write(&path, raw).map_err(|err| AppError::io_context("写入回收站清单失败", &path, err))
@@ -66,7 +68,8 @@ pub fn soft_delete_note(root: &Path, rel: &str) -> Result<TrashItem, AppError> {
     if !src.is_file() {
         return Err(AppError::NoteNotFound(rel.to_string_lossy().into_owned()));
     }
-    let content = fs::read_to_string(&src).map_err(|err| AppError::io_context("读取失败", &src, err))?;
+    let content =
+        fs::read_to_string(&src).map_err(|err| AppError::io_context("读取失败", &src, err))?;
     let fallback = src
         .file_stem()
         .map(|s| s.to_string_lossy().into_owned())
@@ -87,7 +90,8 @@ pub fn soft_delete_note(root: &Path, rel: &str) -> Result<TrashItem, AppError> {
     fs::create_dir_all(&trash_dir)
         .map_err(|err| AppError::io_context("创建回收站目录失败", &trash_dir, err))?;
     let trashed = trash_dir.join(format!("{}.md", item.id));
-    fs::write(&trashed, content).map_err(|err| AppError::io_context("写入回收站失败", &trashed, err))?;
+    fs::write(&trashed, content)
+        .map_err(|err| AppError::io_context("写入回收站失败", &trashed, err))?;
     items.push(item.clone());
     write_manifest(root, &items)?;
     fs::remove_file(&src).map_err(|err| AppError::io_context("删除失败", &src, err))?;
@@ -180,7 +184,8 @@ pub fn restore(root: &Path, id: &str) -> Result<String, AppError> {
     if !src.is_file() {
         return Err(AppError::Repo(format!("trash file missing: {id}")));
     }
-    let content = fs::read_to_string(&src).map_err(|err| AppError::io_context("读取回收站失败", &src, err))?;
+    let content = fs::read_to_string(&src)
+        .map_err(|err| AppError::io_context("读取回收站失败", &src, err))?;
     // 恢复目标同样来自不可信清单：先做词法校验（拒绝绝对路径 / `..` / 隐藏段），
     // 再交给 resolve_within_root 拦符号链接。顺序很重要——create_dir_all 必须在
     // 两道校验之后，否则 `../../x` 会在仓库外先建出目录。
@@ -192,7 +197,8 @@ pub fn restore(root: &Path, id: &str) -> Result<String, AppError> {
     };
     let dest = resolve_within_root(root, &target)?;
     if let Some(parent) = dest.parent() {
-        fs::create_dir_all(parent).map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
+        fs::create_dir_all(parent)
+            .map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
     }
     fs::write(&dest, content).map_err(|err| AppError::io_context("写入失败", &dest, err))?;
     fs::remove_file(&src).map_err(|err| AppError::io_context("删除失败", &src, err))?;

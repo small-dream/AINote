@@ -20,7 +20,11 @@ pub struct SyncFailure {
 
 impl SyncFailure {
     fn new(stage: Option<SyncStage>, error: AppError, files: Vec<String>) -> Self {
-        Self { error, stage, files }
+        Self {
+            error,
+            stage,
+            files,
+        }
     }
 
     /// 可操作建议码：凭证 / 权限 / 冲突各自明确，其余交给用户重试（纯函数）。
@@ -74,8 +78,10 @@ pub fn changed_files<B: GitBackend>(
 /// 本地时间 `YYYY-MM-DD HH:mm`；取本地时区失败时回退 UTC。
 pub fn format_now() -> String {
     let now = time::OffsetDateTime::now_local().unwrap_or_else(|_| time::OffsetDateTime::now_utc());
-    now.format(&time::macros::format_description!("[year]-[month]-[day] [hour]:[minute]"))
-        .unwrap_or_default()
+    now.format(&time::macros::format_description!(
+        "[year]-[month]-[day] [hour]:[minute]"
+    ))
+    .unwrap_or_default()
 }
 
 /// 用例：拉取远端（冲突时返回 Conflict 错误，状态可查）
@@ -157,7 +163,8 @@ pub fn sync<B: GitBackend>(
     backend
         .push(&path, cred)
         .map_err(|error| stage_failure("push", SyncStage::Push, error, Vec::new()))?;
-    let result = status(backend, repo_path).map_err(|error| SyncFailure::new(None, error, Vec::new()))?;
+    let result =
+        status(backend, repo_path).map_err(|error| SyncFailure::new(None, error, Vec::new()))?;
     log::info!(
         target: "ainote::sync",
         "同步完成 ahead={} behind={}",
@@ -167,7 +174,12 @@ pub fn sync<B: GitBackend>(
     Ok(result)
 }
 
-fn stage_failure(stage: &str, named: SyncStage, error: AppError, files: Vec<String>) -> SyncFailure {
+fn stage_failure(
+    stage: &str,
+    named: SyncStage,
+    error: AppError,
+    files: Vec<String>,
+) -> SyncFailure {
     log::error!(target: "ainote::sync", "同步失败 stage={stage} error={error}");
     SyncFailure::new(Some(named), error, files)
 }
@@ -295,7 +307,10 @@ mod tests {
         sync(&mock, &root(), &cred(), &mut background()).unwrap();
         let recorded = mock.recorded();
         assert_eq!(recorded[0], "changed_files");
-        assert!(recorded[1].starts_with("commit:chore: "), "subject 含时间与文件数");
+        assert!(
+            recorded[1].starts_with("commit:chore: "),
+            "subject 含时间与文件数"
+        );
         assert!(recorded[1].contains("· 更新 2 个文件"));
         assert!(recorded[1].contains("M daily/2026-09-10.md"));
         assert!(recorded[1].contains("A new.md"));
@@ -309,7 +324,11 @@ mod tests {
         };
         let err = sync(&mock, &root(), &cred(), &mut background()).unwrap_err();
         assert!(matches!(err.error, AppError::Conflict(_)));
-        assert_eq!(mock.recorded(), vec!["conflicts"], "只读取冲突清单，不做任何写操作");
+        assert_eq!(
+            mock.recorded(),
+            vec!["conflicts"],
+            "只读取冲突清单，不做任何写操作"
+        );
     }
 
     #[test]
@@ -320,7 +339,10 @@ mod tests {
         };
         assert!(matches!(
             sync(&mock, &root(), &cred(), &mut background()),
-            Err(SyncFailure { error: AppError::Conflict(_), .. })
+            Err(SyncFailure {
+                error: AppError::Conflict(_),
+                ..
+            })
         ));
         assert_eq!(
             mock.recorded(),
@@ -349,7 +371,10 @@ mod tests {
         };
 
         assert!(outcome.is_ok());
-        assert_eq!(mock.recorded(), vec!["changed_files", "commit:", "pull", "pull", "pull", "push"]);
+        assert_eq!(
+            mock.recorded(),
+            vec!["changed_files", "commit:", "pull", "pull", "pull", "push"]
+        );
         assert_eq!(reports, vec![1, 2]);
         assert_eq!(delays.len(), 2);
     }
@@ -369,10 +394,23 @@ mod tests {
             sync(&mock, &root(), &cred(), &mut ctx)
         };
 
-        assert!(matches!(outcome, Err(SyncFailure { error: AppError::SyncNetwork(_), .. })));
+        assert!(matches!(
+            outcome,
+            Err(SyncFailure {
+                error: AppError::SyncNetwork(_),
+                ..
+            })
+        ));
         let calls = mock.recorded();
-        assert_eq!(calls.iter().filter(|call| call.as_str() == "pull").count(), 4, "首次 + 3 次重试");
-        assert!(!calls.iter().any(|call| call == "push"), "拉取未成功时不推送");
+        assert_eq!(
+            calls.iter().filter(|call| call.as_str() == "pull").count(),
+            4,
+            "首次 + 3 次重试"
+        );
+        assert!(
+            !calls.iter().any(|call| call == "push"),
+            "拉取未成功时不推送"
+        );
     }
 
     fn conflict(path: &str) -> ConflictFile {

@@ -189,6 +189,10 @@ fn already_missing_added_file_is_skipped_without_error() {
 
     let report = discard_working(dir.to_str().unwrap(), &["ghost.md".into()]).unwrap();
 
-    assert_eq!(report.deleted, vec!["ghost.md"], "幂等：没有文件也算处理完成");
+    assert_eq!(
+        report.deleted,
+        vec!["ghost.md"],
+        "幂等：没有文件也算处理完成"
+    );
     assert_clean(&dir);
 }

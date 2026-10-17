@@ -1,8 +1,8 @@
 use std::collections::HashMap;
 use std::path::Path;
 
-use crate::domain::favorite::toggle_favorite;
 use crate::domain::error::AppError;
+use crate::domain::favorite::toggle_favorite;
 use crate::domain::note::{NoteKind, NoteMeta};
 use crate::repositories::{favorite_files, note_files};
 use crate::services::note_service;
@@ -58,7 +58,10 @@ mod tests {
         assert!(toggle_note_favorite(root.path(), "sub/b.md").unwrap());
         let favorites = list_favorite_notes(root.path()).unwrap();
         assert_eq!(
-            favorites.iter().map(|note| note.title.as_str()).collect::<Vec<_>>(),
+            favorites
+                .iter()
+                .map(|note| note.title.as_str())
+                .collect::<Vec<_>>(),
             vec!["b", "a"]
         );
 

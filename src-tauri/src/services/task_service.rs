@@ -153,11 +153,25 @@ mod tests {
             Err(AppError::TaskInvalid(_))
         ));
         assert!(matches!(
-            create_task(root.path(), "x", None, None, TaskPriority::None, Some("2026-09-20T09:00:00+08:00".into())),
+            create_task(
+                root.path(),
+                "x",
+                None,
+                None,
+                TaskPriority::None,
+                Some("2026-09-20T09:00:00+08:00".into())
+            ),
             Err(AppError::TaskInvalid(_))
         ));
         assert!(matches!(
-            create_task(root.path(), "x", None, Some("2026-09-20 18:00".into()), TaskPriority::None, None),
+            create_task(
+                root.path(),
+                "x",
+                None,
+                Some("2026-09-20 18:00".into()),
+                TaskPriority::None,
+                None
+            ),
             Err(AppError::TaskInvalid(_))
         ));
 
@@ -174,7 +188,8 @@ mod tests {
         assert!(!item.done);
         assert_eq!(item.title, "写周报");
 
-        let second = create_task(root.path(), "回邮件", None, None, TaskPriority::Low, None).unwrap();
+        let second =
+            create_task(root.path(), "回邮件", None, None, TaskPriority::Low, None).unwrap();
         assert_eq!(second.sort_order, 1);
     }
 
@@ -191,13 +206,17 @@ mod tests {
         )
         .unwrap();
         assert_eq!(item.due_at.as_deref(), Some("2026-09-20T18:30"));
-        assert_eq!(board(root.path()).unwrap().tasks[0].due_at.as_deref(), Some("2026-09-20T18:30"));
+        assert_eq!(
+            board(root.path()).unwrap().tasks[0].due_at.as_deref(),
+            Some("2026-09-20T18:30")
+        );
     }
 
     #[test]
     fn update_task_replaces_editable_fields() {
         let root = setup();
-        let item = create_task(root.path(), "旧标题", None, None, TaskPriority::None, None).unwrap();
+        let item =
+            create_task(root.path(), "旧标题", None, None, TaskPriority::None, None).unwrap();
 
         let updated = update_task(
             root.path(),
@@ -215,7 +234,15 @@ mod tests {
         assert_eq!(updated.priority, TaskPriority::Medium);
 
         assert!(matches!(
-            update_task(root.path(), "missing", "x", None, None, TaskPriority::None, None),
+            update_task(
+                root.path(),
+                "missing",
+                "x",
+                None,
+                None,
+                TaskPriority::None,
+                None
+            ),
             Err(AppError::TaskNotFound(_))
         ));
     }
@@ -250,15 +277,28 @@ mod tests {
 
         assert_eq!(updated.updated_at, item.updated_at);
         assert_eq!(fs::read_to_string(&file).unwrap(), before);
-        assert_eq!(fs::metadata(&file).unwrap().modified().unwrap(), before_mtime);
+        assert_eq!(
+            fs::metadata(&file).unwrap().modified().unwrap(),
+            before_mtime
+        );
     }
 
     #[test]
     fn update_task_still_bumps_updated_at_on_real_change() {
         let root = setup();
-        let item = create_task(root.path(), "写周报", None, None, TaskPriority::None, None).unwrap();
+        let item =
+            create_task(root.path(), "写周报", None, None, TaskPriority::None, None).unwrap();
 
-        let updated = update_task(root.path(), &item.id, "写周报", Some("三条".into()), None, TaskPriority::None, None).unwrap();
+        let updated = update_task(
+            root.path(),
+            &item.id,
+            "写周报",
+            Some("三条".into()),
+            None,
+            TaskPriority::None,
+            None,
+        )
+        .unwrap();
 
         assert_eq!(updated.description, "三条");
         assert_ne!(updated.updated_at, item.updated_at);

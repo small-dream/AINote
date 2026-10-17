@@ -1,7 +1,7 @@
 use std::path::Path;
 
-use crate::domain::error::AppError;
 use crate::domain::discard::DiscardReport;
+use crate::domain::error::AppError;
 use crate::domain::history::{CommitInfo, FileDiff, RepoCommit};
 use crate::domain::remote::RemoteCredential;
 use crate::domain::sync::{ChangedFile, ConflictFile};
@@ -40,11 +40,17 @@ pub trait GitBackend: Send + Sync {
     /// 读取当前合并冲突文件（path + 本地/远端内容），供三栏合并（P1-3）
     fn conflict_files(&self, path: &str) -> Result<Vec<ConflictFile>, AppError>;
     /// 以指定内容解决单个冲突文件并写入 index；返回是否已无冲突
-    fn resolve_conflict_file(&self, path: &str, rel: &str, content: &str) -> Result<bool, AppError>;
+    fn resolve_conflict_file(&self, path: &str, rel: &str, content: &str)
+        -> Result<bool, AppError>;
     /// index 已无冲突时完成 merge commit（双父 HEAD + MERGE_HEAD）
     fn complete_merge(&self, path: &str, message: &str) -> Result<(), AppError>;
     /// 指定文件（相对仓库根）的提交历史，仅含修改过该文件的提交，按时间倒序
-    fn file_history(&self, path: &str, file: &str, limit: usize) -> Result<Vec<CommitInfo>, AppError>;
+    fn file_history(
+        &self,
+        path: &str,
+        file: &str,
+        limit: usize,
+    ) -> Result<Vec<CommitInfo>, AppError>;
     /// 全仓提交历史（含每 commit 直接改动的文件），覆盖所有分支，按时间倒序
     fn repo_history(&self, path: &str, limit: usize) -> Result<Vec<RepoCommit>, AppError>;
     /// 选中提交相对其父提交的单文件 diff
@@ -227,7 +233,12 @@ impl GitBackend for MockGitBackend {
         Ok(self.conflicts.clone())
     }
 
-    fn resolve_conflict_file(&self, _path: &str, rel: &str, _content: &str) -> Result<bool, AppError> {
+    fn resolve_conflict_file(
+        &self,
+        _path: &str,
+        rel: &str,
+        _content: &str,
+    ) -> Result<bool, AppError> {
         self.record(format!("resolve_file:{rel}"));
         Ok(self.all_resolved_after_file)
     }
@@ -237,7 +248,12 @@ impl GitBackend for MockGitBackend {
         Ok(())
     }
 
-    fn file_history(&self, _path: &str, file: &str, _limit: usize) -> Result<Vec<CommitInfo>, AppError> {
+    fn file_history(
+        &self,
+        _path: &str,
+        file: &str,
+        _limit: usize,
+    ) -> Result<Vec<CommitInfo>, AppError> {
         self.record(format!("history:{file}"));
         Ok(vec![CommitInfo {
             id: "a1b2c3d4".into(),

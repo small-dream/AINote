@@ -27,7 +27,10 @@ fn plain_repo_reads_and_writes_verbatim() {
     assert_eq!(read.text.as_deref(), Some("# 明文"));
 
     write_text(root, "b.md", "# 新笔记").unwrap();
-    assert_eq!(std::fs::read_to_string(root.join("b.md")).unwrap(), "# 新笔记");
+    assert_eq!(
+        std::fs::read_to_string(root.join("b.md")).unwrap(),
+        "# 新笔记"
+    );
 }
 
 #[test]
@@ -59,13 +62,19 @@ fn encrypted_note_round_trips_while_unlocked_and_stays_encrypted_on_write() {
     assert!(is_envelope(&on_disk));
     assert!(!on_disk.contains("机密"));
     assert_eq!(
-        read_file(root, &root.join("secret.md")).unwrap().text.as_deref(),
+        read_file(root, &root.join("secret.md"))
+            .unwrap()
+            .text
+            .as_deref(),
         Some("# 机密改")
     );
 
     // 新建的普通笔记默认仍是明文（逐篇开关）
     write_text(root, "plain.md", "# 明文").unwrap();
-    assert_eq!(std::fs::read_to_string(root.join("plain.md")).unwrap(), "# 明文");
+    assert_eq!(
+        std::fs::read_to_string(root.join("plain.md")).unwrap(),
+        "# 明文"
+    );
     vault_service::lock(root).unwrap();
 }
 
@@ -86,7 +95,10 @@ fn locked_session_hides_encrypted_notes_without_breaking_scan() {
 
     // 明文笔记不受锁定影响
     assert_eq!(
-        read_file(root, &root.join("plain.md")).unwrap().text.as_deref(),
+        read_file(root, &root.join("plain.md"))
+            .unwrap()
+            .text
+            .as_deref(),
         Some("# 明文")
     );
 

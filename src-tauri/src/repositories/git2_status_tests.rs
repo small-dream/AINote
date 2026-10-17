@@ -52,9 +52,18 @@ fn changed_files_lists_added_modified_deleted_sorted() {
     assert_eq!(
         files,
         vec![
-            ChangedFile { path: "a.md".into(), status: ChangedFileStatus::Modified },
-            ChangedFile { path: "old.md".into(), status: ChangedFileStatus::Deleted },
-            ChangedFile { path: "untracked.md".into(), status: ChangedFileStatus::Added },
+            ChangedFile {
+                path: "a.md".into(),
+                status: ChangedFileStatus::Modified
+            },
+            ChangedFile {
+                path: "old.md".into(),
+                status: ChangedFileStatus::Deleted
+            },
+            ChangedFile {
+                path: "untracked.md".into(),
+                status: ChangedFileStatus::Added
+            },
         ],
         "按路径排序，状态映射为 M/D/A"
     );
@@ -83,12 +92,20 @@ fn changed_files_ignores_ignored_files() {
     fs::write(dir.join("secret.tmp"), "noise").unwrap();
 
     let files = changed_files(dir.to_str().unwrap()).unwrap();
-    assert_eq!(files, vec![ChangedFile { path: ".gitignore".into(), status: ChangedFileStatus::Added }]);
+    assert_eq!(
+        files,
+        vec![ChangedFile {
+            path: ".gitignore".into(),
+            status: ChangedFileStatus::Added
+        }]
+    );
 }
 
 #[test]
 fn to_git_redacts_local_paths_in_message() {
-    let err = to_git(git2::Error::from_str("failed to open /Users/jake/notes/.git"));
+    let err = to_git(git2::Error::from_str(
+        "failed to open /Users/jake/notes/.git",
+    ));
     let AppError::Git(message) = err else {
         panic!("应为 Git 变体");
     };

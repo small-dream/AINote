@@ -48,11 +48,21 @@ mod tests {
         let file = repo.path().join("note.md");
         set_writable(&file, false);
         assert!(note_service::update_note(repo.path(), "note.md", "v2").is_err());
-        assert_eq!(note_service::read_note(repo.path(), "note.md").unwrap().content, "v1");
+        assert_eq!(
+            note_service::read_note(repo.path(), "note.md")
+                .unwrap()
+                .content,
+            "v1"
+        );
 
         set_writable(&file, true);
         note_service::update_note(repo.path(), "note.md", "v2").unwrap();
-        assert_eq!(note_service::read_note(repo.path(), "note.md").unwrap().content, "v2");
+        assert_eq!(
+            note_service::read_note(repo.path(), "note.md")
+                .unwrap()
+                .content,
+            "v2"
+        );
     }
 
     /// 场景：误删笔记后可从回收站恢复，内容与路径保持不变。
@@ -68,7 +78,9 @@ mod tests {
         let item = items.iter().find(|item| item.path == "notes/a.md").unwrap();
         trash_service::restore_trash_item(repo.path(), &item.id).unwrap();
         assert_eq!(
-            note_service::read_note(repo.path(), "notes/a.md").unwrap().content,
+            note_service::read_note(repo.path(), "notes/a.md")
+                .unwrap()
+                .content,
             "precious"
         );
     }
@@ -87,7 +99,9 @@ mod tests {
         backup_service::export(
             repo.path(),
             &zip,
-            &BackupOptions { exclude_assets: false },
+            &BackupOptions {
+                exclude_assets: false,
+            },
             &cancel,
             |_| {},
         )
@@ -101,10 +115,15 @@ mod tests {
         let notes = tempdir().unwrap();
         let result = restore_service::restore(&zip, notes.path()).unwrap();
         let restored = Path::new(&result.repo_path);
-        assert_eq!(fs::read_to_string(restored.join("notes/a.md")).unwrap(), "precious");
+        assert_eq!(
+            fs::read_to_string(restored.join("notes/a.md")).unwrap(),
+            "precious"
+        );
 
         let healthy = Git2Maintenance.check_integrity(restored).unwrap();
-        assert!(!healthy.iter().any(|item| item.severity == IssueSeverity::Error));
+        assert!(!healthy
+            .iter()
+            .any(|item| item.severity == IssueSeverity::Error));
     }
 
     fn corrupt_first_object(repo_path: &Path) {

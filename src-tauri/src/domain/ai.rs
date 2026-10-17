@@ -42,6 +42,32 @@ pub struct AiReplyDto {
     pub text: String,
 }
 
+/// 全库问答的单条检索来源。index 从 1 起，与回答中的 [n] 编号一致。
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct ContextSnippet {
+    pub index: usize,
+    pub path: String,
+    pub heading: Option<String>,
+    pub line: u32,
+    pub text: String,
+}
+
+#[derive(Debug, Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct AiChatReplyDto {
+    pub text: String,
+    pub citations: Vec<ContextSnippet>,
+}
+
+/// 问答流事件：来源先于首个 delta 下发，前端可先准备引用区。
+#[derive(Debug, Clone, Serialize)]
+#[serde(tag = "kind", rename_all = "camelCase")]
+pub enum AiChatStreamEvent {
+    Citations { citations: Vec<ContextSnippet> },
+    Delta { delta: String },
+}
+
 /// ai_generate_stream 增量块（前端经 Tauri Channel 逐块接收，实现打字机效果）。
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]

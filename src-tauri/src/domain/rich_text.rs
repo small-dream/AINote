@@ -39,6 +39,38 @@ pub fn extract_title(json: &str) -> Option<String> {
         .or(fallback)
 }
 
+/// 提取标题节点：返回 (text, level, 标题序号从 1 起)，供双链标题跳转与 AI 引用。
+pub fn headings(json: &str) -> Vec<(String, usize, usize)> {
+    let Ok(value) = serde_json::from_str::<Value>(json) else {
+        return Vec::new();
+    };
+    let mut out = Vec::new();
+    collect_headings(&value, &mut out);
+    out
+}
+
+fn collect_headings(node: &Value, out: &mut Vec<(String, usize, usize)>) {
+    match node {
+        Value::Array(items) => items.iter().for_each(|item| collect_headings(item, out)),
+        Value::Object(map) => {
+            if map.get("type").and_then(|t| t.as_str()) == Some("heading") {
+                if let Some(text) = heading_text(map.get("content")) {
+                    let level = map
+                        .get("attrs")
+                        .and_then(|a| a.get("level"))
+                        .and_then(|l| l.as_u64())
+                        .unwrap_or(1) as usize;
+                    out.push((text, level, out.len() + 1));
+                }
+            }
+            if let Some(content) = map.get("content") {
+                collect_headings(content, out);
+            }
+        }
+        _ => {}
+    }
+}
+
 fn collect_text(node: &Value, out: &mut String) {
     match node {
         Value::Array(items) => {
@@ -121,7 +153,9 @@ mod tests {
 
     #[test]
     fn plain_text_collects_text_nodes() {
-        let json = doc(r#"{"type":"doc","content":[{"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"标题"}]},{"type":"paragraph","content":[{"type":"text","text":"正文 A"},{"type":"text","text":"正文 B"}]}]}"#);
+        let json = doc(
+            r#"{"type":"doc","content":[{"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"标题"}]},{"type":"paragraph","content":[{"type":"text","text":"正文 A"},{"type":"text","text":"正文 B"}]}]}"#,
+        );
         let text = plain_text(&json);
         assert!(text.contains("标题"));
         assert!(text.contains("正文 A"));
@@ -135,19 +169,25 @@ mod tests {
 
     #[test]
     fn extract_title_prefers_level_one_heading() {
-        let json = doc(r#"{"type":"doc","content":[{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"二级"}]},{"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"一级"}]}]}"#);
+        let json = doc(
+            r#"{"type":"doc","content":[{"type":"heading","attrs":{"level":2},"content":[{"type":"text","text":"二级"}]},{"type":"heading","attrs":{"level":1},"content":[{"type":"text","text":"一级"}]}]}"#,
+        );
         assert_eq!(extract_title(&json).as_deref(), Some("一级"));
     }
 
     #[test]
     fn extract_title_falls_back_to_first_heading() {
-        let json = doc(r#"{"type":"doc","content":[{"type":"paragraph"},{"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"三级"}]}]}"#);
+        let json = doc(
+            r#"{"type":"doc","content":[{"type":"paragraph"},{"type":"heading","attrs":{"level":3},"content":[{"type":"text","text":"三级"}]}]}"#,
+        );
         assert_eq!(extract_title(&json).as_deref(), Some("三级"));
     }
 
     #[test]
     fn extract_title_none_without_heading() {
-        let json = doc(r#"{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"正文"}]}]}"#);
+        let json = doc(
+            r#"{"type":"doc","content":[{"type":"paragraph","content":[{"type":"text","text":"正文"}]}]}"#,
+        );
         assert_eq!(extract_title(&json), None);
     }
 
