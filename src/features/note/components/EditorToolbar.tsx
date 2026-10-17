@@ -1,4 +1,5 @@
-import { Code, Eye, Split, SquarePen, type LucideIcon } from "lucide-react";
+import { ChevronLeft, ChevronRight, Code, Eye, Maximize2, Minimize2, Split, SquarePen, type LucideIcon } from "lucide-react";
+import { IconButton } from "@/components/atoms/IconButton";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 import { NoteTitleField } from "./NoteTitleField";
@@ -41,6 +42,12 @@ interface EditorToolbarProps {
   onTitleChange?: (content: string) => void;
   onFlush?: () => Promise<void>;
   onRenamed?: (path: string) => void;
+  canGoBack?: boolean;
+  canGoForward?: boolean;
+  onGoBack?: (() => void) | undefined;
+  onGoForward?: (() => void) | undefined;
+  focusMode?: boolean;
+  onToggleFocus?: () => void;
 }
 
 interface ModeTab { key: ViewMode; labelKey: TranslationKey }
@@ -60,23 +67,46 @@ const COMPACT_MODE_TABS: ModeTab[] = [
 
 const MODE_ICONS: Record<ViewMode, LucideIcon> = { edit: SquarePen, source: Code, split: Split, preview: Eye };
 
+const NOOP = () => undefined;
+const NOOP_ASYNC = async () => undefined;
+
+interface EditorToolbarTitleProps {
+  path: string;
+  isNewNote: boolean;
+  draft: string;
+  saving: boolean;
+  dirty: boolean;
+  onTitleChange?: ((content: string) => void) | undefined;
+  onFlush?: (() => Promise<void>) | undefined;
+  onRenamed?: ((path: string) => void) | undefined;
+}
+
+function EditorToolbarTitle({ path, isNewNote, draft, saving, dirty, onTitleChange, onFlush, onRenamed }: EditorToolbarTitleProps) {
+  return (
+    <div className="flex min-w-0 items-center gap-3">
+      <NoteTitleField key={path} notePath={path} isNewNote={isNewNote} draft={draft} onChange={onTitleChange ?? NOOP} flush={onFlush ?? NOOP_ASYNC} onRenamed={onRenamed ?? NOOP} />
+      <SaveStatus saving={saving} dirty={dirty} />
+    </div>
+  );
+}
+
 /** 笔记操作栏：左侧标题锚点，右侧常驻只有视图切换（仅 Markdown）与「⋯」溢出菜单，低频控件收进菜单保持内容优先。 */
-export function EditorToolbar({ path, mode, compact = false, richText = false, saving = false, dirty = false, saveError, saveErrorCode, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onAi, aiBlocked, historyBlocked, onToggleEncryption, encryptionAction, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, compact = false, richText = false, saving = false, dirty = false, saveError, saveErrorCode, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onAi, aiBlocked, historyBlocked, onToggleEncryption, encryptionAction, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed, canGoBack = false, canGoForward = false, onGoBack, onGoForward, focusMode = false, onToggleFocus }: EditorToolbarProps) {
   return (
     <div
       data-tauri-drag-region="deep"
       className="workspace-toolbar flex min-h-16 items-center justify-between gap-4 border-b border-border bg-bg-primary px-6 py-2.5"
     >
-      <div className="flex min-w-0 items-center gap-3">
-        <NoteTitleField key={path} notePath={path} isNewNote={isNewNote} draft={draft} onChange={onTitleChange ?? (() => undefined)} flush={onFlush ?? (async () => undefined)} onRenamed={onRenamed ?? (() => undefined)} />
-        <SaveStatus saving={saving} dirty={dirty} />
-      </div>
+      <EditorToolbarTitle path={path} isNewNote={isNewNote} draft={draft} saving={saving} dirty={dirty} onTitleChange={onTitleChange} onFlush={onFlush} onRenamed={onRenamed} />
 
       <div className="flex shrink-0 items-center gap-4">
         <ToolbarActions
           mode={mode}
           compact={compact}
           richText={richText}
+          focusMode={focusMode}
+          canGoBack={canGoBack}
+          canGoForward={canGoForward}
           aiBlocked={aiBlocked}
           historyBlocked={historyBlocked}
           encryptionAction={encryptionAction}
@@ -90,6 +120,9 @@ export function EditorToolbar({ path, mode, compact = false, richText = false, s
           onExportMarkdown={onExportMarkdown}
           onMove={onMove}
           onToggleEncryption={onToggleEncryption}
+          onGoBack={onGoBack}
+          onGoForward={onGoForward}
+          onToggleFocus={onToggleFocus}
         />
         <SaveErrorMessage message={saveError} code={saveErrorCode} onRetry={onSave} />
       </div>
@@ -101,6 +134,9 @@ interface ToolbarActionsProps {
   mode: ViewMode;
   compact: boolean;
   richText: boolean;
+  focusMode: boolean;
+  canGoBack: boolean;
+  canGoForward: boolean;
   aiBlocked: boolean;
   historyBlocked: boolean;
   encryptionAction: "encrypt" | "decrypt";
@@ -114,18 +150,30 @@ interface ToolbarActionsProps {
   onExportMarkdown?: (() => void) | undefined;
   onMove: () => void;
   onToggleEncryption?: (() => void) | undefined;
+  onGoBack?: (() => void) | undefined;
+  onGoForward?: (() => void) | undefined;
+  onToggleFocus?: (() => void) | undefined;
 }
 
 /** 右侧操作分组：常驻只有视图切换（仅 Markdown）与「⋯」溢出菜单；主题 / 历史 / 双链 / AI 与文件操作统一收进菜单。 */
-function ToolbarActions({ mode, compact, richText, aiBlocked, historyBlocked, encryptionAction, onModeChange, onHistory, onWiki, onAi, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onMove, onToggleEncryption }: ToolbarActionsProps) {
+function ToolbarActions({ mode, compact, richText, focusMode, canGoBack, canGoForward, aiBlocked, historyBlocked, encryptionAction, onModeChange, onHistory, onWiki, onAi, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onMove, onToggleEncryption, onGoBack, onGoForward, onToggleFocus }: ToolbarActionsProps) {
+  const { t } = useTranslation();
   return (
     <div className="flex items-center gap-1">
-      {!richText ? (
+      {onGoBack || onGoForward ? (
+        <div className="flex items-center gap-0.5">
+          <IconButton size="sm" icon={ChevronLeft} label={t("note.goBack")} disabled={!canGoBack} onClick={onGoBack} />
+          <IconButton size="sm" icon={ChevronRight} label={t("note.goForward")} disabled={!canGoForward} onClick={onGoForward} />
+          <ToolbarDivider />
+        </div>
+      ) : null}
+      {!richText && !focusMode ? (
         <>
           <ModeTabs mode={mode} compact={compact} onChange={onModeChange} />
           <ToolbarDivider />
         </>
       ) : null}
+      {onToggleFocus ? <IconButton size="sm" icon={focusMode ? Minimize2 : Maximize2} label={focusMode ? t("editor.exitFocusMode") : t("editor.focusMode")} active={focusMode} onClick={onToggleFocus} /> : null}
       <ToolbarOverflowMenu
         richText={richText}
         hasConvert={Boolean(onConvertToRichText)}

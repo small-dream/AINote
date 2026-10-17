@@ -4,6 +4,7 @@ import type { CommandPaletteActions } from "../types";
 import { filterCommands, searchResultToCommand, type PaletteCommand } from "../utils/palette";
 import { usePaletteCommands } from "./usePaletteCommands";
 import { usePaletteSearch } from "./usePaletteSearch";
+import { useSearchResultFilters } from "./useSearchResultFilters";
 
 /** 命令面板编排：搜索结果与动作命令合并 + 键盘导航 + 选择态（View 层零逻辑） */
 export function useCommandPalette(repoPath: string | null, actions: CommandPaletteActions) {
@@ -15,14 +16,16 @@ export function useCommandPalette(repoPath: string | null, actions: CommandPalet
   const closePalette = useCommandPaletteStore((state) => state.closePalette);
   const actionCommands = usePaletteCommands(actions, repoPath);
   const { results, isSearching } = usePaletteSearch(open, repoPath);
+  const search = useSearchResultFilters(results);
+  const totalResults = results.length;
 
   const commands = useMemo<PaletteCommand[]>(() => {
     const trimmed = query.trim();
     const searchCommands = trimmed
-      ? results.map((result) => searchResultToCommand(result, actions.onOpenNote, closePalette))
+      ? search.results.map((result) => searchResultToCommand(result, actions.onOpenNote, closePalette))
       : [];
     return [...searchCommands, ...filterCommands(actionCommands, trimmed)];
-  }, [results, actionCommands, query, actions, closePalette]);
+  }, [search.results, actionCommands, query, actions, closePalette]);
 
   const safeSelected = Math.min(selected, Math.max(commands.length - 1, 0));
 
@@ -41,5 +44,13 @@ export function useCommandPalette(repoPath: string | null, actions: CommandPalet
     }
   }
 
-  return { open, query, setQuery, commands, selected: safeSelected, isSearching, handleKeyDown, closePalette };
+  return {
+    open, query, setQuery, commands, selected: safeSelected, isSearching, handleKeyDown, closePalette,
+    searchFilters: search.filters,
+    searchFacets: search.facets,
+    filteredSearchCount: search.results.length,
+    totalSearchCount: totalResults,
+    setSearchKind: search.setKind,
+    setSearchDirectory: search.setDirectory,
+  };
 }

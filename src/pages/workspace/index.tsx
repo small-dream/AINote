@@ -30,6 +30,7 @@ export function WorkspacePage() {
     useVaultUnlockStore.getState().arm();
     if (target) useSessionStore.getState().navigateTo(target);
     else openNote(path);
+    useSessionStore.getState().rememberVisited(path);
     if (repoPath) recordRecentNote(repoPath, path);
   }
 

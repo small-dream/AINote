@@ -51,4 +51,30 @@ describe("useEditorExtensions", () => {
     expect(result.current.canUndo).toBe(false);
     expect(result.current.canRedo).toBe(true);
   });
+
+  it("同步光标行列并在切换笔记时复位", () => {
+    const { result, rerender } = renderHook(
+      ({ resetKey }) => useEditorExtensions({ softRenderEnabled: false, resetKey }),
+      { initialProps: { resetKey: "a.md" } },
+    );
+    const view = mountEditor(result.current.extensions, "one\ntwo");
+
+    act(() => view.dispatch({ selection: { anchor: 6 } }));
+    expect(result.current.cursorPosition).toEqual({ line: 2, column: 3 });
+
+    rerender({ resetKey: "b.md" });
+    expect(result.current.cursorPosition).toEqual({ line: 1, column: 1 });
+    act(() => view.dispatch({ selection: { anchor: 1 } }));
+    expect(result.current.cursorPosition).toEqual({ line: 1, column: 2 });
+  });
+
+  it("打字机模式改变扩展集合", () => {
+    const { result, rerender } = renderHook(
+      ({ typewriter }) => useEditorExtensions({ softRenderEnabled: false, typewriterMode: typewriter }),
+      { initialProps: { typewriter: false } },
+    );
+    const normal = result.current.extensions;
+    rerender({ typewriter: true });
+    expect(result.current.extensions).not.toBe(normal);
+  });
 });

@@ -4,6 +4,8 @@ import { Tooltip } from "@/components/atoms/Tooltip";
 import { noteKindOfPath } from "@/features/note/utils/noteKind";
 import { NoteLockBadge } from "@/features/vault/components/NoteLockBadge";
 import { useTranslation } from "@/i18n";
+import { useSearchResultFilters } from "@/features/search/hooks/useSearchResultFilters";
+import { HighlightedText, SearchFilterBar } from "@/features/search/components/SearchFilterBar";
 
 interface TreeSearchInputProps {
   value: string;
@@ -50,6 +52,7 @@ interface TreeSearchResultsProps {
 /** 搜索进行时替换目录树展示的命中列表，点击打开笔记。 */
 export function TreeSearchResults({ query, results, isSearching, error, onSelect }: TreeSearchResultsProps) {
   const { t } = useTranslation();
+  const search = useSearchResultFilters(results);
   if (error) {
     return <div className="px-3 py-6 text-center text-sm text-danger" role="alert">{t("tree.searchError", { message: error })}</div>;
   }
@@ -58,17 +61,24 @@ export function TreeSearchResults({ query, results, isSearching, error, onSelect
     return <div className="px-3 py-6 text-center text-sm text-text-tertiary">{message}</div>;
   }
   return (
-    <ul className="min-h-0 flex-1 overflow-y-auto px-2 py-2" aria-label={t("palette.searchNotes")}>
-      {results.map((result) => (
-        <li key={result.path}>
-          <SearchResultItem result={result} onSelect={onSelect} />
-        </li>
-      ))}
-    </ul>
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <SearchFilterBar filters={search.filters} facets={search.facets} total={results.length} shown={search.results.length} onKindChange={search.setKind} onDirectoryChange={search.setDirectory} />
+      {search.results.length === 0 ? (
+        <div className="px-3 py-6 text-center text-sm text-text-tertiary">{t("search.filterEmpty")}</div>
+      ) : (
+        <ul className="min-h-0 flex-1 overflow-y-auto px-2 py-2" aria-label={t("palette.searchNotes")}>
+          {search.results.map((result) => (
+            <li key={result.path}>
+              <SearchResultItem result={result} query={query} onSelect={onSelect} />
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
-function SearchResultItem({ result, onSelect }: { result: SearchResult; onSelect: (path: string) => void }) {
+function SearchResultItem({ result, query, onSelect }: { result: SearchResult; query: string; onSelect: (path: string) => void }) {
   const isRichText = noteKindOfPath(result.path) === "richText";
   return (
     <button
@@ -82,8 +92,9 @@ function SearchResultItem({ result, onSelect }: { result: SearchResult; onSelect
         <span className="tree-file flex h-4 w-4 shrink-0 items-center justify-center rounded-[3px] border border-text-tertiary text-[9px] font-semibold text-text-tertiary" aria-hidden="true">M</span>
       )}
       <span className="min-w-0 flex-1">
-        <span className="block truncate">{result.title}</span>
-        <span className="block truncate text-xs text-text-tertiary">{result.path}</span>
+        <span className="block truncate"><HighlightedText text={result.title} query={query} /></span>
+        <span className="block truncate text-xs text-text-tertiary"><HighlightedText text={result.path} query={query} /></span>
+        {result.snippet ? <span className="mt-0.5 block truncate text-xs text-text-tertiary"><HighlightedText text={result.snippet} query={query} /></span> : null}
       </span>
       {result.encrypted ? <NoteLockBadge /> : null}
     </button>

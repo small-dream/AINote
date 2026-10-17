@@ -7,6 +7,7 @@ import { useCommandPalette } from "../hooks/useCommandPalette";
 import { usePaletteShortcut } from "../hooks/usePaletteShortcut";
 import type { CommandPaletteActions } from "../types";
 import type { PaletteCommand } from "../utils/palette";
+import { HighlightedText, SearchFilterBar } from "./SearchFilterBar";
 
 interface CommandPaletteProps {
   repoPath: string | null;
@@ -17,7 +18,7 @@ interface CommandPaletteProps {
 export function CommandPalette({ repoPath, actions }: CommandPaletteProps) {
   usePaletteShortcut();
   const { t } = useTranslation();
-  const { open, query, setQuery, commands, selected, isSearching, handleKeyDown, closePalette } =
+  const { open, query, setQuery, commands, selected, isSearching, handleKeyDown, closePalette, searchFilters, searchFacets, filteredSearchCount, totalSearchCount, setSearchKind, setSearchDirectory } =
     useCommandPalette(repoPath, actions);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -53,7 +54,8 @@ export function CommandPalette({ repoPath, actions }: CommandPaletteProps) {
           />
           <kbd className="shrink-0 rounded border border-border px-1.5 py-0.5 text-[10px] text-text-tertiary">ESC</kbd>
         </div>
-        <PaletteList commands={commands} selected={selected} isSearching={isSearching} hasQuery={hasQuery} />
+        {hasQuery && totalSearchCount > 0 ? <SearchFilterBar filters={searchFilters} facets={searchFacets} total={totalSearchCount} shown={filteredSearchCount} onKindChange={setSearchKind} onDirectoryChange={setSearchDirectory} /> : null}
+        <PaletteList commands={commands} selected={selected} isSearching={isSearching} hasQuery={hasQuery} query={query} filteredSearch={totalSearchCount > 0 && filteredSearchCount === 0} />
         <PaletteFooter />
       </div>
     </div>
@@ -65,15 +67,17 @@ interface PaletteListProps {
   selected: number;
   isSearching: boolean;
   hasQuery: boolean;
+  query: string;
+  filteredSearch: boolean;
 }
 
-function PaletteList({ commands, selected, isSearching, hasQuery }: PaletteListProps) {
+function PaletteList({ commands, selected, isSearching, hasQuery, query, filteredSearch }: PaletteListProps) {
   const { t } = useTranslation();
   if (hasQuery && isSearching && commands.length === 0) {
     return <div className="px-4 py-6 text-center text-sm text-text-tertiary">{t("palette.searching")}</div>;
   }
   if (commands.length === 0) {
-    return <div className="px-4 py-6 text-center text-sm text-text-tertiary">{t("palette.noResults")}</div>;
+    return <div className="px-4 py-6 text-center text-sm text-text-tertiary">{filteredSearch ? t("search.filterEmpty") : t("palette.noResults")}</div>;
   }
   return (
     <ul className="max-h-[40vh] overflow-y-auto py-1" role="listbox">
@@ -82,6 +86,7 @@ function PaletteList({ commands, selected, isSearching, hasQuery }: PaletteListP
           key={command.id}
           command={command}
           selected={index === selected}
+          query={query}
           onRun={() => command.run()}
         />
       ))}
@@ -92,10 +97,11 @@ function PaletteList({ commands, selected, isSearching, hasQuery }: PaletteListP
 interface PaletteItemProps {
   command: PaletteCommand;
   selected: boolean;
+  query: string;
   onRun: () => void;
 }
 
-function PaletteItem({ command, selected, onRun }: PaletteItemProps) {
+function PaletteItem({ command, selected, query, onRun }: PaletteItemProps) {
   return (
     <li role="option" aria-selected={selected}>
       <button
@@ -104,13 +110,16 @@ function PaletteItem({ command, selected, onRun }: PaletteItemProps) {
         className={`flex w-full items-center justify-between gap-3 px-4 py-2 text-left text-sm ${selected ? "bg-bg-tertiary text-text-primary" : "text-text-secondary"}`}
       >
         <span className="flex min-w-0 items-center gap-1.5">
-          <span className="truncate">{command.label}</span>
+          <span className="min-w-0">
+            <span className="block truncate"><HighlightedText text={command.label} query={query} /></span>
+            {command.description ? <span className="mt-0.5 block truncate text-xs text-text-tertiary"><HighlightedText text={command.description} query={query} /></span> : null}
+          </span>
           {command.encrypted ? <NoteLockBadge /> : null}
         </span>
         {command.hint && (
           <span className="flex shrink-0 items-center gap-1 text-xs text-text-tertiary">
             <CornerDownLeft size={12} aria-hidden="true" />
-            <span className="max-w-48 truncate">{command.hint}</span>
+            <span className="max-w-48 truncate"><HighlightedText text={command.hint} query={query} /></span>
           </span>
         )}
       </button>

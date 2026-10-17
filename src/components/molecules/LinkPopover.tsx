@@ -18,7 +18,7 @@ export interface LinkPopoverRequest {
 }
 
 interface LinkPopoverProps {
-  request: LinkPopoverRequest | null;
+  request: LinkPopoverRequest | null | undefined;
   anchorRect?: DOMRect | null | undefined;
 }
 

@@ -1,4 +1,4 @@
-import { create } from "zustand";
+import { create, type StoreApi } from "zustand";
 
 export type Theme = "light" | "dark" | "system";
 export type Locale = "zh-CN" | "en-US";
@@ -30,6 +30,8 @@ export const NOTE_THEME_SCOPE_STORAGE_KEY = "ainote.note-theme-scope";
 export const SIDEBAR_WIDTH_STORAGE_KEY = "ainote.sidebar-width";
 export const RECENT_NOTES_STORAGE_KEY = "ainote.recent-notes";
 export const VAULT_AUTO_LOCK_STORAGE_KEY = "ainote.vault-auto-lock";
+export const FOCUS_MODE_STORAGE_KEY = "ainote.focus-mode";
+export const TYPEWRITER_MODE_STORAGE_KEY = "ainote.typewriter-mode";
 export const SIDEBAR_MIN_WIDTH = 200;
 export const SIDEBAR_MAX_WIDTH = 480;
 export const SIDEBAR_DEFAULT_WIDTH = 248;
@@ -182,7 +184,16 @@ export function writeStoredVaultAutoLock(minutes: VaultAutoLockMinutes): void {
   localStorage.setItem(VAULT_AUTO_LOCK_STORAGE_KEY, String(minutes));
 }
 
-interface UiState {
+function readStoredBoolean(key: string): boolean {
+  return localStorageAvailable && localStorage.getItem(key) === "true";
+}
+
+function writeStoredBoolean(key: string, value: boolean): void {
+  if (!localStorageAvailable) return;
+  localStorage.setItem(key, String(value));
+}
+
+interface UiStateData {
   sidebarCollapsed: boolean;
   sidebarWidth: number;
   sidebarTab: SidebarTab;
@@ -204,6 +215,13 @@ interface UiState {
   noteTheme: NoteTheme;
   noteThemeScope: NoteThemeScope;
   locale: Locale;
+  /** 专注写作：桌面隐藏导航/目录，移动端收起非必要顶栏控件。 */
+  focusMode: boolean;
+  /** 打字时把光标行保持在视口垂直居中。 */
+  typewriterMode: boolean;
+}
+
+interface UiActions {
   toggleSidebar: () => void;
   setSidebarWidth: (sidebarWidth: number) => void;
   persistSidebarWidth: () => void;
@@ -227,7 +245,12 @@ interface UiState {
   setNoteTheme: (noteTheme: NoteTheme) => void;
   setNoteThemeScope: (scope: NoteThemeScope) => void;
   setLocale: (locale: Locale) => void;
+  setFocusMode: (enabled: boolean) => void;
+  toggleFocusMode: () => void;
+  setTypewriterMode: (enabled: boolean) => void;
 }
+
+interface UiState extends UiStateData, UiActions {}
 
 /** 记录最近打开的笔记：同一路径去重后置顶，每个仓库最多 100 条，并同步落盘 */
 function withRecentNote(state: UiState, repoPath: string, path: string): Partial<UiState> {
@@ -250,7 +273,7 @@ function withoutRecentNotes(state: UiState, repoPath: string): Partial<UiState> 
   return { recentNotes };
 }
 
-export const useUiStore = create<UiState>((set) => ({
+const UI_DEFAULTS: UiStateData = {
   sidebarCollapsed: false,
   sidebarWidth: readStoredSidebarWidth(),
   sidebarTab: "tree",
@@ -268,6 +291,12 @@ export const useUiStore = create<UiState>((set) => ({
   noteTheme: readStoredNoteTheme(),
   noteThemeScope: readStoredNoteThemeScope(),
   locale: readStoredLocale(),
+  focusMode: readStoredBoolean(FOCUS_MODE_STORAGE_KEY),
+  typewriterMode: readStoredBoolean(TYPEWRITER_MODE_STORAGE_KEY),
+};
+
+function createUiActions(set: StoreApi<UiState>["setState"]): UiActions {
+  return {
   toggleSidebar: () => set((s) => ({ sidebarCollapsed: !s.sidebarCollapsed })),
   setSidebarWidth: (sidebarWidth) => set({ sidebarWidth: clampSidebarWidth(sidebarWidth) }),
   persistSidebarWidth: () => set((state) => {
@@ -309,4 +338,23 @@ export const useUiStore = create<UiState>((set) => ({
     writeStoredLocale(locale);
     set({ locale });
   },
+  setFocusMode: (focusMode) => {
+    writeStoredBoolean(FOCUS_MODE_STORAGE_KEY, focusMode);
+    set({ focusMode });
+  },
+  toggleFocusMode: () => set((state) => {
+    const focusMode = !state.focusMode;
+    writeStoredBoolean(FOCUS_MODE_STORAGE_KEY, focusMode);
+    return { focusMode };
+  }),
+  setTypewriterMode: (typewriterMode) => {
+    writeStoredBoolean(TYPEWRITER_MODE_STORAGE_KEY, typewriterMode);
+    set({ typewriterMode });
+  },
+  };
+}
+
+export const useUiStore = create<UiState>((set) => ({
+  ...UI_DEFAULTS,
+  ...createUiActions(set),
 }));

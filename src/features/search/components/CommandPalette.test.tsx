@@ -96,4 +96,37 @@ describe("CommandPalette", () => {
     });
     expect(await screen.findByRole("img", { name: "已加密" })).toBeTruthy();
   });
+
+});
+
+describe("CommandPalette 搜索筛选与高亮", () => {
+  beforeEach(() => {
+    vi.resetAllMocks();
+    useCommandPaletteStore.setState({ open: false, query: "" });
+    syncApiMock.status.mockResolvedValue({
+      ahead: 0,
+      behind: 0,
+      hasUncommitted: false,
+      conflicted: false,
+    });
+    vaultApiMock.status.mockResolvedValue({ state: "absent", encryptedNotes: 0 });
+  });
+
+  it("按笔记类型筛选并高亮命中词", async () => {
+    searchApiMock.search.mockResolvedValue([
+      RESULT,
+      { ...RESULT, path: "docs/guide.ainote", title: "Rust Guide", snippet: "A rich rust note" },
+    ]);
+    const { container } = renderPalette({ onOpenNote: vi.fn(), onNewNote: vi.fn(), onNewFolder: vi.fn() });
+    useCommandPaletteStore.setState({ open: true });
+
+    fireEvent.change(await screen.findByPlaceholderText("输入命令或搜索笔记…"), { target: { value: "rust" } });
+    expect(await screen.findByText("Foo")).toBeTruthy();
+    expect(container.querySelectorAll("mark").length).toBeGreaterThan(0);
+
+    fireEvent.change(screen.getByLabelText("笔记类型"), { target: { value: "richText" } });
+    expect(screen.queryByText("Foo")).toBeNull();
+    expect(screen.getByRole("listbox").textContent).toContain("Rust Guide");
+    expect(screen.getByText("1 / 2 条")).toBeTruthy();
+  });
 });

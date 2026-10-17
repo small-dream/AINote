@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { markdown } from "@codemirror/lang-markdown";
 import { GFM } from "@lezer/markdown";
 import { EditorState, Prec, type Extension } from "@codemirror/state";
@@ -21,6 +21,8 @@ import { softRender } from "../softRender/plugin";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 import { readCspNonce } from "@/platform/csp-nonce";
+import type { EditorPosition } from "../utils/editorStats";
+import { typewriterScroll } from "./typewriter";
 
 export interface EditorExtensionsInput {
   notes?: NoteWikiDto[];
@@ -30,6 +32,9 @@ export interface EditorExtensionsInput {
   onLinkInput?: () => void;
   /** Markdown 编辑是否启用软渲染（WYSIWYG），false = 源码模式 */
   softRenderEnabled?: boolean;
+  typewriterMode?: boolean;
+  /** 切换笔记时清空上一篇的瞬态行列。 */
+  resetKey?: string | null;
 }
 
 /** 格式化快捷键（与工具栏按钮共用 dispatchFormat 逻辑） */
@@ -65,10 +70,13 @@ const markdownInputKeymap = Prec.high(
 );
 
 /** 编辑器扩展集合 + 光标激活格式集合（选择/文档变化时经 updateListener 刷新） */
-export function useEditorExtensions(input: EditorExtensionsInput = {}): { extensions: Extension[]; activeFormats: Set<string>; canUndo: boolean; canRedo: boolean } {
-  const { notes = [], repoPath = null, onOpenWiki, onLinkAction, onLinkInput, softRenderEnabled = true } = input;
+export function useEditorExtensions(input: EditorExtensionsInput = {}): { extensions: Extension[]; activeFormats: Set<string>; canUndo: boolean; canRedo: boolean; cursorPosition: EditorPosition } {
+  const { notes = [], repoPath = null, onOpenWiki, onLinkAction, onLinkInput, softRenderEnabled = true, typewriterMode = false, resetKey = null } = input;
   const [activeFormats, setActiveFormats] = useState<Set<string>>(() => new Set());
   const [historyState, setHistoryState] = useState({ canUndo: false, canRedo: false });
+  const [cursorState, setCursorState] = useState<{ key: string | null; position: EditorPosition }>(() => ({ key: resetKey, position: { line: 1, column: 1 } }));
+  const resetKeyRef = useRef(resetKey);
+  useEffect(() => { resetKeyRef.current = resetKey; }, [resetKey]);
   const noteTheme = useUiStore((s) => s.noteTheme);
   const { t } = useTranslation();
   const extensions = useMemo(() => [
@@ -89,6 +97,7 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     formatKeymap,
     Prec.high(keymap.of([{ key: "Mod-k", run: (view) => { if (onLinkInput) { onLinkInput(); return true; } void dispatchLink(view); return true; } }])),
     ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki, onLinkAction, t("note.copyCode"), t("note.copied")) : [syntaxHighlighting(getAinoteHighlightStyle())]),
+    ...(typewriterMode ? [typewriterScroll()] : []),
     EditorView.updateListener.of((update) => {
       if (!update.selectionSet && !update.docChanged) return;
       // 只有激活格式真正变化才更新：否则每次移动光标/拖选都会触发重渲染，
@@ -99,9 +108,17 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
         const nextState = { canUndo: undoDepth(update.state) > 0, canRedo: redoDepth(update.state) > 0 };
         return prev.canUndo === nextState.canUndo && prev.canRedo === nextState.canRedo ? prev : nextState;
       });
+      const head = update.state.selection.main.head;
+      const line = update.state.doc.lineAt(head);
+      const nextCursor = { line: line.number, column: head - line.from + 1 };
+      const currentKey = resetKeyRef.current;
+      setCursorState((prev) => (prev.key === currentKey && prev.position.line === nextCursor.line && prev.position.column === nextCursor.column
+        ? prev
+        : { key: currentKey, position: nextCursor }));
     }),
-  ], [noteTheme, notes, onLinkAction, onLinkInput, onOpenWiki, repoPath, softRenderEnabled, t]);
-  return { extensions, activeFormats, ...historyState };
+  ], [noteTheme, notes, onLinkAction, onLinkInput, onOpenWiki, repoPath, softRenderEnabled, typewriterMode, t]);
+  const cursorPosition = cursorState.key === resetKey ? cursorState.position : { line: 1, column: 1 };
+  return { extensions, activeFormats, ...historyState, cursorPosition };
 }
 
 /** 生产壳（CSP 含 nonce）下放行 CodeMirror 注入的样式；无 nonce 环境返回空数组。 */

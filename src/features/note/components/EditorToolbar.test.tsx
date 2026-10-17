@@ -216,3 +216,23 @@ describe("EditorToolbar / 中频工具入口位置", () => {
     expect(onAi).toHaveBeenCalledTimes(2);
   });
 });
+
+describe("EditorToolbar / 写作手感入口", () => {
+  it("提供笔记后退/前进并遵循可用状态", () => {
+    const onGoBack = vi.fn();
+    const onGoForward = vi.fn();
+    renderToolbar({ canGoBack: true, canGoForward: false, onGoBack, onGoForward });
+    fireEvent.click(screen.getByRole("button", { name: "后退到上一篇笔记" }));
+    expect(onGoBack).toHaveBeenCalledTimes(1);
+    expect((screen.getByRole("button", { name: "前进到下一篇笔记" }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it("专注模式收起视图切换但保留退出入口", () => {
+    const onToggleFocus = vi.fn();
+    renderToolbar({ focusMode: true, onToggleFocus });
+    expect(screen.queryByRole("tab", { name: "写作" })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "退出专注模式" }));
+    expect(onToggleFocus).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("button", { name: "更多" })).toBeTruthy();
+  });
+});

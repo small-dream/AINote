@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import {
   DEFAULT_VAULT_AUTO_LOCK,
+  FOCUS_MODE_STORAGE_KEY,
   LOCALE_STORAGE_KEY,
   NOTE_THEME_STORAGE_KEY,
   NOTE_THEME_SCOPE_STORAGE_KEY,
@@ -8,6 +9,7 @@ import {
   SIDEBAR_DEFAULT_WIDTH,
   SIDEBAR_WIDTH_STORAGE_KEY,
   THEME_STORAGE_KEY,
+  TYPEWRITER_MODE_STORAGE_KEY,
   VAULT_AUTO_LOCK_STORAGE_KEY,
   parseLocale,
   parseNoteTheme,
@@ -24,7 +26,7 @@ import {
   useUiStore,
 } from "./ui.store";
 
-afterEach(() => useUiStore.setState({ theme: "light", noteTheme: "classic", noteThemeScope: "workspace", locale: "zh-CN", sidebarWidth: SIDEBAR_DEFAULT_WIDTH, sidebarTab: "tree", focusedTag: null, vaultAutoLock: DEFAULT_VAULT_AUTO_LOCK, vaultDialogOpen: false }));
+afterEach(() => useUiStore.setState({ theme: "light", noteTheme: "classic", noteThemeScope: "workspace", locale: "zh-CN", sidebarWidth: SIDEBAR_DEFAULT_WIDTH, sidebarTab: "tree", focusedTag: null, vaultAutoLock: DEFAULT_VAULT_AUTO_LOCK, vaultDialogOpen: false, focusMode: false, typewriterMode: false }));
 
 describe("ui.store 主题解析与持久化", () => {
   beforeEach(() => localStorage.clear());
@@ -106,6 +108,22 @@ describe("ui.store 侧边栏 Tab 与标签聚焦", () => {
     useUiStore.getState().openTagIndex("project");
     expect(useUiStore.getState().sidebarTab).toBe("tags");
     expect(useUiStore.getState().focusedTag).toBe("project");
+  });
+});
+
+describe("ui.store 写作手感偏好", () => {
+  it("专注模式与打字机滚动独立持久化", () => {
+    useUiStore.getState().setFocusMode(true);
+    expect(useUiStore.getState().focusMode).toBe(true);
+    expect(localStorage.getItem(FOCUS_MODE_STORAGE_KEY)).toBe("true");
+
+    useUiStore.getState().toggleFocusMode();
+    expect(useUiStore.getState().focusMode).toBe(false);
+    expect(localStorage.getItem(FOCUS_MODE_STORAGE_KEY)).toBe("false");
+
+    useUiStore.getState().setTypewriterMode(true);
+    expect(useUiStore.getState().typewriterMode).toBe(true);
+    expect(localStorage.getItem(TYPEWRITER_MODE_STORAGE_KEY)).toBe("true");
   });
 });
 

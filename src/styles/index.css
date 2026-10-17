@@ -349,6 +349,16 @@ pre,
   overflow: auto;
 }
 
+/* 专注模式：源码编辑器也收进阅读列宽并在剩余空间居中。 */
+.focus-mode-editor .focus-editor-shell .cm-editor {
+  max-width: calc(var(--note-reading-width) + 4rem);
+  margin-inline: auto;
+  padding-inline: 2rem;
+}
+.focus-mode-editor .focus-editor-shell .cm-editor .cm-content {
+  padding-bottom: 35vh;
+}
+
 /* Markdown 渲染样式（react-markdown 输出） */
 .markdown-body {
   font-family: var(--note-body-font);

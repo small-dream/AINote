@@ -14,6 +14,8 @@ export function usePaletteCommands(actions: CommandPaletteActions, repoPath: str
   const { t } = useTranslation();
   const theme = useUiStore((state) => state.theme);
   const locale = useUiStore((state) => state.locale);
+  const focusMode = useUiStore((state) => state.focusMode);
+  const toggleFocusMode = useUiStore((state) => state.toggleFocusMode);
   const setTheme = useUiStore((state) => state.setTheme);
   const setLocale = useUiStore((state) => state.setLocale);
   const syncNow = useSyncNowMutation();
@@ -33,11 +35,12 @@ export function usePaletteCommands(actions: CommandPaletteActions, repoPath: str
         { id: "mode-preview", label: t("palette.modePreview"), keywords: ["preview", "阅读", "预览"], run: () => { actions.onChangeMode?.("preview"); closePalette(); } },
       ] : []),
       ...(actions.onInsertCallout ? [{ id: "insert-callout", label: t("palette.insertCallout"), keywords: ["callout", "tip", "warning", "提示", "引用"], run: () => { actions.onInsertCallout?.(); closePalette(); } }] : []),
+      { id: "toggle-focus", label: t(focusMode ? "editor.exitFocusMode" : "editor.focusMode"), keywords: ["focus", "zen", "专注", "沉浸"], run: () => { toggleFocusMode(); closePalette(); } },
       { id: "toggle-theme", label: t("palette.toggleTheme"), keywords: ["dark", "light", "theme", "主题"], run: () => { setTheme(theme === "dark" ? "light" : "dark"); closePalette(); } },
       { id: "toggle-language", label: t("palette.toggleLanguage"), keywords: ["language", "english", "中文", "语言"], run: () => { setLocale(locale === "zh-CN" ? "en-US" : "zh-CN"); closePalette(); } },
       ...(vaultState === "locked" ? [{ id: "vault-unlock", label: t("palette.vaultUnlock"), keywords: ["unlock", "vault", "加密", "解锁"], run: () => { useUiStore.getState().openVaultDialog(); closePalette(); } }] : []),
       ...(vaultState === "unlocked" ? [{ id: "vault-lock", label: t("palette.vaultLock"), keywords: ["lock", "vault", "加密", "锁定"], run: () => { lockNow(); closePalette(); } }] : []),
     ],
-    [t, closePalette, actions, syncNow, theme, locale, setTheme, setLocale, vaultState, lockNow],
+    [t, closePalette, actions, syncNow, theme, locale, focusMode, toggleFocusMode, setTheme, setLocale, vaultState, lockNow],
   );
 }

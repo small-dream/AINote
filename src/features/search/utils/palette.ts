@@ -6,6 +6,8 @@ export interface PaletteCommand {
   label: string;
   /** 次要说明，如笔记路径 */
   hint?: string;
+  /** 搜索命中的正文片段；动作命令不携带。 */
+  description?: string;
   /** 搜索结果为加密笔记：仅搜索项携带 */
   encrypted?: boolean;
   keywords: string[];
@@ -40,6 +42,7 @@ export function searchResultToCommand(
     id: `note:${result.path}`,
     label: result.title,
     hint: result.path,
+    description: result.snippet,
     encrypted: result.encrypted,
     keywords: [result.path, result.title, result.snippet],
     run: () => {

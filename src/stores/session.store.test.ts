@@ -2,7 +2,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { useSessionStore } from "./session.store";
 
 beforeEach(() => {
-  useSessionStore.setState({ repoPath: null, currentNotePath: null, login: null, workspaceEpoch: 0 });
+  useSessionStore.setState({ repoPath: null, currentNotePath: null, login: null, workspaceEpoch: 0, noteHistory: [], noteHistoryIndex: -1 });
 });
 
 describe("session.store 仓库切换", () => {
@@ -82,5 +82,42 @@ describe("session.store 会话重置", () => {
     expect(useSessionStore.getState().currentNotePath).toBe("daily/a.md");
     useSessionStore.getState().openNote(null);
     expect(useSessionStore.getState().currentNotePath).toBeNull();
+  });
+});
+
+describe("session.store 笔记导航历史", () => {
+  it("前进/后退切换当前笔记，并截断分支后的前进栈", () => {
+    const store = useSessionStore.getState();
+    store.rememberVisited("a.md");
+    store.rememberVisited("b.md");
+    store.rememberVisited("c.md");
+
+    expect(useSessionStore.getState().goBackNote()).toBe("b.md");
+    expect(useSessionStore.getState().currentNotePath).toBe("b.md");
+    expect(useSessionStore.getState().goBackNote()).toBe("a.md");
+    expect(useSessionStore.getState().goForwardNote()).toBe("b.md");
+
+    useSessionStore.getState().rememberVisited("d.md");
+    expect(useSessionStore.getState().noteHistory).toEqual(["a.md", "b.md", "d.md"]);
+    expect(useSessionStore.getState().noteHistoryIndex).toBe(2);
+    expect(useSessionStore.getState().goForwardNote()).toBeNull();
+  });
+
+  it("相邻重复打开不追加记录，历史上限 50 条", () => {
+    const store = useSessionStore.getState();
+    store.rememberVisited("same.md");
+    store.rememberVisited("same.md");
+    expect(useSessionStore.getState().noteHistory).toEqual(["same.md"]);
+
+    for (let index = 0; index < 60; index += 1) store.rememberVisited(`note-${index}.md`);
+    expect(useSessionStore.getState().noteHistory).toHaveLength(50);
+    expect(useSessionStore.getState().noteHistory.at(-1)).toBe("note-59.md");
+  });
+
+  it("切换仓库会清空导航历史", () => {
+    useSessionStore.getState().rememberVisited("a.md");
+    useSessionStore.getState().switchRepo("/repo-b");
+    expect(useSessionStore.getState().noteHistory).toEqual([]);
+    expect(useSessionStore.getState().noteHistoryIndex).toBe(-1);
   });
 });

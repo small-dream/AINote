@@ -14,6 +14,7 @@ import { useVaultAutoLock } from "@/features/vault/hooks/useVaultAutoLock";
 import type { NoteNavigationTarget } from "@/stores/session.store";
 import { VaultUnlockDialog } from "@/features/vault/components/VaultUnlockDialog";
 import { MobileWorkspaceContent } from "./MobileWorkspaceContent";
+import { useFocusModeShortcut } from "@/hooks/useFocusModeShortcut";
 
 const LazySettingsView = lazy(() => import("@/features/settings/components/SettingsView").then(({ SettingsView }) => ({ default: SettingsView })));
 const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
@@ -31,6 +32,7 @@ export interface WorkspaceShellProps {
 
 /** 壳切换：组装层唯一的双壳交汇点，按视口选择桌面三栏壳或移动单栏壳（双壳互不 import）。 */
 export function WorkspaceShellSwitcher({ repoPath, startupSyncing, currentNotePath, editorRef, actions, onSelect, onMoved }: WorkspaceShellProps) {
+  useFocusModeShortcut();
   useVaultAutoLock(repoPath);
   const [historyRequestPath, setHistoryRequestPath] = useState<string | null>(null);
   const noteTheme = useUiStore((state) => state.noteTheme);

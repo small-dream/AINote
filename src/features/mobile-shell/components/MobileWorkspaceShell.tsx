@@ -1,9 +1,7 @@
 import { lazy, Suspense, useState, type ReactNode, type RefObject } from "react";
-import { ArrowLeft, Clock, FolderTree, GitCommitHorizontal, GitGraph, Hash, List, ListTodo, RefreshCw, RotateCcw, Search, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
+import { Clock, FolderTree, GitGraph, Hash, List, ListTodo, Settings, Star, Trash2, type LucideIcon } from "lucide-react";
 import type { NoteEditorHandle } from "@/features/note/components/NoteEditor";
-import { useCommandPaletteStore } from "@/stores/command-palette.store";
 import { useSync } from "@/features/sync/hooks/useSync";
-import { SyncNotice } from "@/features/sync/components/SyncNotice";
 import { deriveSyncFailure } from "@/features/sync/utils/status";
 import { MobileUpdateDialog } from "@/features/update/components/MobileUpdateDialog";
 import { useUiStore } from "@/stores/ui.store";
@@ -12,9 +10,9 @@ import { useMobileEditorView } from "../hooks/useMobileEditorView";
 import { useMobileKeyboardInsets } from "../hooks/useMobileKeyboardInsets";
 import type { SidebarTab } from "@/stores/ui.store";
 import type { TranslationKey } from "@/i18n/messages";
-import { MobileVaultButton } from "./MobileVaultButton";
-import { MobileIconButton, MobileNavButton } from "./MobileButtons";
+import { MobileNavButton } from "./MobileButtons";
 import { useTodoNavBadge } from "@/features/todo/hooks/useTodoAlertCounts";
+import { MobileWorkspaceTopBar } from "./MobileWorkspaceTopBar";
 
 const LazyConflictMergeDialog = lazy(() => import("@/features/sync/components/ConflictMergeDialog").then(({ ConflictMergeDialog }) => ({ default: ConflictMergeDialog })));
 const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
@@ -36,8 +34,10 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
   const { locale, t } = useTranslation();
   const sidebarTab = useUiStore((state) => state.sidebarTab);
   const setSidebarTab = useUiStore((state) => state.setSidebarTab);
+  const focusMode = useUiStore((state) => state.focusMode);
+  const setFocusMode = useUiStore((state) => state.setFocusMode);
   const sync = useSync(repoPath);
-  const { online, status, label, syncNow, isSyncing } = sync;
+  const { status, syncNow } = sync;
   const failure = deriveSyncFailure(syncNow.error, locale);
   const [commitOpen, setCommitOpen] = useState(false);
   const [discardOpen, setDiscardOpen] = useState(false);
@@ -51,26 +51,21 @@ export function MobileWorkspaceShell({ repoPath, currentNotePath, editorRef, ope
   /** 顶栏标题：列表页是当前分组名；编辑器页是仓库名——笔记名就在下方工具栏里可编辑，重复没有意义 */
   const title = showEditor ? (repoDisplayName(repoPath) ?? t("app.notes")) : t(MOBILE_LIST_TITLES[sidebarTab]);
   useMobileKeyboardInsets();
+  const focused = focusMode && showEditor;
 
   return (
     <div className="mobile-workspace-shell flex h-[100dvh] min-h-0 flex-col overflow-hidden bg-bg-primary">
-      <MobileHeader
+      <MobileWorkspaceTopBar
+        focused={focused}
         repoPath={repoPath}
         showEditor={showEditor}
         title={title}
-        online={online}
-        label={label.text}
-        tone={label.tone}
-        isSyncing={isSyncing}
-        conflicted={status.conflicted}
+        sync={sync}
         onBack={backToList}
-        onSync={() => syncNow.mutate()}
-        hasUncommitted={status.hasUncommitted}
+        onExitFocus={() => setFocusMode(false)}
         onOpenCommit={() => setCommitOpen(true)}
         onOpenDiscard={() => setDiscardOpen(true)}
-        onOpenConflict={() => useUiStore.getState().openConflictDialog()}
       />
-      <SyncNotice sync={sync} />
       <MobileUpdateDialog />
       <MobileContent
         showEditor={showEditor}
@@ -165,38 +160,6 @@ function MobileWorkspaceDialogs({ repoPath, commitOpen, discardOpen, graphOpen, 
       ) : null}
     </>
   );
-}
-
-function MobileHeader({ repoPath, showEditor, title, online, label, tone, isSyncing, conflicted, hasUncommitted, onBack, onSync, onOpenCommit, onOpenDiscard, onOpenConflict }: { repoPath: string | null; showEditor: boolean; title: string; online: boolean; label: string; tone: string; isSyncing: boolean; conflicted: boolean; hasUncommitted: boolean; onBack: () => void; onSync: () => void; onOpenCommit: () => void; onOpenDiscard: () => void; onOpenConflict: () => void }) {
-  const { t } = useTranslation();
-  return (
-    <header className="mobile-workspace-header flex min-h-14 shrink-0 items-center gap-2 border-b border-border bg-bg-primary px-3 pt-[env(safe-area-inset-top)]">
-      {showEditor ? <MobileIconButton label={t("mobile.backToList")} icon={ArrowLeft} onClick={onBack} /> : null}
-      {/* 编辑器页标题让位给下方可编辑的笔记标题：顶栏只留仓库名做定位，视觉上也降一级 */}
-      <h1 className={`min-w-0 flex-1 truncate font-semibold ${showEditor ? "text-sm font-medium text-text-secondary" : "text-lg"}`}>{title}</h1>
-      {conflicted ? (
-        <button type="button" className={`mobile-sync-pill is-${tone}`} title={label} onClick={onOpenConflict}>
-          <span className={`mobile-status-dot ${online ? "is-online" : ""}`} aria-hidden="true" />
-          {label}
-        </button>
-      ) : (
-        <span className={`mobile-sync-pill is-${tone}`} title={label}>
-          <span className={`mobile-status-dot ${online ? "is-online" : ""}`} aria-hidden="true" />
-          {label}
-        </span>
-      )}
-      {hasUncommitted ? <MobileIconButton label={t("commit.title")} icon={GitCommitHorizontal} onClick={onOpenCommit} /> : null}
-      {hasUncommitted ? <MobileIconButton label={t("discard.title")} icon={RotateCcw} onClick={onOpenDiscard} /> : null}
-      <MobileVaultButton repoPath={repoPath} />
-      <MobileIconButton label={t("sync.now")} icon={RefreshCw} onClick={onSync} disabled={!online || isSyncing} spinning={isSyncing} />
-      {!showEditor ? <MobileSearchButton /> : null}
-    </header>
-  );
-}
-
-function MobileSearchButton() {
-  const { t } = useTranslation();
-  return <MobileIconButton label={t("palette.searchNotes")} icon={Search} onClick={useCommandPaletteStore.getState().openPalette} />;
 }
 
 function MobileListTabs({ active, onChange, onOpenGraph }: { active: SidebarTab; onChange: (tab: SidebarTab) => void; onOpenGraph: () => void }) {

@@ -30,9 +30,19 @@ describe("TreeSearchResults", () => {
     render(<TreeSearchResults query="foo" results={[result]} isSearching={false} error={null} onSelect={onSelect} />);
 
     expect(screen.getByText("Foo")).toBeTruthy();
-    expect(screen.getByText("daily/foo.md")).toBeTruthy();
-    fireEvent.click(screen.getByText("Foo"));
+    const item = screen.getByRole("button", { name: /Foo/ });
+    expect(item.textContent).toContain("daily/foo.md");
+    fireEvent.click(item);
     expect(onSelect).toHaveBeenCalledWith("daily/foo.md");
+  });
+
+  it("按类型筛选结果并高亮命中词", () => {
+    const rich = { ...result, path: "notes/bar.ainote", title: "Bar", snippet: "foo rich" };
+    render(<TreeSearchResults query="foo" results={[result, rich]} isSearching={false} error={null} onSelect={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("笔记类型"), { target: { value: "richText" } });
+    expect(screen.queryByRole("button", { name: /Foo/ })).toBeNull();
+    expect(screen.getByRole("button", { name: /Bar/ }).textContent).toContain("notes/bar.ainote");
+    expect(document.querySelectorAll("mark").length).toBeGreaterThan(0);
   });
 
   it("无命中且非搜索态展示无结果提示", () => {

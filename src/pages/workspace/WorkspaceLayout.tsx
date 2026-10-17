@@ -6,6 +6,7 @@ import { WorkspaceColumns } from "./WorkspaceColumns";
 import { useSync } from "@/features/sync/hooks/useSync";
 import { SyncNotice } from "@/features/sync/components/SyncNotice";
 import { DesktopUpdateDialog } from "@/features/update/components/DesktopUpdateDialog";
+import { useUiStore } from "@/stores/ui.store";
 import type { NoteNavigationTarget } from "@/stores/session.store";
 
 export interface WorkspaceContentProps {
@@ -25,9 +26,10 @@ interface WorkspaceLayoutProps extends WorkspaceContentProps {
 /** 桌面三栏壳：同步编排在此持有单一实例，导航轨与失败横幅共享同一份失败态。 */
 export function WorkspaceLayout({ repoPath, startupSyncing, currentNotePath, editorRef, actions, onSelect, historyRequestPath, setHistoryRequestPath }: WorkspaceLayoutProps) {
   const sync = useSync(repoPath);
+  const focusMode = useUiStore((state) => state.focusMode && Boolean(currentNotePath));
   return (
     <>
-      <WorkspaceNavRail repoPath={repoPath} startupSyncing={startupSyncing} sync={sync} />
+      {focusMode ? null : <WorkspaceNavRail repoPath={repoPath} startupSyncing={startupSyncing} sync={sync} />}
       <main className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden bg-bg-primary">
         <SyncNotice sync={sync} />
         <div className="min-h-0 min-w-0 flex-1 overflow-hidden">

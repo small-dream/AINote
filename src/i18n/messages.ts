@@ -1,6 +1,46 @@
 import type { Locale } from "@/stores/ui.store";
 
-const zhCN = {
+const EDITOR_SEARCH_MESSAGES_ZH = {
+  "note.goBack": "后退到上一篇笔记",
+  "note.goForward": "前进到下一篇笔记",
+  "editor.characters": "{count} 字",
+  "editor.position": "第 {line} 行，第 {column} 列",
+  "editor.focusMode": "专注模式",
+  "editor.exitFocusMode": "退出专注模式",
+  "editor.typewriterOn": "开启打字机滚动",
+  "editor.typewriterOff": "关闭打字机滚动",
+  "search.filterKind": "笔记类型",
+  "search.filterAllKinds": "全部类型",
+  "search.filterMarkdown": "Markdown",
+  "search.filterRichText": "富文本",
+  "search.filterDirectory": "目录范围",
+  "search.filterAllDirectories": "全部目录",
+  "search.resultCount": "{count} 条结果",
+  "search.filteredCount": "{shown} / {total} 条",
+  "search.filterEmpty": "当前筛选下没有结果",
+} as const;
+
+const EDITOR_SEARCH_MESSAGES_EN = {
+  "note.goBack": "Back to previous note",
+  "note.goForward": "Forward to next note",
+  "editor.characters": "{count} chars",
+  "editor.position": "Ln {line}, Col {column}",
+  "editor.focusMode": "Focus mode",
+  "editor.exitFocusMode": "Exit focus mode",
+  "editor.typewriterOn": "Enable typewriter scrolling",
+  "editor.typewriterOff": "Disable typewriter scrolling",
+  "search.filterKind": "Note type",
+  "search.filterAllKinds": "All types",
+  "search.filterMarkdown": "Markdown",
+  "search.filterRichText": "Rich text",
+  "search.filterDirectory": "Directory",
+  "search.filterAllDirectories": "All directories",
+  "search.resultCount": "{count} results",
+  "search.filteredCount": "{shown} / {total}",
+  "search.filterEmpty": "No results match the current filters",
+} as const;
+
+const zhCN = { ...EDITOR_SEARCH_MESSAGES_ZH,
   "common.back": "返回", "repo.bindLoginRequired": "登录 {provider} 后继续", "repo.loginHint": "请先到「设置 → 账户」登录 {provider} 账号。",
   "richtext.paragraph": "正文", "richtext.insert": "插入", "richtext.more": "更多",
   "ai.capability": "AI 能力", "ai.summary": "{providers} 个服务商 · {models} 个模型 · 默认 {model}", "ai.defaultModelEmpty": "未设置", "ai.enabled": "已启用", "ai.disabled": "已停用", "ai.unnamedProvider": "未命名服务商", "ai.baseUrlMissing": "未设置接口地址", "ai.modelCatalog": "模型目录", "ai.modelsEmpty": "还没有模型，点击“添加模型”或先拉取模型列表。", "ai.remoteModelsHint": "点击模型名可快速加入目录。", "ai.unnamedModel": "未命名模型", "ai.apiKeySavedPlaceholder": "留空保持不变（已加密存储）", "ai.apiKeyPlaceholderEmpty": "输入 API Key（加密存储）",
@@ -105,7 +145,7 @@ const zhCN = {
   "sync.encryptedConflictTitle": "这篇笔记已加密", "sync.encryptedConflictDescription": "加密笔记无法逐行合并（密文之间没有可比较的行结构），请选择保留哪一侧的版本。",
   "sync.appendAll": "整段追加", "sync.appendAllHint": "把这一侧的全部内容追加到合并结果", "sync.conflictPanes": "冲突内容面板", "sync.resolveFailedTitle": "冲突处理失败", "sync.conflictLoadFailed": "读取冲突文件失败", "sync.conflictLoadFailedHint": "请重试；若持续失败，请在「设置 → 诊断与反馈」导出诊断包", "sync.conflictEmpty": "没有待处理的冲突文件", "sync.finishMerge": "完成合并并推送", "sync.finishMergeHint": "冲突文件都已处理完，只差收尾提交与推送。",
 } as const;
-const enUS: Record<keyof typeof zhCN, string> = {
+const enUS: Record<keyof typeof zhCN, string> = { ...EDITOR_SEARCH_MESSAGES_EN,
 
   "todo.overviewTitle": "Overview", "todo.backToOverview": "Back to overview",
   "repo.sizeLabel": "Current repository size", "repo.sizeLoading": "Calculating…", "repo.sizeRefresh": "Refresh repository size", "repo.sizeUnavailable": "Unavailable",

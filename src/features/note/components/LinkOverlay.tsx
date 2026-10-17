@@ -18,7 +18,7 @@ export interface LinkOverlayRequest {
 }
 
 /** 移动友好链接浮层：只读动作优先，编辑入口不会遮挡阅读目标。 */
-export function LinkOverlay({ request }: { request: LinkOverlayRequest | null }) {
+export function LinkOverlay({ request }: { request: LinkOverlayRequest | null | undefined }) {
   const { t } = useTranslation();
   const ref = useRef<HTMLDivElement | null>(null);
   useEffect(() => {

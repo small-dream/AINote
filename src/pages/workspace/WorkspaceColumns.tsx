@@ -30,6 +30,7 @@ export function WorkspaceColumns({ repoPath, currentNotePath, createdPath, edito
   const { t } = useTranslation();
   const { sidebarWidth, isResizing, resizeHandleProps } = useSidebarResizer();
   const sidebarTab = useUiStore((state) => state.sidebarTab);
+  const focusMode = useUiStore((state) => state.focusMode && Boolean(currentNotePath));
 
   if (sidebarTab === "todo") {
     return <TodoWorkspace repoPath={repoPath} />;
@@ -37,7 +38,7 @@ export function WorkspaceColumns({ repoPath, currentNotePath, createdPath, edito
 
   return (
     <div className="workspace-columns flex h-full min-h-0 min-w-0 flex-1 overflow-hidden">
-      <WorkspaceSidebar
+      {focusMode ? null : <WorkspaceSidebar
         repoPath={repoPath}
         onSelect={onSelect}
         onRequestNew={onRequestNew}
@@ -49,9 +50,9 @@ export function WorkspaceColumns({ repoPath, currentNotePath, createdPath, edito
         onRequestRename={onSetRename}
         onRequestHistory={onRequestHistory}
         sidebarWidth={sidebarWidth}
-      />
-      <SidebarDivider label={t("sidebar.resize")} isResizing={isResizing} resizeHandleProps={resizeHandleProps} />
-      <section className="min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary" aria-label={t("app.noteContent")}>
+      />}
+      {focusMode ? null : <SidebarDivider label={t("sidebar.resize")} isResizing={isResizing} resizeHandleProps={resizeHandleProps} />}
+      <section className={`${focusMode ? "focus-mode-editor" : ""} min-h-0 min-w-0 flex-1 overflow-hidden bg-bg-primary`} aria-label={t("app.noteContent")}>
         <NoteEditor
           ref={editorRef}
           repoPath={repoPath}

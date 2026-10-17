@@ -10,6 +10,7 @@ import { metricsCommandHandlers, type MetricsStore } from "./metrics";
 import { aiCommandHandlers } from "./ai";
 import { taskCommandHandlers, type TaskStore } from "./tasks";
 import { vaultCommandHandlers, type VaultStore } from "./vault";
+import { searchNotes } from "./search";
 
 interface MockStore extends TaskStore, VaultStore, CaptureStore, MetricsStore {
   notes: Map<string, { content: string; kind: string }>;
@@ -155,7 +156,7 @@ const commandHandlers: Record<string, CommandHandler> = {
   ...noteCommandHandlers,
   ...captureCommandHandlers,
   ...wikiCommandHandlers,
-  search_notes: () => [],
+  search_notes: (args, ctx) => searchNotes(ctx.store, String(args.query ?? "")),
   create_folder: () => null,
   asset_exists: (args, ctx) => {
     const paths = Array.isArray(args.paths) ? (args.paths as string[]) : [];

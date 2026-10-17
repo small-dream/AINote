@@ -18,6 +18,7 @@ import { useNoteEncryption } from "@/features/vault/hooks/useNoteEncryption";
 import { useSessionStore, type NoteNavigationTarget } from "@/stores/session.store";
 import { useToastStore } from "@/stores/toast.store";
 import { normalizeWikiHeading } from "@/features/wiki/utils/wiki";
+import type { EditorStats } from "@/features/note/utils/editorStats";
 
 interface RichTextEditorProps {
   /** TipTap JSON 字符串（.ainote 文件内容） */
@@ -37,16 +38,19 @@ interface RichTextEditorProps {
   onOutlineToggle?: () => void;
   /** 顶部工具栏的 AI 入口：AI 按钮统一收在 EditorToolbar，这里把富文本侧的菜单触发器注册给宿主 */
   aiTriggerRef?: RefObject<(() => void) | null> | undefined;
-  navigationTarget?: NoteNavigationTarget | null;
-  navigationNonce?: number;
+  navigationTarget?: NoteNavigationTarget | null | undefined;
+  navigationNonce?: number | undefined;
+  focusMode?: boolean;
+  typewriterMode?: boolean;
+  onStatsChange?: (stats: EditorStats) => void;
 }
 
 /** 真富文本所见即所得编辑器：TipTap 读写 TipTap JSON。
  * 支持图片/表格/任务列表、斜杠命令、双链与标签 mark。
  * 通过父组件 key 重挂载以切换笔记；异步加载的 content 会由 hook 同步到编辑器。 */
-export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, encrypted = false, outlineOpen = false, onOutlineToggle = () => undefined, aiTriggerRef, navigationTarget = null, navigationNonce = 0 }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, encrypted = false, outlineOpen = false, onOutlineToggle = () => undefined, aiTriggerRef, navigationTarget = null, navigationNonce = 0, focusMode = false, typewriterMode = false, onStatsChange }: RichTextEditorProps) {
   const { t } = useTranslation();
-  const { editor, handleFiles, status } = useRichTextEditor({ content, onChange, repoPath });
+  const { editor, handleFiles, status } = useRichTextEditor({ content, onChange, repoPath, typewriterMode, ...(onStatsChange ? { onStatsChange } : {}) });
   const contextMenu = useRichTextContextMenu();
   const encryption = useNoteEncryption(repoPath, notePath, encrypted);
   const outline = useRichTextOutline(content);
@@ -80,12 +84,12 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
 
   return (
     <div data-note-theme={noteTheme} style={emptyTaskPlaceholder(t)} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)} onContextMenu={(event) => contextMenu.handleContextMenu(event, editor)}>
-      <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} />
+      {focusMode ? null : <RichTextToolbar editor={editor} onImagePicked={handleFiles} status={status} />}
       <RichTextBubbleMenu editor={editor} />
       <RichTextContextMenu position={contextMenu.position} editor={editor} hasSelection={contextMenu.hasSelection} onOpenAi={() => { contextMenu.close(); ai.openMenu(); }} onClose={contextMenu.close} noteTheme={noteTheme} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />
       <AiWriteControls ai={ai} />
       <div className="relative flex min-h-0 flex-1 overflow-hidden">
-        <NoteOutlineFloating items={outline} open={outlineOpen} onToggle={onOutlineToggle} onSelect={(item) => scrollToOutline(editor, item)} />
+        {focusMode ? null : <NoteOutlineFloating items={outline} open={outlineOpen} onToggle={onOutlineToggle} onSelect={(item) => scrollToOutline(editor, item)} />}
         <EditorContent editor={editor} className="rich-text-scroll min-h-0 flex-1 overflow-y-auto px-8 py-4" />
       </div>
     </div>

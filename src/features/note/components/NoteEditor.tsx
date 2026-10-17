@@ -35,6 +35,7 @@ import { useMarkdownLinkInput } from "../hooks/useMarkdownLinkInput";
 import { useMarkdownNavigation } from "../hooks/useMarkdownNavigation";
 import { openExternalLink } from "@/platform/open-link";
 import type { NoteNavigationTarget } from "@/stores/session.store";
+import { useNoteNavigationHistory } from "../hooks/useNoteNavigationHistory";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
 
@@ -63,6 +64,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const { request: markdownLinkInput, open: openMarkdownLink, openForHref: openMarkdownLinkForHref } = useMarkdownLinkInput(viewRef);
     const wiki = useEditorWiki(repoPath, onOpenNote);
     const noteTheme = useUiStore((state) => state.noteTheme);
+    const typewriterMode = useUiStore((state) => state.typewriterMode);
     const navigationTarget = useSessionStore((state) => state.navigationTarget);
     const navigationNonce = useSessionStore((state) => state.navigationNonce);
     const { preferences: { mode: preferredMode, editorScrollTop, previewScrollTop, ratio }, setMode, setRatio, setEditorScrollTop, setPreviewScrollTop } = preferences;
@@ -72,7 +74,8 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const softRenderEnabled = usesSoftRender(mode);
     const handleLinkAction = useCallback((request: { point: { x: number; y: number }; href: string; onOpenLink: () => void }) => setLinkOverlay({ ...request, onCopyLink: () => void navigator.clipboard.writeText(request.href).catch(() => undefined), onEditLink: () => { setLinkOverlay(null); openMarkdownLinkForHref(request.href, request.point); }, onClose: () => setLinkOverlay(null) }), [openMarkdownLinkForHref]);
     const onLinkAction = useCallback((href: string, point: { x: number; y: number }) => handleLinkAction({ href, point, onOpenLink: () => void openExternalLink(href).catch(reportToastError) }), [handleLinkAction]);
-    const { extensions, activeFormats, canUndo, canRedo } = useEditorExtensions({ notes: wiki.notes, repoPath, onOpenWiki: wiki.handleOpenWiki, onLinkAction, onLinkInput: openMarkdownLink, softRenderEnabled });
+    const { extensions, activeFormats, canUndo, canRedo, cursorPosition } = useEditorExtensions({ notes: wiki.notes, repoPath, onOpenWiki: wiki.handleOpenWiki, onLinkAction, onLinkInput: openMarkdownLink, softRenderEnabled, typewriterMode, resetKey: notePath });
+    const noteNavigation = useNoteNavigationHistory(flush, Boolean(notePath));
     const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
     const outline = useMemo(() => extractOutline(draft), [draft]);
     const asset = useAssetImport(readyView);
@@ -107,6 +110,6 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const placeholder = editorPlaceholder(notePath, loadError, locked);
     if (placeholder !== null) return placeholder;
     const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, canUndo, canRedo, onImagePicked: asset.handleFiles, assetStatus: asset.status, onContextMenu: markdownMenu.handleContextMenu, contextMenu: <MarkdownContextMenu menu={markdownMenu} noteTheme={noteTheme} aiBlocked={encrypted} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />, previewContextMenu: { onContextMenu: previewMenu.handleContextMenu }, softRender: softRenderEnabled, onLinkAction: handleLinkAction, onLinkInput: openMarkdownLink };
-    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} previewMenu={previewMenu} noteTheme={noteTheme} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} encrypted={encrypted} navigationTarget={navigationTarget} navigationNonce={navigationNonce} linkOverlay={linkOverlay} markdownLinkInput={markdownLinkInput} />;
+    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} previewMenu={previewMenu} noteTheme={noteTheme} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} encrypted={encrypted} navigationTarget={navigationTarget} navigationNonce={navigationNonce} linkOverlay={linkOverlay} markdownLinkInput={markdownLinkInput} markdownCursor={cursorPosition} noteNavigation={noteNavigation} />;
   },
 );

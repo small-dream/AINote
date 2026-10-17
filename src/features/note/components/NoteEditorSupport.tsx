@@ -1,4 +1,4 @@
-import { lazy, Suspense, useEffect, useRef, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useRef, useState } from "react";
 import type { Dispatch, ReactNode, RefObject, SetStateAction } from "react";
 import { EditorView } from "@codemirror/view";
 import { EditorToolbar, type ViewMode } from "./EditorToolbar";
@@ -30,11 +30,15 @@ import type { LinkPopoverRequest } from "@/components/molecules/LinkPopover";
 import { useTranslation } from "@/i18n";
 import type { NoteNavigationTarget } from "@/stores/session.store";
 import { citationQuote } from "../utils/navigation";
+import { NoteEditorStatusBar } from "./EditorStatusBar";
+import type { EditorPosition, EditorStats } from "../utils/editorStats";
+import type { useNoteNavigationHistory } from "../hooks/useNoteNavigationHistory";
 
 const LazyRichTextEditor = lazy(() => import("@/features/richtext/components/RichTextEditor").then(({ RichTextEditor }) => ({ default: RichTextEditor })));
 const LazyHistoryPanel = lazy(() => import("@/features/history/components/HistoryPanel").then(({ HistoryPanel }) => ({ default: HistoryPanel })));
 const LazyPdfExportOverlay = lazy(() => import("@/features/export/components/PdfExportOverlay").then(({ PdfExportOverlay }) => ({ default: PdfExportOverlay })));
 const LazyAskAiPanel = lazy(() => import("@/features/ai/components/AskAiPanel").then(({ AskAiPanel }) => ({ default: AskAiPanel })));
+const EMPTY_STATS: EditorStats = { characters: 0, line: 1, column: 1 };
 
 export interface NoteEditorContentProps {
   notePath: string;
@@ -78,10 +82,18 @@ export interface NoteEditorContentProps {
   encrypted: boolean;
   navigationTarget?: NoteNavigationTarget | null | undefined;
   navigationNonce?: number | undefined;
+  markdownCursor?: EditorPosition | undefined;
+  noteNavigation?: ReturnType<typeof useNoteNavigationHistory> | undefined;
 }
 
-export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath = null, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, previewMenu, noteTheme, richTextDialog, onRequestConvertToRichText, onConfirmConvertToRichText, onCancelConvertToRichText, onConvertToMarkdown, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf, encrypted, linkOverlay = null, markdownLinkInput = null, navigationTarget = null, navigationNonce = 0 }: NoteEditorContentProps) {
+export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, onMove, onOpenNote, createdPath, mode, compact, setMode, setOutlineOpen, outlineOpen, surfaceProps, previewMenu, noteTheme, richTextDialog, onRequestConvertToRichText, onConfirmConvertToRichText, onCancelConvertToRichText, onConvertToMarkdown, onExportMarkdown, flush, saving, dirty, saveError, saveErrorCode, history, wiki, ai, suggest, askAiOpen, closeAskAi, insertAnswer, pdf, encrypted, linkOverlay, markdownLinkInput, navigationTarget, navigationNonce, markdownCursor, noteNavigation }: NoteEditorContentProps) {
   const richText = kind === "richText";
+  const focusMode = useUiStore((state) => state.focusMode);
+  const typewriterMode = useUiStore((state) => state.typewriterMode);
+  const toggleFocusMode = useUiStore((state) => state.toggleFocusMode);
+  const [richStatsState, setRichStatsState] = useState<{ notePath: string; stats: EditorStats }>(() => ({ notePath, stats: EMPTY_STATS }));
+  const richStats = statsForNote(richStatsState, notePath);
+  const handleRichStatsChange = useCallback((stats: EditorStats) => setRichStatsState({ notePath, stats }), [notePath]);
   // 富文本的 AI 菜单触发器由 RichTextEditor 注册上来（AI 按钮统一在顶部工具栏，两种笔记类型同一位置）。
   const richTextAiTrigger = useRef<(() => void) | null>(null);
   const encryption = useNoteEncryption(repoPath, notePath, encrypted);
@@ -101,9 +113,10 @@ export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, o
     if (encrypted) closeAskAi();
   }, [encrypted, closeAskAi]);
   return <div className="flex h-full min-h-0 flex-col bg-bg-primary">
-    <EditorToolbar path={notePath} mode={mode} compact={compact} richText={richText} saving={saving} dirty={dirty} saveError={saveError} saveErrorCode={saveErrorCode} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={onRequestConvertToRichText} onConvertToMarkdown={onConvertToMarkdown} onExportPdf={() => void pdf.request()} onExportMarkdown={onExportMarkdown} onAi={richText ? () => richTextAiTrigger.current?.() : ai.openMenu} aiBlocked={encrypted} historyBlocked={encrypted} onToggleEncryption={encryption.available ? encryption.toggle : undefined} encryptionAction={encryption.action} isNewNote={notePath === createdPath} draft={draft} onTitleChange={onChange} onFlush={flush} onRenamed={onOpenNote} />
+    <EditorToolbar path={notePath} mode={mode} compact={compact} richText={richText} saving={saving} dirty={dirty} saveError={saveError} saveErrorCode={saveErrorCode} onModeChange={setMode} onSave={() => void flush().catch(() => undefined)} onMove={() => onMove(notePath)} onHistory={history.openHistory} onWiki={wiki.openPanel} onConvertToRichText={onRequestConvertToRichText} onConvertToMarkdown={onConvertToMarkdown} onExportPdf={() => void pdf.request()} onExportMarkdown={onExportMarkdown} onAi={richText ? () => richTextAiTrigger.current?.() : ai.openMenu} aiBlocked={encrypted} historyBlocked={encrypted} onToggleEncryption={encryption.available ? encryption.toggle : undefined} encryptionAction={encryption.action} isNewNote={notePath === createdPath} draft={draft} onTitleChange={onChange} onFlush={flush} onRenamed={onOpenNote} canGoBack={noteNavigation?.canGoBack ?? false} canGoForward={noteNavigation?.canGoForward ?? false} onGoBack={noteNavigation?.goBack} onGoForward={noteNavigation?.goForward} focusMode={focusMode} onToggleFocus={toggleFocusMode} />
     <ConvertNoteDialog open={richTextDialog.open} losses={richTextDialog.losses} converting={richTextDialog.converting} onCancel={onCancelConvertToRichText} onConfirm={onConfirmConvertToRichText} />
-    <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} encrypted={encrypted} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} aiTriggerRef={richTextAiTrigger} navigationTarget={navigationTarget} navigationNonce={navigationNonce} /> : <MarkdownEditorSurface {...surfaceProps} />}</Suspense>
+    <Suspense fallback={<EditorLoading />}>{richText ? <LazyRichTextEditor key={`${repoPath}:${notePath}:${history.reloadEpoch}`} content={draft} onChange={onChange} repoPath={repoPath} onOpenWiki={wiki.handleOpenWiki} notePath={notePath} encrypted={encrypted} outlineOpen={outlineOpen} onOutlineToggle={() => setOutlineOpen((o) => !o)} aiTriggerRef={richTextAiTrigger} navigationTarget={navigationTarget} navigationNonce={navigationNonce} focusMode={focusMode} typewriterMode={typewriterMode} onStatsChange={handleRichStatsChange} /> : <MarkdownEditorSurface {...surfaceProps} focusMode={focusMode} />}</Suspense>
+    <NoteEditorStatusBar richText={richText} draft={draft} richStats={richStats} markdownCursor={markdownCursor} />
     <PreviewContextMenu menu={previewMenu} noteTheme={noteTheme} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />
     <LinkOverlay request={linkOverlay} />
     <LinkPopover request={markdownLinkInput} />
@@ -122,6 +135,8 @@ export function NoteEditorContent({ notePath, repoPath, kind, draft, onChange, o
     {pdf.open ? <Suspense fallback={null}><LazyPdfExportOverlay open title={pdf.title} kind={kind} content={draft} repoPath={repoPath} onClose={pdf.close} /></Suspense> : null}
   </div>;
 }
+
+function statsForNote(state: { notePath: string; stats: EditorStats }, notePath: string): EditorStats { return state.notePath === notePath ? state.stats : EMPTY_STATS; }
 
 interface EditorAiOverlaysProps {
   encrypted: boolean;
