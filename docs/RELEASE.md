@@ -52,7 +52,7 @@ GitHub 提供的 macOS DMG 仅面向 Apple Silicon（Apple 芯片）Mac，且未
 ## 版本、签名与回滚规范
 
 - 版本遵循 SemVer（`MAJOR.MINOR.PATCH`）；破坏性配置或数据迁移升级 MAJOR，向后兼容功能升级 MINOR，缺陷修复升级 PATCH。
-- `latest.json` 由 Tauri CLI 生成并使用 updater 私钥签名；客户端只接受匹配 `pubkey` 的资产，禁止关闭签名校验。
+- `latest.json` 由 `publish-updater-manifest` 任务汇总各平台签名后生成，`notes` 取自 Release 正文的「更新内容」段落（发布前校验非空）；客户端只接受匹配 `pubkey` 的签名资产，禁止关闭签名校验。
 - 发布失败时 Draft Release 保持草稿，修复后可重新运行同一标签；不得删除并复用不同版本的标签。
 - 若标签被删除后重新推送（retag），GitHub 会把原 Draft Release 的 `tag_name` 改写为 `untagged-<hash>`，导致按标签查不到；工作流会自动按 `name` 找回同名孤立草稿并修复 `tag_name`，但同名孤立草稿多于一个时会中止并要求人工清理。
 - 发现严重问题时，先将 Release 标记为 pre-release 或撤回资产，再发布修复版本。不要重写已经公开的标签或签名资产。
@@ -62,7 +62,7 @@ GitHub 提供的 macOS DMG 仅面向 Apple Silicon（Apple 芯片）Mac，且未
 
 - `pnpm release:check <tag>`：校验标签与三处版本一致。
 - `pnpm build`、`pnpm test`、`pnpm lint`、`cargo test` 全部通过后才允许合并发布 PR。
-- 任何 Secret 泄漏、签名失败、资产缺平台或 updater 清单缺失，均视为发布失败并阻止公开 Release。
+- 任何 Secret 泄漏、签名失败、资产缺平台或 updater 清单缺失（含 `notes` 更新说明为空），均视为发布失败并阻止公开 Release。
 
 ## Android 发布包
 

@@ -72,6 +72,7 @@ describe("DesktopUpdateDialog 主动提示", () => {
     expect(screen.queryByRole("dialog")).toBeNull();
   });
 
+
   it("「稍后再说」本次会话关闭，同一版本不再打扰", async () => {
     await openWithAutoCheck();
 
@@ -127,5 +128,15 @@ describe("DesktopUpdateDialog 主动提示", () => {
     fireEvent.click(screen.getByRole("button", { name: "重试" }));
     await flushAsync();
     expect(screen.getByText("正在下载并安装更新，完成后 AINote 将自动重启。")).toBeTruthy();
+  });
+});
+
+describe("DesktopUpdateDialog 发布说明", () => {
+  it("取不到发布说明时给出占位文案，而不是整块消失", async () => {
+    updateApiMock.checkForUpdate.mockResolvedValue({ ...UPDATE_INFO, body: null });
+    await openWithAutoCheck();
+
+    expect(screen.getByText("发现新版本 0.15.0")).toBeTruthy();
+    expect(screen.getByText("此版本没有填写发布说明。")).toBeTruthy();
   });
 });

@@ -1,6 +1,7 @@
 import { getVersion } from "@tauri-apps/api/app";
 import { check, type Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
+import { supportApi } from "./support.api";
 
 export interface UpdateInfo {
   version: string;
@@ -49,6 +50,31 @@ async function closePendingUpdate(): Promise<void> {
   pendingUpdate = null;
 }
 
+/**
+ * 兜底读取发布说明：仅当 updater 清单没带 notes 时才走这条路。
+ * 请求走 WebView 网络栈，和更新检查的 Rust 网络栈（已支持系统代理）不一致，
+ * 失败时写日志但绝不影响「发现新版本」提示——否则用户只会看到一个没有内容的弹窗。
+ */
+async function loadReleaseNotes(version: string): Promise<string | null> {
+  try {
+    return await fetchReleaseNotes(version);
+  } catch (error) {
+    reportNotesFailure(version, error);
+    return null;
+  }
+}
+
+function reportNotesFailure(version: string, error: unknown): void {
+  try {
+    const detail = error instanceof Error ? error.message : String(error);
+    void supportApi
+      .log("warn", `更新说明获取失败 version=${version}`, detail)
+      .catch(() => undefined);
+  } catch {
+    // 日志上报本身失败时保持静默，不影响更新提示
+  }
+}
+
 /** 读取应用自身版本，供更新页在检查前展示当前状态。 */
 async function getCurrentVersion(): Promise<string> {
   return getVersion();
@@ -60,7 +86,7 @@ async function checkForUpdate(): Promise<UpdateInfo | null> {
   if (pendingUpdate && pendingUpdate !== update) await closePendingUpdate();
   pendingUpdate = update;
   if (!update) return null;
-  const body = update.body || await fetchReleaseNotes(update.version).catch(() => null);
+  const body = update.body || await loadReleaseNotes(update.version);
   return {
     version: update.version,
     body,

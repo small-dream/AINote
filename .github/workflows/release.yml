@@ -233,6 +233,9 @@ jobs:
     needs: [create-release, publish-tauri]
     runs-on: ubuntu-22.04
     steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.create-release.outputs.tag }}
       - name: Build updater manifest
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -243,6 +246,9 @@ jobs:
           version="${TAG#v}"
           download_url="https://github.com/$REPO/releases/download/$TAG"
           gh release download "$TAG" --repo "$REPO" --pattern '*.sig' --clobber
+          # 更新说明随清单一起下发：客户端只靠 updater 就能拿到内容，不再二次请求 GitHub API。
+          gh api "repos/$REPO/releases/tags/$TAG" --jq '.body // ""' > release-body.md
+          node scripts/updater-notes.mjs release-body.md > updater-notes.txt
           python3 - "$version" "$download_url" <<'PY'
           import json
           import sys
@@ -250,6 +256,7 @@ jobs:
           from pathlib import Path
 
           version, download_url = sys.argv[1:]
+          notes = Path("updater-notes.txt").read_text(encoding="utf-8").strip()
           signatures = {
               "app": ("AINote_aarch64.app.tar.gz.sig", "AINote_aarch64.app.tar.gz"),
               "msi": ("AINote_{version}_x64_en-US.msi.sig", "AINote_{version}_x64_en-US.msi"),
@@ -268,7 +275,7 @@ jobs:
 
           manifest = {
               "version": version,
-              "notes": "",
+              "notes": notes,
               "pub_date": datetime.now(timezone.utc).isoformat(timespec="milliseconds").replace("+00:00", "Z"),
               "platforms": {
                   "darwin-aarch64": entry("app"),
@@ -329,7 +336,14 @@ jobs:
           if data.get("version") != version:
               print(f"::error::latest.json version {data.get('version')!r} != 期望 {version}")
               sys.exit(1)
-          print(f"latest.json 校验通过: version={version}，平台 {len(platforms)} 个条目齐全")
+          notes = (data.get("notes") or "").strip()
+          if not notes:
+              print("::error::latest.json 缺少 notes（更新内容），客户端更新弹窗将没有说明")
+              sys.exit(1)
+          if "## 安装与更新" in notes:
+              print("::error::latest.json 的 notes 混入了安装说明，应只包含「更新内容」段落")
+              sys.exit(1)
+          print(f"latest.json 校验通过: version={version}，平台 {len(platforms)} 个条目齐全，更新说明 {len(notes)} 字符")
           PY
       - name: Publish complete release
         env:

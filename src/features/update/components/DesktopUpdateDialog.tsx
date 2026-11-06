@@ -63,10 +63,14 @@ function AvailableBody({
       <p className="text-sm text-text-primary">
         {t("update.desktopVersionLine", { current: currentVersion ?? "—", version: info.version })}
       </p>
-      {notes && (
+      {notes ? (
         <div className="max-h-48 overflow-y-auto rounded-md border border-border bg-bg-secondary p-3">
           <UpdateReleaseNotes content={notes} />
         </div>
+      ) : (
+        <p className="rounded-md border border-border bg-bg-secondary p-3 text-sm text-text-secondary">
+          {t("update.noNotes")}
+        </p>
       )}
       <div className="flex flex-wrap justify-end gap-2">
         <Button variant="ghost" className="border border-border text-xs" onClick={onDismiss}>
