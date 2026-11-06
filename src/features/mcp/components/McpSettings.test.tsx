@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const mcpApiMock = vi.hoisted(() => ({
@@ -7,6 +7,9 @@ const mcpApiMock = vi.hoisted(() => ({
   setEnabled: vi.fn(),
   setPort: vi.fn(),
   rotateToken: vi.fn(),
+  installIntegration: vi.fn(),
+  removeIntegration: vi.fn(),
+  installDetected: vi.fn(),
 }));
 
 vi.mock("@/api", () => ({
@@ -26,6 +29,24 @@ const STATUS = {
   tools: [
     { name: "read_note", description: "Read a note", writes: false },
     { name: "create_note", description: "Create a note", writes: true },
+  ],
+  integrations: [
+    {
+      id: "cursor",
+      name: "Cursor",
+      configPath: "/home/u/.cursor/mcp.json",
+      detected: true,
+      configured: false,
+      error: null,
+    },
+    {
+      id: "claude-desktop",
+      name: "Claude Desktop",
+      configPath: "/home/u/.config/Claude/claude_desktop_config.json",
+      detected: false,
+      configured: false,
+      error: null,
+    },
   ],
 };
 
@@ -102,5 +123,58 @@ describe("McpSettings", () => {
     fireEvent.change(input, { target: { value: "39500" } });
     fireEvent.click(screen.getByRole("button", { name: "应用端口" }));
     await waitFor(() => expect(mcpApiMock.setPort).toHaveBeenCalledWith(39500));
+  });
+});
+
+describe("McpSettings integrations", () => {
+  it("writes one client config and updates its status", async () => {
+    const configured = {
+      ...STATUS,
+      integrations: STATUS.integrations.map((item) =>
+        item.id === "cursor" ? { ...item, configured: true } : item,
+      ),
+    };
+    mcpApiMock.installIntegration.mockResolvedValue({
+      status: configured,
+      issuedToken: null,
+      clientConfig: null,
+    });
+    renderSettings();
+    await screen.findByText("Cursor");
+    const row = screen.getByText("Cursor").closest("li") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "写入配置" }));
+    await waitFor(() => expect(mcpApiMock.installIntegration).toHaveBeenCalledWith("cursor"));
+    expect(await within(row).findByText("已配置")).toBeTruthy();
+  });
+
+  it("removes a client config", async () => {
+    mcpApiMock.status.mockResolvedValue({
+      ...STATUS,
+      integrations: STATUS.integrations.map((item) =>
+        item.id === "cursor" ? { ...item, configured: true } : item,
+      ),
+    });
+    mcpApiMock.removeIntegration.mockResolvedValue({
+      status: STATUS,
+      issuedToken: null,
+      clientConfig: null,
+    });
+    renderSettings();
+    await screen.findByText("Cursor");
+    const row = screen.getByText("Cursor").closest("li") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "移除" }));
+    await waitFor(() => expect(mcpApiMock.removeIntegration).toHaveBeenCalledWith("cursor"));
+  });
+
+  it("writes all detected clients at once", async () => {
+    mcpApiMock.installDetected.mockResolvedValue({
+      status: STATUS,
+      issuedToken: null,
+      clientConfig: null,
+    });
+    renderSettings();
+    await screen.findByText("一键写入客户端");
+    fireEvent.click(screen.getByRole("button", { name: "写入全部已检测客户端" }));
+    await waitFor(() => expect(mcpApiMock.installDetected).toHaveBeenCalled());
   });
 });

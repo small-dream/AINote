@@ -11,6 +11,7 @@ use crate::domain::mcp::{
 };
 
 use super::executor;
+use super::integrations::Integrations;
 use super::server::{self, ServerHandle};
 use super::{token, tools};
 
@@ -94,6 +95,7 @@ fn status_inner(state: &McpState, app: &AppHandle) -> Result<McpStatusDto, AppEr
         has_token,
         last_error,
         tools: tools::info(),
+        integrations: Integrations::current().list(),
     })
 }
 
@@ -102,6 +104,7 @@ fn action(
     app: &AppHandle,
     issued_token: Option<String>,
     port: u16,
+    warnings: Vec<String>,
 ) -> Result<McpActionDto, AppError> {
     let status = status_inner(state, app)?;
     let client_config = issued_token
@@ -111,6 +114,7 @@ fn action(
         status,
         issued_token,
         client_config,
+        warnings,
     })
 }
 
@@ -152,7 +156,7 @@ pub fn set_enabled(
         let port = port.unwrap_or(config::mcp_port(app)?);
         config::set_mcp_settings(app, false, port)?;
         state.set_last_error(None);
-        return action(&state, app, None, port);
+        return action(&state, app, None, port, Vec::new());
     }
 
     let previous_port = config::mcp_port(app)?;
@@ -167,8 +171,9 @@ pub fn set_enabled(
         return Err(error);
     }
     config::set_mcp_settings(app, true, port)?;
+    let warnings = Integrations::current().sync_configured(&endpoint_url(port), &token);
     let issued = if generated { Some(token) } else { None };
-    action(&state, app, issued, port)
+    action(&state, app, issued, port, warnings)
 }
 
 pub fn set_port(app: &AppHandle, port: u16) -> Result<McpActionDto, AppError> {
@@ -179,7 +184,7 @@ pub fn set_port(app: &AppHandle, port: u16) -> Result<McpActionDto, AppError> {
     let enabled = config::mcp_enabled(app)?;
     if !enabled {
         config::set_mcp_settings(app, false, port)?;
-        return action(&state, app, None, port);
+        return action(&state, app, None, port, Vec::new());
     }
     let old_port = config::mcp_port(app)?;
     let (token, _) = ensure_token(&state, app)?;
@@ -192,7 +197,8 @@ pub fn set_port(app: &AppHandle, port: u16) -> Result<McpActionDto, AppError> {
         return Err(error);
     }
     config::set_mcp_settings(app, true, port)?;
-    action(&state, app, None, port)
+    let warnings = Integrations::current().sync_configured(&endpoint_url(port), &token);
+    action(&state, app, None, port, warnings)
 }
 
 pub fn rotate_token(app: &AppHandle) -> Result<McpActionDto, AppError> {
@@ -202,7 +208,59 @@ pub fn rotate_token(app: &AppHandle) -> Result<McpActionDto, AppError> {
     let token = token::rotate_token(app)?;
     state.set_token(Some(token.clone()));
     let port = config::mcp_port(app)?;
-    action(&state, app, Some(token), port)
+    let warnings = Integrations::current().sync_configured(&endpoint_url(port), &token);
+    action(&state, app, Some(token), port, warnings)
+}
+
+fn active_token(state: &McpState, app: &AppHandle) -> Result<String, AppError> {
+    match state.current_token() {
+        Some(token) => Ok(token),
+        None => token::read_token(app)?
+            .ok_or_else(|| AppError::Mcp("MCP Token 尚未生成，请先启用服务".into())),
+    }
+}
+
+/// 一键写入单个客户端配置；要求服务正在运行，避免写入一个不可连接的地址。
+pub fn install_integration(app: &AppHandle, id: &str) -> Result<McpActionDto, AppError> {
+    let state = app.try_state::<McpState>().ok_or_else(|| {
+        AppError::Mcp("MCP 状态不可用（桌面端未初始化）".into())
+    })?;
+    if !running(&state) {
+        return Err(AppError::Mcp("请先启用 MCP 服务，再写入客户端配置".into()));
+    }
+    let token = active_token(&state, app)?;
+    let port = config::mcp_port(app)?;
+    let url = endpoint_url(port);
+    Integrations::current()
+        .install(id, &url, &token)
+        .map_err(AppError::Mcp)?;
+    action(&state, app, None, port, Vec::new())
+}
+
+/// 从客户端配置中移除 `ainote` 条目；服务是否运行不影响移除。
+pub fn remove_integration(app: &AppHandle, id: &str) -> Result<McpActionDto, AppError> {
+    let state = app.try_state::<McpState>().ok_or_else(|| {
+        AppError::Mcp("MCP 状态不可用（桌面端未初始化）".into())
+    })?;
+    let port = config::mcp_port(app)?;
+    Integrations::current()
+        .remove(id)
+        .map_err(AppError::Mcp)?;
+    action(&state, app, None, port, Vec::new())
+}
+
+/// 写入全部已检测到的客户端，返回逐项失败原因。
+pub fn install_detected(app: &AppHandle) -> Result<McpActionDto, AppError> {
+    let state = app.try_state::<McpState>().ok_or_else(|| {
+        AppError::Mcp("MCP 状态不可用（桌面端未初始化）".into())
+    })?;
+    if !running(&state) {
+        return Err(AppError::Mcp("请先启用 MCP 服务，再写入客户端配置".into()));
+    }
+    let token = active_token(&state, app)?;
+    let port = config::mcp_port(app)?;
+    let warnings = Integrations::current().install_detected(&endpoint_url(port), &token);
+    action(&state, app, None, port, warnings)
 }
 
 /// 启动时自动恢复（失败只记录，不阻断应用启动）。

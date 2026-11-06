@@ -13,6 +13,8 @@ mod executor;
 #[cfg(desktop)]
 mod http;
 #[cfg(desktop)]
+mod integrations;
+#[cfg(desktop)]
 mod server;
 mod token;
 
@@ -20,12 +22,14 @@ mod token;
 mod desktop;
 #[cfg(desktop)]
 pub use desktop::{
-    rotate_token, set_enabled, set_port, shutdown, start_if_enabled, status, McpState,
+    install_detected, install_integration, remove_integration, rotate_token, set_enabled,
+    set_port, shutdown, start_if_enabled, status, McpState,
 };
 
 #[cfg(not(desktop))]
 mod unsupported;
 #[cfg(not(desktop))]
 pub use unsupported::{
-    rotate_token, set_enabled, set_port, shutdown, start_if_enabled, status, McpState,
+    install_detected, install_integration, remove_integration, rotate_token, set_enabled,
+    set_port, shutdown, start_if_enabled, status, McpState,
 };

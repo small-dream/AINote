@@ -7,6 +7,16 @@ export interface McpToolInfo {
   writes: boolean;
 }
 
+/** 常见 MCP 客户端配置探测结果；不含 Token */
+export interface McpIntegration {
+  id: string;
+  name: string;
+  configPath: string;
+  detected: boolean;
+  configured: boolean;
+  error: string | null;
+}
+
 /** MCP 服务状态；不含 Token 明文 */
 export interface McpStatus {
   enabled: boolean;
@@ -16,13 +26,16 @@ export interface McpStatus {
   hasToken: boolean;
   lastError: string | null;
   tools: McpToolInfo[];
+  integrations: McpIntegration[];
 }
 
-/** 启用 / 改端口 / 轮换 Token 的返回：Token 与完整配置只在本次调用下发。 */
+/** 启用 / 改端口 / 轮换 Token / 写入客户端配置的返回。 */
 export interface McpAction {
   status: McpStatus;
   issuedToken: string | null;
   clientConfig: string | null;
+  /** 客户端配置同步失败项；空数组时 Rust 不序列化。 */
+  warnings?: string[];
 }
 
 /** MCP 写入成功后 Rust 广播的事件载荷 */

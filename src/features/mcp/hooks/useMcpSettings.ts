@@ -30,5 +30,25 @@ export function useMcpSettings() {
     mutationFn: () => mcpApi.rotateToken(),
     onSuccess: apply,
   });
-  return { status, setEnabled, setPort, rotateToken };
+  const installIntegration = useMutation({
+    mutationFn: (id: string) => mcpApi.installIntegration(id),
+    onSuccess: apply,
+  });
+  const removeIntegration = useMutation({
+    mutationFn: (id: string) => mcpApi.removeIntegration(id),
+    onSuccess: apply,
+  });
+  const installDetected = useMutation({
+    mutationFn: () => mcpApi.installDetected(),
+    onSuccess: apply,
+  });
+  return {
+    status,
+    setEnabled,
+    setPort,
+    rotateToken,
+    installIntegration,
+    removeIntegration,
+    installDetected,
+  };
 }

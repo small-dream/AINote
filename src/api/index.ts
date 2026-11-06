@@ -87,4 +87,4 @@ export type {
   TrashItem,
   TreeNode,
 } from "./types";
-export type { McpAction, McpNotesChanged, McpStatus, McpToolInfo } from "./mcp.types";
+export type { McpAction, McpIntegration, McpNotesChanged, McpStatus, McpToolInfo } from "./mcp.types";

@@ -90,6 +90,28 @@
 
 Cursor 使用 `url` + `headers` 即可；若某个客户端要求显式传输类型，可在条目中补 `"type": "http"`。
 
+### 6.1 一键写入客户端配置
+
+设置页提供「一键写入客户端」，由 Rust 直接读取 SecureStore 中的 Token 并写入本机客户端配置；前端不接触 Token 明文，也不需要用户手工复制。
+
+| 客户端 | 配置位置 | 容器键 / 条目 |
+|---|---|---|
+| Claude Code | `~/.claude.json` | `mcpServers.ainote`：`{type:"http", url, headers}` |
+| Claude Desktop | Windows `%APPDATA%\Claude\claude_desktop_config.json`；macOS `~/Library/Application Support/Claude/...`；Linux `$XDG_CONFIG_HOME/Claude/...` | `mcpServers.ainote`：`{url, headers}` |
+| Cursor | `~/.cursor/mcp.json` | `mcpServers.ainote`：`{url, headers}` |
+| VS Code | `Code/User/mcp.json`（用户配置） | `servers.ainote`：`{type:"http", url, headers}` |
+| Windsurf | `~/.codeium/windsurf/mcp_config.json`，回退 `~/.codeium/mcp_config.json` | `mcpServers.ainote`：`{serverUrl, headers}` |
+| Cline | `~/.cline/data/settings/cline_mcp_settings.json` 或 VS Code / Cursor 的 `globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` | `mcpServers.ainote`：`{type:"streamableHttp", url, headers, disabled:false, autoApprove:[]}` |
+
+写入规则：
+
+- 只替换 `ainote` 一个条目，保留同一文件中的其他服务器与顶层字段。
+- 先读取并解析；文件不是合法 JSON 时**不覆盖**，在设置页显示具体原因。
+- 采用临时文件 + rename 原子写；Unix 下保留原文件权限。
+- 轮换 Token 或修改端口后，自动更新所有已配置客户端；失败项在设置页提示，不阻断轮换本身。
+- 客户端配置文件会包含 Token 明文，设置页明确提示「仅本人可读」；写入后需重启对应客户端。
+- 移动端不提供该能力。
+
 ## 7. 验收
 
 1. 启用后外部客户端可完成 `tools/list` 与 7 个工具调用；创建/修改后 AINote 列表、目录树与编辑器刷新。
@@ -97,8 +119,10 @@ Cursor 使用 `url` + `headers` 即可；若某个客户端要求显式传输类
 3. 加密笔记锁定态拒绝、解锁后可读写且磁盘仍为密文。
 4. 轮换 Token 后旧 Token 401；错误 Origin 403；未带 Token 401。
 5. 端口占用返回可读错误；重启应用后自动恢复；停用后连接被拒绝。
-6. 日志/诊断包无 Token、正文与绝对路径。
-7. 门禁：`pnpm build && pnpm test && pnpm lint` 与 `cargo test` 全绿。
+6. 一键写入后对应客户端能在重启后看到 `ainote` 工具；文件中原有其他服务器条目保持不变。
+7. 客户端配置为非法 JSON 时写入被拒绝且原文件不变；轮换 Token / 改端口后已写入客户端自动更新。
+8. 日志/诊断包无 Token、正文与绝对路径。
+9. 门禁：`pnpm build && pnpm test && pnpm lint` 与 `cargo test` 全绿。
 
 ## 8. 影响面
 

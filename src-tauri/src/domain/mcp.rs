@@ -23,6 +23,21 @@ pub struct McpToolInfoDto {
     pub writes: bool,
 }
 
+/// 常见 MCP 客户端配置探测结果；不包含 Token。
+#[derive(Debug, Clone, Serialize, PartialEq, Eq)]
+#[serde(rename_all = "camelCase")]
+pub struct McpIntegrationDto {
+    pub id: String,
+    pub name: String,
+    pub config_path: String,
+    /// 是否检测到该客户端（配置文件或应用目录存在）。
+    pub detected: bool,
+    /// 配置文件中是否已有 `ainote` 条目。
+    pub configured: bool,
+    /// 读取/解析失败时的可读原因；不包含 Token。
+    pub error: Option<String>,
+}
+
 /// MCP 服务状态；不含 Token 明文。
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -34,16 +49,21 @@ pub struct McpStatusDto {
     pub has_token: bool,
     pub last_error: Option<String>,
     pub tools: Vec<McpToolInfoDto>,
+    pub integrations: Vec<McpIntegrationDto>,
 }
 
-/// 启用 / 改端口 / 轮换 Token 的返回：Token 与完整配置只在本次调用下发一次。
+/// 启用 / 改端口 / 轮换 Token / 写入客户端配置的返回。
+/// Token 与完整配置只在本次调用下发一次；warnings 汇总客户端配置同步失败项。
 #[derive(Debug, Clone, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpActionDto {
     pub status: McpStatusDto,
     pub issued_token: Option<String>,
     pub client_config: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub warnings: Vec<String>,
 }
+
 
 /// MCP 写入成功后广播给前端的事件载荷。
 #[derive(Debug, Clone, Serialize)]
@@ -81,11 +101,20 @@ mod tests {
                 description: "read".into(),
                 writes: false,
             }],
+            integrations: vec![McpIntegrationDto {
+                id: "cursor".into(),
+                name: "Cursor".into(),
+                config_path: "C:/Users/u/.cursor/mcp.json".into(),
+                detected: true,
+                configured: false,
+                error: None,
+            }],
         })
         .unwrap();
         assert_eq!(json["hasToken"], true);
         assert_eq!(json["url"], "http://127.0.0.1:39471/mcp");
         assert_eq!(json["tools"][0]["writes"], false);
+        assert_eq!(json["integrations"][0]["configured"], false);
         assert!(json.get("token").is_none());
     }
 }

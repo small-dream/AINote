@@ -17,6 +17,7 @@ pub fn status(_app: &AppHandle) -> Result<McpStatusDto, AppError> {
         has_token: false,
         last_error: Some("MCP 仅支持桌面端".into()),
         tools: Vec::new(),
+        integrations: Vec::new(),
     })
 }
 
@@ -37,6 +38,18 @@ pub fn set_port(_app: &AppHandle, _port: u16) -> Result<McpActionDto, AppError> 
 }
 
 pub fn rotate_token(_app: &AppHandle) -> Result<McpActionDto, AppError> {
+    Err(unsupported())
+}
+
+pub fn install_integration(_app: &AppHandle, _id: &str) -> Result<McpActionDto, AppError> {
+    Err(unsupported())
+}
+
+pub fn remove_integration(_app: &AppHandle, _id: &str) -> Result<McpActionDto, AppError> {
+    Err(unsupported())
+}
+
+pub fn install_detected(_app: &AppHandle) -> Result<McpActionDto, AppError> {
     Err(unsupported())
 }
 

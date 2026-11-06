@@ -2,8 +2,10 @@ import { useState } from "react";
 import { messageOf } from "@/api";
 import type { McpStatus } from "@/api";
 import { useTranslation } from "@/i18n";
+import { useToastStore } from "@/stores/toast.store";
 import { useMcpSettings } from "../hooks/useMcpSettings";
 import { McpConnectionCard } from "./McpConnectionCard";
+import { McpIntegrationsCard } from "./McpIntegrationsCard";
 import { McpStatusCard } from "./McpStatusCard";
 import { McpTokenDialog } from "./McpTokenDialog";
 import { McpToolsCard } from "./McpToolsCard";
@@ -19,9 +21,11 @@ export function McpSettings() {
   const { status, setEnabled, setPort, rotateToken } = useMcpSettings();
   const [issued, setIssued] = useState<IssuedToken | null>(null);
   const busy = setEnabled.isPending || setPort.isPending || rotateToken.isPending;
-  const error = [status.error, setEnabled.error, setPort.error, rotateToken.error]
-    .map((value) => (value ? messageOf(value) : null))
-    .find((value) => value !== null) ?? null;
+  const error = [status.error, setEnabled.error, setPort.error, rotateToken.error].map((value) => (value ? messageOf(value) : null)).find((value) => value !== null) ?? null;
+
+  function reportWarnings(warnings?: string[]) {
+    if (warnings?.length) useToastStore.getState().push(t("mcp.integrationWarnings", { message: warnings.join("; ") }), "error");
+  }
 
   async function toggle(enabled: boolean) {
     try {
@@ -29,6 +33,7 @@ export function McpSettings() {
       const action = await setEnabled.mutateAsync(
         enabled && port !== undefined ? { enabled, port } : { enabled },
       );
+      reportWarnings(action.warnings);
       if (action.issuedToken) setIssued({ token: action.issuedToken, config: action.clientConfig });
     } catch {
       // 错误由 mutation.error 统一展示。
@@ -39,6 +44,7 @@ export function McpSettings() {
     if (!globalThis.confirm(t("mcp.rotateConfirm"))) return;
     try {
       const action = await rotateToken.mutateAsync();
+      reportWarnings(action.warnings);
       if (action.issuedToken) setIssued({ token: action.issuedToken, config: action.clientConfig });
     } catch {
       // 错误由 mutation.error 统一展示。
@@ -47,7 +53,8 @@ export function McpSettings() {
 
   async function applyPort(port: number) {
     try {
-      await setPort.mutateAsync(port);
+      const action = await setPort.mutateAsync(port);
+      reportWarnings(action.warnings);
     } catch {
       // 错误由 mutation.error 统一展示。
     }
@@ -115,6 +122,7 @@ function McpSettingsView({
         onApplyPort={onApplyPort}
         onRotate={onRotate}
       />
+      <McpIntegrationsCard status={status} />
       <McpToolsCard tools={status.tools} />
       <div className="rounded-xl border border-border bg-bg-secondary/60 p-3">
         <p className="text-xs leading-5 text-text-secondary">{t("mcp.securityNote")}</p>
