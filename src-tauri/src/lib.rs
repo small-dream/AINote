@@ -22,6 +22,9 @@ pub use services::auth_store::AuthStore;
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
+    // 幂等：正常路径上 `.so` 的 `.init_array` 构造器更早装好 hook，这里兜底防止构造器被链接器裁掉。
+    #[cfg(target_os = "android")]
+    platform::android_panic::install();
     let builder = tauri::Builder::default()
         .plugin(config::logging::plugin())
         .plugin(tauri_plugin_dialog::init())

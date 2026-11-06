@@ -1,6 +1,8 @@
 //! Android 原生桥：经 ndk-context + JNI 调用 Kotlin `dev.ainote.app.ApkInstaller`
 //! （应用内更新安装、外部链接打开、未知来源安装权限）。
-//! ndk-context 由 MainActivity 在启动时经 `Keyring.initializeNdkContext` 初始化，进程内全局有效。
+//! ndk-context 由 tao 在 `Rust::onCreate`（Tauri 2.12 起）以 applicationContext 初始化，进程内全局有效。
+//! **应用侧不得再自行初始化**：ndk-context 的 `initialize_android_context` 内部是
+//! `assert!(previous.is_none())`，第二次初始化会 panic 后 SIGABRT（v0.59.x / v0.60.0 启动闪退的原因）。
 
 use jni::objects::{JClass, JObject, JValue};
 use jni::JNIEnv;
