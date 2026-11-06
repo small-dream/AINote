@@ -241,13 +241,15 @@ jobs:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           REPO: ${{ github.repository }}
           TAG: ${{ needs.create-release.outputs.tag }}
+          RELEASE_ID: ${{ needs.create-release.outputs.release_id }}
         run: |
           set -euo pipefail
           version="${TAG#v}"
           download_url="https://github.com/$REPO/releases/download/$TAG"
           gh release download "$TAG" --repo "$REPO" --pattern '*.sig' --clobber
           # 更新说明随清单一起下发：客户端只靠 updater 就能拿到内容，不再二次请求 GitHub API。
-          gh api "repos/$REPO/releases/tags/$TAG" --jq '.body // ""' > release-body.md
+          # 草稿 Release 按 tag 查会 404（/releases/tags/{tag} 只返回已发布版本），必须用 ID 读取正文。
+          gh api "repos/$REPO/releases/$RELEASE_ID" --jq '.body // ""' > release-body.md
           node scripts/updater-notes.mjs release-body.md > updater-notes.txt
           python3 - "$version" "$download_url" <<'PY'
           import json
