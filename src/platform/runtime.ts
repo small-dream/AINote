@@ -19,3 +19,8 @@ export function isIosApp(): boolean {
 export function isMobileApp(): boolean {
   return isAndroidApp() || isIosApp();
 }
+
+/** 当前是否为桌面壳（Tauri 且非 Android/iOS）：桌面专属能力入口使用。 */
+export function isDesktopApp(): boolean {
+  return isTauriRuntime() && !isMobileApp();
+}

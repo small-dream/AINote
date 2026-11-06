@@ -48,13 +48,14 @@ pub fn run() {
     #[cfg(desktop)]
     let builder = builder
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
-        .manage(platform::capture_shortcut::CaptureShortcutState::default());
+        .manage(platform::capture_shortcut::CaptureShortcutState::default())
+        .manage(services::mcp::McpState::default());
     builder
         .manage(commands::repo::backup::BackupState::default())
         .manage(commands::update::UpdateDownloadState::default())
-        .manage(commands::git::repo_lock::RepoWriteLock::default())
+        .manage(services::repo_lock::RepoWriteLock::default())
         .manage(commands::close_guard::CloseGuard::default())
-        .manage(commands::close_guard::DraftState::default())
+        .manage(services::draft_state::DraftState::default())
         .on_window_event(|window, event| {
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 #[cfg(desktop)]
@@ -70,6 +71,8 @@ pub fn run() {
                 domain::metrics::MetricEvent::AppLaunched,
             );
             log::info!(target: "ainote::startup", "AINote {} 启动", env!("CARGO_PKG_VERSION"));
+            #[cfg(desktop)]
+            services::mcp::start_if_enabled(_app.handle());
             // 移动端启动时探测一次设备级快速解锁能力：这条日志让「入口为什么没出现」可以直接
             // 从 logcat / 诊断包读出原因（supported / kind / reason），不必靠猜。
             #[cfg(any(target_os = "android", target_os = "ios"))]
@@ -200,6 +203,10 @@ pub fn run() {
             commands::metrics::metrics_clear,
             commands::metrics::metrics_set_enabled,
             commands::metrics::export::metrics_export,
+            commands::mcp::status::mcp_status,
+            commands::mcp::set_enabled::mcp_set_enabled,
+            commands::mcp::set_port::mcp_set_port,
+            commands::mcp::rotate_token::mcp_rotate_token,
             commands::task::board::task_board,
             commands::task::create::task_create,
             commands::task::update::task_update,
@@ -221,6 +228,10 @@ pub fn run() {
         .build(tauri::generate_context!())
         .expect("error while building AINote")
         .run(|app, event| {
+            #[cfg(desktop)]
+            if let tauri::RunEvent::Exit = event {
+                services::mcp::shutdown(app);
+            }
             #[cfg(desktop)]
             platform::tray::handle_run_event(app, &event);
             #[cfg(not(desktop))]

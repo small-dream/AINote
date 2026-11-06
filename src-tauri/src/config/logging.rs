@@ -67,6 +67,10 @@ fn redaction_rules() -> &'static [(Regex, &'static str)] {
                 "${1}***",
             ),
             (
+                Regex::new(r"\bainote_mcp_[A-Za-z0-9_-]{20,}\b").unwrap(),
+                "***",
+            ),
+            (
                 Regex::new(r"(?i)\bbearer\s+[A-Za-z0-9._\-]+").unwrap(),
                 "Bearer ***",
             ),
@@ -116,6 +120,14 @@ mod tests {
             redact("authorization=token ghp_secret"),
             "authorization=***"
         );
+    }
+
+    #[test]
+    fn redacts_mcp_tokens() {
+        let token = "ainote_mcp_abcdefghijklmnopqrstuvwxyz0123456789";
+        let output = redact(&format!("connect token={token}"));
+        assert!(!output.contains("ainote_mcp_abcdefghij"));
+        assert!(output.contains("***"));
     }
 
     #[test]

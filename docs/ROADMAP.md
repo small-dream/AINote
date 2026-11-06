@@ -262,6 +262,20 @@ timeline
 
 ---
 
+### 本轮增量 — MCP 集成（外部 AI Agent，未发布）
+
+> 让外部 Agent 通过标准 MCP 操作本地笔记，同时保持本地优先、最小权限与现有 Git 提交流程。
+
+- **服务端**：桌面端内嵌 `POST /mcp` Streamable HTTP，仅监听 `127.0.0.1`；Bearer Token 存 SecureStore，默认关闭。
+- **工具**：`list_notes` / `read_note` / `search_notes` / `create_note` / `update_note` / `append_note` / `patch_note`；只写 Markdown，富文本只读。
+- **一致性**：`expectedRevision` 乐观并发、编辑器草稿守卫、复用 RepoWriteLock、加密会话、写入后 UI 事件刷新；不自动提交 Git。
+- **协议**：同时兼容 MCP `2026-07-28`（无 initialize）与 `2025-11-25` / `2025-06-18` / `2025-03-26`（initialize）。
+- **Desktop Impact**：新增设置页 MCP 分组、本地监听与 Token 管理。
+- **Mobile Impact**：无入站服务与入口；共享类型/i18n/API 可编译，Rust 侧 stub。
+- **验收**：真实 MCP 客户端 7 工具闭环；revision 冲突、草稿拒绝、加密锁定、Token 轮换、错误 Origin、端口占用均有明确反馈；全量门禁通过。
+
+---
+
 ### M4 — 移动成熟与跨端一致（v0.28）📋
 
 **要回答的问题**：手机上是「能用」还是「好用」？

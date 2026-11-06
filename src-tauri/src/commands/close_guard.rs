@@ -3,6 +3,7 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use tauri::{AppHandle, Manager};
 
 use crate::domain::error::AppErrorDto;
+use crate::services::draft_state::DraftState;
 
 /// 退出确认守卫：`confirm_close` 后放行一次退出请求。
 /// 未确认的退出请求若存在待保存变更（Git 未提交或未落盘草稿），
@@ -20,23 +21,6 @@ impl CloseGuard {
     #[cfg(desktop)]
     pub fn take_allow(&self) -> bool {
         self.0.swap(false, Ordering::SeqCst)
-    }
-}
-
-/// 前端编辑器草稿状态：前端在「有 / 无未落盘草稿」切换时上报。
-/// Git 干净但编辑器里仍有未落盘草稿时，仅靠 git status 无法拦截关闭，会静默丢稿。
-#[derive(Default)]
-pub struct DraftState(AtomicBool);
-
-impl DraftState {
-    pub fn set(&self, dirty: bool) {
-        self.0.store(dirty, Ordering::SeqCst);
-    }
-
-    /// 当前是否存在未落盘草稿。
-    #[cfg_attr(not(desktop), allow(dead_code))]
-    pub fn get(&self) -> bool {
-        self.0.load(Ordering::SeqCst)
     }
 }
 
@@ -89,16 +73,6 @@ mod tests {
         assert!(!should_intercept(false, false));
         assert!(!should_intercept(true, true), "已放行则不再拦截");
         assert!(!should_intercept(true, false));
-    }
-
-    #[test]
-    fn draft_state_tracks_frontend_draft() {
-        let draft = DraftState::default();
-        assert!(!draft.get(), "默认无未落盘草稿");
-        draft.set(true);
-        assert!(draft.get());
-        draft.set(false);
-        assert!(!draft.get());
     }
 
     #[test]

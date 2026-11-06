@@ -1,5 +1,27 @@
 # 更新日志
 
+## v0.61.0 — 2026-11-06（MCP 集成：外部 AI Agent 操作笔记）
+
+### 新增
+
+- **桌面端 MCP 服务端**：设置 → MCP 集成可启用本机 `POST /mcp` Streamable HTTP 端点；默认关闭，仅监听 `127.0.0.1`，所有请求要求 Bearer Token，Token 存 SecureStore 且只在首次生成/轮换时一次性展示。
+- **协议兼容**：同时支持 MCP `2026-07-28`（无 initialize、每请求 `_meta`、`server/discover`、`resultType`）与 `2025-11-25` / `2025-06-18` / `2025-03-26`（initialize、无会话）。
+- **7 个笔记工具**：`list_notes`、`read_note`、`search_notes`、`create_note`、`update_note`、`append_note`、`patch_note`；写工具仅接受 `.md`，使用 `expectedRevision` 乐观并发，路径复用现有穿越/符号链接防御。
+- **数据安全协同**：写前检查未落盘草稿并获取 `RepoWriteLock`；加密笔记锁定态拒绝、解锁后仍以密文落盘；写入后广播 `mcp:notes-changed`，前端失效查询并在无脏草稿时重载编辑器；不自动提交 Git。
+- **安全边界**：校验 `Origin` / `Host` 为回环地址，body ≤ 2 MB，串行处理请求，单请求 panic 兜底；日志脱敏新增 `ainote_mcp_` 前缀。
+
+### 跨端影响
+
+- **Desktop Impact**：设置页新增「MCP 集成」；新增本地 HTTP 监听、Token 管理、写锁/草稿守卫复用与 UI 变更事件。
+- **Mobile Impact**：无入站服务、设置入口不出现；共享类型/i18n/API 可编译，Rust 侧为 stub。
+
+### 验证
+
+- `pnpm build` 通过；`pnpm test` 249 个文件通过（1506 passed，1 skipped）；`pnpm lint` 通过。
+- `cargo test mcp --lib`：30 passed（协议/工具/HTTP/Token/加密笔记/路径安全）。
+- `cargo test`：472 passed、6 ignored；14 项 Windows 专有路径分隔符断言失败（与 v0.60.1 已记录的既有问题相同，CI 在 ubuntu-22.04 运行），本次 MCP 相关测试全部通过。
+- 未在真实 Claude Desktop / Cursor 上执行手工连接验收；发布前需按 `docs/MCP_INTEGRATION_PLAN.md` §7 完成一次真实客户端闭环。
+
 ## v0.60.2 — 2026-11-06（代码块滚动条按需显现；更新说明随清单下发）
 
 ### 改进

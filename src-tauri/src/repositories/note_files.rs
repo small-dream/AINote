@@ -63,6 +63,25 @@ pub fn write_note(root: &Path, rel: &str, content: &str) -> Result<(), AppError>
     fs::write(&path, content).map_err(|err| AppError::io_context("写入失败", &path, err))
 }
 
+/// 独占创建笔记：目标已存在时返回 `NoteExists`，绝不静默覆盖（MCP `create_note` 使用）。
+pub fn write_note_new(root: &Path, rel: &str, content: &str) -> Result<(), AppError> {
+    let path = resolve_within_root(root, &validate_rel_path(rel)?)?;
+    if let Some(parent) = path.parent() {
+        fs::create_dir_all(parent)
+            .map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
+    }
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(&path)
+        .map_err(|err| match err.kind() {
+            std::io::ErrorKind::AlreadyExists => AppError::NoteExists(rel.to_string()),
+            _ => AppError::io_context("创建失败", &path, err),
+        })?;
+    file.write_all(content.as_bytes())
+        .map_err(|err| AppError::io_context("写入失败", &path, err))
+}
+
 /// 覆盖已有笔记；目标不存在时返回 `NoteNotFound`，绝不隐式创建文件。
 pub fn overwrite_note(root: &Path, rel: &str, content: &str) -> Result<(), AppError> {
     let path = resolve_within_root(root, &validate_rel_path(rel)?)?;
@@ -165,6 +184,19 @@ mod tests {
         let (_t, root) = setup();
         write_note(&root, "a/b.md", "# hi").unwrap();
         assert_eq!(read_note(&root, "a/b.md").unwrap(), "# hi");
+    }
+
+    #[test]
+    fn write_note_new_refuses_existing_file() {
+        let (_t, root) = setup();
+        write_note_new(&root, "a/b.md", "# new").unwrap();
+        assert_eq!(read_note(&root, "a/b.md").unwrap(), "# new");
+        assert!(matches!(
+            write_note_new(&root, "a/b.md", "# overwrite"),
+            Err(AppError::NoteExists(_))
+        ));
+        assert_eq!(read_note(&root, "a/b.md").unwrap(), "# new", "不得覆盖原文");
+        assert!(write_note_new(&root, "../evil.md", "x").is_err());
     }
 
     #[test]

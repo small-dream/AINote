@@ -76,6 +76,12 @@ pub fn write_text(root: &Path, rel: &str, content: &str) -> Result<(), AppError>
     note_files::write_note(root, rel, &payload)
 }
 
+/// 独占创建新笔记：目标已存在时返回 `NoteExists`，不静默覆盖。
+/// 新文件不可能是密文信封，因此直接写明文。
+pub fn write_text_new(root: &Path, rel: &str, content: &str) -> Result<(), AppError> {
+    note_files::write_note_new(root, rel, content)
+}
+
 /// 覆盖已有笔记：目标不存在时返回 `NoteNotFound`，不创建父目录或空文件。
 pub fn overwrite_text(root: &Path, rel: &str, content: &str) -> Result<(), AppError> {
     let file = root.join(note_files::validate_rel_path(rel)?);

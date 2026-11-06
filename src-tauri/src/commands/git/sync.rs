@@ -1,7 +1,7 @@
 use tauri::ipc::Channel;
 use tauri::{AppHandle, Manager};
 
-use crate::commands::git::repo_lock::{RepoWriteGuard, RepoWriteLock};
+use crate::services::repo_lock::{RepoWriteGuard, RepoWriteLock};
 use crate::config;
 use crate::domain::error::{AppError, AppErrorDto};
 use crate::domain::metrics::MetricEvent;

@@ -1,5 +1,8 @@
 //! 仓库级写互斥：所有会写 index/refs 的命令（sync/pull/push/commit/resolve/reset 等）
 //! 共用同一把锁。锁只加在 command 入口，service 内部不再加锁，命令之间不得互相调用。
+//!
+//! 位于 services 层是因为 MCP 服务端（另一个入站适配器）也需要与同步/提交互斥；
+//! 锁本身只依赖 Tauri 状态管理，不依赖具体 Git 实现。
 
 use std::collections::HashMap;
 use std::sync::atomic::{AtomicBool, Ordering};

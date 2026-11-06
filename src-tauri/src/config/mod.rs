@@ -12,8 +12,32 @@ use tauri::{AppHandle, Manager};
 
 use crate::domain::diagnostics::DiagnosticsConfigSummary;
 use crate::domain::error::AppError;
+use crate::domain::mcp::DEFAULT_MCP_PORT;
 
 const CONFIG_FILE: &str = "ainote.json";
+
+/// MCP 本地服务配置（Token 不在这里，走 SecureStore）。
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub(crate) struct McpConfig {
+    #[serde(default)]
+    pub(crate) enabled: bool,
+    #[serde(default = "default_mcp_port")]
+    pub(crate) port: u16,
+}
+
+impl Default for McpConfig {
+    fn default() -> Self {
+        Self {
+            enabled: false,
+            port: DEFAULT_MCP_PORT,
+        }
+    }
+}
+
+fn default_mcp_port() -> u16 {
+    DEFAULT_MCP_PORT
+}
 
 #[derive(Debug, Serialize, Deserialize, Default)]
 #[serde(rename_all = "camelCase")]
@@ -36,6 +60,9 @@ pub(crate) struct AppConfig {
     /// 各托管平台的账号名（非敏感，仅用于设置页展示用户名）；键为平台 id。
     #[serde(default)]
     pub(crate) provider_logins: std::collections::BTreeMap<String, String>,
+    /// MCP 本地服务开关与端口；Token 在 SecureStore。
+    #[serde(default)]
+    pub(crate) mcp: McpConfig,
     /// 旧版单仓库字段（repoPath），加载时迁移进 repos。
     #[serde(default, rename = "repoPath")]
     legacy_repo_path: Option<String>,
@@ -125,6 +152,24 @@ pub fn metrics_enabled(app: &AppHandle) -> Result<bool, AppError> {
 pub fn set_metrics_enabled(app: &AppHandle, enabled: bool) -> Result<(), AppError> {
     let mut cfg = load_config(app)?;
     cfg.metrics_enabled = Some(enabled);
+    save_config(app, &cfg)
+}
+
+/// MCP 本地服务是否启用（默认关闭）。
+pub fn mcp_enabled(app: &AppHandle) -> Result<bool, AppError> {
+    Ok(load_config(app)?.mcp.enabled)
+}
+
+/// MCP 监听端口（默认 39471）。
+pub fn mcp_port(app: &AppHandle) -> Result<u16, AppError> {
+    let port = load_config(app)?.mcp.port;
+    Ok(if port == 0 { DEFAULT_MCP_PORT } else { port })
+}
+
+/// 一次性持久化 MCP 开关与端口（启动成功后再写，避免启动失败后反复自启）。
+pub fn set_mcp_settings(app: &AppHandle, enabled: bool, port: u16) -> Result<(), AppError> {
+    let mut cfg = load_config(app)?;
+    cfg.mcp = McpConfig { enabled, port };
     save_config(app, &cfg)
 }
 

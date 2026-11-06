@@ -13,6 +13,7 @@ pub mod history;
 pub mod history_reset;
 pub mod hosting;
 pub mod maintenance;
+pub mod mcp;
 pub mod metrics;
 pub mod note;
 pub mod quick_unlock;

@@ -115,6 +115,12 @@ fn plaintext_of(repo_path: &Path, file: &Path) -> Result<String, AppError> {
         .ok_or_else(|| AppError::VaultLocked("加密笔记需要先解锁仓库密钥".to_string()))
 }
 
+/// 用例：读取单篇笔记元数据（MCP 工具与前端列表共用同一套标题/类型/时间口径）。
+pub fn meta_of(repo_path: &Path, rel: &str) -> Result<NoteMeta, AppError> {
+    let path = note_files::validate_rel_path(rel)?;
+    to_meta(repo_path, &repo_path.join(path))
+}
+
 /// 用例：更新笔记内容（加密笔记继续以密文落盘）
 pub fn update_note(repo_path: &Path, rel: &str, content: &str) -> Result<(), AppError> {
     note_content::overwrite_text(repo_path, rel, content)

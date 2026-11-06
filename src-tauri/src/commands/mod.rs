@@ -6,6 +6,7 @@ pub mod blocking;
 pub mod capture;
 pub mod close_guard;
 pub mod git;
+pub mod mcp;
 pub mod metrics;
 pub mod note;
 pub mod print;

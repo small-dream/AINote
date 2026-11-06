@@ -7,7 +7,6 @@ pub mod graph;
 pub mod history;
 pub mod pull;
 pub mod push;
-pub mod repo_lock;
 pub mod resolve;
 pub mod resolve_file;
 pub mod restore;

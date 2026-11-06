@@ -5,6 +5,7 @@ export { repoApi } from "./repo.api";
 export { syncApi } from "./sync.api";
 export { authApi } from "./auth.api";
 export { aiApi } from "./ai.api";
+export { mcpApi } from "./mcp.api";
 export { assetApi, assetUrl, onDropPaths } from "./asset.api";
 export { wikiApi } from "./wiki.api";
 export { captureApi } from "./capture.api";
@@ -86,3 +87,4 @@ export type {
   TrashItem,
   TreeNode,
 } from "./types";
+export type { McpAction, McpNotesChanged, McpStatus, McpToolInfo } from "./mcp.types";

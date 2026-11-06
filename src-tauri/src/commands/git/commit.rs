@@ -1,7 +1,7 @@
 use tauri::AppHandle;
 
 use crate::commands::blocking;
-use crate::commands::git::repo_lock::RepoWriteGuard;
+use crate::services::repo_lock::RepoWriteGuard;
 use crate::config;
 use crate::domain::error::AppErrorDto;
 use crate::repositories::git2_backend::Git2Backend;

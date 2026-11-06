@@ -43,6 +43,7 @@ The same notes and the same file format, editable offline and synced when you re
 - **Data ownership**: Notes live in your own Git repository (GitHub or Gitee), so they are portable, auditable, backup-friendly, and versioned.
 - **Offline-first**: Browsing, searching, editing, and local commits work without a network. Push and pull when you reconnect.
 - **Local-first AI**: Use OpenAI-compatible APIs or local Ollama. Providers and models are pluggable, and API keys are stored encrypted.
+- **MCP server (desktop)**: Let Claude Desktop, Cursor and other agents read, create and edit Markdown notes through a local MCP endpoint. Off by default, loopback-only, Bearer-token protected, and wired into the existing draft guard and Git workflow.
 - **Native performance**: A React frontend connects to a Rust/Tauri backend; Git, file, and network work run outside the UI layer.
 
 ## Features

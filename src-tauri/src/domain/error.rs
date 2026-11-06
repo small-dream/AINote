@@ -9,8 +9,14 @@ use crate::domain::sync::SyncStage;
 pub enum AppError {
     #[error("note not found: {0}")]
     NoteNotFound(String),
+    /// 独占创建时目标已存在（MCP 新建笔记不静默覆盖）。
+    #[error("note already exists: {0}")]
+    NoteExists(String),
     #[error("invalid path: {0}")]
     InvalidPath(String),
+    /// MCP 启停 / 端口 / 协议适配错误（桌面端本地服务）。
+    #[error("mcp error: {0}")]
+    Mcp(String),
     #[error("auth error: {0}")]
     Auth(String),
     /// 目标平台尚未配置访问令牌：可操作错误，DTO 会带上平台 id 供前端直接引导登录。
@@ -168,7 +174,9 @@ impl From<AppError> for AppErrorDto {
     fn from(err: AppError) -> Self {
         let (code, kind, retriable) = match &err {
             AppError::NoteNotFound(_) => ("NOTE_1001", ErrorKind::NotFound, false),
+            AppError::NoteExists(_) => ("NOTE_1003", ErrorKind::Conflict, false),
             AppError::InvalidPath(_) => ("NOTE_1002", ErrorKind::Unknown, false),
+            AppError::Mcp(_) => ("MCP_10001", ErrorKind::Unknown, false),
             AppError::Auth(_) => ("AUTH_2001", ErrorKind::Auth, false),
             AppError::AuthLoginRequired { .. } => ("AUTH_2001", ErrorKind::Auth, false),
             AppError::AuthNetwork(_) => ("AUTH_2002", ErrorKind::Auth, true),
@@ -275,7 +283,9 @@ mod tests {
     #[test]
     fn maps_codes_per_domain() {
         assert_eq!(dto(AppError::NoteNotFound("a".into())).code, "NOTE_1001");
+        assert_eq!(dto(AppError::NoteExists("a".into())).code, "NOTE_1003");
         assert_eq!(dto(AppError::InvalidPath("..".into())).code, "NOTE_1002");
+        assert_eq!(dto(AppError::Mcp("port in use".into())).code, "MCP_10001");
         assert_eq!(dto(AppError::Auth("bad".into())).code, "AUTH_2001");
         assert_eq!(
             dto(AppError::AuthLoginRequired {
@@ -405,6 +415,12 @@ mod tests {
         let conflict = dto(AppError::Conflict("x".into()));
         assert_eq!(conflict.kind, ErrorKind::Conflict);
         assert!(!conflict.retriable);
+        let note_exists = dto(AppError::NoteExists("a.md".into()));
+        assert_eq!(note_exists.kind, ErrorKind::Conflict);
+        assert!(!note_exists.retriable);
+        let mcp = dto(AppError::Mcp("port in use".into()));
+        assert_eq!(mcp.kind, ErrorKind::Unknown);
+        assert!(!mcp.retriable);
         let ai = dto(AppError::Ai("bad".into()));
         assert_eq!(ai.kind, ErrorKind::Unknown);
         assert!(!ai.retriable);

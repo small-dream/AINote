@@ -6,6 +6,7 @@ import { reportToastError } from "@/stores/toast.store";
 import { ToastViewport } from "@/components/molecules/ToastViewport";
 import { installGlobalErrorLogging } from "@/features/support";
 import { CloseConfirmDialog } from "@/features/close-guard/components/CloseConfirmDialog";
+import { McpChangeBridge } from "@/features/mcp/components/McpChangeBridge";
 
 const queryClient = new QueryClient({
   mutationCache: new MutationCache({
@@ -27,6 +28,7 @@ export function AppProviders({ children }: { children: ReactNode }) {
       <TypographyApplier />
       <ToastViewport />
       <CloseConfirmDialog />
+      <McpChangeBridge />
       {children}
     </QueryClientProvider>
   );
