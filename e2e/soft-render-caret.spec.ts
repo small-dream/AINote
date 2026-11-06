@@ -116,7 +116,8 @@ test.describe("AINote 软渲染光标落点", () => {
     await page.keyboard.type("尾");
     await expect(line.locator(".cm-sr-strong")).toHaveText("加粗尾");
 
-    await page.keyboard.press("Meta+z");
+    await page.keyboard.press("ControlOrMeta+z");
+    await expect(line.locator(".cm-sr-strong")).toHaveText("加粗");
     await page.keyboard.press("Home");
     await page.keyboard.type("首");
     await expect(line.locator(".cm-sr-strong")).toHaveText("首加粗");
