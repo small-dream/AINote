@@ -1,0 +1,94 @@
+import { expect, test, type Page } from "@playwright/test";
+import type { E2eState } from "../src/e2e/types";
+import { calls, openWorkspace } from "./helpers";
+
+const fence = String.fromCharCode(96).repeat(3);
+const code = "const 标题 = '中文';\n\tconsole.log(标题);\n" + "verylongunbrokenstring".repeat(12);
+const markdown = "## 代码\n\n" + fence + "typescript\n" + code + "\n" + fence + "\n";
+const rich = JSON.stringify({ type: "doc", content: [
+  { type: "heading", attrs: { level: 2 }, content: [{ type: "text", text: "代码" }] },
+  { type: "codeBlock", attrs: { language: "typescript" }, content: [{ type: "text", text: code }] },
+] });
+const state = (path: string, content: string, kind?: "richText"): E2eState => ({
+  repoPath: "/mock-repo", notes: [{ path, content, ...(kind ? { kind } : {}) }],
+});
+
+async function installClipboard(page: Page): Promise<void> {
+  await page.addInitScript(() => {
+    const state = globalThis as typeof globalThis & { __COPIED_CODE__?: string };
+    Object.defineProperty(navigator, "clipboard", {
+      configurable: true,
+      value: { writeText: async (text: string) => { state.__COPIED_CODE__ = text; } },
+    });
+  });
+}
+
+test("Markdown preview uses reading surface, copies source, wraps temporarily and fits 320px", async ({ page }) => {
+  await installClipboard(page);
+  await page.setViewportSize({ width: 320, height: 820 });
+  await openWorkspace(page, state("snippet.md", markdown));
+  await page.getByRole("button", { name: "snippet", exact: true }).first().click();
+  await page.getByRole("tab", { name: "预览" }).click();
+  const block = page.locator(".markdown-code-block").first();
+  await expect(block.locator(".note-code-actions")).toBeVisible();
+  await expect(block.locator(".note-code-language")).toHaveText("typescript");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  const before = (await calls(page)).filter((call) => call.cmd === "update_note").length;
+  await block.getByRole("button", { name: "复制代码" }).click();
+  await expect(block.getByRole("status")).toHaveText("已复制");
+  expect(await page.evaluate(() => (globalThis as typeof globalThis & { __COPIED_CODE__?: string }).__COPIED_CODE__))
+    .toBe(code + "\n");
+  await block.getByRole("button", { name: "自动换行" }).click();
+  await expect(block.locator("pre")).toHaveClass(/note-code-wrapped/);
+  await expect(block.getByRole("button", { name: "取消自动换行" })).toBeVisible();
+  await expect.poll(async () => (await calls(page)).filter((call) => call.cmd === "update_note").length).toBe(before);
+});
+
+test("Soft render operations stay outside source editor state", async ({ page }) => {
+  await installClipboard(page);
+  await openWorkspace(page, state("soft.md", markdown));
+  await page.getByRole("button", { name: "soft", exact: true }).first().click();
+  const block = page.locator(".cm-sr-codeblock-widget").first();
+  await expect(block.locator(".note-code-actions")).toBeVisible();
+  const before = (await calls(page)).filter((call) => call.cmd === "update_note").length;
+  await block.getByRole("button", { name: "自动换行" }).click();
+  await block.getByRole("button", { name: "复制代码" }).click();
+  await expect(block.locator("pre")).toHaveClass(/note-code-wrapped/);
+  await expect.poll(async () => (await calls(page)).filter((call) => call.cmd === "update_note").length).toBe(before);
+  await expect(page.locator(".cm-content")).not.toContainText("复制代码");
+});
+
+test("Rich text controls and language selection do not corrupt serialized content", async ({ page }) => {
+  await installClipboard(page);
+  await openWorkspace(page, state("rich.ainote", rich, "richText"));
+  await page.getByRole("button", { name: "rich", exact: true }).first().click();
+  await expect(page.locator(".ProseMirror code")).toContainText("console.log", { timeout: 15_000 });
+  const block = page.locator(".code-block-shell").first();
+  await expect(block.locator(".note-code-actions")).toBeVisible();
+  const before = (await calls(page)).filter((call) => call.cmd === "update_note").length;
+  await block.getByRole("button", { name: "自动换行" }).click();
+  await block.getByRole("button", { name: "复制代码" }).click();
+  await expect(block.locator("pre")).toHaveClass(/note-code-wrapped/);
+  await block.locator("select").selectOption("rust");
+  await expect(block.locator("select")).toHaveValue("rust");
+  await expect.poll(async () => (await calls(page)).filter((call) => call.cmd === "update_note").length).toBeGreaterThan(before);
+  await expect(block.locator("code")).toContainText("console.log");
+  expect(await block.locator("code").evaluate((node) => getComputedStyle(node).fontSize))
+    .toBe(await block.locator("pre").evaluate((node) => getComputedStyle(node).fontSize));
+  await expect(block.locator("button")).toHaveCount(2);
+});
+
+test.describe("移动窄屏代码块", () => {
+  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true });
+
+  test("预览支持触控自动换行", async ({ page }) => {
+    await installClipboard(page);
+    await openWorkspace(page, state("mobile-code.md", markdown));
+    await page.getByRole("button", { name: "mobile-code", exact: true }).first().click();
+  await page.getByRole("tab", { name: "预览" }).click();
+    const block = page.locator(".markdown-code-block").first();
+    await expect(block.getByRole("button", { name: "复制代码" })).toBeVisible();
+    await block.getByRole("button", { name: "自动换行" }).click();
+    await expect(block.locator("pre")).toHaveClass(/note-code-wrapped/);
+  });
+});

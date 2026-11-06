@@ -26,9 +26,6 @@ export interface SoftRenderOptions {
   onOpenWiki?: (name: string) => void;
   /** 普通点击外链时交给上层显示统一动作浮层。 */
   onLinkAction?: (href: string, point: { x: number; y: number }) => void;
-  /** 代码块复制按钮文案 */
-  copyCodeLabel?: string;
-  copiedLabel?: string;
   /** 开发诊断：输出点击坐标与 selection 映射日志。 */
   debugClick?: boolean;
 }
@@ -90,9 +87,9 @@ const WIDGET_BUILDERS: Record<WidgetRange["kind"], (widget: WidgetRange, options
   table: (widget) => Decoration.replace({ widget: new TableWidget(widget.value ?? "", widget.from, widget.to), block: true }),
   bullet: (widget) => Decoration.replace({ widget: new BulletWidget(widget.from, widget.to) }),
   number: (widget) => Decoration.replace({ widget: new NumberWidget(widget.from, widget.to, widget.index ?? 1) }),
-  codeblock: (widget, options) =>
+  codeblock: (widget) =>
     Decoration.replace({
-      widget: new CodeBlockWidget(widget.value ?? "", widget.alt ?? "", widget.from, widget.to, options.copyCodeLabel, options.copiedLabel),
+      widget: new CodeBlockWidget(widget.value ?? "", widget.alt ?? "", widget.from, widget.to),
       block: true,
     }),
   math: (widget) =>
@@ -113,7 +110,7 @@ function handleClick(event: MouseEvent, view: EditorView, options: SoftRenderOpt
     toggleTask(view, checkbox);
     return true;
   }
-  if (closestElement(target, ".cm-sr-code-copy")) return true;
+  if (closestElement(target, "[data-code-control]")) return true;
   if (enterWidgetAt(event, view)) return true;
   correctSelectionToClickedLine(event, view);
   debugClick("click:after", event, view, options);
@@ -139,6 +136,7 @@ function correctSelectionToClickedLine(event: MouseEvent, view: EditorView): voi
 }
 
 function createLineSelectionStyle(view: EditorView, event: MouseEvent, options: SoftRenderOptions): MouseSelectionStyle | null {
+  if (closestElement(event.target, "[data-code-control]")) return null;
   debugMouseDown(event, view, options);
   if (event.button !== 0) return null;
   // 双击（以及更快的连击）在软渲染里按「选中当前行」处理：CodeMirror 默认的整行选区

@@ -1,6 +1,9 @@
 import type { Locale } from "@/stores/ui.store";
 
 const EDITOR_SEARCH_MESSAGES_ZH = {
+  "note.wrapCode": "自动换行",
+  "note.unwrapCode": "取消自动换行",
+  "note.copyCodeFailed": "复制失败，点击重试",
   "note.goBack": "后退到上一篇笔记",
   "note.goForward": "前进到下一篇笔记",
   "editor.characters": "{count} 字",
@@ -21,6 +24,9 @@ const EDITOR_SEARCH_MESSAGES_ZH = {
 } as const;
 
 const EDITOR_SEARCH_MESSAGES_EN = {
+  "note.wrapCode": "Wrap lines",
+  "note.unwrapCode": "Unwrap lines",
+  "note.copyCodeFailed": "Copy failed, retry",
   "note.goBack": "Back to previous note",
   "note.goForward": "Forward to next note",
   "editor.characters": "{count} chars",

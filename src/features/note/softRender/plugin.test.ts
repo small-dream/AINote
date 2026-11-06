@@ -225,7 +225,7 @@ describe("softRender 代码块与数学", () => {
     const view = await createView("```js\nconst a = 1;\n```", 0);
     const widget = view.contentDOM.querySelector(".cm-sr-codeblock-widget");
     expect(widget).toBeDefined();
-    expect(widget?.querySelector(".cm-sr-codeblock-header span")?.textContent).toBe("js");
+    expect(widget?.querySelector(".note-code-language")?.textContent).toBe("js");
     expect(widget?.querySelector(".cm-sr-codeblock-code")?.textContent).toContain("const");
     view.destroy();
   });

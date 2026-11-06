@@ -45,6 +45,7 @@ export function useCodeBlockScrollControls(
     if (travel <= 0) return;
     const next = drag.startScrollLeft + ((event.clientX - drag.startX) * maxScroll) / travel;
     pre.scrollLeft = Math.min(maxScroll, Math.max(0, next));
+    pre.dispatchEvent(new Event("scroll"));
   };
 
   const endThumbDrag = (event: ReactPointerEvent<HTMLDivElement>) => {

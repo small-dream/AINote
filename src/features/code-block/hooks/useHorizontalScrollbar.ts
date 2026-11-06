@@ -32,15 +32,20 @@ export function useHorizontalScrollbar(ref: RefObject<HTMLElement | null>) {
   useLayoutEffect(() => {
     const element = ref.current;
     if (!element) return;
+    let active = true;
     refresh();
     element.addEventListener("scroll", refresh, { passive: true });
     const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(refresh);
     observer?.observe(element);
     if (element.firstElementChild) observer?.observe(element.firstElementChild);
-    void document.fonts?.ready.then(refresh).catch(() => undefined);
+    const mutations = new MutationObserver(refresh);
+    mutations.observe(element, { childList: true, subtree: true, characterData: true, attributes: true });
+    void document.fonts?.ready.then(() => { if (active) refresh(); }).catch(() => undefined);
     return () => {
+      active = false;
       element.removeEventListener("scroll", refresh);
       observer?.disconnect();
+      mutations.disconnect();
     };
   }, [refresh, ref]);
 

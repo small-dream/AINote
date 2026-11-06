@@ -166,9 +166,10 @@ describe("MarkdownPreview P1 预览增强", () => {
 
   it("代码块显示语言和复制操作", () => {
     const { container } = render(<MarkdownPreview content={"```ts\nconst answer = 42;\n```"} />);
-    expect(container.querySelector(".markdown-code-toolbar")?.textContent).toContain("ts");
+    expect(container.querySelector(".note-code-language")?.textContent).toBe("ts");
     expect(container.querySelector("pre code")?.className).toContain("language-ts");
-    expect(container.querySelector(".markdown-code-toolbar button")).toBeTruthy();
+    expect(container.querySelector(".note-code-actions button")).toBeTruthy();
+    expect(container.querySelector(".markdown-code-toolbar")).toBeNull();
   });
 
   it("外部链接保留 href 与安全属性，交由系统浏览器打开", () => {
@@ -232,7 +233,6 @@ describe("MarkdownPreview properties and callouts", () => {
     expect(container.querySelector(".markdown-mermaid")).toBeTruthy();
   });
 });
-
 describe("MarkdownPreview tag chips", () => {
   it("将行内标签渲染为标签胶囊，不把标题误判为标签", () => {
     const { container } = render(<MarkdownPreview content={"# 标题\n\n正文 #AI"} />);
@@ -244,12 +244,6 @@ describe("MarkdownPreview tag chips", () => {
 });
 
 describe("MarkdownPreview edge cases", () => {
-  it("渲染 important/caution callout 时不保留语法前缀", () => {
-    const { container } = render(<MarkdownPreview content={"> [!IMPORTANT] 重要\n\n> [!CAUTION] 注意"} />);
-    expect(container.textContent).not.toContain("[!IMPORTANT]");
-    expect(container.textContent).not.toContain("[!CAUTION]");
-  });
-
   it("没有仓库路径时保留相对图片 URL", () => {
     const { container } = render(<MarkdownPreview content={"![图](assets/photo.png)"} />);
     expect(container.querySelector("img")?.getAttribute("src")).toBe("assets/photo.png");

@@ -1,0 +1,139 @@
+/* 阅读式代码块：三个渲染器共用阅读主题，不改变正文与标题排版。 */
+.note-code-block {
+  --code-action-size: 28px;
+  margin: 0.8em 0;
+  padding: var(--note-code-padding);
+  min-width: 0;
+  max-width: 100%;
+  border: 1px solid var(--note-border);
+  border-radius: var(--note-code-radius);
+  background: var(--note-code-bg);
+  color: var(--note-ink);
+  font-size: var(--note-font-size);
+  overflow: hidden;
+}
+.note-code-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) var(--code-action-size);
+  align-items: start;
+  gap: 12px;
+  min-width: 0;
+}
+.note-code-content { min-width: 0; }
+.note-code-block pre.note-code-pre {
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--note-ink);
+  font-family: var(--note-code-font);
+  font-size: var(--note-code-size);
+  line-height: 1.6;
+  tab-size: 4;
+  white-space: pre;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scrollbar-width: none;
+}
+.note-code-block pre.note-code-pre::-webkit-scrollbar { display: none; }
+.note-code-block pre.note-code-pre code {
+  padding: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  white-space: inherit;
+}
+.rich-text-editor .ProseMirror .note-code-block pre.note-code-pre code { font: inherit; }
+.note-code-block pre.note-code-pre.note-code-wrapped {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.note-code-controls { min-width: 0; }
+.note-code-actions {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+.note-code-action {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--code-action-size);
+  height: var(--code-action-size);
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--note-secondary);
+  cursor: pointer;
+}
+.note-code-action:hover,
+.note-code-action[aria-pressed="true"] {
+  background: var(--note-surface);
+  color: var(--note-ink);
+}
+.note-code-action:focus-visible,
+.note-code-scrollbar:focus-visible {
+  outline: 2px solid var(--note-accent);
+  outline-offset: 1px;
+}
+.note-code-status {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+.note-code-language {
+  margin-top: 8px;
+  color: var(--note-secondary);
+  font-family: var(--note-body-font);
+  font-size: 12px;
+  line-height: 1.5;
+}
+.note-code-language select {
+  max-width: 100%;
+  padding: 2px 4px;
+  margin-inline-start: -4px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: var(--note-code-bg);
+  color: var(--note-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+.note-code-language select:hover { color: var(--note-ink); }
+.note-code-language select:focus-visible { border-color: var(--note-accent); }
+.note-code-scrollbar {
+  position: relative;
+  height: 12px;
+  margin-top: 10px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--note-ink) 8%, var(--note-code-bg));
+  cursor: pointer;
+  touch-action: none;
+}
+.note-code-scrollbar-thumb {
+  position: absolute;
+  top: 2px;
+  bottom: 2px;
+  left: 0;
+  min-width: 32px;
+  border-radius: 6px;
+  background: var(--note-secondary);
+  cursor: grab;
+}
+.note-code-scrollbar-thumb:hover { background: var(--note-ink); }
+.note-code-scrollbar-thumb:active { cursor: grabbing; }
+@media (max-width: 640px), (pointer: coarse) {
+  :root { --note-code-padding: 12px; }
+  .note-code-block { --code-action-size: 44px; }
+  .note-code-main { gap: 8px; }
+  .note-code-language select { min-height: 44px; }
+}

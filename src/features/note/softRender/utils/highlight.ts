@@ -12,7 +12,7 @@ function loadLowlight(): Promise<Lowlight> {
 }
 
 /** 使用 lowlight/highlight.js 把源码高亮为 DOM 树。 */
-export function highlightCode(source: string, language: string | null): HTMLElement {
+export function highlightCode(source: string, language: string | null): HTMLPreElement {
   const pre = document.createElement("pre");
   pre.className = "hljs cm-sr-codeblock-pre";
   const code = document.createElement("code");

@@ -100,6 +100,32 @@
   max-width: 100%;
 }
 
+/* 打印预览与纸面均不展示控件；长行完整折行，不依赖编辑器临时状态。 */
+.pdf-export-page .note-code-controls,
+.pdf-export-page .note-code-scroll-host,
+.pdf-export-page .note-code-language select {
+  display: none !important;
+}
+.pdf-export-page .note-code-main { display: block; }
+.pdf-export-page .note-code-block { overflow: visible; }
+.pdf-export-page pre,
+.pdf-export-page .note-code-block pre.note-code-pre {
+  max-width: 100%;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  overflow: visible;
+  font-family: var(--note-code-font);
+  font-size: var(--note-code-size);
+  line-height: 1.6;
+}
+.pdf-export-page .ProseMirror > pre {
+  padding: var(--note-code-padding);
+  border: 1px solid var(--note-border);
+  border-radius: var(--note-code-radius);
+  background: var(--note-code-bg);
+}
+.pdf-export-page pre code { font: inherit; white-space: inherit; }
+
 /* 打印时：隐藏应用与工具栏，让内容回到正常文档流以支持多页分页 */
 @media print {
   @page {

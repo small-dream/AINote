@@ -96,7 +96,7 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     markdownInputKeymap,
     formatKeymap,
     Prec.high(keymap.of([{ key: "Mod-k", run: (view) => { if (onLinkInput) { onLinkInput(); return true; } void dispatchLink(view); return true; } }])),
-    ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki, onLinkAction, t("note.copyCode"), t("note.copied")) : [syntaxHighlighting(getAinoteHighlightStyle())]),
+    ...(softRenderEnabled ? softRenderExtension(repoPath, onOpenWiki, onLinkAction) : [syntaxHighlighting(getAinoteHighlightStyle())]),
     ...(typewriterMode ? [typewriterScroll()] : []),
     EditorView.updateListener.of((update) => {
       if (!update.selectionSet && !update.docChanged) return;
@@ -175,8 +175,8 @@ function sameFormats(a: Set<string>, b: Set<string>): boolean {
   return true;
 }
 
-function softRenderExtension(repoPath: string | null, onOpenWiki: ((name: string) => void) | undefined, onLinkAction: ((href: string, point: { x: number; y: number }) => void) | undefined, copyCodeLabel: string, copiedLabel: string): Extension[] {
-  const options = { repoPath, copyCodeLabel, copiedLabel } as Parameters<typeof softRender>[0];
+function softRenderExtension(repoPath: string | null, onOpenWiki: ((name: string) => void) | undefined, onLinkAction: ((href: string, point: { x: number; y: number }) => void) | undefined): Extension[] {
+  const options = { repoPath } as Parameters<typeof softRender>[0];
   if (onOpenWiki) options.onOpenWiki = onOpenWiki;
   if (onLinkAction) options.onLinkAction = onLinkAction;
   return [softRender(options)];

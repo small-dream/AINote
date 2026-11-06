@@ -281,6 +281,10 @@ AINote/
 
 ## 6. Android HTTPS 信任链（平台专属）
 
+### 共享代码块 UI（features/code-block）
+
+Markdown React 预览、CodeMirror 软渲染 Widget 与 TipTap NodeView 共用阅读式容器、复制/自动换行控件和自定义横向滚动控制。内容 DOM 仍由各自宿主管理，共享适配器只挂载操作区；复制回调读取宿主原始代码。自动换行只切换当前块的 DOM class，是组件生命周期内的临时展示状态，不进入 Markdown 文本、TipTap JSON、自动保存或 undo history。CodeMirror 尺寸变化后请求重新测量；TipTap 控件和滚动区 non-editable，语言选择以 NodeView 位置更新原有语言属性。ResizeObserver、MutationObserver 和复制反馈计时器随组件卸载清理。打印样式隐藏操作控件和滚动条，长行折行；静态序列化不携带交互 UI 或换行状态。不新增 IPC、Rust Command、持久化 Store 或笔记格式字段。
+
 - **问题根因**：`openssl-src` 在 Android 上固定给 OpenSSL `Configure` 传 `no-stdio`，`BIO_new_file` 退化为空实现，libgit2 无法读取任何文件型信任库；同时 Android 系统 CA 目录使用 OpenSSL 1.0 的旧式 subject hash，与 OpenSSL 1.1+ 的目录查找不兼容。两者叠加会导致所有 HTTPS 证书校验失败。
 - **实现**：`repositories/ca_bundle.rs` 在首个网络操作前把 `/apex/com.android.conscrypt/cacerts`（Android 14+）或 `/system/etc/security/cacerts` 下的 PEM 证书合并为去重后的单个 bundle（并附带 `sectigo_e46.pem` 兜底根），写入应用 cache 目录后通过 `git2::opts::set_ssl_cert_file` 交给 libgit2。证书链校验保持开启，不再对 `github.com` 放行。
 - **构建要求**：Android 构建必须走 `pnpm android:dev` / `pnpm android:build`（`scripts/tauri-android.mjs` 注入 `OPENSSL_SRC_PERL=scripts/openssl-src-perl-wrapper.sh`，该包装脚本剥掉 `no-stdio`）。直接调用 `pnpm tauri android build` 会被 `src-tauri/build.rs` 拒绝，避免构建出无法校验 HTTPS 的包。

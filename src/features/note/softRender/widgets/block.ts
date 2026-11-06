@@ -1,7 +1,11 @@
-import { WidgetType } from "@codemirror/view";
+import { EditorView, WidgetType } from "@codemirror/view";
+import { mountCodeBlock } from "@/features/code-block/mountCodeBlock";
 import { highlightCode } from "../utils/highlight";
 import { renderMath } from "../utils/math";
 import { renderMermaid } from "../utils/mermaidRender";
+
+// CodeMirror 可复用相等 Widget 的 DOM，但替换 Widget 实例；资源跟随 DOM 而非实例。
+const mountedBlocks = new WeakMap<HTMLElement, ReturnType<typeof mountCodeBlock>>();
 
 /** 在 widget 根节点记录源码区间，供点击进入编辑使用。 */
 export function markRange(el: HTMLElement, from: number, to: number): void {
@@ -29,7 +33,7 @@ export class HrWidget extends WidgetType {
 
 /** 代码块：光标离开时渲染为高亮 DOM。 */
 export class CodeBlockWidget extends WidgetType {
-  constructor(readonly source: string, readonly language: string, readonly from: number, readonly to: number, readonly copyCodeLabel = "Copy code", readonly copiedLabel = "Copied") {
+  constructor(readonly source: string, readonly language: string, readonly from: number, readonly to: number) {
     super();
   }
 
@@ -39,52 +43,34 @@ export class CodeBlockWidget extends WidgetType {
       other.source === this.source &&
       other.language === this.language &&
       other.from === this.from &&
-      other.to === this.to &&
-      other.copyCodeLabel === this.copyCodeLabel &&
-      other.copiedLabel === this.copiedLabel
+      other.to === this.to
     );
   }
 
-  ignoreEvent(): boolean {
-    return false;
+  ignoreEvent(event: Event): boolean {
+    return event.target instanceof Element && Boolean(event.target.closest("[data-code-control]"));
   }
 
-  toDOM(): HTMLElement {
-    const wrapper = document.createElement("div");
-    wrapper.className = "cm-sr-codeblock cm-sr-codeblock-widget";
-    const header = document.createElement("div");
-    header.className = "cm-sr-codeblock-header";
-    const language = document.createElement("span");
-    language.textContent = this.language || "code";
-    header.appendChild(language);
-    const copy = document.createElement("button");
-    copy.type = "button";
-    copy.className = "cm-sr-code-copy";
-    copy.textContent = this.copyCodeLabel;
-    copy.dataset.label = this.copyCodeLabel;
-    copy.setAttribute("aria-label", this.copyCodeLabel);
-    copy.addEventListener("click", () => {
-      void copyCode(this.source, copy, this.copiedLabel);
+  toDOM(view: EditorView): HTMLElement {
+    const footer = document.createElement("div");
+    footer.className = "note-code-language";
+    footer.textContent = this.language;
+    const mounted = mountCodeBlock({
+      pre: highlightCode(this.source, this.language || null),
+      getSource: () => this.source,
+      ...(this.language ? { footer } : {}),
+      onLayoutChange: () => view.requestMeasure(),
     });
-    header.appendChild(copy);
-    wrapper.appendChild(header);
-    wrapper.appendChild(highlightCode(this.source, this.language || null));
+    const wrapper = mounted.shell;
+    mountedBlocks.set(wrapper, mounted);
+    wrapper.classList.add("cm-sr-codeblock", "cm-sr-codeblock-widget");
     markRange(wrapper, this.from, this.to);
     return wrapper;
   }
-}
 
-async function copyCode(source: string, button: HTMLButtonElement, copiedLabel: string): Promise<void> {
-  try {
-    await navigator.clipboard.writeText(source);
-    button.textContent = copiedLabel;
-    button.setAttribute("aria-label", copiedLabel);
-    window.setTimeout(() => {
-      button.textContent = button.dataset.label ?? "Copy code";
-      button.setAttribute("aria-label", button.textContent);
-    }, 1400);
-  } catch {
-    return;
+  destroy(dom: HTMLElement): void {
+    mountedBlocks.get(dom)?.destroy();
+    mountedBlocks.delete(dom);
   }
 }
 

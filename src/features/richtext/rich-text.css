@@ -41,46 +41,6 @@
   color: var(--note-secondary);
   margin: 0.5em 0;
 }
-.rich-text-editor .ProseMirror pre {
-  background: var(--note-code-bg);
-  padding: 0.75rem 1rem;
-  font-size: 13px;
-  overflow-x: auto;
-}
-.rich-text-editor .ProseMirror .code-block-shell {
-  border: 1px solid var(--note-border);
-  border-radius: 8px;
-  overflow: hidden;
-  background: var(--note-code-bg);
-}
-.rich-text-editor .ProseMirror .code-block-shell pre {
-  margin: 0;
-  border: none;
-  border-radius: 0;
-}
-.rich-text-editor .ProseMirror .code-block-toolbar {
-  display: flex;
-  align-items: center;
-  min-height: 30px;
-  padding: 0 0.5rem;
-  border-bottom: 1px solid var(--note-border);
-  background: var(--note-muted);
-}
-.rich-text-editor .ProseMirror .code-block-language {
-  padding: 2px 4px;
-  border: none;
-  border-radius: 4px;
-  background: transparent;
-  color: var(--note-secondary);
-  font-family: inherit;
-  font-size: 11px;
-  cursor: pointer;
-  outline: none;
-}
-.rich-text-editor .ProseMirror .code-block-language:hover {
-  background: var(--note-surface);
-  color: var(--note-ink);
-}
 .rich-text-editor .ProseMirror code {
   font-family: var(--note-code-font);
   background: var(--note-code-bg);

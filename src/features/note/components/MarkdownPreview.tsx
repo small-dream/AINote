@@ -1,4 +1,4 @@
-import { useMemo, useState, type ComponentProps, type ReactNode } from "react";
+import { useMemo, type ComponentProps, type ReactNode } from "react";
 import ReactMarkdown, { defaultUrlTransform, type Components, type ExtraProps } from "react-markdown";
 import type { ComponentType } from "react";
 import remarkGfm from "remark-gfm";
@@ -68,30 +68,13 @@ function Heading(tag: "h1" | "h2" | "h3" | "h4" | "h5" | "h6", ids: Map<string, 
 }
 
 function CodeBlock({ node, children, ...props }: PreProps) {
-  const { t } = useTranslation();
-  const [copied, setCopied] = useState(false);
-  const code = textContent(children).replace(/\n$/, "");
+  const code = textContent(children);
   const language = getLanguage(children);
   if (language?.toLocaleLowerCase() === "mermaid") {
     return <MermaidBlock source={code} line={getNodeLine(node)} />;
   }
-  const handleCopy = async () => {
-    try {
-      await navigator.clipboard.writeText(code);
-      setCopied(true);
-      window.setTimeout(() => setCopied(false), 1400);
-    } catch {
-      setCopied(false);
-    }
-  };
   return (
-    <div className="markdown-code-block" data-line={getNodeLine(node)}>
-      <div className="markdown-code-toolbar">
-        <span>{language ?? t("note.code")}</span>
-        <button type="button" onClick={() => void handleCopy()}>{copied ? t("note.copied") : t("note.copyCode")}</button>
-      </div>
-      <CodeBlockScroller {...props}>{children}</CodeBlockScroller>
-    </div>
+    <CodeBlockScroller {...props} source={code} language={language} line={getNodeLine(node)}>{children}</CodeBlockScroller>
   );
 }
 

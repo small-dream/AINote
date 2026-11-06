@@ -1,9 +1,10 @@
-import { mergeAttributes, type Editor, type NodeViewRendererProps } from "@tiptap/core";
+import { mergeAttributes, type NodeViewRendererProps } from "@tiptap/core";
 import CodeBlockLowlight from "@tiptap/extension-code-block-lowlight";
 import { createLowlight, common } from "lowlight";
 import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { ViewMutationRecord } from "@tiptap/pm/view";
 import { useUiStore } from "@/stores/ui.store";
+import { mountCodeBlock } from "@/features/code-block/mountCodeBlock";
 
 /** 基于 highlight.js 的 Lowlight 实例：注册常见语言，支持自动检测。 */
 const lowlight = createLowlight(common);
@@ -35,14 +36,19 @@ function syncLanguageOptions(select: HTMLSelectElement, language: string) {
   }
 }
 
-/** 构建代码块头部的语言下拉：填充选项、显示当前语言并绑定切换命令。 */
-function createLanguageSelect(editor: Editor, initialLanguage: string) {
+/** 构建底部语言下拉：填充选项、显示当前语言并绑定切换命令。 */
+function createLanguageSelect(initialLanguage: string, onChange: (language: string | null) => void) {
   const select = document.createElement("select");
   select.className = "code-block-language";
-  select.setAttribute("aria-label", useUiStore.getState().locale === "zh-CN" ? "代码语言" : "Code language");
   const autoOption = document.createElement("option");
   autoOption.value = "";
-  autoOption.textContent = useUiStore.getState().locale === "zh-CN" ? "自动检测" : "Auto detect";
+  const translate = () => {
+    const chinese = useUiStore.getState().locale === "zh-CN";
+    select.setAttribute("aria-label", chinese ? "代码语言" : "Code language");
+    autoOption.textContent = chinese ? "自动检测" : "Auto detect";
+  };
+  translate();
+  const unsubscribe = useUiStore.subscribe(translate);
   select.append(autoOption);
   for (const { id, label } of CODE_LANGUAGES) {
     const option = document.createElement("option");
@@ -53,34 +59,42 @@ function createLanguageSelect(editor: Editor, initialLanguage: string) {
   syncLanguageOptions(select, initialLanguage);
   select.value = initialLanguage;
   select.addEventListener("change", () => {
-    editor.chain().focus().updateAttributes("codeBlock", { language: select.value || null }).run();
+    onChange(select.value || null);
   });
   select.addEventListener("mousedown", (event) => event.stopPropagation());
-  return select;
+  return { select, unsubscribe };
 }
 
-/** 代码块 NodeView：头部内嵌语言下拉（参考 Typora/Notion），内容区保持可编辑。 */
+/** 共享阅读式容器与底部语言选择，内容 DOM 仍由 ProseMirror 管理。 */
 function createCodeBlockView() {
   return (props: NodeViewRendererProps) => {
     const { node } = props;
-    const container = document.createElement("div");
-    container.className = "code-block-shell";
-
     const toolbar = document.createElement("div");
-    toolbar.className = "code-block-toolbar";
+    toolbar.className = "note-code-language";
+    toolbar.contentEditable = "false";
+    toolbar.dataset.codeControl = "";
     const currentLanguage = node.attrs.language ?? "";
-    const select = createLanguageSelect(props.editor, currentLanguage);
+    const { select, unsubscribe } = createLanguageSelect(currentLanguage, (language) => {
+      const position = props.getPos();
+      if (position === undefined) return;
+      const { state, dispatch } = props.view;
+      const current = state.doc.nodeAt(position);
+      if (current) dispatch(state.tr.setNodeMarkup(position, undefined, { ...current.attrs, language }));
+    });
     toolbar.append(select);
 
     const pre = document.createElement("pre");
     const code = document.createElement("code");
     if (node.attrs.language) code.className = `language-${node.attrs.language}`;
     pre.append(code);
-    container.append(toolbar, pre);
-
+    const mounted = mountCodeBlock({ pre, footer: toolbar, getSource: () => code.textContent ?? "" });
+    const container = mounted.shell;
+    container.classList.add("code-block-shell");
     return {
       dom: container,
       contentDOM: code,
+      stopEvent: (event: Event) => event.target instanceof Element && Boolean(event.target.closest("[data-code-control]")),
+      destroy: () => { unsubscribe(); mounted.destroy(); },
       update(updatedNode: ProseMirrorNode) {
         if (updatedNode.type !== node.type) return false;
         const language = updatedNode.attrs.language ?? "";
@@ -98,8 +112,7 @@ function createCodeBlockView() {
   };
 }
 
-/** 代码块节点：在 Lowlight 语法高亮基础上，把语言写入 pre 的 data-language
- * 属性，供顶部语言徽标展示（替换 StarterKit 内置 codeBlock，同名扩展不能共存）。 */
+/** 语言属性保留在静态 HTML；操作控件与换行状态不参与序列化。 */
 export const CodeBlock = CodeBlockLowlight.extend({
   addNodeView() {
     return createCodeBlockView();
