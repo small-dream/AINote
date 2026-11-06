@@ -143,7 +143,8 @@
   }
 
   .markdown-code-toolbar,
-  .code-block-toolbar {
+  .code-block-toolbar,
+  .markdown-code-scrollbar {
     display: none !important;
   }
 

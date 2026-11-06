@@ -23,6 +23,7 @@ import { slugifyHeading, textContent } from "../utils/preview";
 import { useTranslation } from "@/i18n";
 import { MarkdownProperties } from "./MarkdownProperties";
 import { MermaidBlock } from "./MermaidBlock";
+import { CodeBlockScroller } from "./CodeBlockScroller";
 import { toggleTaskAtLine } from "../utils/task";
 import { PreviewImage } from "./PreviewImage";
 import { isExternalHttpUrl, isMailtoUrl, openExternalLink } from "@/platform/open-link";
@@ -89,7 +90,7 @@ function CodeBlock({ node, children, ...props }: PreProps) {
         <span>{language ?? t("note.code")}</span>
         <button type="button" onClick={() => void handleCopy()}>{copied ? t("note.copied") : t("note.copyCode")}</button>
       </div>
-      <pre {...props}>{children}</pre>
+      <CodeBlockScroller {...props}>{children}</CodeBlockScroller>
     </div>
   );
 }
