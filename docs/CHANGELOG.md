@@ -12,7 +12,7 @@
 ### 验证
 
 - `pnpm build` 通过；`pnpm test` 249 个文件通过（1509 passed，1 skipped）；`pnpm lint` 通过。
-- `cargo test mcp --lib`：44 passed（含配置路径、JSON 合并/原子写、六种客户端条目格式、Token/HTTP/工具/加密笔记）。
+- `cargo test mcp --lib`：45 passed（含配置路径、JSON 合并/原子写与 BOM、六种客户端条目格式、Token/HTTP/工具/加密笔记）。
 - `cargo test`：486 passed、6 ignored；14 项 Windows 专有路径分隔符断言失败（与既有记录相同，CI 在 ubuntu-22.04 运行）。
 - 未在真实 Claude Code / Claude Desktop / Cursor / VS Code / Windsurf / Cline 上执行手工连接验收；发布前需按 `docs/MCP_INTEGRATION_PLAN.md` §7 验证写入后客户端能发现工具。
 

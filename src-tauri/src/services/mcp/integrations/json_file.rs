@@ -5,21 +5,25 @@
 use std::fs;
 use std::io::Write;
 use std::path::Path;
+use std::sync::atomic::{AtomicU64, Ordering};
 
 use serde_json::{Map, Value};
 
 pub const SERVER_NAME: &str = "ainote";
+
+static TEMP_SEQUENCE: AtomicU64 = AtomicU64::new(0);
 
 pub fn read_root(path: &Path) -> Result<Map<String, Value>, String> {
     if !path.exists() {
         return Ok(Map::new());
     }
     let text = fs::read_to_string(path).map_err(|err| format!("读取配置失败: {err}"))?;
+    let text = text.strip_prefix('\u{feff}').unwrap_or(&text);
     if text.trim().is_empty() {
         return Ok(Map::new());
     }
     let value: Value =
-        serde_json::from_str(&text).map_err(|err| format!("配置不是合法 JSON: {err}"))?;
+        serde_json::from_str(text).map_err(|err| format!("配置不是合法 JSON: {err}"))?;
     value
         .as_object()
         .cloned()
@@ -67,7 +71,11 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
         .file_name()
         .ok_or_else(|| "配置文件没有文件名".to_string())?
         .to_string_lossy();
-    let temp = parent.join(format!(".{file_name}.ainote-tmp"));
+    let sequence = TEMP_SEQUENCE.fetch_add(1, Ordering::Relaxed);
+    let temp = parent.join(format!(
+        ".{file_name}.ainote-{}-{sequence}.tmp",
+        std::process::id()
+    ));
     {
         let mut file =
             fs::File::create(&temp).map_err(|err| format!("创建临时配置失败: {err}"))?;
@@ -88,11 +96,27 @@ fn write_atomic(path: &Path, bytes: &[u8]) -> Result<(), String> {
             .map_err(|err| format!("同步临时配置失败: {err}"))?;
     }
     if fs::rename(&temp, path).is_err() {
-        // Windows 上目标被占用时 rename 可能失败：清理目标后重试，失败则保留临时文件。
-        fs::remove_file(path).map_err(|err| format!("替换配置失败: {err}"))?;
-        fs::rename(&temp, path).map_err(|err| format!("替换配置失败: {err}"))?;
+        // Windows 上目标被占用时 rename 可能失败：先备份目标，失败时恢复，避免丢配置。
+        let backup = parent.join(format!(".{file_name}.ainote-bak"));
+        let had_target = fs::rename(path, &backup).is_ok();
+        match fs::rename(&temp, path) {
+            Ok(()) => {
+                if had_target {
+                    let _ = fs::remove_file(&backup);
+                }
+                Ok(())
+            }
+            Err(err) => {
+                if had_target {
+                    let _ = fs::rename(&backup, path);
+                }
+                let _ = fs::remove_file(&temp);
+                Err(format!("替换配置失败: {err}"))
+            }
+        }
+    } else {
+        Ok(())
     }
-    Ok(())
 }
 
 #[cfg(test)]
@@ -147,6 +171,14 @@ mod tests {
         let empty = dir.path().join("empty.json");
         fs::write(&empty, "  \n").unwrap();
         assert!(read_root(&empty).unwrap().is_empty());
+    }
+
+    #[test]
+    fn utf8_bom_is_tolerated() {
+        let dir = tmp();
+        let path = dir.path().join("bom.json");
+        fs::write(&path, "\u{feff}{\"mcpServers\":{}}").unwrap();
+        assert!(read_root(&path).is_ok());
     }
 
     #[test]

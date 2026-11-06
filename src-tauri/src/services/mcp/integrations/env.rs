@@ -16,10 +16,13 @@ pub struct ConfigEnv {
 
 impl ConfigEnv {
     pub fn current() -> Self {
-        let home = std::env::var_os("HOME")
-            .or_else(|| std::env::var_os("USERPROFILE"))
-            .map(PathBuf::from)
-            .unwrap_or_default();
+        let home = if cfg!(windows) {
+            std::env::var_os("USERPROFILE").or_else(|| std::env::var_os("HOME"))
+        } else {
+            std::env::var_os("HOME").or_else(|| std::env::var_os("USERPROFILE"))
+        }
+        .map(PathBuf::from)
+        .unwrap_or_default();
         let app_support = if cfg!(windows) {
             std::env::var_os("APPDATA")
                 .map(PathBuf::from)
