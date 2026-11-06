@@ -21,6 +21,9 @@ export function highlightCode(source: string, language: string | null): HTMLElem
   pre.appendChild(code);
   void loadLowlight().then((lowlight) => {
     const root = language ? lowlight.highlight(language, source) : lowlight.highlightAuto(source);
+    // highlightAuto 对无法识别的纯文本会返回空结果树；此时保留已写入的源码，
+    // 否则无语言标记的围栏代码块（例如 `| dedup devid`）会被清成空白。
+    if (root.children.length === 0) return;
     code.replaceChildren();
     appendHastChildren(code, root);
   }).catch(() => undefined);
