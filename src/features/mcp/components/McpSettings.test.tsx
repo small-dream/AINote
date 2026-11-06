@@ -40,6 +40,14 @@ const STATUS = {
       error: null,
     },
     {
+      id: "codex",
+      name: "Codex",
+      configPath: "/home/u/.codex/config.toml",
+      detected: true,
+      configured: false,
+      error: null,
+    },
+    {
       id: "windsurf",
       name: "Windsurf",
       configPath: "/home/u/.codeium/windsurf/mcp_config.json",
@@ -164,6 +172,28 @@ describe("McpSettings integrations", () => {
     const row = screen.getByText("Cursor").closest("li") as HTMLElement;
     fireEvent.click(within(row).getByRole("button", { name: "移除" }));
     await waitFor(() => expect(mcpApiMock.removeIntegration).toHaveBeenCalledWith("cursor"));
+  });
+});
+
+describe("McpSettings Codex", () => {
+  it("writes Codex TOML config through the same action", async () => {
+    const configured = {
+      ...STATUS,
+      integrations: STATUS.integrations.map((item) =>
+        item.id === "codex" ? { ...item, configured: true } : item,
+      ),
+    };
+    mcpApiMock.installIntegration.mockResolvedValue({
+      status: configured,
+      issuedToken: null,
+      clientConfig: null,
+    });
+    renderSettings();
+    await screen.findByText("Codex");
+    const row = screen.getByText("Codex").closest("li") as HTMLElement;
+    fireEvent.click(within(row).getByRole("button", { name: "写入配置" }));
+    await waitFor(() => expect(mcpApiMock.installIntegration).toHaveBeenCalledWith("codex"));
+    expect(await within(row).findByText("已配置")).toBeTruthy();
   });
 
   it("writes all detected clients at once", async () => {

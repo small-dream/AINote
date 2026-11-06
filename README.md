@@ -43,7 +43,7 @@ AINote 是一款面向开发者与知识工作者的跨平台 Markdown 笔记应
 - **数据所有权**：笔记保存在你自己的 Git 仓库中（GitHub / Gitee），可以随时迁移、审计、备份和回滚。
 - **离线优先**：浏览、搜索、编辑和本地提交不依赖网络；联网后再推送或拉取。
 - **本地优先的 AI**：支持 OpenAI 兼容 API 与本地 Ollama，Provider 与模型可插拔，API Key 加密存储。
-- **MCP 服务端（桌面端）**：让 Cursor、Claude Code、VS Code 等外部 Agent 通过本机 MCP 端点读取、新建和修改 Markdown 笔记；默认关闭、仅回环监听、Bearer Token 保护，写入沿用现有草稿守卫与 Git 链路。
+- **MCP 服务端（桌面端）**：让 Cursor、Claude Code、Codex 等外部 Agent 通过本机 MCP 端点读取、新建和修改 Markdown 笔记；默认关闭、仅回环监听、Bearer Token 保护，写入沿用现有草稿守卫与 Git 链路。
 - **原生性能**：React 前端与 Rust/Tauri 后端分离，Git、文件和网络操作都运行在原生层。
 
 ## 核心特性

@@ -4,14 +4,16 @@
 //! 不经过前端。用户仍可在客户端里看到明文 Token，设置页会提示配置文件权限风险。
 
 mod adapters;
+mod atomic_write;
 mod env;
 mod json_file;
+mod toml_file;
 
 use std::path::{Path, PathBuf};
 
 use crate::domain::mcp::McpIntegrationDto;
 
-use adapters::AdapterSpec;
+use adapters::{AdapterFormat, AdapterSpec};
 use env::ConfigEnv;
 
 pub struct Integrations {
@@ -40,9 +42,19 @@ impl Integrations {
     pub fn install(&self, id: &str, url: &str, token: &str) -> Result<McpIntegrationDto, String> {
         let adapter = adapters::find(id).ok_or_else(|| format!("未知客户端: {id}"))?;
         let path = self.resolve_path(adapter);
-        let mut root = json_file::read_root(&path)?;
-        json_file::set_server(&mut root, adapter.container, (adapter.entry)(url, token))?;
-        json_file::write_root(&path, &root)?;
+        let entry = (adapter.entry)(url, token);
+        match &adapter.format {
+            AdapterFormat::Json { container } => {
+                let mut root = json_file::read_root(&path)?;
+                json_file::set_server(&mut root, container, entry)?;
+                json_file::write_root(&path, &root)?;
+            }
+            AdapterFormat::Toml { section } => {
+                let mut doc = toml_file::read_doc(&path)?;
+                toml_file::set_server(&mut doc, section, &entry)?;
+                toml_file::write_doc(&path, &doc)?;
+            }
+        }
         Ok(self.describe(adapter))
     }
 
@@ -52,9 +64,18 @@ impl Integrations {
         if !path.exists() {
             return Ok(self.describe(adapter));
         }
-        let mut root = json_file::read_root(&path)?;
-        json_file::remove_server(&mut root, adapter.container);
-        json_file::write_root(&path, &root)?;
+        match &adapter.format {
+            AdapterFormat::Json { container } => {
+                let mut root = json_file::read_root(&path)?;
+                json_file::remove_server(&mut root, container);
+                json_file::write_root(&path, &root)?;
+            }
+            AdapterFormat::Toml { section } => {
+                let mut doc = toml_file::read_doc(&path)?;
+                toml_file::remove_server(&mut doc, section);
+                toml_file::write_doc(&path, &doc)?;
+            }
+        }
         Ok(self.describe(adapter))
     }
 
@@ -88,9 +109,7 @@ impl Integrations {
 
     fn is_configured(&self, adapter: &AdapterSpec) -> bool {
         let path = self.resolve_path(adapter);
-        json_file::read_root(&path)
-            .map(|root| json_file::is_configured(&root, adapter.container))
-            .unwrap_or(false)
+        self.configured_state(adapter, &path).0
     }
 
     fn detected(&self, adapter: &AdapterSpec) -> bool {
@@ -107,13 +126,7 @@ impl Integrations {
 
     fn describe(&self, adapter: &AdapterSpec) -> McpIntegrationDto {
         let path = self.resolve_path(adapter);
-        let (configured, error) = match json_file::read_root(&path) {
-            Ok(root) => (
-                json_file::is_configured(&root, adapter.container),
-                None,
-            ),
-            Err(error) => (false, Some(error)),
-        };
+        let (configured, error) = self.configured_state(adapter, &path);
         McpIntegrationDto {
             id: adapter.id.to_string(),
             name: adapter.name.to_string(),
@@ -121,6 +134,19 @@ impl Integrations {
             detected: self.detected(adapter),
             configured,
             error,
+        }
+    }
+
+    fn configured_state(&self, adapter: &AdapterSpec, path: &Path) -> (bool, Option<String>) {
+        match &adapter.format {
+            AdapterFormat::Json { container } => match json_file::read_root(path) {
+                Ok(root) => (json_file::is_configured(&root, container), None),
+                Err(error) => (false, Some(error)),
+            },
+            AdapterFormat::Toml { section } => match toml_file::read_doc(path) {
+                Ok(doc) => (toml_file::is_configured(&doc, section), None),
+                Err(error) => (false, Some(error)),
+            },
         }
     }
 
@@ -239,6 +265,27 @@ mod tests {
         );
         // 未配置的 VS Code 不应被创建。
         assert!(!Path::new(&integrations.list().iter().find(|i| i.id == "vscode").unwrap().config_path).exists());
+    }
+
+    #[test]
+    fn installs_codex_toml_and_preserves_comments() {
+        let (dir, integrations) = setup();
+        let codex_dir = dir.path().join("home").join(".codex");
+        fs::create_dir_all(&codex_dir).unwrap();
+        let config = codex_dir.join("config.toml");
+        fs::write(&config, "# existing\nmodel = \"x\"\n").unwrap();
+
+        let entry = integrations
+            .install("codex", "http://127.0.0.1:39471/mcp", "ainote_mcp_codex")
+            .unwrap();
+        assert!(entry.configured);
+        let text = fs::read_to_string(&config).unwrap();
+        assert!(text.contains("# existing"), "{text}");
+        assert!(text.contains("[mcp_servers.ainote]"), "{text}");
+        assert!(text.contains("http_headers"), "{text}");
+        assert!(text.contains("Bearer ainote_mcp_codex"), "{text}");
+        let doc = toml_file::read_doc(&config).unwrap();
+        assert!(toml_file::is_configured(&doc, "mcp_servers"));
     }
 
     #[test]

@@ -4,17 +4,17 @@
 
 ### 新增
 
-- **一键写入客户端配置**：设置 → MCP 集成新增客户端列表，可直接把当前服务地址与 Token 写入 Claude Code、Cursor、VS Code、Windsurf、Cline 的本机 MCP 配置，无需手动复制 JSON。Claude Desktop 的远程连接器仍需在其 Connectors UI 添加。
+- **一键写入客户端配置**：设置 → MCP 集成新增客户端列表，可直接把当前服务地址与 Token 写入 Claude Code、Codex、Cursor、VS Code、Windsurf、Cline 的本机 MCP 配置，无需手动复制 JSON。Claude Desktop 的远程连接器仍需在其 Connectors UI 添加。
 - **安全合并**：只替换 `ainote` 条目，保留同一文件里的其他服务器与顶层字段；文件不是合法 JSON 时不覆盖并显示原因；临时文件 + rename 原子写，Unix 下保留原权限。
 - **自动同步**：轮换 Token 或修改端口后，自动更新所有已写入的客户端；失败项在设置页提示，不阻断轮换本身。
 - **风险提示**：客户端配置包含 Token 明文，界面明确提示「仅本人可读」；移动端不提供该能力。
 
 ### 验证
 
-- `pnpm build` 通过；`pnpm test` 249 个文件通过（1509 passed，1 skipped）；`pnpm lint` 通过。
-- `cargo test mcp --lib`：45 passed（含配置路径、JSON 合并/原子写与 BOM、六种客户端条目格式、Token/HTTP/工具/加密笔记）。
-- `cargo test`：486 passed、6 ignored；14 项 Windows 专有路径分隔符断言失败（与既有记录相同，CI 在 ubuntu-22.04 运行）。
-- 未在真实 Claude Code / Cursor / VS Code / Windsurf / Cline 上执行手工连接验收；发布前需按 `docs/MCP_INTEGRATION_PLAN.md` §7 验证写入后客户端能发现工具。
+- `pnpm build` 通过；`pnpm test` 249 个文件通过（1510 passed，1 skipped）；`pnpm lint` 通过。
+- `cargo test mcp --lib`：51 passed（含配置路径、JSON/TOML 合并与原子写、六种客户端条目格式、Token/HTTP/工具/加密笔记）。
+- `cargo test`：493 passed、6 ignored；14 项 Windows 专有路径分隔符断言失败（与既有记录相同，CI 在 ubuntu-22.04 运行）。
+- 未在真实 Claude Code / Codex / Cursor / VS Code / Windsurf / Cline 上执行手工连接验收；发布前需按 `docs/MCP_INTEGRATION_PLAN.md` §7 验证写入后客户端能发现工具。
 
 ## v0.61.0 — 2026-11-06（MCP 集成：外部 AI Agent 操作笔记）
 

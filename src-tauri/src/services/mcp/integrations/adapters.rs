@@ -9,11 +9,17 @@ use serde_json::{json, Value};
 
 use super::env::{self, ConfigEnv};
 
+pub enum AdapterFormat {
+    /// JSON 文件，顶层容器键为 `mcpServers` 或 VS Code 的 `servers`。
+    Json { container: &'static str },
+    /// TOML 文件，节为 `mcp_servers`（Codex）。
+    Toml { section: &'static str },
+}
+
 pub struct AdapterSpec {
     pub id: &'static str,
     pub name: &'static str,
-    /// 顶层容器键：`mcpServers` 或 VS Code 的 `servers`。
-    pub container: &'static str,
+    pub format: AdapterFormat,
     /// 父目录存在即视为已安装（Claude Code 只看文件本身）。
     pub detect_parent: bool,
     pub paths: fn(&ConfigEnv) -> Vec<PathBuf>,
@@ -25,15 +31,29 @@ pub fn adapters() -> &'static [AdapterSpec] {
         AdapterSpec {
             id: "claude-code",
             name: "Claude Code",
-            container: "mcpServers",
+            format: AdapterFormat::Json {
+                container: "mcpServers",
+            },
             detect_parent: false,
             paths: env::claude_code,
             entry: http_entry,
         },
         AdapterSpec {
+            id: "codex",
+            name: "Codex",
+            format: AdapterFormat::Toml {
+                section: "mcp_servers",
+            },
+            detect_parent: true,
+            paths: env::codex,
+            entry: codex_entry,
+        },
+        AdapterSpec {
             id: "cursor",
             name: "Cursor",
-            container: "mcpServers",
+            format: AdapterFormat::Json {
+                container: "mcpServers",
+            },
             detect_parent: true,
             paths: env::cursor,
             entry: url_entry,
@@ -41,7 +61,7 @@ pub fn adapters() -> &'static [AdapterSpec] {
         AdapterSpec {
             id: "vscode",
             name: "VS Code",
-            container: "servers",
+            format: AdapterFormat::Json { container: "servers" },
             detect_parent: true,
             paths: env::vscode,
             entry: http_entry,
@@ -49,7 +69,9 @@ pub fn adapters() -> &'static [AdapterSpec] {
         AdapterSpec {
             id: "windsurf",
             name: "Windsurf",
-            container: "mcpServers",
+            format: AdapterFormat::Json {
+                container: "mcpServers",
+            },
             detect_parent: true,
             paths: env::windsurf,
             entry: windsurf_entry,
@@ -57,7 +79,9 @@ pub fn adapters() -> &'static [AdapterSpec] {
         AdapterSpec {
             id: "cline",
             name: "Cline",
-            container: "mcpServers",
+            format: AdapterFormat::Json {
+                container: "mcpServers",
+            },
             detect_parent: true,
             paths: env::cline,
             entry: cline_entry,
@@ -88,6 +112,13 @@ fn url_entry(url: &str, token: &str) -> Value {
     })
 }
 
+fn codex_entry(url: &str, token: &str) -> Value {
+    json!({
+        "url": url,
+        "http_headers": headers(token),
+    })
+}
+
 fn windsurf_entry(url: &str, token: &str) -> Value {
     json!({
         "serverUrl": url,
@@ -115,20 +146,17 @@ mod tests {
         for adapter in adapters() {
             assert!(ids.insert(adapter.id), "duplicate id {}", adapter.id);
             let entry = (adapter.entry)("http://127.0.0.1:1/mcp", "t");
-            assert_eq!(
-                entry["headers"]["Authorization"],
-                "Bearer t",
-                "{}",
-                adapter.id
-            );
             match adapter.id {
+                "codex" => {
+                    assert_eq!(entry["http_headers"]["Authorization"], "Bearer t");
+                }
                 "claude-code" | "vscode" => assert_eq!(entry["type"], "http"),
                 "windsurf" => assert!(entry.get("serverUrl").is_some()),
                 "cline" => assert_eq!(entry["type"], "streamableHttp"),
                 _ => assert!(entry.get("url").is_some()),
             }
         }
-        assert_eq!(ids.len(), 5);
+        assert_eq!(ids.len(), 6);
     }
 
     #[test]
@@ -136,5 +164,14 @@ mod tests {
         let adapter = find("claude-code").unwrap();
         assert!(!adapter.detect_parent);
         assert!(find("cursor").unwrap().detect_parent);
+    }
+
+    #[test]
+    fn codex_uses_toml_section() {
+        let adapter = find("codex").unwrap();
+        match adapter.format {
+            AdapterFormat::Toml { section } => assert_eq!(section, "mcp_servers"),
+            _ => panic!("codex should use toml"),
+        }
     }
 }

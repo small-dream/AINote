@@ -142,7 +142,7 @@
 - **P1-MCP-3 新建与修改**：Agent 可新建 Markdown 笔记，整篇覆盖、追加或精确片段替换已有 `.md` 笔记。写入使用 `expectedRevision` 乐观并发；旧 revision 返回冲突且不覆盖。
 - **P1-MCP-4 数据安全与协同**：编辑器存在未落盘草稿时写工具被拒绝；同步/提交进行中返回可重试忙碌错误；写入不自动创建 Git 提交，仍走用户手动提交或同步前兜底；写入后 UI 自动失效查询并在无脏草稿时重载当前笔记。
 - **P1-MCP-5 凭证与边界**：Token 只存平台安全存储，仅在首次生成/轮换时一次性展示；日志只记录方法与工具名，不含 Token、正文或绝对路径。移动端不提供服务与入口，保持共享代码可编译。
-- **P1-MCP-6 一键写入客户端**：设置页可直接把当前地址与 Token 写入 Claude Code、Cursor、VS Code、Windsurf、Cline 的本机 MCP 配置；只替换 `ainote` 条目，保留其他服务器；解析失败不覆盖原文件；轮换 Token / 改端口后自动同步已写入的客户端。客户端配置含 Token 明文，界面明确提示文件权限风险。Claude Desktop 的远程连接器需在其 Connectors UI 添加，本版本不写 `claude_desktop_config.json`。
+- **P1-MCP-6 一键写入客户端**：设置页可直接把当前地址与 Token 写入 Claude Code、Codex、Cursor、VS Code、Windsurf、Cline 的本机 MCP 配置；只替换 `ainote` 条目，保留其他服务器；解析失败不覆盖原文件；轮换 Token / 改端口后自动同步已写入的客户端。客户端配置含 Token 明文，界面明确提示文件权限风险。Claude Desktop 的远程连接器需在其 Connectors UI 添加，本版本不写 `claude_desktop_config.json`。
 - **验收**：7 个工具可被真实 MCP 客户端调用；创建/修改后列表、目录树、编辑器刷新；revision 冲突、草稿守卫、加密锁定、Token 轮换、错误 Origin、端口占用均有明确反馈；`pnpm build && pnpm test && pnpm lint` 与 `cargo test` 通过。
 
 ## 3. 核心业务流程

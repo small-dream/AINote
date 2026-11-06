@@ -97,6 +97,7 @@ Cursor 使用 `url` + `headers` 即可；若某个客户端要求显式传输类
 | 客户端 | 配置位置 | 容器键 / 条目 |
 |---|---|---|
 | Claude Code | `~/.claude.json` | `mcpServers.ainote`：`{type:"http", url, headers}` |
+| Codex | `~/.codex/config.toml`（或 `CODEX_HOME`） | `[mcp_servers.ainote]`：`url` + `http_headers` |
 | Cursor | `~/.cursor/mcp.json` | `mcpServers.ainote`：`{url, headers}` |
 | VS Code | `Code/User/mcp.json`（用户配置） | `servers.ainote`：`{type:"http", url, headers}` |
 | Windsurf | `~/.codeium/windsurf/mcp_config.json`，回退 `~/.codeium/mcp_config.json` | `mcpServers.ainote`：`{serverUrl, headers}` |
@@ -107,8 +108,8 @@ Cursor 使用 `url` + `headers` 即可；若某个客户端要求显式传输类
 写入规则：
 
 - 只替换 `ainote` 一个条目，保留同一文件中的其他服务器与顶层字段。
-- 先读取并解析；文件不是合法 JSON 时**不覆盖**，在设置页显示具体原因。
-- 采用临时文件 + rename 原子写；Unix 下保留原文件权限。
+- 先读取并解析；文件不是合法 JSON / TOML 时**不覆盖**，在设置页显示具体原因。
+- 采用临时文件 + rename 原子写；Unix 下保留原文件权限；Codex 的 `config.toml` 使用 `toml_edit` 保留注释与格式。
 - 轮换 Token 或修改端口后，自动更新所有已配置客户端；失败项在设置页提示，不阻断轮换本身。
 - 客户端配置文件会包含 Token 明文，设置页明确提示「仅本人可读」；写入后需重启对应客户端。
 - 移动端不提供该能力。

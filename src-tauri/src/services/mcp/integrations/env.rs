@@ -12,6 +12,8 @@ pub struct ConfigEnv {
     pub home: PathBuf,
     /// Windows `%APPDATA%`；macOS `~/Library/Application Support`；Linux `$XDG_CONFIG_HOME` 或 `~/.config`。
     pub app_support: PathBuf,
+    /// Codex 配置目录；优先 `CODEX_HOME`，否则 `~/.codex`。
+    pub codex_home: PathBuf,
 }
 
 impl ConfigEnv {
@@ -34,7 +36,14 @@ impl ConfigEnv {
                 .map(PathBuf::from)
                 .unwrap_or_else(|| home.join(".config"))
         };
-        Self { home, app_support }
+        let codex_home = std::env::var_os("CODEX_HOME")
+            .map(PathBuf::from)
+            .unwrap_or_else(|| home.join(".codex"));
+        Self {
+            home,
+            app_support,
+            codex_home,
+        }
     }
 
     #[cfg(test)]
@@ -42,6 +51,7 @@ impl ConfigEnv {
         Self {
             home: home.to_path_buf(),
             app_support: app_support.to_path_buf(),
+            codex_home: home.join(".codex"),
         }
     }
 
@@ -56,6 +66,10 @@ impl ConfigEnv {
 
 pub fn claude_code(env: &ConfigEnv) -> Vec<PathBuf> {
     vec![env.home.join(".claude.json")]
+}
+
+pub fn codex(env: &ConfigEnv) -> Vec<PathBuf> {
+    vec![env.codex_home.join("config.toml")]
 }
 
 pub fn cursor(env: &ConfigEnv) -> Vec<PathBuf> {
@@ -107,6 +121,10 @@ mod tests {
     #[test]
     fn paths_are_relative_to_home_or_app_support() {
         assert_eq!(claude_code(&env())[0], Path::new("/home/u/.claude.json"));
+        assert_eq!(
+            codex(&env())[0],
+            Path::new("/home/u/.codex/config.toml")
+        );
         assert_eq!(
             cursor(&env())[0],
             Path::new("/home/u/.cursor/mcp.json")

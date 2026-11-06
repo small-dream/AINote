@@ -43,6 +43,7 @@ tauri-plugin-updater = "2.14.1"
 tauri-plugin-window-state = "2.5.0"
 tauri-plugin-global-shortcut = "2.4.1"
 tiny_http = "0.12"
+toml_edit = "0.25"
 # 仅为启用 reqwest 的 system-proxy 特性：Windows 读取注册表系统代理、macOS 读取系统网络配置，
 # 让 tauri-plugin-updater 的更新检查跟随系统代理，避免直连 GitHub 被重置/超时导致「检查更新失败」。
 # reqwest 本体由 tauri-plugin-updater 引入（rustls-no-provider + 插件自装 ring provider），

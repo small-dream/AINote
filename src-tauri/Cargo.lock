@@ -128,6 +128,7 @@ dependencies = [
  "thiserror 2.0.20",
  "time",
  "tiny_http",
+ "toml_edit 0.25.13+spec-1.1.0",
  "ureq",
  "zeroize",
  "zip 4.6.1",
@@ -5390,6 +5391,7 @@ dependencies = [
  "indexmap 2.14.1",
  "toml_datetime 1.1.1+spec-1.1.0",
  "toml_parser",
+ "toml_writer",
  "winnow 1.0.4",
 ]
 
