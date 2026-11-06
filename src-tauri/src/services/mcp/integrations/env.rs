@@ -58,13 +58,6 @@ pub fn claude_code(env: &ConfigEnv) -> Vec<PathBuf> {
     vec![env.home.join(".claude.json")]
 }
 
-pub fn claude_desktop(env: &ConfigEnv) -> Vec<PathBuf> {
-    vec![env
-        .app_support
-        .join("Claude")
-        .join("claude_desktop_config.json")]
-}
-
 pub fn cursor(env: &ConfigEnv) -> Vec<PathBuf> {
     vec![env.home.join(".cursor").join("mcp.json")]
 }
@@ -114,10 +107,6 @@ mod tests {
     #[test]
     fn paths_are_relative_to_home_or_app_support() {
         assert_eq!(claude_code(&env())[0], Path::new("/home/u/.claude.json"));
-        assert_eq!(
-            claude_desktop(&env())[0],
-            Path::new("/home/u/.config/Claude/claude_desktop_config.json")
-        );
         assert_eq!(
             cursor(&env())[0],
             Path::new("/home/u/.cursor/mcp.json")

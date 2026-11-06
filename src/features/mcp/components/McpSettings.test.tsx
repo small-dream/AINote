@@ -40,9 +40,9 @@ const STATUS = {
       error: null,
     },
     {
-      id: "claude-desktop",
-      name: "Claude Desktop",
-      configPath: "/home/u/.config/Claude/claude_desktop_config.json",
+      id: "windsurf",
+      name: "Windsurf",
+      configPath: "/home/u/.codeium/windsurf/mcp_config.json",
       detected: false,
       configured: false,
       error: null,

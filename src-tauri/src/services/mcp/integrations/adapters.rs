@@ -31,14 +31,6 @@ pub fn adapters() -> &'static [AdapterSpec] {
             entry: http_entry,
         },
         AdapterSpec {
-            id: "claude-desktop",
-            name: "Claude Desktop",
-            container: "mcpServers",
-            detect_parent: true,
-            paths: env::claude_desktop,
-            entry: url_entry,
-        },
-        AdapterSpec {
             id: "cursor",
             name: "Cursor",
             container: "mcpServers",
@@ -136,7 +128,7 @@ mod tests {
                 _ => assert!(entry.get("url").is_some()),
             }
         }
-        assert_eq!(ids.len(), 6);
+        assert_eq!(ids.len(), 5);
     }
 
     #[test]

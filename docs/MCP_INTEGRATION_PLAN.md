@@ -97,11 +97,12 @@ Cursor 使用 `url` + `headers` 即可；若某个客户端要求显式传输类
 | 客户端 | 配置位置 | 容器键 / 条目 |
 |---|---|---|
 | Claude Code | `~/.claude.json` | `mcpServers.ainote`：`{type:"http", url, headers}` |
-| Claude Desktop | Windows `%APPDATA%\Claude\claude_desktop_config.json`；macOS `~/Library/Application Support/Claude/...`；Linux `$XDG_CONFIG_HOME/Claude/...` | `mcpServers.ainote`：`{url, headers}` |
 | Cursor | `~/.cursor/mcp.json` | `mcpServers.ainote`：`{url, headers}` |
 | VS Code | `Code/User/mcp.json`（用户配置） | `servers.ainote`：`{type:"http", url, headers}` |
 | Windsurf | `~/.codeium/windsurf/mcp_config.json`，回退 `~/.codeium/mcp_config.json` | `mcpServers.ainote`：`{serverUrl, headers}` |
 | Cline | `~/.cline/data/settings/cline_mcp_settings.json` 或 VS Code / Cursor 的 `globalStorage/saoudrizwan.claude-dev/settings/cline_mcp_settings.json` | `mcpServers.ainote`：`{type:"streamableHttp", url, headers, disabled:false, autoApprove:[]}` |
+
+> Claude Desktop 的远程自定义连接器目前通过其 Connectors UI 添加，`claude_desktop_config.json` 不是通用的远程 HTTP 配置入口；本版本不写该文件，避免生成一个客户端不识别、看起来却「已配置」的条目。
 
 写入规则：
 
