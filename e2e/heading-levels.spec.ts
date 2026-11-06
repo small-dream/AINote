@@ -52,6 +52,19 @@ for (const { name, viewport } of [
       await line(page, "四级标题").click({ position: { x: 20, y: 8 } });
       await expect(visibleTrigger(page)).toHaveText("H6");
     });
+
+    test("切到预览再回写作：光标停在原处，标题级别不跳成首行 H1", async ({ page }) => {
+      await openHeadingNote(page);
+      await line(page, "四级标题").click({ position: { x: 20, y: 8 } });
+      await expect(visibleTrigger(page)).toHaveText("H4");
+
+      await page.getByRole("tab", { name: "预览" }).click();
+      await page.getByRole("tab", { name: "写作" }).click();
+
+      // 编辑器重建后光标应回到 H4 段落，而不是默认落到文档开头的 H1
+      await expect(visibleTrigger(page)).toHaveText("H4");
+      await expect(page.locator(".editor-status-bar:visible").first()).toContainText("第 3 行");
+    });
   });
 }
 

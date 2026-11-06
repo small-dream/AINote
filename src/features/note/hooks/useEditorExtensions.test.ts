@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { undo } from "@codemirror/commands";
 import { useUiStore } from "@/stores/ui.store";
 import { mountEditor } from "@/test/editorHarness";
+import { clearEditorSelectionMemory, editorSelectionKey, readEditorSelection } from "../utils/editorSelectionStore";
 import { useEditorExtensions } from "./useEditorExtensions";
 
 describe("useEditorExtensions", () => {
@@ -76,5 +77,28 @@ describe("useEditorExtensions", () => {
     const normal = result.current.extensions;
     rerender({ typewriter: true });
     expect(result.current.extensions).not.toBe(normal);
+  });
+});
+
+describe("useEditorExtensions / 选区快照", () => {
+  beforeEach(() => {
+    useUiStore.setState({ noteTheme: "classic" });
+    clearEditorSelectionMemory();
+  });
+
+  it("把最新选区记到当前笔记下，切换笔记后记到新键", () => {
+    const { result, rerender } = renderHook(
+      ({ resetKey }) => useEditorExtensions({ softRenderEnabled: false, repoPath: "/repo", resetKey }),
+      { initialProps: { resetKey: "a.md" } },
+    );
+    const viewA = mountEditor(result.current.extensions, "hello world");
+
+    act(() => viewA.dispatch({ selection: { anchor: 7, head: 2 } }));
+    expect(readEditorSelection(editorSelectionKey("/repo", "a.md"))).toEqual({ anchor: 7, head: 2 });
+
+    rerender({ resetKey: "b.md" });
+    const viewB = mountEditor(result.current.extensions, "hello world");
+    act(() => viewB.dispatch({ selection: { anchor: 3, head: 3 } }));
+    expect(readEditorSelection(editorSelectionKey("/repo", "b.md"))).toEqual({ anchor: 3, head: 3 });
   });
 });

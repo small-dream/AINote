@@ -87,6 +87,18 @@ describe("ToolbarMenu / 键盘导航", () => {
   });
 });
 
+describe("ToolbarMenu / 文字触发器", () => {
+  it("当前值（active）只加重文字色，不用选中底色；展开时才显示 accent", () => {
+    render(<ToolbarMenu variant="format" label="标题级别" text="H2" active entries={[]} />);
+    const trigger = screen.getByRole("button", { name: "标题级别" });
+    expect(trigger.className).toContain("text-text-primary");
+    expect(trigger.className).not.toContain("bg-accent-soft");
+
+    fireEvent.click(trigger);
+    expect(trigger.className).toContain("bg-accent-soft");
+  });
+});
+
 describe("ToolbarMenu / 无障碍语义", () => {
   it("文件选择器项是真实按钮，可被键盘聚焦", () => {
     openMenu();

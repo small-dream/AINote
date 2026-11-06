@@ -14,6 +14,7 @@ import { usePreviewContextMenu } from "../hooks/usePreviewContextMenu";
 import { MarkdownContextMenu } from "./MarkdownContextMenu";
 import { type MarkdownEditorSurfaceProps } from "./MarkdownEditorSurface";
 import { extractOutline, type OutlineItem } from "../utils/outline";
+import { editorSelectionKey } from "../utils/editorSelectionStore";
 import { useEditorPreferences } from "../hooks/useEditorPreferences";
 import { dispatchFormat } from "../hooks/useFormatCommands";
 import { insertCallout } from "../utils/insert";
@@ -61,6 +62,7 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const { draft, kind, onChange, flush, saving, dirty, loaded, loadError, saveError, locked, encrypted } = useNoteEditor(repoPath, notePath, history.reloadEpoch);
     const preferences = useEditorPreferences(repoPath, notePath);
     const { onCreateEditor, viewRef } = useFocusTitleOnLoad(focusTitleOnLoad, notePath, draft);
+    const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor, editorSelectionKey(repoPath, notePath));
     const { request: markdownLinkInput, open: openMarkdownLink, openForHref: openMarkdownLinkForHref } = useMarkdownLinkInput(viewRef);
     const wiki = useEditorWiki(repoPath, onOpenNote);
     const noteTheme = useUiStore((state) => state.noteTheme);
@@ -76,7 +78,6 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
     const onLinkAction = useCallback((href: string, point: { x: number; y: number }) => handleLinkAction({ href, point, onOpenLink: () => void openExternalLink(href).catch(reportToastError) }), [handleLinkAction]);
     const { extensions, activeFormats, canUndo, canRedo, cursorPosition } = useEditorExtensions({ notes: wiki.notes, repoPath, onOpenWiki: wiki.handleOpenWiki, onLinkAction, onLinkInput: openMarkdownLink, softRenderEnabled, typewriterMode, resetKey: notePath });
     const noteNavigation = useNoteNavigationHistory(flush, Boolean(notePath));
-    const { readyView, handleCreateEditor } = useEditorViewReady(onCreateEditor);
     const outline = useMemo(() => extractOutline(draft), [draft]);
     const asset = useAssetImport(readyView);
     const previewRef = useRef<HTMLDivElement | null>(null);

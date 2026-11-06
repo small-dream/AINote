@@ -39,7 +39,7 @@ interface ToolbarMenuProps {
   variant?: "bar" | "format";
   /** format 变体的文字触发器内容（如标题级别选择器）；提供时图标让位给文字 + 下拉箭头 */
   text?: string | undefined;
-  /** 触发器选中态（如当前标题非正文） */
+  /** 触发器当前值（如非正文的标题级别）：只加重文字色，不用选中底色，避免把「值」误读成开关 */
   active?: boolean | undefined;
   width?: number;
   /** 面板水平对齐：end 右缘对齐触发器（顶栏右侧），start 左缘对齐（左侧导航轨） */
@@ -106,7 +106,7 @@ function MenuTrigger({ icon, label, variant, text, active, open, toggle, tooltip
 }
 
 function FormatMenuTrigger({ icon: Icon, label, text, active, open, portal, onToggle }: { icon?: LucideIcon | undefined; label: string; text?: string | undefined; active: boolean; open: boolean; portal: boolean; onToggle: () => void }) {
-  const state = open || active ? "bg-accent-soft text-accent" : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary";
+  const state = open ? "bg-accent-soft text-accent" : active ? "text-text-primary hover:bg-bg-tertiary" : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary";
   return (
     <Tooltip content={label} placement="bottom" portal={portal}>
       <button type="button" aria-label={label} aria-haspopup="menu" aria-expanded={open} onMouseDown={(event) => event.preventDefault()} onClick={onToggle} className={`flex h-8 min-w-8 items-center justify-center gap-1 rounded-md px-1.5 text-xs font-medium transition-colors duration-120 ${state}`}>

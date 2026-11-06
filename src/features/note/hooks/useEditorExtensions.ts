@@ -22,6 +22,7 @@ import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 import { readCspNonce } from "@/platform/csp-nonce";
 import type { EditorPosition } from "../utils/editorStats";
+import { editorSelectionKey, rememberEditorSelection } from "../utils/editorSelectionStore";
 import { typewriterScroll } from "./typewriter";
 
 export interface EditorExtensionsInput {
@@ -100,6 +101,8 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     ...(typewriterMode ? [typewriterScroll()] : []),
     EditorView.updateListener.of((update) => {
       if (!update.selectionSet && !update.docChanged) return;
+      const selection = update.state.selection.main;
+      rememberEditorSelection(editorSelectionKey(repoPath, resetKey), selection);
       // 只有激活格式真正变化才更新：否则每次移动光标/拖选都会触发重渲染，
       // 进而让 @uiw/react-codemirror 重建扩展，打断进行中的鼠标选择。
       const next = getActiveFormats(update.state);
@@ -108,15 +111,14 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
         const nextState = { canUndo: undoDepth(update.state) > 0, canRedo: redoDepth(update.state) > 0 };
         return prev.canUndo === nextState.canUndo && prev.canRedo === nextState.canRedo ? prev : nextState;
       });
-      const head = update.state.selection.main.head;
-      const line = update.state.doc.lineAt(head);
-      const nextCursor = { line: line.number, column: head - line.from + 1 };
+      const line = update.state.doc.lineAt(selection.head);
+      const nextCursor = { line: line.number, column: selection.head - line.from + 1 };
       const currentKey = resetKeyRef.current;
       setCursorState((prev) => (prev.key === currentKey && prev.position.line === nextCursor.line && prev.position.column === nextCursor.column
         ? prev
         : { key: currentKey, position: nextCursor }));
     }),
-  ], [noteTheme, notes, onLinkAction, onLinkInput, onOpenWiki, repoPath, softRenderEnabled, typewriterMode, t]);
+  ], [noteTheme, notes, onLinkAction, onLinkInput, onOpenWiki, repoPath, resetKey, softRenderEnabled, typewriterMode, t]);
   const cursorPosition = cursorState.key === resetKey ? cursorState.position : { line: 1, column: 1 };
   return { extensions, activeFormats, ...historyState, cursorPosition };
 }

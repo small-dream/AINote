@@ -16,6 +16,16 @@ describe("HeadingDropdown", () => {
     }
   });
 
+  it("当前级别只作为值展示：关闭态不用选中底色，展开时才用 accent", () => {
+    render(<HeadingDropdown active={new Set(["h2"])} onSelect={vi.fn()} />);
+    const trigger = screen.getByRole("button", { name: "标题级别" });
+    expect(trigger.className).toContain("text-text-primary");
+    expect(trigger.className).not.toContain("bg-accent-soft");
+
+    fireEvent.click(trigger);
+    expect(trigger.className).toContain("bg-accent-soft");
+  });
+
   it("下拉提供正文与 H1-H6 共七个级别，选中后回调级别", () => {
     const onSelect = vi.fn();
     render(<HeadingDropdown active={new Set()} onSelect={onSelect} />);

@@ -20,7 +20,9 @@ interface HeadingDropdownProps {
   onSelect: (level: HeadingLevel) => void;
 }
 
-/** 标题级别下拉：portal 到 body 定位，避免被工具栏滚动容器裁剪 */
+/** 标题级别下拉：portal 到 body 定位，避免被工具栏滚动容器裁剪。
+ *  级别是光标所在块的属性而不是开关，触发器只展示当前值（accent 底仅用于展开态），
+ *  否则「H1」会被误读成按钮处于选中状态。 */
 export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
   const { t } = useTranslation();
   const [open, setOpen] = useState(false);
@@ -40,9 +42,11 @@ export function HeadingDropdown({ active, onSelect }: HeadingDropdownProps) {
           onMouseDown={(e) => e.preventDefault()}
           onClick={() => setOpen((v) => !v)}
           className={`flex h-7 items-center gap-0.5 rounded-md px-2 text-xs transition-colors duration-120 ${
-            current.level > 0
+            open
               ? "bg-accent-soft text-accent"
-              : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
+              : current.level > 0
+                ? "text-text-primary hover:bg-bg-tertiary"
+                : "text-text-secondary hover:bg-bg-tertiary hover:text-text-primary"
           }`}
         >
           {current.label}
