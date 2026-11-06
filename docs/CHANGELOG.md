@@ -1,5 +1,25 @@
 # 更新日志
 
+## v0.60.2 — 2026-11-06（代码块滚动条按需显现；更新说明随清单下发）
+
+### 改进
+
+- **代码块滚动条按需显现**：Markdown 预览、软渲染与富文本代码块的自定义横向滚动条默认隐藏，鼠标悬停代码块时淡入，键盘聚焦轨道或拖动时同样可见；触屏设备没有 hover，保持常驻可拖。轨道空间保留，代码块高度不随悬停跳动，长代码块不再常驻一条灰条干扰阅读。
+
+### 修复
+
+- **Windows 更新弹窗没有发布说明**：`latest.json` 的 `notes` 改为 Release 正文的「更新内容」段落（新增 `scripts/updater-notes.mjs` 及单测），说明随清单一次下发，不再依赖 WebView 对 `api.github.com` 的二次请求；发布前校验 `notes` 非空且不含安装说明，缺失即拦截公开 Release。取不到说明时弹窗展示「此版本没有填写发布说明」，回退请求失败写入前端告警日志，不再静默吞掉。
+
+### 跨端影响
+
+- **Desktop Impact**：桌面端代码块滚动条只在悬停/键盘聚焦时显现；Windows 更新提示恢复显示更新内容。
+- **Mobile Impact**：触屏无 hover，滚动条保持常驻可拖动；移动端更新链路（App Store / APK）未改动。
+
+### 验证
+
+- `pnpm build`、`pnpm test`、`pnpm lint` 通过；`pnpm test:e2e e2e/code-block-ui.spec.ts` 4 passed（新增悬停断言：初始 `opacity: 0` → 悬停 `1` → 移开 `0`）。
+- `pnpm release:check v0.60.2` 校验三处版本一致。
+
 ## v0.60.1 — 2026-11-06（修复：Android 一打开就闪退）
 
 ### 修复
