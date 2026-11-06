@@ -32,6 +32,13 @@ test("Markdown preview uses reading surface, copies source, wraps temporarily an
   const block = page.locator(".markdown-code-block").first();
   await expect(block.locator(".note-code-actions")).toBeVisible();
   await expect(block.locator(".note-code-language")).toHaveText("typescript");
+  const scrollbar = block.locator(".markdown-code-scrollbar");
+  await expect(scrollbar).toHaveCount(1);
+  await expect.poll(() => scrollbar.evaluate((el) => getComputedStyle(el).opacity)).toBe("0");
+  await block.hover();
+  await expect.poll(() => scrollbar.evaluate((el) => getComputedStyle(el).opacity)).toBe("1");
+  await page.mouse.move(0, 0);
+  await expect.poll(() => scrollbar.evaluate((el) => getComputedStyle(el).opacity)).toBe("0");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   const before = (await calls(page)).filter((call) => call.cmd === "update_note").length;
   await block.getByRole("button", { name: "复制代码" }).click();
