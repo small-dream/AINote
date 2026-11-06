@@ -118,6 +118,9 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+      - uses: android-actions/setup-android@v4.0.4
+        with:
+          log-accepted-android-sdk-licenses: false
       - name: Install Android SDK and NDK
         run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
       - name: Configure Android NDK toolchain
