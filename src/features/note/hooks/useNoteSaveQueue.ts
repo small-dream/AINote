@@ -12,14 +12,45 @@ interface UseNoteSaveQueueOptions {
   debounceMs: number;
 }
 
+interface SavedDraft {
+  repoPath: string | null;
+  notePath: string;
+  content: string;
+  revision: number;
+}
+
+function matchesSavedDraft(
+  saved: SavedDraft | null,
+  repoPath: string | null,
+  notePath: string | null,
+  content: string,
+  revision: number,
+  allowRevisionMatch: boolean,
+): boolean {
+  if (!saved || saved.repoPath !== repoPath || saved.notePath !== notePath) return false;
+  return saved.content === content || (allowRevisionMatch && saved.revision === revision);
+}
+
 export function useNoteSaveQueue({ repoPath, notePath, draft, dirty, setDirty, isLoaded, debounceMs }: UseNoteSaveQueueOptions) {
   const save = useUpdateNoteMutation(repoPath);
   const reset = save.reset;
   const [saving, setSaving] = useState(false);
   const inFlight = useRef<Promise<void> | null>(null);
-  const latest = useRef({ draft, dirty, notePath, save });
+  const latest = useRef({ repoPath, draft, dirty, notePath, save });
+  const draftRevision = useRef(0);
+  const previousDraft = useRef(draft);
+  const acknowledged = useRef<SavedDraft | null>(null);
 
-  useEffect(() => { latest.current = { draft, dirty, notePath, save }; });
+  useEffect(() => {
+    if (draft !== previousDraft.current) {
+      previousDraft.current = draft;
+      draftRevision.current += 1;
+    }
+    latest.current = { repoPath, draft, dirty, notePath, save };
+    if (dirty && matchesSavedDraft(acknowledged.current, repoPath, notePath, draft, draftRevision.current, true)) {
+      setDirty(false);
+    }
+  }, [draft, dirty, notePath, repoPath, save, setDirty]);
 
   useEffect(() => { reset(); }, [notePath, repoPath, reset]);
 
@@ -30,10 +61,19 @@ export function useNoteSaveQueue({ repoPath, notePath, draft, dirty, setDirty, i
     if (!current.notePath || (!current.dirty && contentOverride === undefined) || !isLoaded()) return;
     const path = current.notePath;
     const content = contentOverride ?? current.draft;
+    const revision = draftRevision.current;
+    if (matchesSavedDraft(acknowledged.current, current.repoPath, path, content, revision, contentOverride === undefined)) {
+      if (current.dirty) setDirty(false);
+      return;
+    }
     setSaving(true);
     const request = current.save
       .mutateAsync({ path, content })
-      .then(() => { if (latest.current.notePath === path && latest.current.draft === content) setDirty(false); })
+      .then(() => {
+        acknowledged.current = { repoPath: current.repoPath, notePath: path, content, revision };
+        if (latest.current.repoPath === current.repoPath && latest.current.notePath === path
+          && (latest.current.draft === content || draftRevision.current === revision)) setDirty(false);
+      })
       .finally(() => setSaving(false));
     inFlight.current = request;
     try { await request; } finally { if (inFlight.current === request) inFlight.current = null; }

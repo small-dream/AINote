@@ -61,6 +61,8 @@ export interface E2eState {
   updateDownloadFails?: boolean;
   /** 注入「下载挂住不返回」的后端（弱网 / CDN 不通，验证取消不被阻塞的后端拖住） */
   updateDownloadStalls?: boolean;
+  /** move_note 落盘后延迟返回（验证改名期间旧路径自动保存竞态） */
+  moveNoteDelayMs?: number;
   /** 注入一次同步失败（用于验证失败态 UI 与恢复入口） */
   syncFailure?: {
     code: string;

@@ -1,5 +1,5 @@
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { NoteTitleField } from "./NoteTitleField";
 
 const mutateAsync = vi.fn().mockResolvedValue(undefined);
@@ -7,6 +7,11 @@ const mutateAsync = vi.fn().mockResolvedValue(undefined);
 vi.mock("@/queries/note.queries", () => ({
   useMoveNoteMutation: () => ({ mutateAsync, isPending: false }),
 }));
+
+beforeEach(() => {
+  mutateAsync.mockReset();
+  mutateAsync.mockResolvedValue(undefined);
+});
 
 function renderField(notePath = "旧名字.md") {
   render(
@@ -80,5 +85,26 @@ describe("NoteTitleField", () => {
     fireEvent.keyDown(input, { key: "Enter" });
     await waitFor(() => expect(onRenamed).toHaveBeenCalledWith("新名字.md"));
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+});
+
+describe("NoteTitleField 并发提交", () => {
+  it("Enter 与 blur 连续触发时只提交一次", async () => {
+    let resolveFlush: (() => void) | undefined;
+    const flush = vi.fn(() => new Promise<void>((resolve) => { resolveFlush = resolve; }));
+    const onChange = vi.fn();
+    render(
+      <NoteTitleField notePath="未命名.md" isNewNote draft="" onChange={onChange} flush={flush} onRenamed={vi.fn()} />
+    );
+    const input = screen.getByLabelText("笔记标题") as HTMLInputElement;
+
+    fireEvent.change(input, { target: { value: "文章标题" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+    fireEvent.blur(input);
+
+    expect(flush).toHaveBeenCalledTimes(1);
+    await act(async () => { resolveFlush?.(); });
+    await waitFor(() => expect(mutateAsync).toHaveBeenCalledTimes(1));
+    expect(onChange).toHaveBeenCalledTimes(1);
   });
 });

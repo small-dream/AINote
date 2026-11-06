@@ -6,6 +6,7 @@ mod tests {
     use std::path::Path;
     use std::time::Instant;
 
+    use crate::domain::note::NoteKind;
     use crate::repositories::git2_backend::Git2Backend;
     use crate::repositories::git_backend::GitBackend;
     use crate::services::{
@@ -15,12 +16,8 @@ mod tests {
     fn write_fixture(root: &Path, count: usize) {
         for index in 0..count {
             let path = format!("notes/{index:04}.md");
-            note_service::update_note(
-                root,
-                &path,
-                &format!("# Note {index}\n\n#tag-{index}\ncontent {index}"),
-            )
-            .unwrap();
+            let content = format!("# Note {index}\n\n#tag-{index}\ncontent {index}");
+            note_service::create_note(root, &path, NoteKind::Markdown, Some(&content)).unwrap();
         }
     }
 
@@ -72,7 +69,13 @@ mod tests {
             .map(|line| format!("line {line}\n"))
             .collect::<String>();
         let started = Instant::now();
-        note_service::update_note(fixture.path(), "large.md", &content).unwrap();
+        note_service::create_note(
+            fixture.path(),
+            "large.md",
+            NoteKind::Markdown,
+            Some(&content),
+        )
+        .unwrap();
         let read = note_service::read_note(fixture.path(), "large.md").unwrap();
         let elapsed_ms = ms(started);
         assert_eq!(read.content.lines().count(), 5_000);

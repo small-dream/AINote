@@ -1,4 +1,5 @@
 use std::fs;
+use std::io::Write;
 use std::path::{Component, Path, PathBuf};
 
 use crate::domain::error::AppError;
@@ -60,6 +61,21 @@ pub fn write_note(root: &Path, rel: &str, content: &str) -> Result<(), AppError>
             .map_err(|err| AppError::io_context("创建目录失败", parent, err))?;
     }
     fs::write(&path, content).map_err(|err| AppError::io_context("写入失败", &path, err))
+}
+
+/// 覆盖已有笔记；目标不存在时返回 `NoteNotFound`，绝不隐式创建文件。
+pub fn overwrite_note(root: &Path, rel: &str, content: &str) -> Result<(), AppError> {
+    let path = resolve_within_root(root, &validate_rel_path(rel)?)?;
+    let mut file = fs::OpenOptions::new()
+        .write(true)
+        .truncate(true)
+        .open(&path)
+        .map_err(|err| match err.kind() {
+            std::io::ErrorKind::NotFound => AppError::NoteNotFound(rel.to_string()),
+            _ => AppError::io_context("写入失败", &path, err),
+        })?;
+    file.write_all(content.as_bytes())
+        .map_err(|err| AppError::io_context("写入失败", &path, err))
 }
 
 /// 导入外部 Markdown 笔记：在当前目录生成不冲突的 `<stem>.md` 目标路径（只计算不写入）。
@@ -149,6 +165,20 @@ mod tests {
         let (_t, root) = setup();
         write_note(&root, "a/b.md", "# hi").unwrap();
         assert_eq!(read_note(&root, "a/b.md").unwrap(), "# hi");
+    }
+
+    #[test]
+    fn overwrite_existing_note_but_never_recreates_missing_file() {
+        let (_t, root) = setup();
+        write_note(&root, "a.md", "# old").unwrap();
+        overwrite_note(&root, "a.md", "# new").unwrap();
+        assert_eq!(read_note(&root, "a.md").unwrap(), "# new");
+
+        assert!(matches!(
+            overwrite_note(&root, "missing.md", "# late"),
+            Err(AppError::NoteNotFound(_))
+        ));
+        assert!(!root.join("missing.md").exists());
     }
 
     #[test]

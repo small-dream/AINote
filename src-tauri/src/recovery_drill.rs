@@ -12,6 +12,7 @@ mod tests {
     use tempfile::tempdir;
 
     use crate::domain::maintenance::IssueSeverity;
+    use crate::domain::note::NoteKind;
     use crate::repositories::git2_backend::Git2Backend;
     use crate::repositories::git2_maintenance::Git2Maintenance;
     use crate::repositories::git_backend::GitBackend;
@@ -43,7 +44,7 @@ mod tests {
     fn drill_save_failure_keeps_original_content() {
         let repo = tempdir().unwrap();
         init_repo(repo.path());
-        note_service::update_note(repo.path(), "note.md", "v1").unwrap();
+        note_service::create_note(repo.path(), "note.md", NoteKind::Markdown, Some("v1")).unwrap();
 
         let file = repo.path().join("note.md");
         set_writable(&file, false);
@@ -70,7 +71,13 @@ mod tests {
     fn drill_deleted_note_restores_from_trash() {
         let repo = tempdir().unwrap();
         init_repo(repo.path());
-        note_service::update_note(repo.path(), "notes/a.md", "precious").unwrap();
+        note_service::create_note(
+            repo.path(),
+            "notes/a.md",
+            NoteKind::Markdown,
+            Some("precious"),
+        )
+        .unwrap();
         note_service::delete_note(repo.path(), "notes/a.md").unwrap();
         assert!(!repo.path().join("notes/a.md").exists());
 
@@ -90,7 +97,13 @@ mod tests {
     fn drill_corrupted_repo_recovers_from_backup() {
         let repo = tempdir().unwrap();
         init_repo(repo.path());
-        note_service::update_note(repo.path(), "notes/a.md", "precious").unwrap();
+        note_service::create_note(
+            repo.path(),
+            "notes/a.md",
+            NoteKind::Markdown,
+            Some("precious"),
+        )
+        .unwrap();
         commit_all(repo.path(), "init");
 
         let backup_dir = tempdir().unwrap();

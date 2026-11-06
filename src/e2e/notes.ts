@@ -9,6 +9,7 @@ export type E2eNoteMap = Map<string, { content: string; kind: string }>;
 export interface NoteStore extends DirtyTrackedStore {
   notes: E2eNoteMap;
   vaultState: E2eVaultState;
+  moveNoteDelayMs: number;
 }
 
 interface NoteCommandContext {
@@ -109,6 +110,21 @@ export const noteCommandHandlers: Record<string, NoteCommandHandler> = {
     const path = String(args.path ?? "");
     writeNoteContent(ctx.store, needNote(ctx.store.notes, path), String(args.content ?? ""));
     markWorkspaceDirty(ctx.store, path);
+    return null;
+  },
+  move_note: async (args, ctx) => {
+    const from = String(args.from ?? "");
+    const to = String(args.to ?? "");
+    const note = needNote(ctx.store.notes, from);
+    if (from === to) return null;
+    if (ctx.store.notes.has(to)) throw noteError(`note already exists: ${to}`);
+    ctx.store.notes.delete(from);
+    ctx.store.notes.set(to, note);
+    markWorkspaceDirty(ctx.store, from, "deleted");
+    markWorkspaceDirty(ctx.store, to, "added");
+    if (ctx.store.moveNoteDelayMs > 0) {
+      await new Promise((resolve) => setTimeout(resolve, ctx.store.moveNoteDelayMs));
+    }
     return null;
   },
   create_note: (args, ctx) => {

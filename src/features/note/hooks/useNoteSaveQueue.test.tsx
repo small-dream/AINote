@@ -79,6 +79,38 @@ describe("useNoteSaveQueue", () => {
   });
 });
 
+describe("useNoteSaveQueue 显式内容认领", () => {
+  it("新草稿尚未同步到 draft 时也清除 dirty", async () => {
+    const { result, setDirty } = setup();
+
+    await act(async () => {
+      await result.current.flush("# 改名后正文");
+    });
+
+    expect(mutateAsync).toHaveBeenCalledWith({ path: "note.md", content: "# 改名后正文" });
+    expect(setDirty).toHaveBeenCalledWith(false);
+  });
+
+  it("旧 draft 的定时器不会再次写回", async () => {
+    vi.useFakeTimers();
+    try {
+      const { result, setDirty } = setup({ debounceMs: 3_000 });
+
+      await act(async () => {
+        await result.current.flush("# 改名后正文");
+      });
+      await act(async () => {
+        vi.advanceTimersByTime(3_000);
+      });
+
+      expect(mutateAsync).toHaveBeenCalledTimes(1);
+      expect(setDirty).toHaveBeenCalledWith(false);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+});
+
 /** 连续输入场景共用：draft 可变、isLoaded 与真实调用方一致为稳定引用 */
 function renderContinuousDraft(setDirty: (dirty: boolean) => void, initialDraft: string) {
   return renderHook(

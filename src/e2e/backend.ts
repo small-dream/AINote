@@ -14,6 +14,7 @@ import { searchNotes } from "./search";
 
 interface MockStore extends TaskStore, VaultStore, CaptureStore, MetricsStore {
   notes: Map<string, { content: string; kind: string }>;
+  moveNoteDelayMs: number;
   conflicted: boolean;
   conflicts: E2eConflictSeed[];
   /** 挂起中的同步（模拟退避等待）：取消时用最后一次状态收尾 */
@@ -37,6 +38,7 @@ function appError(message: string): { code: string; kind: string; message: strin
 function createStore(state: E2eState): MockStore {
   return {
     notes: new Map(state.notes.map((note) => [note.path, { content: note.content, kind: note.kind ?? "markdown" }])),
+    moveNoteDelayMs: state.moveNoteDelayMs ?? 0,
     conflicted: state.conflicted === true,
     conflicts: state.conflicts ?? [],
     pendingSync: null,

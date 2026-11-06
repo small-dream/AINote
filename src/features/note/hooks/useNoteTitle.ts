@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { messageOf } from "@/api";
 import { useMoveNoteMutation } from "@/queries/note.queries";
 import { getDirectoryPath } from "@/features/file-tree/utils/path";
@@ -25,8 +25,11 @@ export function useNoteTitle({ notePath, isNewNote, draft, onChange, flush, onRe
   const rename = useMoveNoteMutation();
   const [value, setValue] = useState(() => (isNewNote ? "" : noteDisplayName(notePath.split("/").at(-1) ?? notePath)));
   const [error, setError] = useState<string | null>(null);
+  const [committing, setCommitting] = useState(false);
+  const commitInFlight = useRef(false);
 
   async function commit() {
+    if (commitInFlight.current) return;
     const title = value.trim();
     if (!title) {
       setValue(isNewNote ? "" : noteDisplayName(notePath.split("/").at(-1) ?? notePath));
@@ -43,6 +46,8 @@ export function useNoteTitle({ notePath, isNewNote, draft, onChange, flush, onRe
       ? applyRichTextTitle(draft, title)
       : applyMarkdownTitle(draft, title);
     onChange(nextDraft);
+    commitInFlight.current = true;
+    setCommitting(true);
     try {
       // 显式把新草稿交给 flush：并发渲染下 onChange 的状态未必已落盘，不能再赌一帧时序
       await flush(nextDraft);
@@ -51,6 +56,9 @@ export function useNoteTitle({ notePath, isNewNote, draft, onChange, flush, onRe
       setError(null);
     } catch (err) {
       setError(messageOf(err));
+    } finally {
+      commitInFlight.current = false;
+      setCommitting(false);
     }
   }
 
@@ -64,5 +72,5 @@ export function useNoteTitle({ notePath, isNewNote, draft, onChange, flush, onRe
     setError(null);
   }
 
-  return { value, error, pending: rename.isPending, setValue: updateValue, reset, commit };
+  return { value, error, pending: committing || rename.isPending, setValue: updateValue, reset, commit };
 }

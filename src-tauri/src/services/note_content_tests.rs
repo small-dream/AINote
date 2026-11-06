@@ -40,6 +40,11 @@ fn missing_note_reports_not_found() {
         read_file(tmp.path(), &tmp.path().join("nope.md")),
         Err(AppError::NoteNotFound(_))
     ));
+    assert!(matches!(
+        overwrite_text(tmp.path(), "nope.md", "# late"),
+        Err(AppError::NoteNotFound(_))
+    ));
+    assert!(!tmp.path().join("nope.md").exists());
 }
 
 #[test]

@@ -117,7 +117,7 @@ fn plaintext_of(repo_path: &Path, file: &Path) -> Result<String, AppError> {
 
 /// 用例：更新笔记内容（加密笔记继续以密文落盘）
 pub fn update_note(repo_path: &Path, rel: &str, content: &str) -> Result<(), AppError> {
-    note_content::write_text(repo_path, rel, content)
+    note_content::overwrite_text(repo_path, rel, content)
 }
 
 /// 用例：删除笔记（软删除：移入回收站 `.trash`，可恢复，P2）
@@ -236,6 +236,25 @@ mod tests {
     }
 
     #[test]
+    fn update_after_move_does_not_recreate_source_path() {
+        let tmp = setup();
+        let root = tmp.path();
+        create_note(root, "未命名.md", NoteKind::Markdown, Some("# 未命名\n")).unwrap();
+        update_note(root, "未命名.md", "# 文章标题\n\n正文").unwrap();
+        move_note(root, "未命名.md", "文章标题.md").unwrap();
+
+        assert!(matches!(
+            update_note(root, "未命名.md", "# 文章标题\n\n正文"),
+            Err(AppError::NoteNotFound(_))
+        ));
+        assert!(!root.join("未命名.md").exists());
+        assert_eq!(
+            read_note(root, "文章标题.md").unwrap().content,
+            "# 文章标题\n\n正文"
+        );
+    }
+
+    #[test]
     fn create_is_idempotent_and_validates_path() {
         let tmp = setup();
         let root = tmp.path();
@@ -302,8 +321,8 @@ mod tests {
     fn list_notes_reads_display_title() {
         let tmp = setup();
         let root = tmp.path();
-        update_note(root, "sub/x.md", "# 标题X\n").unwrap();
-        update_note(root, "y.md", "无标题").unwrap();
+        create_note(root, "sub/x.md", NoteKind::Markdown, Some("# 标题X\n")).unwrap();
+        create_note(root, "y.md", NoteKind::Markdown, Some("无标题")).unwrap();
         let notes = list_notes(root).unwrap();
         let by_path: std::collections::HashMap<_, _> = notes
             .iter()
@@ -342,7 +361,7 @@ mod tests {
         let tmp = setup();
         let root = tmp.path();
         crate::services::vault_service::create(root, "correct horse battery").unwrap();
-        update_note(root, "a.md", "# 机密\n正文").unwrap();
+        create_note(root, "a.md", NoteKind::Markdown, Some("# 机密\n正文")).unwrap();
 
         assert!(set_note_encryption(root, "a.md", true).unwrap().encrypted);
         let on_disk = std::fs::read_to_string(root.join("a.md")).unwrap();
@@ -367,7 +386,7 @@ mod tests {
         let _serial = crate::services::vault_service::test_guard();
         let tmp = setup();
         let root = tmp.path();
-        update_note(root, "a.md", "# 明文").unwrap();
+        create_note(root, "a.md", NoteKind::Markdown, Some("# 明文")).unwrap();
 
         // 未建库：给出「先去设置启用」的可操作错误，而不是含糊的锁定错误
         assert!(matches!(
