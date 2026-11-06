@@ -1,6 +1,8 @@
 import { Button } from "@/components/atoms/Button";
 import type { HostingProviderDto } from "@/api/types";
 import { useAuthStatusQuery } from "@/queries/auth.queries";
+import { isExternalHttpUrl, openExternalLink } from "@/platform/open-link";
+import { reportToastError } from "@/stores/toast.store";
 import { useLogin } from "../hooks/useLogin";
 import { useTranslation } from "@/i18n";
 
@@ -19,6 +21,12 @@ export function LoginForm({ onSuccess, fixedProviderId }: LoginFormProps) {
   const { providerId, token, login, error, busy, selectProvider, handleValidate, handleSave, onTokenChange } =
     useLogin(onSuccess, { fixedProviderId });
   const active = providers.find((provider) => provider.id === providerId);
+  const tokenPage = active && isExternalHttpUrl(active.tokenPage) ? active.tokenPage : undefined;
+  /** 令牌申请页：壳内 window.open / target=_blank 不会创建新窗口，必须交给系统浏览器 */
+  const handleGetToken = () => {
+    if (!tokenPage) return;
+    void openExternalLink(tokenPage).catch(reportToastError);
+  };
 
   return (
     <div>
@@ -37,7 +45,7 @@ export function LoginForm({ onSuccess, fixedProviderId }: LoginFormProps) {
         busy={busy}
         hasToken={login !== null}
         tokenEmpty={!token.trim()}
-        tokenPage={active?.tokenPage}
+        onGetToken={tokenPage ? handleGetToken : undefined}
         onValidate={() => void handleValidate()}
         onSave={() => void handleSave()}
       />
@@ -108,16 +116,16 @@ interface LoginActionsProps {
   busy: boolean;
   hasToken: boolean;
   tokenEmpty: boolean;
-  tokenPage: string | undefined;
+  onGetToken: (() => void) | undefined;
   onValidate: () => void;
   onSave: () => void;
 }
 
-function LoginActions({ t, busy, hasToken, tokenEmpty, tokenPage, onValidate, onSave }: LoginActionsProps) {
+function LoginActions({ t, busy, hasToken, tokenEmpty, onGetToken, onValidate, onSave }: LoginActionsProps) {
   return (
     <div className="flex justify-end gap-2">
-      {tokenPage && (
-        <Button variant="ghost" onClick={() => window.open(tokenPage, "_blank")}>{t("auth.getToken")}</Button>
+      {onGetToken && (
+        <Button variant="ghost" onClick={onGetToken}>{t("auth.getToken")}</Button>
       )}
       {hasToken ? (
         <Button variant="primary" onClick={onSave} disabled={busy}>{busy ? t("common.saving") : t("auth.continue")}</Button>
