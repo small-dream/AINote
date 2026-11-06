@@ -53,8 +53,8 @@ targets:
           - UIInterfaceOrientationPortraitUpsideDown
           - UIInterfaceOrientationLandscapeLeft
           - UIInterfaceOrientationLandscapeRight
-        CFBundleShortVersionString: 0.24.6
-        CFBundleVersion: "0.24.6"
+        CFBundleShortVersionString: 0.60.1
+        CFBundleVersion: "0.60.1"
     entitlements:
       path: ainote-core_iOS/ainote-core_iOS.entitlements
     scheme:

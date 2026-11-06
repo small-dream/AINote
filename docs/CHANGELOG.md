@@ -1,5 +1,29 @@
 # 更新日志
 
+## v0.60.1 — 2026-11-06（修复：Android 一打开就闪退）
+
+### 修复
+
+- **Android 启动即 SIGABRT**：`MainActivity` 在 `super.onCreate` 之前调用 `Keyring.initializeNdkContext(applicationContext)`，而 Tauri 2.12（tao 0.37.1）起 tao 又会在 `Rust::onCreate` 里用 `applicationContext` 初始化一次 ndk-context；`ndk-context 0.1.1` 的 `initialize_android_context` 内部是 `assert!(previous.is_none())`，第二次初始化 panic 后穿出 `extern "C"` 边界 `abort`，表现就是点图标立刻闪退。现在移除应用侧初始化，统一交给 tao；`android-native-keyring-store`、`android_jni` / `android_bridge` 的 JNI 桥接继续使用同一份 Application Context，凭证与 APK 安装链路不受影响。删除不再需要的 `io/crates/keyring/Keyring.kt`。
+  - 影响范围：v0.59.0 起（`tauri 2.12.4` / `tao 0.37.1`）的 Android 包全部无法启动；最后可用的 Android 版本是 v0.58.5（`tao 0.35.3` 不初始化 ndk-context）。真机复现与修复验证见下方「验证」。
+- **登录页「如何获取 Token」**：改由系统浏览器打开（Android 壳内的 `window.open` / `target=_blank` 不会创建新窗口，点击后没有任何反应）。
+
+### 新增
+
+- **启动期 panic 可观测性**：tao 把 Rust 的 stdout / stderr 重定向到 logcat（tag `RustStdoutStderr`）的动作发生在 `onFirstActivityCreate`，启动阶段 `Rust::onCreate` 里的 panic 早于它，此前只能从 tombstone 看到 `Java_..._Rust_onCreate` + `panic_cannot_unwind`，看不到 panic 文案。现在 `platform/android_panic.rs` 在 `.so` 加载时（`.init_array` 构造器，早于任何 JNI 调用；`run()` 入口再幂等兜底一次）安装 panic hook：panic 文案按行切块写入 logcat（tag `ainote::panic`），并调用 bionic `android_set_abort_message` 把首行摘要写进 tombstone 的 `Abort message`；原 hook 保留，`stderr` 与 `RUST_BACKTRACE` 行为不变。切块逻辑是纯函数并带单测。
+
+### 跨端影响
+
+- **Desktop Impact**：无行为变化——改动仅在 Android 原生壳、Android-only 的 panic hook（桌面端只参与编译与单测）与文档。
+- **Mobile Impact**：Android 恢复可启动；启动期崩溃从此在 `adb logcat` 与 tombstone 里都能直接读到原因。
+
+### 验证
+
+- 真机（OPPO PGJM10 / Android 14 / arm64）复现 v0.60.0 崩溃：`adb logcat -b crash` 为 `Java_dev_ainote_app_Rust_onCreate` → `panic_cannot_unwind` → `SIGABRT`，进程存活 < 1s，且无 `JNI DETECTED ERROR`；反查 APK 内 `.so` 确认包含 `assertion failed: previous.is_none()` 与 `Java_io_crates_keyring_Keyring_00024Companion_initializeNdkContext`，与「重复初始化 ndk-context」的链路一致。
+- `pnpm build`、`pnpm test`（243 个文件，1474 passed，1 skipped）、`pnpm lint` 通过。
+- `cargo test`：441 passed、6 ignored；14 项 Windows 专有的路径分隔符断言失败（`sub\body.md` vs `sub/body.md`，与本次改动无关，CI 在 ubuntu-22.04 上运行）。
+- Android 包需在 macOS / CI 上重建后在真机复验启动（Windows 本地不支持 Android 构建）；复验方式：`adb logcat -c && adb shell am start -n dev.ainote.app/dev.ainote.app.MainActivity`，`adb logcat -b crash` 应无 `Fatal signal`。
+
 ## v0.60.0 — 2026-11-06（代码块 UI 统一、Tauri 与 Android 工具链升级）
 
 - 统一 Markdown 预览、软渲染与富文本代码块的语言标签、复制按钮、折行切换和横向滚动条；共享展示状态，并适配阅读主题、触屏及打印导出。
