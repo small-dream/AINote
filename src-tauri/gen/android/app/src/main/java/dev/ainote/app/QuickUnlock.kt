@@ -5,7 +5,6 @@ import android.app.KeyguardManager
 import android.content.Context
 import android.hardware.biometrics.BiometricManager
 import android.hardware.biometrics.BiometricPrompt
-import android.hardware.fingerprint.FingerprintManager
 import android.os.Build
 import android.os.CancellationSignal
 import android.security.keystore.KeyGenParameterSpec
@@ -39,8 +38,8 @@ object QuickUnlock {
     private const val AUTH_WINDOW_SECONDS = 30
     private const val AUTH_TIMEOUT_SECONDS = 120L
 
-    /** Android 9（API 28）起才有平台 BiometricPrompt。 */
-    private const val MIN_SDK = Build.VERSION_CODES.P
+    /** 应用最低支持 Android 12（API 31）。 */
+    private const val MIN_SDK = Build.VERSION_CODES.S
 
     @Volatile
     private var current: Activity? = null
@@ -66,37 +65,18 @@ object QuickUnlock {
             val keyguard = context.getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager
                 ?: return "unsupported:probeFailed"
             if (!keyguard.isDeviceSecure) return "unsupported:noDeviceLock"
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                // Android 10 起提示允许设备凭证兜底：只要有锁屏就能用，生物识别可选。
-                return if (hasBiometric(context)) "ok:biometric" else "ok:deviceCredential"
-            }
-            // Android 9：平台 BiometricPrompt 只支持生物识别，必须有已录入的指纹。
-            @Suppress("DEPRECATION")
-            val fingerprint = context.getSystemService(FingerprintManager::class.java)
-                ?: return "unsupported:noBiometric"
-            @Suppress("DEPRECATION")
-            if (fingerprint.hasEnrolledFingerprints()) "ok:biometric" else "unsupported:noBiometric"
+            if (hasBiometric(context)) "ok:biometric" else "ok:deviceCredential"
         }.getOrElse { "unsupported:probeFailed" }
     }
 
     /** 本机是否已录入可用的强生物识别（探测用，不弹窗）。 */
     private fun hasBiometric(context: Context): Boolean {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
-            val manager = context.getSystemService(BiometricManager::class.java) ?: return false
-            return runCatching {
-                manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
-                    BiometricManager.BIOMETRIC_SUCCESS
-            }.getOrDefault(false)
-        }
-        // Android 10 只有无参 canAuthenticate()（API 30 起被废弃）。
-        return hasAnyBiometric(context)
-    }
-
-    @Suppress("DEPRECATION")
-    private fun hasAnyBiometric(context: Context): Boolean = runCatching {
         val manager = context.getSystemService(BiometricManager::class.java) ?: return false
-        manager.canAuthenticate() == BiometricManager.BIOMETRIC_SUCCESS
-    }.getOrDefault(false)
+        return runCatching {
+            manager.canAuthenticate(BiometricManager.Authenticators.BIOMETRIC_STRONG) ==
+                BiometricManager.BIOMETRIC_SUCCESS
+        }.getOrDefault(false)
+    }
 
     /** 开启（或重新开启）：先生成新密钥，再要求一次系统认证，最后写入口令载荷。 */
     @JvmStatic
@@ -174,21 +154,10 @@ object QuickUnlock {
                 val builder = BiometricPrompt.Builder(activity)
                     .setTitle("解锁加密笔记")
                     .setSubtitle(reason)
-                when {
-                    Build.VERSION.SDK_INT >= Build.VERSION_CODES.R -> builder.setAllowedAuthenticators(
-                        BiometricManager.Authenticators.BIOMETRIC_STRONG or
-                            BiometricManager.Authenticators.DEVICE_CREDENTIAL
-                    )
-                    Build.VERSION.SDK_INT == Build.VERSION_CODES.Q ->
-                        @Suppress("DEPRECATION") builder.setDeviceCredentialAllowed(true)
-                    else -> @Suppress("DEPRECATION") builder.setNegativeButton(
-                        "取消",
-                        executor
-                    ) { _, _ ->
-                        outcome = "cancel"
-                        latch.countDown()
-                    }
-                }
+                builder.setAllowedAuthenticators(
+                    BiometricManager.Authenticators.BIOMETRIC_STRONG or
+                        BiometricManager.Authenticators.DEVICE_CREDENTIAL
+                )
                 builder.build().authenticate(CancellationSignal(), executor, callback)
             } catch (error: Exception) {
                 outcome = describe(error)

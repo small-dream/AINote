@@ -25,11 +25,11 @@ pub enum QuickUnlockKind {
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub enum QuickUnlockUnsupportedReason {
-    /// 平台本身不提供：Windows / Linux，或 Android 9 以下
+    /// 平台本身不提供：Windows / Linux，或 Android 12 以下
     PlatformUnsupported,
     /// 设备未设置锁屏 / 设备密码
     NoDeviceLock,
-    /// 有锁屏但没有可用生物识别，且该平台不能用设备密码兜底（Android 9）
+    /// 没有可用生物识别且无法用设备密码兜底；保留此原因码以兼容既有协议
     NoBiometric,
     /// 系统没有可用的设备认证方式（Apple：LAContext 判定）
     DeviceAuthUnavailable,

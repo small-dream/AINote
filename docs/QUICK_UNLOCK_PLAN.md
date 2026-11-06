@@ -88,7 +88,8 @@ legacy-plain (登录钥匙串):                                           0 成�
 - 关闭后立即回到纯口令流程；`VAULT_9007` 不渲染错误文本。
 - **设置页恒定可见**：只要有密钥库，设置页就显示「设备级快速解锁」区块——已解锁可开关、已锁定显示「先用仓库口令解锁，随后即可在此开启」并禁用按钮、平台不支持则写明原因码文案（`noDeviceLock` / `noBiometric` / `platformUnsupported` / `deviceAuthUnavailable` / `probeFailed`，仅移动端展示，桌面 Windows・Linux 不产生噪音）。**绝不出现「入口凭空消失且没有任何解释」**。
 - **认证失败后的口令入口**：口令输入框在所有解锁界面**始终与设备按钮同屏**；设备认证失败（`VAULT_9008`）或条目失效（`VAULT_9006`）时焦点自动移进口令输入框，文案也直接指向「在下方输入仓库口令」，用户不必再找入口。
-- **系统弹窗自身的兜底**：macOS 用 `LAContext.deviceOwnerAuthentication`（Touch ID 或登录密码）、iOS 用 `kSecAccessControlUserPresence`（Face ID / Touch ID 或设备密码）、Android 10+ 用 `BIOMETRIC_STRONG | DEVICE_CREDENTIAL`，系统弹窗内自带「使用密码 / 图案」入口；**Android 9（API 28）** 的平台 `BiometricPrompt` 只支持生物识别，此时唯一的兜底就是应用内的仓库口令。
+- **系统弹窗自身的兜底**：macOS 用 `LAContext.deviceOwnerAuthentication`（Touch ID 或登录密码）、iOS 用 `kSecAccessControlUserPresence`（Face ID / Touch ID 或设备密码）、Android 12+ 用 `BIOMETRIC_STRONG | DEVICE_CREDENTIAL`，系统弹窗内自带「使用密码 / 图案」入口。
+- **Android 系统基线**：最低 Android 12（API 31）；使用平台 `BiometricManager` 探测强生物识别，无生物识别但设置设备锁时使用设备凭证。无需旧指纹 API 或 AndroidX 生物识别兼容依赖；Robolectric API 31 回归覆盖无设备锁、仅设备凭证与强生物识别三种情况。
 
 ## 6. 明确不做
 

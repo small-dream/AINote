@@ -110,7 +110,7 @@ jobs:
       - uses: actions/setup-java@v5
         with:
           distribution: temurin
-          java-version: 17
+          java-version: 25
       - run: pnpm install --frozen-lockfile
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -118,10 +118,12 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: src-tauri
+      - name: Install Android SDK and NDK
+        run: sdkmanager "platforms;android-37.0" "build-tools;37.0.0" "ndk;30.0.16248370"
       - name: Configure Android NDK toolchain
         run: |
           set -euo pipefail
-          ndk_root=$(find "$ANDROID_HOME/ndk" -mindepth 1 -maxdepth 1 -type d | sort -V | tail -n 1)
+          ndk_root="$ANDROID_HOME/ndk/30.0.16248370"
           toolchain_bin="$ndk_root/toolchains/llvm/prebuilt/linux-x86_64/bin"
           if [ ! -x "$toolchain_bin/llvm-ranlib" ]; then
             echo "::error::未找到 Android NDK llvm-ranlib: $toolchain_bin/llvm-ranlib"

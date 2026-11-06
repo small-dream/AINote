@@ -3,10 +3,8 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <!-- 应用内更新：下载 APK 后调起系统安装器需要此权限（首次安装时系统会引导用户授权） -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
-    <!-- 设备级快速解锁：BiometricPrompt 需要 USE_BIOMETRIC（Android 9 及以上） -->
+    <!-- 设备级快速解锁：Android 12 及以上使用系统 BiometricPrompt -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
-    <!-- Android 9（API 28）走 FingerprintManager.hasEnrolledFingerprints()，该 API 仍要求 USE_FINGERPRINT -->
-    <uses-permission android:name="android.permission.USE_FINGERPRINT" />
 
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />
@@ -16,7 +14,7 @@
         android:label="@string/app_name"
         android:theme="@style/Theme.ainote_core"
         android:usesCleartextTraffic="${usesCleartextTraffic}">
-        <!-- 键盘避让：Android 11 以下（以及未强制 edge-to-edge 的机型）由系统直接缩小 WebView；
+        <!-- 键盘避让：未强制 edge-to-edge 的机型由系统直接缩小 WebView；
              新版本 Android 强制 edge-to-edge 后该属性不再改变窗口，改由前端 CSS 变量 kb-inset 把移动壳
              高度收到键盘上方（见 src/platform/keyboard-inset.ts）。 -->
         <activity

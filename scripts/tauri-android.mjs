@@ -10,10 +10,9 @@ import { fileURLToPath } from "node:url";
 const here = path.dirname(fileURLToPath(import.meta.url));
 
 // Tauri CLI 在 JAVA_HOME 未设置时会强制使用 Android Studio 自带的 JBR；
-// 当前固定版本矩阵（Gradle 8.14 / AGP 8.11 / Kotlin 1.9）只支持 JDK 17-21，
-// 若拿到 JBR 25 会在配置阶段直接失败。这里显式挑选一个受支持的 JDK。
+// Gradle 9 / AGP 9 支持 JDK 25；显式发现 JBR，保证终端和 IDE 使用同一工具链。
 const MIN_JDK = 17;
-const MAX_JDK = 21;
+const MAX_JDK = 25;
 
 function javaMajor(javaHome) {
   try {
@@ -37,12 +36,15 @@ function jdkCandidates() {
       candidates.push(candidate);
     }
   };
+  push("/Applications/Android Studio.app/Contents/jbr/Contents/Home");
+  push("/opt/android-studio/jbr");
   if (process.platform === "darwin" && fs.existsSync("/usr/libexec/java_home")) {
-    for (const version of ["21", "17"]) {
+    for (const version of ["25", "21", "17"]) {
       try {
         push(
           execFileSync("/usr/libexec/java_home", ["-v", version], {
             encoding: "utf8",
+            stdio: ["ignore", "pipe", "ignore"],
           }).trim(),
         );
       } catch {

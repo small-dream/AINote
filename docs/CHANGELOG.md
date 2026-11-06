@@ -1,5 +1,16 @@
 # 更新日志
 
+## v0.60.0 — 2026-11-06（代码块 UI 统一、Tauri 与 Android 工具链升级）
+
+- 统一 Markdown 预览、软渲染与富文本代码块的语言标签、复制按钮、折行切换和横向滚动条；共享展示状态，并适配阅读主题、触屏及打印导出。
+- 升级 Tauri 2.12.5、CLI 2.12.4、Wry 0.57.1 及相关官方插件；Android 使用 Gradle 9.8.2、AGP 9.5.1、Kotlin 2.2.10、SDK / targetSdk 37、Build Tools 37.0.0、NDK 30.0.16248370。本机以 Android Studio JBR 25.0.4 构建，发布 CI 同步改用 JDK 25。
+- Android 最低版本提高到 **Android 12（API 31）**，Tauri 配置、Gradle、需求和本地化提示保持一致；快速解锁使用平台强生物识别或设备凭证，移除旧指纹接口及权限。新增 API 31 能力探测回归测试，前端 ESLint 排除 Android 构建报告。
+- 沿用 Tauri 2 官方 AGP 9 兼容模式（外置 Kotlin、旧 DSL），等待上游插件支持后再全面迁移；Kotlin 与官方模板对齐，避免 Kotlin 2.4 和 lint 分析 API 的已有兼容问题。
+- **Desktop Impact**：共享原生运行时与通知、更新、进程等插件升级；桌面壳布局不变。
+- **Mobile Impact**：Android 11 及以下不再支持；iOS 最低版本按升级后的原生依赖要求统一为 15.0，Xcode 工程与 Tauri 配置同步。
+- 验证：`pnpm build`、`pnpm test`（1471 passed，1 skipped）、`pnpm lint`；Rust 单测 464 passed、7 ignored，另 4 项集成测试通过；桌面 Release 构建与新进程启动检查、Android arm64 Release APK、iOS arm64 模拟器无签名 Release Archive 通过。APK 元数据确认 minSdk 31 / targetSdk 37；API 31 快速解锁 3 项测试通过。JDK 25 下 `gradlew help` 与 `build --dry-run` 通过。
+- E2E 全量 167 passed、2 项工作区打开超时，失败两项单独重跑均通过。完整 Android `lintUniversalRelease` 已能完成分析，不再出现 Kotlin 分析 API 崩溃，但仍因原有 TV 声明缺少横幅与触屏可选声明而失败（2 errors）；未修改 TV 支持范围。未验证真机系统认证弹窗或 iOS 真机签名 Archive。
+
 ## v0.59.1 — 2026-11-06（修复：预览代码块滚动条、无语言代码块空白与未命名笔记重命名竞态）
 
 ### 修复
