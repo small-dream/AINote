@@ -1,6 +1,13 @@
 # 更新日志
 
-## Unreleased — 代码块编辑体验（隐藏围栏 · 收紧底部留白）
+## v0.62.0 — 2026-11-07（MCP 客户端配置一键写入 · 代码块编辑体验）
+
+### 新增
+
+- **一键写入客户端配置**：设置 → MCP 集成新增客户端列表，可直接把当前服务地址与 Token 写入 Claude Code、Codex、Cursor、VS Code、Windsurf、Cline 的本机 MCP 配置，无需手动复制 JSON。Claude Desktop 的远程连接器仍需在其 Connectors UI 添加。
+- **安全合并**：只替换 `ainote` 条目，保留同一文件里的其他服务器与顶层字段；文件不是合法 JSON 时不覆盖并显示原因；临时文件 + rename 原子写，Unix 下保留原权限。
+- **自动同步**：轮换 Token 或修改端口后，自动更新所有已写入的客户端；失败项在设置页提示，不阻断轮换本身。
+- **风险提示**：客户端配置包含 Token 明文，界面明确提示「仅本人可读」；移动端不提供该能力。
 
 ### 修复
 
@@ -10,29 +17,16 @@
 
 ### 跨端影响
 
-- **Desktop Impact**：桌面软渲染编辑态隐藏围栏、代码块操作区横排；Markdown 预览与富文本共用同一容器 CSS，三处观感一致。
-- **Mobile Impact**：触屏沿用同一容器（44px 命中区横排、12px 内边距），窄屏代码宽度相应让给操作区；预览 / 软渲染 / 富文本渲染一致。
+- **Desktop Impact**：设置页 MCP 集成新增客户端写入列表（含 Token 明文，明确提示仅本人可读）；软渲染编辑态隐藏代码围栏、代码块操作区横排，Markdown 预览与富文本共用同一容器 CSS。
+- **Mobile Impact**：MCP 客户端写入是桌面专属能力，移动端不出现入口；触屏代码块沿用同一容器（44px 命中区横排、12px 内边距），窄屏代码宽度相应让给操作区，预览 / 软渲染 / 富文本渲染一致。
 
 ### 验证
 
 - `pnpm build` 通过；`pnpm test` 249 个文件通过（1512 passed，1 skipped）；`pnpm lint` 通过。
-- `pnpm exec playwright test`：172 passed（含新增「按钮横排 + 编辑态围栏隐藏」断言）；`richtext-flow` 清除格式一例首轮偶发失败，单独复跑通过（与本改动无关）。
-- 截图复核：桌面预览 / 软渲染渲染态 / 软渲染编辑态 / 移动 390px / 富文本五处布局。
-
-## Unreleased — MCP 客户端配置一键写入
-
-### 新增
-
-- **一键写入客户端配置**：设置 → MCP 集成新增客户端列表，可直接把当前服务地址与 Token 写入 Claude Code、Codex、Cursor、VS Code、Windsurf、Cline 的本机 MCP 配置，无需手动复制 JSON。Claude Desktop 的远程连接器仍需在其 Connectors UI 添加。
-- **安全合并**：只替换 `ainote` 条目，保留同一文件里的其他服务器与顶层字段；文件不是合法 JSON 时不覆盖并显示原因；临时文件 + rename 原子写，Unix 下保留原权限。
-- **自动同步**：轮换 Token 或修改端口后，自动更新所有已写入的客户端；失败项在设置页提示，不阻断轮换本身。
-- **风险提示**：客户端配置包含 Token 明文，界面明确提示「仅本人可读」；移动端不提供该能力。
-
-### 验证
-
-- `pnpm build` 通过；`pnpm test` 249 个文件通过（1510 passed，1 skipped）；`pnpm lint` 通过。
 - `cargo test mcp --lib`：51 passed（含配置路径、JSON/TOML 合并与原子写、六种客户端条目格式、Token/HTTP/工具/加密笔记）。
 - `cargo test`：493 passed、6 ignored；14 项 Windows 专有路径分隔符断言失败（与既有记录相同，CI 在 ubuntu-22.04 运行）。
+- `pnpm exec playwright test`：172 passed（含新增「按钮横排 + 编辑态围栏隐藏」断言）；`richtext-flow` 清除格式一例首轮偶发失败，单独复跑通过（与本改动无关）。
+- 截图复核：桌面预览 / 软渲染渲染态 / 软渲染编辑态 / 移动 390px / 富文本五处布局。
 - 未在真实 Claude Code / Codex / Cursor / VS Code / Windsurf / Cline 上执行手工连接验收；发布前需按 `docs/MCP_INTEGRATION_PLAN.md` §7 验证写入后客户端能发现工具。
 
 ## v0.61.0 — 2026-11-06（MCP 集成：外部 AI Agent 操作笔记）
