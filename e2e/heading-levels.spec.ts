@@ -3,6 +3,7 @@ import type { E2eState } from "../src/e2e/types";
 import { calls, openNote, openWorkspace } from "./helpers";
 
 const CONTENT = "# 一级标题\n\n#### 四级标题\n";
+const ADJACENT_CONTENT = "# 一级标题\n## 二级标题\n\n正文\n";
 
 /** 当前可见编辑器的标题级别下拉按钮（桌面与移动壳可能同时在 DOM 里挂载编辑器）。 */
 function visibleTrigger(page: Page): Locator {
@@ -17,6 +18,11 @@ function line(page: Page, text: string): Locator {
 async function openHeadingNote(page: Page): Promise<void> {
   await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "heading.md", content: CONTENT }] });
   await openNote(page, "heading", "一级标题");
+}
+
+async function openAdjacentHeadingNote(page: Page): Promise<void> {
+  await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "heading-spacing.md", content: ADJACENT_CONTENT }] });
+  await openNote(page, "heading-spacing", "一级标题");
 }
 
 /** 桌面与移动共用编辑工具栏，按两种视口各跑一次，覆盖两个壳。 */
@@ -64,6 +70,25 @@ for (const { name, viewport } of [
       // 编辑器重建后光标应回到 H4 段落，而不是默认落到文档开头的 H1
       await expect(visibleTrigger(page)).toHaveText("H4");
       await expect(page.locator(".editor-status-bar:visible").first()).toContainText("第 3 行");
+    });
+
+    test("H1 紧接 H2 时仍保留标题间距", async ({ page }) => {
+      await openAdjacentHeadingNote(page);
+
+      const gap = await page.locator(".cm-content:visible").first().evaluate((root) => {
+        const h1 = root.querySelector<HTMLElement>(".cm-sr-h1");
+        const h2 = root.querySelector<HTMLElement>(".cm-sr-h2");
+        if (!h1 || !h2) return null;
+        const textRect = (element: HTMLElement) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return range.getBoundingClientRect();
+        };
+        return textRect(h2).top - textRect(h1).bottom;
+      });
+
+      if (gap === null) throw new Error("未找到可测量的 H1/H2 标题");
+      expect(gap).toBeGreaterThan(15);
     });
   });
 }

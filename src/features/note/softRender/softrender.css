@@ -41,6 +41,12 @@
 .cm-sr-h5,
 .cm-sr-h6 { font-size: 1em; }
 
+/* 标题行自带标题上间距：源码里 H1 紧接 H2（中间没有空行）时也能拉开；
+   标题前有空行时再叠加块间距，整体节奏与预览的标题上边距接近。 */
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) {
+  padding-top: var(--note-heading-margin);
+}
+
 .cm-sr-strong { font-weight: 700; }
 .cm-sr-em { font-style: italic; }
 .cm-sr-strike { text-decoration: line-through; }
@@ -152,13 +158,13 @@
 }
 
 /* 块级间距：softRender 保留源码空行，若以完整行高渲染会与预览（折叠空行 + 块 margin）
-   不一致而显得间距过大；这里把空行收窄到预览的块边距高度，标题前用更大间距，
-   与预览标题上边距（1.2em）一致，并随 CM 行高测量正确滚动。 */
+   不一致而显得间距过大；这里把空行统一收窄到块边距高度。标题上方的额外间距由标题行
+   自身承担（见上方 .cm-line:has(.cm-sr-h*)），整体节奏接近预览并随 CM 行高测量正确滚动。 */
 .cm-sr-blank {
   line-height: var(--note-block-margin);
 }
 .cm-sr-blank-heading {
-  line-height: var(--note-heading-margin);
+  line-height: var(--note-block-margin);
 }
 
 .cm-sr-blockquote {
