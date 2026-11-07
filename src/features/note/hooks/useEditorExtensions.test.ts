@@ -80,6 +80,19 @@ describe("useEditorExtensions", () => {
   });
 });
 
+describe("useEditorExtensions / 选区匹配", () => {
+  it("短选不提示，同词选区命中不超过 12 处", async () => {
+    useUiStore.setState({ noteTheme: "classic" });
+    const { result } = renderHook(() => useEditorExtensions({ softRenderEnabled: false }));
+    const view = mountEditor(result.current.extensions, "lorem ".repeat(11) + "lorem");
+    act(() => view.dispatch({ selection: { anchor: 0, head: 3 } }));
+    expect(view.dom.querySelectorAll(".cm-selectionMatch")).toHaveLength(0);
+
+    act(() => view.dispatch({ selection: { anchor: 0, head: 5 } }));
+    expect(view.dom.querySelectorAll(".cm-selectionMatch")).toHaveLength(11);
+  });
+});
+
 describe("useEditorExtensions / 选区快照", () => {
   beforeEach(() => {
     useUiStore.setState({ noteTheme: "classic" });

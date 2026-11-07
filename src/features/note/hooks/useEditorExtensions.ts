@@ -87,7 +87,7 @@ export function useEditorExtensions(input: EditorExtensionsInput = {}): { extens
     markdown({ extensions: [GFM] }),
     history(),
     searchExtension(t),
-    highlightSelectionMatches(),
+    selectionMatchesExtension(),
     closeBrackets(),
     bracketMatching(),
     indentOnInput(),
@@ -175,6 +175,18 @@ function sameFormats(a: Set<string>, b: Set<string>): boolean {
   if (a.size !== b.size) return false;
   for (const value of a) if (!b.has(value)) return false;
   return true;
+}
+
+/**
+ * 选区同名匹配容易造成大面积视觉噪音；只在较长且完整词命中时提示，
+ * 批量选中仍由查找面板 / Mod-Shift-L 提供显式操作。
+ */
+function selectionMatchesExtension(): Extension {
+  return highlightSelectionMatches({
+    minSelectionLength: 4,
+    wholeWords: true,
+    maxMatches: 12,
+  });
 }
 
 function softRenderExtension(repoPath: string | null, onOpenWiki: ((name: string) => void) | undefined, onLinkAction: ((href: string, point: { x: number; y: number }) => void) | undefined): Extension[] {
