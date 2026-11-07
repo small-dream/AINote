@@ -126,23 +126,25 @@
   border: none;
 }
 
-.cm-sr-codeblock-line {
+/* 行级装饰类必须带上 .cm-line：CodeMirror 运行时注入的 `.cm-line { padding: 0 2px 0 6px }`
+   与它们同为单类选择器且注入顺序在后，否则整块内边距（16px）会被压成 0，编辑态比渲染态贴边。
+   围栏行隐藏 ``` 后仍保留一个行高，正好充当代码块的上下内边距——既不会多出一条空行，
+   也让光标/方向键能落到围栏行上把围栏淡显回来。 */
+.cm-line.cm-sr-codeblock-line {
   background: var(--note-code-bg);
   border-inline: 1px solid var(--note-border);
   padding-inline: var(--note-code-padding);
   tab-size: 4;
 }
-.cm-sr-codeblock-line-first {
+.cm-line.cm-sr-codeblock-line-first {
   border-top: 1px solid var(--note-border);
   border-top-left-radius: 6px;
   border-top-right-radius: 6px;
-  padding-top: var(--note-code-padding);
 }
-.cm-sr-codeblock-line-last {
+.cm-line.cm-sr-codeblock-line-last {
   border-bottom: 1px solid var(--note-border);
   border-bottom-left-radius: 6px;
   border-bottom-right-radius: 6px;
-  padding-bottom: var(--note-code-padding);
 }
 .cm-sr-code-text {
   font-family: var(--note-code-font);

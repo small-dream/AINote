@@ -89,7 +89,7 @@ const WIDGET_BUILDERS: Record<WidgetRange["kind"], (widget: WidgetRange, options
   number: (widget) => Decoration.replace({ widget: new NumberWidget(widget.from, widget.to, widget.index ?? 1) }),
   codeblock: (widget) =>
     Decoration.replace({
-      widget: new CodeBlockWidget(widget.value ?? "", widget.alt ?? "", widget.from, widget.to),
+      widget: new CodeBlockWidget(widget.value ?? "", widget.alt ?? "", widget.from, widget.to, widget.caret),
       block: true,
     }),
   math: (widget) =>
@@ -207,7 +207,10 @@ function enterWidgetAt(event: MouseEvent, view: EditorView): boolean {
   const to = Number(el.dataset.srTo);
   if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from + 1) return false;
   event.preventDefault();
-  view.dispatch({ selection: { anchor: from + 1 } });
+  // 代码块把光标直接放到正文首行（data-sr-caret），避免落进围栏触发围栏淡显。
+  const caret = Number(el.dataset.srCaret);
+  const anchor = Number.isFinite(caret) && caret >= from && caret <= to ? caret : from + 1;
+  view.dispatch({ selection: { anchor } });
   return true;
 }
 

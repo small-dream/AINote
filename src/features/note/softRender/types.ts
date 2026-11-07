@@ -24,6 +24,8 @@ export interface WidgetRange {
   checked?: boolean;
   /** 图片 alt 文本 */
   alt?: string;
+  /** 点击 widget 进入编辑时首选的光标落点（代码块落到正文首行） */
+  caret?: number;
   /** ordered 列表序号 */
   index?: number;
   /** math 模式：inline / block */

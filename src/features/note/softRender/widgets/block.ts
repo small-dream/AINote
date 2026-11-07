@@ -33,7 +33,13 @@ export class HrWidget extends WidgetType {
 
 /** 代码块：光标离开时渲染为高亮 DOM。 */
 export class CodeBlockWidget extends WidgetType {
-  constructor(readonly source: string, readonly language: string, readonly from: number, readonly to: number) {
+  constructor(
+    readonly source: string,
+    readonly language: string,
+    readonly from: number,
+    readonly to: number,
+    readonly caret?: number,
+  ) {
     super();
   }
 
@@ -65,6 +71,7 @@ export class CodeBlockWidget extends WidgetType {
     mountedBlocks.set(wrapper, mounted);
     wrapper.classList.add("cm-sr-codeblock", "cm-sr-codeblock-widget");
     markRange(wrapper, this.from, this.to);
+    if (this.caret !== undefined) wrapper.dataset.srCaret = String(this.caret);
     return wrapper;
   }
 

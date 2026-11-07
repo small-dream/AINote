@@ -65,6 +65,41 @@ test("Soft render operations stay outside source editor state", async ({ page })
   await expect(page.locator(".cm-content")).not.toContainText("复制代码");
 });
 
+/** 单行 + 横向溢出：渲染态高度应只由正文决定，编辑态不应把 ``` 显示出来。 */
+const singleLine =
+  "note\n\n" + fence + "\n" +
+  '8B8D20F1 | spath method | search method="prints.remote" OR method="prints.local" OR method="prints.other"\n' +
+  fence + "\n\nafter\n";
+
+test("Soft render code block hugs content and hides fences while editing", async ({ page }) => {
+  await openWorkspace(page, state("compact.md", singleLine));
+  await page.getByRole("button", { name: "compact", exact: true }).first().click();
+  const block = page.locator(".cm-sr-codeblock-widget").first();
+  await expect(block.locator(".note-code-actions")).toBeVisible();
+  // 操作按钮横排：竖排会把只有一行的代码块撑出一大片底部空白。
+  const metrics = await block.evaluate((el) => {
+    const buttons = Array.from(el.querySelectorAll(".note-code-actions button"));
+    return {
+      tops: buttons.map((button) => Math.round(button.getBoundingClientRect().top)),
+      actionsHeight: el.querySelector(".note-code-actions")?.getBoundingClientRect().height ?? 0,
+      blockHeight: el.getBoundingClientRect().height,
+      preHeight: el.querySelector("pre")?.getBoundingClientRect().height ?? 0,
+    };
+  });
+  expect(new Set(metrics.tops).size).toBe(1);
+  expect(metrics.actionsHeight).toBeLessThanOrEqual(32);
+  expect(metrics.blockHeight).toBeLessThan(metrics.preHeight + 60);
+
+  await block.locator("pre").click();
+  await expect(page.locator(".cm-sr-codeblock-widget")).toHaveCount(0);
+  await expect(page.locator(".cm-content")).toContainText("spath method");
+  // 围栏行仍占一行（充当块内边距），但 DOM 里没有 ```；光标不在围栏上时不淡显。
+  await expect(page.locator(".cm-content")).not.toContainText(fence);
+  await expect(page.locator(".cm-sr-codeblock-line-first")).toHaveText("");
+  await expect(page.locator(".cm-sr-marker")).toHaveCount(0);
+  await expect(page.locator(".cm-line .cm-sr-code-text")).toContainText("spath method");
+});
+
 test("Rich text controls and language selection do not corrupt serialized content", async ({ page }) => {
   await installClipboard(page);
   await openWorkspace(page, state("rich.ainote", rich, "richText"));
@@ -95,6 +130,10 @@ test.describe("移动窄屏代码块", () => {
   await page.getByRole("tab", { name: "预览" }).click();
     const block = page.locator(".markdown-code-block").first();
     await expect(block.getByRole("button", { name: "复制代码" })).toBeVisible();
+    // 触屏按钮保持 44px 命中区，但两个按钮仍在同一行，块高不因操作区翻倍。
+    const tops = await block.locator(".note-code-actions button")
+      .evaluateAll((els) => els.map((el) => Math.round(el.getBoundingClientRect().top)));
+    expect(new Set(tops).size).toBe(1);
     await block.getByRole("button", { name: "自动换行" }).click();
     await expect(block.locator("pre")).toHaveClass(/note-code-wrapped/);
   });

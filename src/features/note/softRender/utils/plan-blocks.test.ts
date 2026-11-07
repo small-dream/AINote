@@ -42,17 +42,33 @@ describe("planSoftRender 标题", () => {
 });
 
 describe("planSoftRender 代码块与引用", () => {
-  it("围栏代码块光标离开时渲染为 widget，进入时淡显围栏", () => {
+  it("围栏代码块光标离开时渲染为 widget，进入时隐藏围栏（光标不在围栏行上）", () => {
     const text = "before\n\n```js\nconst a = 1;\n```";
     const plan = planFor(text, 0);
-    expect(plan.widgets.find((w) => w.kind === "codeblock")).toMatchObject({ alt: "js", value: "const a = 1;" });
+    expect(plan.widgets.find((w) => w.kind === "codeblock")).toMatchObject({ alt: "js", value: "const a = 1;", caret: 14 });
+    // 光标在代码正文里：两条围栏都隐藏（替换为空，DOM 里看不到 ```）。
     const active = planFor(text, 15);
-    expect(active.hides.find((h) => h.from === 8)?.reveal).toBe(true);
+    expect(active.hides.filter((h) => h.from >= 8 && h.to <= 13).every((h) => !h.reveal)).toBe(true);
+    expect(active.hides.find((h) => h.from === 27)?.reveal).toBe(false);
     expect(active.gaps.filter((gap) => gap.cls.startsWith("cm-sr-codeblock-line")).map((gap) => gap.cls)).toEqual([
       "cm-sr-codeblock-line cm-sr-codeblock-line-first",
       "cm-sr-codeblock-line",
       "cm-sr-codeblock-line cm-sr-codeblock-line-last",
     ]);
+  });
+
+  it("光标落在开围栏行上时只淡显该围栏", () => {
+    const text = "before\n\n```js\nconst a = 1;\n```";
+    const active = planFor(text, 9);
+    expect(active.hides.find((h) => h.from === 8)?.reveal).toBe(true);
+    expect(active.hides.find((h) => h.from === 11)?.reveal).toBe(true);
+    expect(active.hides.find((h) => h.from === 27)?.reveal).toBe(false);
+  });
+
+  it("选区跨过围栏时淡显围栏，方便整块复制", () => {
+    const text = "```js\nconst a = 1;\n```";
+    const active = planFor(text, 0, 22);
+    expect(active.hides.filter((h) => h.from <= 11 || h.from === 19).every((h) => h.reveal)).toBe(true);
   });
 
   it("引用块隐藏 > 前缀", () => {

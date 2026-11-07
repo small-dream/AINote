@@ -14,9 +14,10 @@
 }
 .note-code-main {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) var(--code-action-size);
+  /* 操作区单独占一列、按钮横排常驻：竖排两个图标会把只有一两行的代码块撑出大片底部空白。 */
+  grid-template-columns: minmax(0, 1fr) auto;
   align-items: start;
-  gap: 12px;
+  gap: 8px;
   min-width: 0;
 }
 .note-code-content { min-width: 0; }
@@ -54,9 +55,9 @@
 .note-code-controls { min-width: 0; }
 .note-code-actions {
   display: flex;
-  flex-direction: column;
+  flex-direction: row;
   align-items: center;
-  gap: 4px;
+  gap: 2px;
 }
 .note-code-action {
   display: inline-flex;
@@ -113,7 +114,7 @@
 .note-code-scrollbar {
   position: relative;
   height: 12px;
-  margin-top: 10px;
+  margin-top: 6px;
   border-radius: 6px;
   background: color-mix(in srgb, var(--note-ink) 8%, var(--note-code-bg));
   cursor: pointer;

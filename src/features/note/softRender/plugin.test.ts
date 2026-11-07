@@ -191,6 +191,9 @@ describe("softRender 交互与块级", () => {
     await new Promise((resolve) => setTimeout(resolve, 0));
     expect(view.contentDOM.querySelector(".cm-sr-codeblock-widget")).toBeNull();
     expect(view.contentDOM.textContent).toContain("const a = 1;");
+    // 光标落到正文首行，围栏保持隐藏（编辑代码时不应冒出 ```）。
+    expect(view.state.selection.main.head).toBe(6);
+    expect(view.contentDOM.textContent).not.toContain("```");
     view.destroy();
   });
 
