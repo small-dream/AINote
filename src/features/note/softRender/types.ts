@@ -1,4 +1,6 @@
-export type WidgetKind = "checkbox" | "image" | "hr" | "table" | "bullet" | "number" | "codeblock" | "mermaid" | "math";
+export type WidgetKind =
+  | "checkbox" | "image" | "hr" | "table" | "bullet" | "number"
+  | "codeblock" | "codeblock-edit-header" | "codeblock-edit-scrollbar" | "mermaid" | "math";
 
 export interface MarkRange {
   from: number;
@@ -26,6 +28,12 @@ export interface WidgetRange {
   alt?: string;
   /** 点击 widget 进入编辑时首选的光标落点（代码块落到正文首行） */
   caret?: number;
+  /** 编辑态顶栏收起代码块时应落到源码区间末尾之后。 */
+  blockTo?: number;
+  /** 围栏语言节点的可替换范围；无 CodeInfo 时只在 languageInsertAt 插入。 */
+  languageFrom?: number;
+  languageTo?: number;
+  languageInsertAt?: number;
   /** ordered 列表序号 */
   index?: number;
   /** math 模式：inline / block */

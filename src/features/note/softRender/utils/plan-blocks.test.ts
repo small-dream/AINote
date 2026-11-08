@@ -52,8 +52,12 @@ describe("planSoftRender 代码块与引用", () => {
     expect(active.hides.find((h) => h.from === 27)?.reveal).toBe(false);
     expect(active.gaps.filter((gap) => gap.cls.startsWith("cm-sr-codeblock-line")).map((gap) => gap.cls)).toEqual([
       "cm-sr-codeblock-line cm-sr-codeblock-line-first",
-      "cm-sr-codeblock-line",
+      "cm-sr-codeblock-line cm-sr-codeblock-body cm-sr-codeblock-body-first",
       "cm-sr-codeblock-line cm-sr-codeblock-line-last",
+    ]);
+    expect(active.widgets.map((widget) => widget.kind)).toEqual([
+      "codeblock-edit-header",
+      "codeblock-edit-scrollbar",
     ]);
   });
 
@@ -91,6 +95,24 @@ describe("planSoftRender 代码块与引用", () => {
     const text = "> [!NOTE] hi";
     const active = planFor(text, 3);
     expect(active.hides.find((h) => h.from === 2 && h.to === 10)?.reveal).toBe(true);
+  });
+});
+
+describe("planSoftRender 代码块选区", () => {
+  it("整行选区带行尾换行时不淡显下一行闭合围栏", () => {
+    const text = "```js\nconst a = 1;\n```";
+    const bodyStart = text.indexOf("const");
+    const closingFence = text.indexOf("\n", bodyStart) + 1;
+    const active = planFor(text, bodyStart, closingFence);
+    expect(active.hides.find((h) => h.from === closingFence)?.reveal).toBe(false);
+  });
+
+  it("代码块选区标记只覆盖代码正文，不包含围栏", () => {
+    const text = "```js\nconst a = 1;\n```";
+    const mark = findMark(planFor(text, 0, text.length), "cm-sr-code-selection");
+    expect(mark).toBeDefined();
+    expect(text.slice(mark?.from, mark?.to)).toBe("const a = 1;");
+    expect(findMark(planFor(text, 0), "cm-sr-code-selection")).toBeUndefined();
   });
 });
 

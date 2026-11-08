@@ -6,12 +6,29 @@
   font-family: var(--note-body-font);
   font-size: var(--note-font-size);
   line-height: var(--note-line-height);
+  /* CodeMirror 会按最宽行写入 inline flex-basis；软渲染代码块改为卡内横滚后，
+     长代码行不应再撑宽整个编辑器（移动端会把顶栏复制按钮裁到屏外）。 */
+  flex-basis: auto !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  --cm-sr-code-header-height: 41px;
+  --cm-sr-code-footer-height: 30px;
+  --cm-sr-code-line-number-width: 28px;
+  --cm-sr-codeblock-block-gap: 12px;
+}
+
+/* 块替换 widget 的边界光标会被 CodeMirror 画成整块高度；正常代码行/标题光标均远低于此值。
+   兜底限制只压缩异常块光标，不影响正文、标题和多行选区。 */
+.cm-soft-render .cm-cursor,
+.cm-soft-render .cm-dropCursor {
+  max-height: 2.5em;
 }
 
 /* 与预览一致的阅读列宽并居中：避免编辑区通栏而预览呈窄列居中。
    max-width 计入左右内边距（2rem×2），使正文可读宽度恰为 --note-reading-width。 */
 .note-theme-surface .cm-soft-render-shell {
   height: 100%;
+  --cm-sr-content-inline-padding: 2rem;
 }
 .note-theme-surface .cm-soft-render-shell .cm-editor,
 .note-theme-surface .cm-soft-render-shell .cm-scroller {
@@ -20,7 +37,17 @@
 .note-theme-surface .cm-soft-render-shell .cm-editor .cm-content {
   max-width: calc(var(--note-reading-width) + 4rem);
   margin-inline: auto;
-  padding: 1.25rem 2rem 1.5rem;
+  padding: 1.25rem var(--cm-sr-content-inline-padding) 1.5rem;
+}
+/* CodeMirror 的选区层是正文的兄弟节点，不会跟随代码行的 overflow 裁切；
+   这里把选区层限制在正文内容盒内，避免双击长代码时蓝色高亮画到卡片外。 */
+.note-theme-surface .cm-soft-render-shell .cm-editor .cm-scroller > .cm-selectionLayer {
+  inset: 0;
+  width: auto;
+  height: auto;
+  font-family: var(--note-body-font);
+  font-size: var(--note-font-size);
+  clip-path: inset(0 calc(max(0px, (100% - (var(--note-reading-width) + 2 * var(--cm-sr-content-inline-padding))) / 2) + var(--cm-sr-content-inline-padding)));
 }
 
 .cm-sr-h1,
@@ -45,6 +72,33 @@
    标题前有空行时再叠加块间距，整体节奏与预览的标题上边距接近。 */
 .cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) {
   padding-top: var(--note-heading-margin);
+}
+
+/* 标题下间距：预览的 margin-bottom 按标题自身字号计算（0.6em × 标题字号）。
+   .cm-line 的字号是正文字号，所以这里按各级标题比例换算成行内 em，避免 H1 紧贴正文。 */
+.cm-soft-render .cm-line:has(.cm-sr-h1) { padding-bottom: 0.96em; }
+.cm-soft-render .cm-line:has(.cm-sr-h2) { padding-bottom: 0.81em; }
+.cm-soft-render .cm-line:has(.cm-sr-h3) { padding-bottom: 0.69em; }
+.cm-soft-render .cm-line:has(.cm-sr-h4) { padding-bottom: 0.63em; }
+.cm-soft-render .cm-line:has(.cm-sr-h5),
+.cm-soft-render .cm-line:has(.cm-sr-h6) { padding-bottom: 0.6em; }
+
+/* 预览里相邻标题的上下 margin 会折叠；软渲染已由下一个标题的上间距承担，不再叠加。
+   标题后若隔着空行再出现标题，空行本身还保留块间距，同样不追加标题下间距。 */
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6):has(+ .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6)),
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6):has(+ .cm-line.cm-sr-blank-heading) {
+  padding-bottom: 0;
+}
+
+/* 代码块前已有自己的 12px 间距；若标题与围栏之间有空行，间距由空行承担，
+   标题行不再追加，避免两段间距叠成一大块。 */
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6):has(+ .cm-line.cm-sr-blank:has(+ .cm-sr-codeblock-widget, + .cm-sr-codeblock-header)) {
+  padding-bottom: 0;
+}
+
+/* 标题后只有一个空行再接正文时，空行不再额外占高；标题自身的下间距已与预览一致。 */
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank {
+  line-height: 0;
 }
 
 .cm-sr-strong { font-weight: 700; }
@@ -132,29 +186,220 @@
   border: none;
 }
 
+/* 软渲染代码块卡片：渲染态和编辑态共用顶栏、行号、底部滚动条与同一组高度 token。
+   聚焦只切换 DOM 形态，不改变卡片外高。 */
+.cm-sr-codeblock-header {
+  box-sizing: border-box;
+  height: var(--cm-sr-code-header-height);
+  border: 1px solid var(--note-border);
+  border-bottom: 0;
+  border-radius: var(--note-code-radius) var(--note-code-radius) 0 0;
+  background: color-mix(in srgb, var(--note-ink) 3%, var(--note-code-bg));
+  box-shadow: inset 0 -1px 0 var(--note-border);
+  color: var(--note-secondary);
+  font-family: var(--note-body-font);
+  font-size: 12px;
+}
+.cm-sr-codeblock-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  padding: 0 8px 0 6px;
+}
+.cm-sr-codeblock-toggle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  padding: 0;
+  border: 0;
+  border-radius: 5px;
+  background: transparent;
+  color: var(--note-secondary);
+  cursor: pointer;
+}
+.cm-sr-codeblock-toggle:hover { background: var(--note-surface); color: var(--note-ink); }
+.cm-sr-codeblock-language { position: relative; display: inline-flex; align-items: center; }
+.cm-sr-codeblock-language::after {
+  content: "";
+  position: absolute;
+  right: 5px;
+  width: 5px;
+  height: 5px;
+  border-right: 1.5px solid currentColor;
+  border-bottom: 1.5px solid currentColor;
+  transform: translateY(-2px) rotate(45deg);
+  pointer-events: none;
+}
+.cm-sr-codeblock-language select {
+  max-width: 220px;
+  padding: 5px 20px 5px 6px;
+  border: 1px solid transparent;
+  border-radius: 5px;
+  appearance: none;
+  background: transparent;
+  color: var(--note-secondary);
+  font: inherit;
+  cursor: pointer;
+}
+.cm-sr-codeblock-language select:hover { background: transparent; color: var(--note-ink); }
+.cm-sr-codeblock-language select:focus-visible {
+  border-color: transparent;
+  outline: none;
+  box-shadow: none;
+  background: transparent;
+  color: var(--note-ink);
+}
+.cm-sr-codeblock-actions { margin-left: auto; }
+.cm-sr-codeblock-header .note-code-action { width: 26px; height: 26px; }
+.cm-sr-codeblock-header .note-code-action:hover { background: var(--note-surface); }
+.cm-sr-codeblock-footer,
+.cm-sr-codeblock-widget .note-code-scroll-host {
+  box-sizing: border-box;
+  height: var(--cm-sr-code-footer-height);
+  padding: 6px 12px 11px;
+  border-inline: 1px solid var(--note-border);
+  border-bottom: 1px solid var(--note-border);
+  border-radius: 0 0 var(--note-code-radius) var(--note-code-radius);
+  background: var(--note-code-bg);
+}
+.cm-sr-codeblock-footer .note-code-scrollbar {
+  width: 100%;
+  margin-top: 0;
+  opacity: 1;
+}
+.cm-sr-codeblock-footer .note-code-scrollbar:not(.is-overflowing) { opacity: 0; pointer-events: none; }
+.cm-sr-codeblock-footer.is-empty,
+.cm-sr-codeblock-widget .note-code-scroll-host.is-empty {
+  height: 12px;
+  padding: 0;
+}
+.note-code-block.cm-sr-codeblock-widget .note-code-scrollbar {
+  width: 100%;
+  margin-top: 0;
+  opacity: 0;
+}
+@media (hover: hover) {
+  .note-code-block.cm-sr-codeblock-widget:hover .note-code-scrollbar { opacity: 1; }
+}
+.note-code-block.cm-sr-codeblock-widget .note-code-scrollbar:focus-visible { opacity: 1; }
+.note-code-block.cm-sr-codeblock-widget {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  border-radius: var(--note-code-radius);
+  overflow: visible;
+  background: transparent;
+}
+.cm-sr-codeblock-widget .note-code-content { padding: 0; }
+.note-code-block.cm-sr-codeblock-widget pre.note-code-pre {
+  box-sizing: border-box;
+  width: 100%;
+  padding: var(--note-code-padding);
+  border-inline: 1px solid var(--note-border);
+  background: var(--note-code-bg);
+  font-size: var(--note-code-size);
+  line-height: 1.6;
+}
+.cm-sr-codeblock-render-line {
+  display: flex;
+  align-items: flex-start;
+  min-width: max-content;
+}
+.cm-sr-codeblock-render-line::before {
+  content: attr(data-line);
+  position: sticky;
+  left: calc(-1 * var(--note-code-padding));
+  box-sizing: border-box;
+  flex: 0 0 calc(var(--cm-sr-code-line-number-width) + 10px);
+  width: calc(var(--cm-sr-code-line-number-width) + 10px);
+  padding-right: 10px;
+  color: var(--note-tertiary);
+  background: var(--note-code-bg);
+  text-align: right;
+  user-select: none;
+}
+.cm-sr-codeblock-render-content { display: block; min-width: 0; white-space: pre; }
+.cm-sr-codeblock-line-break { display: none; }
+.cm-sr-codeblock-widget .note-code-pre.note-code-wrapped { white-space: pre-wrap; }
+.cm-sr-codeblock-widget .note-code-pre.note-code-wrapped .cm-sr-codeblock-render-line { min-width: 0; }
+.cm-sr-codeblock-widget .note-code-pre.note-code-wrapped .cm-sr-codeblock-render-content {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
 /* 行级装饰类必须带上 .cm-line：CodeMirror 运行时注入的 `.cm-line { padding: 0 2px 0 6px }`
    与它们同为单类选择器且注入顺序在后，否则整块内边距（16px）会被压成 0，编辑态比渲染态贴边。
-   围栏行隐藏 ``` 后仍保留一个行高，正好充当代码块的上下内边距——既不会多出一条空行，
-   也让光标/方向键能落到围栏行上把围栏淡显回来。 */
+   围栏行隐藏 ``` 后仍保留一个行高，正好充当代码块的上下内边距。 */
 .cm-line.cm-sr-codeblock-line {
   background: var(--note-code-bg);
   border-inline: 1px solid var(--note-border);
   padding-inline: var(--note-code-padding);
   tab-size: 4;
 }
-.cm-line.cm-sr-codeblock-line-first {
-  border-top: 1px solid var(--note-border);
-  border-top-left-radius: 6px;
-  border-top-right-radius: 6px;
+/* 编辑器全局启用了 lineWrapping，聚焦代码块后长行会继承正文的软换行，
+   把单行代码拆成多行并撑高整个块。代码块编辑态改为行内横向滚动，同时把
+   字号 / 行高对齐渲染态；滚动条隐藏，光标移动时由浏览器自动横向跟随。 */
+.cm-soft-render .cm-line.cm-sr-codeblock-line {
+  font-size: var(--note-code-size);
+  line-height: 1.6;
+  white-space: pre;
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  overflow-y: hidden;
+  overflow-wrap: normal;
+  word-break: normal;
+  scrollbar-width: none;
 }
-.cm-line.cm-sr-codeblock-line-last {
-  border-bottom: 1px solid var(--note-border);
-  border-bottom-left-radius: 6px;
-  border-bottom-right-radius: 6px;
+.cm-soft-render .cm-line.cm-sr-codeblock-line::-webkit-scrollbar { display: none; }
+/* 围栏默认被隐藏，只用于占住代码块上下内边距；不能按正文行高撑开，
+   否则短代码块一聚焦就会比渲染态更高。 */
+.cm-soft-render .cm-line.cm-sr-codeblock-line-first,
+.cm-soft-render .cm-line.cm-sr-codeblock-line-last {
+  line-height: var(--note-code-padding);
+}
+.cm-soft-render .cm-line.cm-sr-codeblock-body { counter-increment: cm-sr-code-line; }
+.cm-soft-render .cm-line.cm-sr-codeblock-body-first { counter-reset: cm-sr-code-line; }
+.cm-soft-render .cm-line.cm-sr-codeblock-body::before {
+  content: counter(cm-sr-code-line);
+  position: sticky;
+  left: calc(-1 * var(--note-code-padding));
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+  width: calc(var(--cm-sr-code-line-number-width) + 10px);
+  padding-right: 10px;
+  color: var(--note-tertiary);
+  background: var(--note-code-bg);
+  text-align: right;
+  user-select: none;
 }
 .cm-sr-code-text {
   font-family: var(--note-code-font);
   font-size: 0.92em;
+}
+/* 行元素已按渲染态缩到代码字号，正文 span 不再二次缩放。 */
+.cm-soft-render .cm-sr-code-text { font-size: 1em; }
+/* 代码行底色不透明，原生选区层在行内不可见；用文本装饰补出与编辑器一致的选区色。 */
+.cm-sr-code-selection {
+  border-radius: 2px;
+  background-color: color-mix(in srgb, var(--accent) 40%, var(--bg-primary));
+}
+
+@media (max-width: 640px), (pointer: coarse) {
+  .cm-soft-render .cm-content {
+    --cm-sr-code-header-height: 45px;
+    --cm-sr-code-footer-height: 34px;
+  }
+  .cm-sr-codeblock-toggle,
+  .cm-sr-codeblock-header .note-code-action { width: 36px; height: 36px; }
+  .cm-sr-codeblock-language select { min-height: 36px; }
+  .cm-sr-codeblock-footer,
+  .cm-sr-codeblock-widget .note-code-scroll-host { padding-bottom: 15px; }
 }
 
 /* 块级间距：softRender 保留源码空行，若以完整行高渲染会与预览（折叠空行 + 块 margin）
@@ -165,6 +410,24 @@
 }
 .cm-sr-blank-heading {
   line-height: var(--note-block-margin);
+}
+
+/* 代码块上下间距放在相邻源码行的 padding 上，而不是 widget margin：
+   这样 CodeMirror 的高度映射与实际 DOM 一致，双击/点击不会错行；
+   源码空行只负责占位，不再和间距重复叠加。 */
+.cm-soft-render .cm-line:has(+ .cm-sr-codeblock-widget),
+.cm-soft-render .cm-line:has(+ .cm-sr-codeblock-header) {
+  padding-bottom: var(--cm-sr-codeblock-block-gap);
+}
+.cm-soft-render .cm-sr-codeblock-widget + .cm-line,
+.cm-soft-render .cm-sr-codeblock-footer + .cm-line {
+  padding-top: var(--cm-sr-codeblock-block-gap);
+}
+.cm-soft-render .cm-line.cm-sr-blank:has(+ .cm-sr-codeblock-widget),
+.cm-soft-render .cm-line.cm-sr-blank:has(+ .cm-sr-codeblock-header),
+.cm-soft-render .cm-sr-codeblock-widget + .cm-line.cm-sr-blank,
+.cm-soft-render .cm-sr-codeblock-footer + .cm-line.cm-sr-blank {
+  line-height: 0;
 }
 
 .cm-sr-blockquote {
@@ -269,8 +532,11 @@
 }
 
 @media (max-width: 640px) {
+  .note-theme-surface .cm-soft-render-shell {
+    --cm-sr-content-inline-padding: 1rem;
+  }
   .note-theme-surface .cm-soft-render-shell .cm-editor .cm-content {
-    padding: 1rem;
+    padding: 1rem var(--cm-sr-content-inline-padding);
   }
 }
 

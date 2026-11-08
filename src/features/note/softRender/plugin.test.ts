@@ -158,6 +158,21 @@ describe("softRender 点击定位", () => {
     expect(view.state.doc.sliceString(selection.from, selection.to)).toBe("second");
     view.destroy();
   });
+
+});
+
+describe("softRender 代码块选区", () => {
+  it("代码块内双击交给原生单词选择，不选中超宽整行", async () => {
+    const view = await createView("```js\nconst a = 1;\n```", 10);
+    const line = view.contentDOM.querySelector<HTMLElement>(".cm-line.cm-sr-codeblock-line-first");
+    if (!line) throw new Error("code line not rendered");
+    const event = new MouseEvent("mousedown", { bubbles: true, button: 0, detail: 2 });
+    Object.defineProperty(event, "target", { value: line });
+    const provider = view.state.facet(EditorView.mouseSelectionStyle).at(-1);
+    expect(provider).toBeDefined();
+    expect(provider?.(view, event)).toBeNull();
+    view.destroy();
+  });
 });
 
 describe("softRender 交互与块级", () => {
@@ -228,7 +243,8 @@ describe("softRender 代码块与数学", () => {
     const view = await createView("```js\nconst a = 1;\n```", 0);
     const widget = view.contentDOM.querySelector(".cm-sr-codeblock-widget");
     expect(widget).toBeDefined();
-    expect(widget?.querySelector(".note-code-language")?.textContent).toBe("js");
+    expect(widget?.querySelector<HTMLSelectElement>(".cm-sr-codeblock-header select")?.value).toBe("js");
+    expect(widget?.querySelectorAll(".cm-sr-codeblock-render-line")).toHaveLength(1);
     expect(widget?.querySelector(".cm-sr-codeblock-code")?.textContent).toContain("const");
     view.destroy();
   });

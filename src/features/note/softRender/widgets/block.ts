@@ -1,11 +1,11 @@
 import { EditorView, WidgetType } from "@codemirror/view";
-import { mountCodeBlock } from "@/features/code-block/mountCodeBlock";
 import { highlightCode } from "../utils/highlight";
 import { renderMath } from "../utils/math";
 import { renderMermaid } from "../utils/mermaidRender";
+import { mountSoftCodeBlock } from "./softCodeBlock";
 
 // CodeMirror 可复用相等 Widget 的 DOM，但替换 Widget 实例；资源跟随 DOM 而非实例。
-const mountedBlocks = new WeakMap<HTMLElement, ReturnType<typeof mountCodeBlock>>();
+const mountedBlocks = new WeakMap<HTMLElement, ReturnType<typeof mountSoftCodeBlock>>();
 
 /** 在 widget 根节点记录源码区间，供点击进入编辑使用。 */
 export function markRange(el: HTMLElement, from: number, to: number): void {
@@ -39,6 +39,9 @@ export class CodeBlockWidget extends WidgetType {
     readonly from: number,
     readonly to: number,
     readonly caret?: number,
+    readonly languageFrom?: number,
+    readonly languageTo?: number,
+    readonly languageInsertAt?: number,
   ) {
     super();
   }
@@ -49,7 +52,11 @@ export class CodeBlockWidget extends WidgetType {
       other.source === this.source &&
       other.language === this.language &&
       other.from === this.from &&
-      other.to === this.to
+      other.to === this.to &&
+      other.caret === this.caret &&
+      other.languageFrom === this.languageFrom &&
+      other.languageTo === this.languageTo &&
+      other.languageInsertAt === this.languageInsertAt
     );
   }
 
@@ -58,13 +65,19 @@ export class CodeBlockWidget extends WidgetType {
   }
 
   toDOM(view: EditorView): HTMLElement {
-    const footer = document.createElement("div");
-    footer.className = "note-code-language";
-    footer.textContent = this.language;
-    const mounted = mountCodeBlock({
+    const mounted = mountSoftCodeBlock({
       pre: highlightCode(this.source, this.language || null),
-      getSource: () => this.source,
-      ...(this.language ? { footer } : {}),
+      source: this.source,
+      language: this.language,
+      onLanguageChange: (language) => {
+        const from = this.languageFrom ?? this.languageInsertAt;
+        if (from === undefined) return;
+        view.dispatch({ changes: { from, to: this.languageTo ?? from, insert: language } });
+      },
+      onEnterEdit: () => {
+        view.focus();
+        view.dispatch({ selection: { anchor: this.caret ?? this.from + 1 } });
+      },
       onLayoutChange: () => view.requestMeasure(),
     });
     const wrapper = mounted.shell;

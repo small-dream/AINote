@@ -5,36 +5,12 @@ import type { Node as ProseMirrorNode } from "@tiptap/pm/model";
 import type { ViewMutationRecord } from "@tiptap/pm/view";
 import { useUiStore } from "@/stores/ui.store";
 import { mountCodeBlock } from "@/features/code-block/mountCodeBlock";
+import { CODE_LANGUAGES, syncLanguageOptions } from "@/features/code-block/utils/codeLanguages";
 
 /** 基于 highlight.js 的 Lowlight 实例：注册常见语言，支持自动检测。 */
 const lowlight = createLowlight(common);
 
-const LANGUAGE_LABELS: Record<string, string> = {
-  arduino: "Arduino", bash: "Bash", c: "C", cpp: "C++", csharp: "C#", css: "CSS",
-  diff: "Diff", go: "Go", graphql: "GraphQL", ini: "INI", java: "Java",
-  javascript: "JavaScript", json: "JSON", kotlin: "Kotlin", less: "Less", lua: "Lua",
-  makefile: "Makefile", markdown: "Markdown", objectivec: "Objective-C", perl: "Perl",
-  php: "PHP", "php-template": "PHP Template", plaintext: "Plain text", python: "Python",
-  "python-repl": "Python REPL", r: "R", ruby: "Ruby", rust: "Rust", scss: "SCSS",
-  shell: "Shell", sql: "SQL", swift: "Swift", typescript: "TypeScript", vbnet: "VB.NET",
-  wasm: "WebAssembly", xml: "XML", yaml: "YAML",
-};
-
-/** 可选语言列表（lowlight common 已注册且去重后的标识符），供语言选择器使用。 */
-export const CODE_LANGUAGES: ReadonlyArray<{ id: string; label: string }> = lowlight
-  .listLanguages()
-  .map((id) => ({ id, label: LANGUAGE_LABELS[id] ?? id }));
-
-/** 确保 select 中存在当前语言选项（支持 Markdown 里出现的别名，如 ts / js）。 */
-function syncLanguageOptions(select: HTMLSelectElement, language: string) {
-  const exists = [...select.options].some((option) => option.value === language);
-  if (language && !exists) {
-    const option = document.createElement("option");
-    option.value = language;
-    option.textContent = language;
-    select.append(option);
-  }
-}
+export { CODE_LANGUAGES };
 
 /** 构建底部语言下拉：填充选项、显示当前语言并绑定切换命令。 */
 function createLanguageSelect(initialLanguage: string, onChange: (language: string | null) => void) {

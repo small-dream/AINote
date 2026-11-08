@@ -10,6 +10,8 @@ import {
   BulletWidget,
   CheckboxWidget,
   CodeBlockWidget,
+  CodeBlockEditHeaderWidget,
+  CodeBlockEditScrollbarWidget,
   HrWidget,
   ImageWidget,
   MathWidget,
@@ -18,6 +20,7 @@ import {
   TableWidget,
 } from "./widgets";
 import { resolveImageSrc } from "./utils/image";
+import { codeBlockPointer } from "./utils/codeBlockPointer";
 
 export interface SoftRenderOptions {
   /** 活动仓库绝对路径，用于解析图片等仓库相对路径 */
@@ -42,6 +45,7 @@ export function softRender(options: SoftRenderOptions): Extension {
   });
   return [
     field,
+    codeBlockPointer,
     keymap.of([{ key: "Space", run: toggleTaskAtCursor }]),
     EditorView.mouseSelectionStyle.of((view, event) => createLineSelectionStyle(view, event, options)),
     EditorView.domEventHandlers({ click: (event, view) => handleClick(event, view, options) }),
@@ -67,7 +71,7 @@ function computeDecorations(state: EditorState, options: SoftRenderOptions): Dec
 }
 
 function toWidgetDecoration(widget: WidgetRange, options: SoftRenderOptions): Range<Decoration> {
-  return WIDGET_BUILDERS[widget.kind](widget, options).range(widget.from, widget.to);
+  return WIDGET_BUILDERS[widget.kind](widget, options);
 }
 
 function toHideDecoration(hide: HideRange): Decoration {
@@ -77,28 +81,50 @@ function toHideDecoration(hide: HideRange): Decoration {
   return Decoration.replace({});
 }
 
-const WIDGET_BUILDERS: Record<WidgetRange["kind"], (widget: WidgetRange, options: SoftRenderOptions) => Decoration> = {
-  checkbox: (widget) => Decoration.replace({ widget: new CheckboxWidget(widget.from, widget.checked ?? false) }),
+const WIDGET_BUILDERS: Record<WidgetRange["kind"], (widget: WidgetRange, options: SoftRenderOptions) => Range<Decoration>> = {
+  checkbox: (widget) => Decoration.replace({ widget: new CheckboxWidget(widget.from, widget.checked ?? false) }).range(widget.from, widget.to),
   image: (widget, options) =>
     Decoration.replace({
       widget: new ImageWidget(resolveImageSrc(options.repoPath, widget.value ?? ""), widget.alt ?? "", widget.from, widget.to),
-    }),
-  hr: (widget) => Decoration.replace({ widget: new HrWidget(widget.from, widget.to), block: true }),
-  table: (widget) => Decoration.replace({ widget: new TableWidget(widget.value ?? "", widget.from, widget.to), block: true }),
-  bullet: (widget) => Decoration.replace({ widget: new BulletWidget(widget.from, widget.to) }),
-  number: (widget) => Decoration.replace({ widget: new NumberWidget(widget.from, widget.to, widget.index ?? 1) }),
+    }).range(widget.from, widget.to),
+  hr: (widget) => Decoration.replace({ widget: new HrWidget(widget.from, widget.to), block: true }).range(widget.from, widget.to),
+  table: (widget) => Decoration.replace({ widget: new TableWidget(widget.value ?? "", widget.from, widget.to), block: true }).range(widget.from, widget.to),
+  bullet: (widget) => Decoration.replace({ widget: new BulletWidget(widget.from, widget.to) }).range(widget.from, widget.to),
+  number: (widget) => Decoration.replace({ widget: new NumberWidget(widget.from, widget.to, widget.index ?? 1) }).range(widget.from, widget.to),
   codeblock: (widget) =>
     Decoration.replace({
-      widget: new CodeBlockWidget(widget.value ?? "", widget.alt ?? "", widget.from, widget.to, widget.caret),
+      widget: new CodeBlockWidget(
+        widget.value ?? "", widget.alt ?? "", widget.from, widget.to, widget.caret,
+        widget.languageFrom, widget.languageTo, widget.languageInsertAt,
+      ),
       block: true,
-    }),
+    }).range(widget.from, widget.to),
+  "codeblock-edit-header": (widget) =>
+    Decoration.widget({
+      widget: new CodeBlockEditHeaderWidget({
+        source: widget.value ?? "",
+        language: widget.alt ?? "",
+        blockTo: widget.blockTo ?? widget.to,
+        languageFrom: widget.languageFrom,
+        languageTo: widget.languageTo,
+        languageInsertAt: widget.languageInsertAt,
+      }),
+      block: true,
+      side: -1,
+    }).range(widget.from),
+  "codeblock-edit-scrollbar": (widget) =>
+    Decoration.widget({
+      widget: new CodeBlockEditScrollbarWidget(widget.from, widget.to),
+      block: true,
+      side: 1,
+    }).range(widget.to),
   math: (widget) =>
     Decoration.replace({
       widget: new MathWidget(widget.value ?? "", widget.mode ?? "inline", widget.from, widget.to),
       block: widget.mode === "block",
-    }),
+    }).range(widget.from, widget.to),
   mermaid: (widget) =>
-    Decoration.replace({ widget: new MermaidWidget(widget.value ?? "", widget.from, widget.to), block: true }),
+    Decoration.replace({ widget: new MermaidWidget(widget.value ?? "", widget.from, widget.to), block: true }).range(widget.from, widget.to),
 };
 
 function handleClick(event: MouseEvent, view: EditorView, options: SoftRenderOptions): boolean {
@@ -111,6 +137,7 @@ function handleClick(event: MouseEvent, view: EditorView, options: SoftRenderOpt
     return true;
   }
   if (closestElement(target, "[data-code-control]")) return true;
+  if (enterCodeBlockBeside(event, view)) return true;
   if (enterWidgetAt(event, view)) return true;
   correctSelectionToClickedLine(event, view);
   debugClick("click:after", event, view, options);
@@ -141,7 +168,12 @@ function createLineSelectionStyle(view: EditorView, event: MouseEvent, options: 
   if (event.button !== 0) return null;
   // 双击（以及更快的连击）在软渲染里按「选中当前行」处理：CodeMirror 默认的整行选区
   // 会连行尾换行一起选，而换行的 DOM 落在下一行行首，高亮看起来就溢到了下一行。
-  if (event.detail >= 2) return createWholeLineStyle(view, event);
+  if (event.detail >= 2) {
+    // 代码行是独立横向滚动容器，但 CodeMirror 的选区层是它的兄弟节点，不会被裁切；
+    // 选中整条长行会让蓝色选区一直画到卡片外，因此代码块内交还原生单词选择。
+    if (closestElement(event.target, ".cm-line.cm-sr-codeblock-line")) return null;
+    return createWholeLineStyle(view, event);
+  }
   if (!isPlainSingleClick(event)) return null;
   return createCaretStyle(view, event);
 }
@@ -203,6 +235,22 @@ function closestElement(target: EventTarget | null, selector: string): HTMLEleme
 function enterWidgetAt(event: MouseEvent, view: EditorView): boolean {
   const el = closestElement(event.target, "[data-sr-from]");
   if (!el) return false;
+  return enterWidgetElement(el, event, view);
+}
+
+/** 点击代码块右侧空白时把它当作块内点击，避免在替换 widget 的边界画出整块高的光标。 */
+function enterCodeBlockBeside(event: MouseEvent, view: EditorView): boolean {
+  if (event.button !== 0 || !(event.target instanceof Element) || !event.target.closest(".cm-content")) return false;
+  if (event.target.closest(".cm-sr-codeblock-widget")) return false;
+  const widget = Array.from(view.contentDOM.querySelectorAll<HTMLElement>(".cm-sr-codeblock-widget[data-sr-from]"))
+    .find((el) => {
+      const box = el.getBoundingClientRect();
+      return event.clientX >= box.right && event.clientY >= box.top && event.clientY <= box.bottom;
+    });
+  return widget ? enterWidgetElement(widget, event, view) : false;
+}
+
+function enterWidgetElement(el: HTMLElement, event: MouseEvent, view: EditorView): boolean {
   const from = Number(el.dataset.srFrom);
   const to = Number(el.dataset.srTo);
   if (!Number.isFinite(from) || !Number.isFinite(to) || to <= from + 1) return false;

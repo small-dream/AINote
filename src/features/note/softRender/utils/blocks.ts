@@ -1,5 +1,5 @@
 import type { SyntaxNode } from "@lezer/common";
-import type { BlockRange, HideRange, SoftRenderPlan, TextRange, WidgetRange } from "../types";
+import type { BlockRange, HideRange, SoftRenderPlan, WidgetRange } from "../types";
 import { isActiveRange } from "./ranges";
 
 export type BlockHandler = (
@@ -43,122 +43,7 @@ function headingClass(node: SyntaxNode): string {
   return `cm-sr-h${node.name.slice(prefix.length)}`;
 }
 
-/**
- * 围栏代码块：光标离开时渲染为高亮/Mermaid widget；进入时就地编辑源码。
- * 编辑态默认隐藏 ```（围栏行不显示字符，行高即代码块的上下内边距）；
- * 只有光标落到围栏行本身时才淡显，用于改语言或改围栏。
- */
-export function planFencedCode(
-  node: SyntaxNode,
-  doc: string,
-  cursor: number,
-  plan: SoftRenderPlan,
-  selectionTo?: number,
-): void {
-  const marks = node.getChildren("CodeMark");
-  if (marks.length < 2) return;
-  if (isActiveRange(node.from, node.to, cursor, selectionTo)) {
-    planActiveCodeBlock(node, doc, plan, marks, cursor, selectionTo);
-  } else {
-    planInactiveCodeBlock(node, doc, plan);
-  }
-}
-
-function planActiveCodeBlock(
-  node: SyntaxNode,
-  doc: string,
-  plan: SoftRenderPlan,
-  marks: SyntaxNode[],
-  cursor: number,
-  selectionTo?: number,
-): void {
-  const lines = collectCodeLines(node, doc);
-  const openLine = lineIndexAt(lines, marks[0]?.from ?? node.from);
-  const closeLine = lineIndexAt(lines, marks[marks.length - 1]?.from ?? node.to);
-  const revealed = new Set<number>();
-  if (openLine >= 0 && lineHit(lines[openLine], cursor, selectionTo)) revealed.add(openLine);
-  if (closeLine >= 0 && lineHit(lines[closeLine], cursor, selectionTo)) revealed.add(closeLine);
-
-  for (const mark of marks) {
-    const index = lineIndexAt(lines, mark.from);
-    plan.hides.push({ from: mark.from, to: mark.to, reveal: revealed.has(index) });
-  }
-  const info = node.getChild("CodeInfo");
-  if (info) plan.hides.push({ from: info.from, to: info.to, reveal: revealed.has(lineIndexAt(lines, info.from)) });
-  planCodeBlockLines(lines, plan);
-  const text = node.getChild("CodeText");
-  if (text) plan.marks.push({ from: text.from, to: text.to, cls: "cm-sr-code-text" });
-}
-
-/** 代码块占据的源码行（首行是开围栏，末行是闭围栏，末行可能不含换行）。 */
-function collectCodeLines(node: SyntaxNode, doc: string): TextRange[] {
-  const lines: TextRange[] = [];
-  let lineStart = node.from;
-  for (;;) {
-    const newline = doc.indexOf("\n", lineStart);
-    const lineEnd = newline === -1 || newline >= node.to ? node.to : newline;
-    lines.push({ from: lineStart, to: lineEnd });
-    if (newline === -1 || newline >= node.to) return lines;
-    lineStart = newline + 1;
-  }
-}
-
-function lineIndexAt(lines: TextRange[], pos: number): number {
-  return lines.findIndex((line) => pos >= line.from && pos <= line.to);
-}
-
-/** 光标/选区是否落在这一行上（用于只淡显光标所在的那条围栏）。 */
-function lineHit(line: TextRange | undefined, cursor: number, selectionTo?: number): boolean {
-  if (!line) return false;
-  if (selectionTo === undefined) return cursor >= line.from && cursor <= line.to;
-  const start = Math.min(cursor, selectionTo);
-  const end = Math.max(cursor, selectionTo);
-  return start <= line.to && end >= line.from;
-}
-
-function planCodeBlockLines(lines: TextRange[], plan: SoftRenderPlan): void {
-  lines.forEach((line, index) => {
-    plan.gaps.push({ pos: line.from, cls: codeBlockLineClass(index === 0, index === lines.length - 1) });
-  });
-}
-
-function codeBlockLineClass(isFirst: boolean, isLast: boolean): string {
-  const classes = ["cm-sr-codeblock-line"];
-  if (isFirst) classes.push("cm-sr-codeblock-line-first");
-  if (isLast) classes.push("cm-sr-codeblock-line-last");
-  return classes.join(" ");
-}
-
-function planInactiveCodeBlock(node: SyntaxNode, doc: string, plan: SoftRenderPlan): void {
-  const { code, language } = describeCodeBlock(node, doc);
-  if (language.toLocaleLowerCase() === "mermaid") {
-    plan.widgets.push({ kind: "mermaid", from: node.from, to: node.to, value: code });
-  } else {
-    // 点击 widget 时直接落到正文首行，不把光标放进围栏（否则围栏会被淡显出来）。
-    plan.widgets.push({
-      kind: "codeblock",
-      from: node.from,
-      to: node.to,
-      value: code,
-      alt: language,
-      caret: firstCodeLineStart(node, doc),
-    });
-  }
-}
-
-function firstCodeLineStart(node: SyntaxNode, doc: string): number {
-  const newline = doc.indexOf("\n", node.from);
-  return newline === -1 || newline >= node.to ? node.from + 1 : newline + 1;
-}
-
-function describeCodeBlock(node: SyntaxNode, doc: string): { code: string; language: string } {
-  const info = node.getChild("CodeInfo");
-  const text = node.getChild("CodeText");
-  return {
-    code: text ? doc.slice(text.from, text.to) : "",
-    language: info ? doc.slice(info.from, info.to).trim() : "",
-  };
-}
+export { planFencedCode } from "./codeBlockPlan";
 
 /** 引用块：隐藏 > 前缀；首行是 [!NOTE/TIP/...] 时按 Callout 渲染。 */
 export function planBlockquote(

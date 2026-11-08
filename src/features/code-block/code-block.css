@@ -116,7 +116,7 @@
   height: 12px;
   margin-top: 6px;
   border-radius: 6px;
-  background: color-mix(in srgb, var(--note-ink) 8%, var(--note-code-bg));
+  background: color-mix(in srgb, var(--note-ink) 6%, var(--note-code-bg));
   cursor: pointer;
   touch-action: none;
   opacity: 0;
@@ -124,9 +124,11 @@
 }
 /* 鼠标设备上轨道只在悬停代码块、键盘聚焦或拖动时显现，避免常驻灰条干扰阅读；
    触屏没有 hover，保持常驻以便拖动。 */
-.note-code-block:hover .note-code-scrollbar,
 .note-code-block:active .note-code-scrollbar,
 .note-code-scrollbar:focus-visible { opacity: 1; }
+@media (hover: hover) {
+  .note-code-block:hover .note-code-scrollbar { opacity: 1; }
+}
 @media (hover: none) {
   .note-code-scrollbar { opacity: 1; transition: none; }
 }
@@ -140,10 +142,10 @@
   left: 0;
   min-width: 32px;
   border-radius: 6px;
-  background: var(--note-secondary);
+  background: color-mix(in srgb, var(--note-ink) 24%, var(--note-code-bg));
   cursor: grab;
 }
-.note-code-scrollbar-thumb:hover { background: var(--note-ink); }
+.note-code-scrollbar-thumb:hover { background: color-mix(in srgb, var(--note-ink) 36%, var(--note-code-bg)); }
 .note-code-scrollbar-thumb:active { cursor: grabbing; }
 @media (max-width: 640px), (pointer: coarse) {
   :root { --note-code-padding: 12px; }

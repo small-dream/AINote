@@ -4,6 +4,10 @@ import { calls, openNote, openWorkspace } from "./helpers";
 
 const CONTENT = "# 一级标题\n\n#### 四级标题\n";
 const ADJACENT_CONTENT = "# 一级标题\n## 二级标题\n\n正文\n";
+const HEADING_BODY_CASES = [
+  { label: "紧贴", content: "# 分组统计数量\n统计成功失败数量\n" },
+  { label: "隔空行", content: "# 分组统计数量\n\n统计成功失败数量\n" },
+] as const;
 
 /** 当前可见编辑器的标题级别下拉按钮（桌面与移动壳可能同时在 DOM 里挂载编辑器）。 */
 function visibleTrigger(page: Page): Locator {
@@ -23,6 +27,11 @@ async function openHeadingNote(page: Page): Promise<void> {
 async function openAdjacentHeadingNote(page: Page): Promise<void> {
   await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "heading-spacing.md", content: ADJACENT_CONTENT }] });
   await openNote(page, "heading-spacing", "一级标题");
+}
+
+async function openHeadingBodyNote(page: Page, content: string): Promise<void> {
+  await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "heading-body.md", content }] });
+  await openNote(page, "heading-body", "分组统计数量");
 }
 
 /** 桌面与移动共用编辑工具栏，按两种视口各跑一次，覆盖两个壳。 */
@@ -89,6 +98,41 @@ for (const { name, viewport } of [
 
       if (gap === null) throw new Error("未找到可测量的 H1/H2 标题");
       expect(gap).toBeGreaterThan(15);
+    });
+
+    for (const bodyCase of HEADING_BODY_CASES) test(`H1 与${bodyCase.label}正文的间距和预览一致`, async ({ page }) => {
+      await openHeadingBodyNote(page, bodyCase.content);
+
+      const softGap = await page.locator(".cm-content:visible").first().evaluate((root) => {
+        const heading = root.querySelector<HTMLElement>(".cm-sr-h1");
+        const body = [...root.querySelectorAll<HTMLElement>(".cm-line")].find((line) => line.textContent?.includes("统计成功失败数量"));
+        if (!heading || !body) return null;
+        const textRect = (element: HTMLElement) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return range.getBoundingClientRect();
+        };
+        return textRect(body).top - textRect(heading).bottom;
+      });
+
+      await page.getByRole("tab", { name: "预览" }).click();
+      const previewGap = await page.locator(".markdown-body:visible").first().evaluate((root) => {
+        const heading = root.querySelector<HTMLElement>("h1");
+        const body = root.querySelector<HTMLElement>("p");
+        if (!heading || !body) return null;
+        const textRect = (element: HTMLElement) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return range.getBoundingClientRect();
+        };
+        return textRect(body).top - textRect(heading).bottom;
+      });
+
+      if (softGap === null || previewGap === null) throw new Error("未找到可测量的 H1/正文");
+      // 移动端编辑区为避免 iOS 聚焦缩放会把正文抬到 16px，而预览仍是 15px，
+      // 同比例间距会多约 3px；规则本身的桌面端差值应在 1px 内。
+      const tolerance = name === "桌面端" ? 1 : 3.5;
+      expect(Math.abs(softGap - previewGap), `写作 ${softGap}px / 预览 ${previewGap}px`).toBeLessThanOrEqual(tolerance);
     });
   });
 }
