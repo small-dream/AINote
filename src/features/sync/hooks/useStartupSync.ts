@@ -2,16 +2,21 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useEffect, useRef } from "react";
 import { syncApi } from "@/api";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
-import { reportSyncProgress, useSyncRetryStore } from "@/stores/sync-retry.store";
+import { useSyncRetryStore } from "@/stores/sync-retry.store";
 
-/** 启动与联网恢复时自动完成 commit → pull → push，确保离线队列最终送达。 */
+/**
+ * 启动与联网恢复时只拉取远端更新。
+ *
+ * 启动阶段不提交本地改动、也不推送本地提交：未提交内容由用户决定何时保存版本，
+ * 完整的 commit → pull → push 仅由手动「一键同步」触发。
+ */
 export function useStartupSync(repoPath: string | null) {
   const online = useNetworkStatus();
   const queryClient = useQueryClient();
   const startedForRepo = useRef<string | null>(null);
   const { mutate, isPending } = useMutation({
-    mutationFn: () => syncApi.syncNow(reportSyncProgress),
-    // 重试只交给 Rust 侧的幂等拉取阶段：整条 commit → pull → push 重放会造成重复推送
+    mutationFn: () => syncApi.pull(),
+    // 网络重试由 Rust 拉取用例负责；启动不触发提交或推送。
     retry: false,
     onSettled: () => {
       useSyncRetryStore.getState().clear();

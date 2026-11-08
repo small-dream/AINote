@@ -43,6 +43,25 @@ fn commit_file(repo: &git2::Repository, path: &str, content: &str, msg: &str) ->
         .unwrap()
 }
 
+/// 在 HEAD 的现有 tree 上追加文件；用于构造不改动其他文件的远端/本地提交。
+fn commit_file_preserving_tree(
+    repo: &git2::Repository,
+    path: &str,
+    content: &str,
+    msg: &str,
+) -> git2::Oid {
+    let blob = repo.blob(content.as_bytes()).unwrap();
+    let parent = repo.head().ok().and_then(|head| head.peel_to_commit().ok());
+    let parent_tree = parent.as_ref().map(|commit| commit.tree().unwrap());
+    let mut root = repo.treebuilder(parent_tree.as_ref()).unwrap();
+    root.insert(path, blob, 0o100644).unwrap();
+    let tree = repo.find_tree(root.write().unwrap()).unwrap();
+    let sig = sig();
+    let parent_refs: Vec<&git2::Commit> = parent.iter().collect();
+    repo.commit(Some("HEAD"), &sig, &sig, msg, &tree, &parent_refs)
+        .unwrap()
+}
+
 fn init_local(remote_url: &str) -> (tempfile::TempDir, std::path::PathBuf) {
     let dir = tempfile::tempdir().unwrap();
     let repo = git2::Repository::init(dir.path()).unwrap();
@@ -164,6 +183,90 @@ fn fast_forward_keeps_local_modification_instead_of_overwriting_it() {
             .unwrap(),
         "seed",
         "检出失败时分支引用保持原状，不留下半完成状态"
+    );
+}
+
+#[test]
+fn fast_forward_preserves_uncommitted_changes_to_unrelated_files() {
+    let remote_dir = tempfile::tempdir().unwrap();
+    let bare = remote_dir.path().join("remote.git");
+    seed_bare(&bare);
+
+    let work = tempfile::tempdir().unwrap();
+    let local = work.path().join("repo");
+    clone_repo(&bare.to_string_lossy(), &local, &cred()).unwrap();
+
+    {
+        let remote_repo = git2::Repository::open(&bare).unwrap();
+        commit_file_preserving_tree(&remote_repo, "remote.md", "remote", "remote");
+    }
+    std::fs::write(local.join("seed.md"), "local-change").unwrap();
+
+    pull(&local.to_string_lossy(), &cred()).unwrap();
+
+    assert_eq!(
+        std::fs::read_to_string(local.join("remote.md")).unwrap(),
+        "remote",
+        "远端新增文件应同步到本地"
+    );
+    assert_eq!(
+        std::fs::read_to_string(local.join("seed.md")).unwrap(),
+        "local-change",
+        "远端未改动的本地未提交内容必须保留"
+    );
+    let repo = git2::Repository::open(&local).unwrap();
+    assert_eq!(
+        repo.head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .message()
+            .unwrap(),
+        "remote",
+        "安全快进后本地分支应指向远端提交"
+    );
+}
+
+#[test]
+fn diverged_pull_rejects_dirty_worktree_without_finishing_merge() {
+    let remote_dir = tempfile::tempdir().unwrap();
+    let bare = remote_dir.path().join("remote.git");
+    seed_bare(&bare);
+
+    let work = tempfile::tempdir().unwrap();
+    let local = work.path().join("repo");
+    clone_repo(&bare.to_string_lossy(), &local, &cred()).unwrap();
+
+    {
+        let repo = git2::Repository::open(&local).unwrap();
+        commit_file_preserving_tree(&repo, "local.md", "local", "local-commit");
+        repo.checkout_head(Some(git2::build::CheckoutBuilder::new().force()))
+            .unwrap();
+    }
+    {
+        let remote_repo = git2::Repository::open(&bare).unwrap();
+        commit_file_preserving_tree(&remote_repo, "remote.md", "remote", "remote-commit");
+    }
+    std::fs::write(local.join("seed.md"), "local-change").unwrap();
+
+    let error = pull(&local.to_string_lossy(), &cred()).unwrap_err();
+
+    assert!(matches!(error, AppError::Repo(_)), "提示先处理本地改动");
+    assert_eq!(
+        std::fs::read_to_string(local.join("seed.md")).unwrap(),
+        "local-change"
+    );
+    assert!(!local.join("remote.md").exists(), "拒绝时不应改写工作区");
+    let repo = git2::Repository::open(&local).unwrap();
+    assert_eq!(
+        repo.head()
+            .unwrap()
+            .peel_to_commit()
+            .unwrap()
+            .message()
+            .unwrap(),
+        "local-commit",
+        "拒绝时本地分支保持原状"
     );
 }
 

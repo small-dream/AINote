@@ -94,6 +94,7 @@ test.describe("同步自动重试（E4-T2）", () => {
     const state = baseState();
     state.syncRetry = { retry: 1, maxRetries: 3, delayMs: 1500 };
     await openWorkspace(page, state);
+    await page.getByRole("button", { name: "立即同步" }).click();
 
     const retrying = page.getByRole("status").filter({ hasText: "重试中（1/3）" });
     await expect(retrying).toBeVisible();

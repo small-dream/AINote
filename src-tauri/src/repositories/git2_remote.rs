@@ -12,7 +12,9 @@ use crate::domain::vault::is_envelope;
 use crate::repositories::vault_files;
 
 use super::ca_bundle;
-use super::git2_backend::{blob_is_envelope, current_branch, open, signature, to_git};
+use super::git2_backend::{
+    blob_is_envelope, current_branch, has_uncommitted, open, signature, to_git,
+};
 use super::git2_error::to_sync;
 
 fn callbacks(cred: &RemoteCredential) -> RemoteCallbacks<'static> {
@@ -103,6 +105,7 @@ pub fn force_push(path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
 pub fn pull(path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
     fetch(path, cred)?;
     let repo = open(path)?;
+    let dirty = has_uncommitted(&repo)?;
     let branch = current_branch(&repo)?;
     let remote_ref = format!("refs/remotes/origin/{branch}");
     let their_oid = match repo.refname_to_id(&remote_ref) {
@@ -116,6 +119,13 @@ pub fn pull(path: &str, cred: &RemoteCredential) -> Result<(), AppError> {
     }
     if analysis.is_fast_forward() {
         return fast_forward(&repo, &branch, their_oid);
+    }
+    // 分叉合并会改写 index/worktree；工作区有未提交内容时交给用户先保存版本或撤销，
+    // 不替用户提交，也不冒静默覆盖的风险。快进仍走 safe checkout，可保留不冲突的本地改动。
+    if dirty {
+        return Err(AppError::Repo(
+            "存在未提交的本地修改，无法自动合并远端分叉；请先保存版本或撤销后再同步".into(),
+        ));
     }
     merge_or_conflict(&repo, &their)
 }

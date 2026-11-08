@@ -82,7 +82,7 @@ fn parents_of(repo: &Repository) -> Result<Vec<git2::Commit<'_>>, AppError> {
     }
 }
 
-fn has_uncommitted(repo: &Repository) -> Result<bool, AppError> {
+pub(crate) fn has_uncommitted(repo: &Repository) -> Result<bool, AppError> {
     let mut opts = StatusOptions::new();
     opts.include_untracked(true);
     Ok(!repo.statuses(Some(&mut opts)).map_err(to_git)?.is_empty())

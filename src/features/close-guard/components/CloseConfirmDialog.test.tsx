@@ -73,7 +73,7 @@ describe("CloseConfirmDialog", () => {
     expect(screen.queryByText("有待提交的变更")).toBeNull();
     fireCloseRequested();
     expect(await screen.findByText("有待提交的变更")).toBeTruthy();
-    expect(screen.getByText(/下次同步时自动提交/)).toBeTruthy();
+    expect(screen.getByText(/下次点击「一键同步」时会自动提交/)).toBeTruthy();
   });
 });
 
