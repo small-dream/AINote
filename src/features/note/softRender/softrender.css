@@ -68,10 +68,28 @@
 .cm-sr-h5,
 .cm-sr-h6 { font-size: 1em; }
 
-/* 标题行自带标题上间距：源码里 H1 紧接 H2（中间没有空行）时也能拉开；
-   标题前有空行时再叠加块间距，整体节奏与预览的标题上边距接近。 */
+/* 标题行自带标题上间距，保证源码里 H1 后即使没有空行也能和正文分开。 */
 .cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) {
   padding-top: var(--note-heading-margin);
+}
+
+/* 预览里相邻标题的上下 margin 会折叠；软渲染紧接的标题或只隔一个空行时，
+   由后一个标题按自身字号承担折叠后的上间距，前一个标题的下间距和空行高度归零。 */
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h1),
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h1) { padding-top: 1.92em; }
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h2),
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h2) { padding-top: 1.62em; }
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h3),
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h3) { padding-top: 1.38em; }
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h4),
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h4) { padding-top: 1.26em; }
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h5),
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h5),
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h6),
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h6) { padding-top: 1.2em; }
+
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading {
+  line-height: 0;
 }
 
 /* 标题下间距：预览的 margin-bottom 按标题自身字号计算（0.6em × 标题字号）。
@@ -85,7 +103,7 @@
 
 /* 预览里相邻标题的上下 margin 会折叠；软渲染已由下一个标题的上间距承担，不再叠加。
    标题后若隔着空行再出现标题，空行本身还保留块间距，同样不追加标题下间距。 */
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6):has(+ .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6)),
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6):has(+ .cm-line .cm-sr-h1, + .cm-line .cm-sr-h2, + .cm-line .cm-sr-h3, + .cm-line .cm-sr-h4, + .cm-line .cm-sr-h5, + .cm-line .cm-sr-h6),
 .cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6):has(+ .cm-line.cm-sr-blank-heading) {
   padding-bottom: 0;
 }

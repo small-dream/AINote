@@ -3,7 +3,10 @@ import type { E2eState } from "../src/e2e/types";
 import { calls, openNote, openWorkspace } from "./helpers";
 
 const CONTENT = "# 一级标题\n\n#### 四级标题\n";
-const ADJACENT_CONTENT = "# 一级标题\n## 二级标题\n\n正文\n";
+const ADJACENT_HEADING_CASES = [
+  { label: "紧接", content: "# 一级标题\n## 二级标题\n\n正文\n" },
+  { label: "隔空行", content: "# 一级标题\n\n## 二级标题\n\n正文\n" },
+] as const;
 const HEADING_BODY_CASES = [
   { label: "紧贴", content: "# 分组统计数量\n统计成功失败数量\n" },
   { label: "隔空行", content: "# 分组统计数量\n\n统计成功失败数量\n" },
@@ -24,8 +27,8 @@ async function openHeadingNote(page: Page): Promise<void> {
   await openNote(page, "heading", "一级标题");
 }
 
-async function openAdjacentHeadingNote(page: Page): Promise<void> {
-  await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "heading-spacing.md", content: ADJACENT_CONTENT }] });
+async function openAdjacentHeadingNote(page: Page, content: string): Promise<void> {
+  await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "heading-spacing.md", content }] });
   await openNote(page, "heading-spacing", "一级标题");
 }
 
@@ -81,10 +84,10 @@ for (const { name, viewport } of [
       await expect(page.locator(".editor-status-bar:visible").first()).toContainText("第 3 行");
     });
 
-    test("H1 紧接 H2 时仍保留标题间距", async ({ page }) => {
-      await openAdjacentHeadingNote(page);
+    for (const pair of ADJACENT_HEADING_CASES) test(`H1 与${pair.label}的 H2 间距和预览一致`, async ({ page }) => {
+      await openAdjacentHeadingNote(page, pair.content);
 
-      const gap = await page.locator(".cm-content:visible").first().evaluate((root) => {
+      const softGap = await page.locator(".cm-content:visible").first().evaluate((root) => {
         const h1 = root.querySelector<HTMLElement>(".cm-sr-h1");
         const h2 = root.querySelector<HTMLElement>(".cm-sr-h2");
         if (!h1 || !h2) return null;
@@ -95,9 +98,22 @@ for (const { name, viewport } of [
         };
         return textRect(h2).top - textRect(h1).bottom;
       });
+      await page.getByRole("tab", { name: "预览" }).click();
+      const previewGap = await page.locator(".markdown-body:visible").first().evaluate((root) => {
+        const h1 = root.querySelector<HTMLElement>("h1");
+        const h2 = root.querySelector<HTMLElement>("h2");
+        if (!h1 || !h2) return null;
+        const textRect = (element: HTMLElement) => {
+          const range = document.createRange();
+          range.selectNodeContents(element);
+          return range.getBoundingClientRect();
+        };
+        return textRect(h2).top - textRect(h1).bottom;
+      });
 
-      if (gap === null) throw new Error("未找到可测量的 H1/H2 标题");
-      expect(gap).toBeGreaterThan(15);
+      if (softGap === null || previewGap === null) throw new Error("未找到可测量的 H1/H2 标题");
+      const tolerance = name === "桌面端" ? 1 : 3.5;
+      expect(Math.abs(softGap - previewGap), `写作 ${softGap}px / 预览 ${previewGap}px`).toBeLessThanOrEqual(tolerance);
     });
 
     for (const bodyCase of HEADING_BODY_CASES) test(`H1 与${bodyCase.label}正文的间距和预览一致`, async ({ page }) => {
