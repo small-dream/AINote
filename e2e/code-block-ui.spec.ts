@@ -169,6 +169,27 @@ test("Soft render short code block keeps its rendered height while editing", asy
   await expect(page.locator(".cm-sr-codeblock-footer-track")).toHaveAttribute("aria-hidden", "true");
 });
 
+test("Soft render hidden fence rows keep fences hidden when clicked", async ({ page }) => {
+  await openWorkspace(page, state("fence-click.md", "before\n\n" + fence + "\nconst a = 1;\n" + fence + "\n\nafter\n"));
+  await page.getByRole("button", { name: "fence-click", exact: true }).first().click();
+  await page.locator(".cm-sr-codeblock-widget pre").click();
+  const firstFence = await page.locator(".cm-line.cm-sr-codeblock-line-first").boundingBox();
+  const lastFence = await page.locator(".cm-line.cm-sr-codeblock-line-last").boundingBox();
+  if (!firstFence || !lastFence) throw new Error("hidden fence rows not measured");
+  await page.mouse.click(firstFence.x + 80, firstFence.y + 6);
+  await expect(page.locator(".cm-sr-marker")).toHaveCount(0);
+  await expect(page.locator(".cm-content")).not.toContainText(fence);
+  await expect(page.locator(".cm-sr-codeblock-widget")).toHaveCount(0);
+  await expect(page.getByText("第 4 行，第 1 列")).toBeVisible();
+  const lastAfterOpeningClick = await page.locator(".cm-line.cm-sr-codeblock-line-last").boundingBox();
+  if (!lastAfterOpeningClick) throw new Error("closing fence row disappeared after click");
+  await page.mouse.click(lastAfterOpeningClick.x + 80, lastAfterOpeningClick.y + 6);
+  await expect(page.locator(".cm-sr-marker")).toHaveCount(0);
+  await expect(page.locator(".cm-content")).not.toContainText(fence);
+  await expect(page.locator(".cm-sr-codeblock-widget")).toHaveCount(0);
+  await expect(page.getByText("第 4 行，第 1 列")).toBeVisible();
+});
+
 test("Soft render code block double-click keeps selection inside the card", async ({ page }) => {
   await openWorkspace(page, state("code-selection.md", markdown));
   await page.getByRole("button", { name: "code-selection", exact: true }).first().click();

@@ -69,6 +69,16 @@ describe("planSoftRender 代码块与引用", () => {
     expect(active.hides.find((h) => h.from === 27)?.reveal).toBe(false);
   });
 
+  it("光标落在围栏行边界时仍隐藏围栏，避免点击留白冒出 ```", () => {
+    const text = "before\n\n```js\nconst a = 1;\n```";
+    const openingBoundary = planFor(text, 13);
+    expect(openingBoundary.hides.find((h) => h.from === 8)?.reveal).toBe(false);
+    const closingBoundary = planFor(text, 27);
+    expect(closingBoundary.hides.find((h) => h.from === 27)?.reveal).toBe(false);
+    // 光标真正进入围栏行内部时仍淡显，保留键盘编辑源码围栏的能力。
+    expect(planFor(text, 9).hides.find((h) => h.from === 8)?.reveal).toBe(true);
+  });
+
   it("选区跨过围栏时淡显围栏，方便整块复制", () => {
     const text = "```js\nconst a = 1;\n```";
     const active = planFor(text, 0, 22);

@@ -134,7 +134,9 @@ function lineIndexAt(lines: TextRange[], pos: number): number {
 /** 光标/选区是否落在这一行上（用于只淡显光标所在的那条围栏）。 */
 function lineHit(line: TextRange | undefined, cursor: number, selectionTo?: number): boolean {
   if (!line) return false;
-  if (selectionTo === undefined) return cursor >= line.from && cursor <= line.to;
+  // 折叠光标落在围栏行的起止边界时不淡显：隐藏围栏行没有任何可见字符，
+  // 点击顶部 / 底部留白经常正好映射到 line.from / line.to，不能因此把 ``` 冒出来。
+  if (selectionTo === undefined) return cursor > line.from && cursor < line.to;
   const start = Math.min(cursor, selectionTo);
   const end = Math.max(cursor, selectionTo);
   // 选区按半开区间判断：整行选择常带行尾换行，终点恰好在下一行行首时

@@ -1,6 +1,7 @@
 import { EditorView, ViewPlugin } from "@codemirror/view";
 
 const INTERACTIVE = "button, select, input, textarea, a, label, [role='scrollbar'], .cm-gutters, .cm-tooltip";
+const CODE_FENCE_LINE = ".cm-line.cm-sr-codeblock-line-first, .cm-line.cm-sr-codeblock-line-last";
 
 interface ActiveBlock {
   header: HTMLElement;
@@ -26,6 +27,15 @@ export const codeBlockPointer = ViewPlugin.fromClass(class {
 function handleCodeBlockMouseDown(event: MouseEvent, view: EditorView): void {
   if (!isPlainPrimaryClick(event) || isInteractive(event.target)) return;
   if (isVerticalScrollbar(event, view)) return;
+  const hiddenFence = hiddenCodeFenceAt(event, view);
+  if (hiddenFence) {
+    const body = adjacentCodeBody(hiddenFence);
+    if (body) {
+      consume(event);
+      focusCodeBody(body, view);
+      return;
+    }
+  }
   if (event.target instanceof Element && event.target.closest(".cm-line.cm-sr-codeblock-body")) return;
 
   const inactive = inactiveCodeBlockAt(event, view);
@@ -56,6 +66,40 @@ function isVerticalScrollbar(event: MouseEvent, view: EditorView): boolean {
   const rect = scroller.getBoundingClientRect();
   const scrollbarWidth = scroller.offsetWidth - scroller.clientWidth;
   return scrollbarWidth > 0 && event.clientX >= rect.left + scroller.clientWidth;
+}
+
+/** 点击隐藏在卡片上下留白里的围栏行时，不把光标落到围栏边界上。 */
+function hiddenCodeFenceAt(event: MouseEvent, view: EditorView): HTMLElement | null {
+  const targetLine = codeFenceLineForTarget(event.target);
+  const hitLine = targetLine ?? codeFenceLineAtPoint(view, event.clientX, event.clientY);
+  if (!hitLine || !view.contentDOM.contains(hitLine) || hitLine.querySelector(".cm-sr-marker")) return null;
+  return hitLine;
+}
+
+/** click 阶段仍需识别隐藏围栏，避免 CodeMirror 的点击校正把光标写回围栏边界。 */
+export function isHiddenCodeFenceTarget(target: EventTarget | null): boolean {
+  const line = codeFenceLineForTarget(target);
+  return Boolean(line && !line.querySelector(".cm-sr-marker"));
+}
+
+function codeFenceLineForTarget(target: EventTarget | null): HTMLElement | null {
+  return target instanceof Element ? target.closest<HTMLElement>(CODE_FENCE_LINE) : null;
+}
+
+function codeFenceLineAtPoint(view: EditorView, x: number, y: number): HTMLElement | null {
+  const doc = view.contentDOM.ownerDocument;
+  if (typeof doc.elementFromPoint !== "function") return null;
+  return doc.elementFromPoint(x, y)?.closest<HTMLElement>(CODE_FENCE_LINE) ?? null;
+}
+
+function adjacentCodeBody(line: HTMLElement): HTMLElement | null {
+  const direction = line.classList.contains("cm-sr-codeblock-line-first") ? "nextElementSibling" : "previousElementSibling";
+  for (let sibling = line[direction]; sibling; sibling = sibling[direction]) {
+    if (!(sibling instanceof HTMLElement)) continue;
+    if (sibling.classList.contains("cm-sr-codeblock-body")) return sibling;
+    if (sibling.matches(CODE_FENCE_LINE)) return null;
+  }
+  return null;
 }
 
 function inactiveCodeBlockAt(event: MouseEvent, view: EditorView): HTMLElement | null {
@@ -116,6 +160,14 @@ function focusCodeLine(event: MouseEvent, line: HTMLElement, view: EditorView): 
   const x = clamp(event.clientX, box.left + 1, Math.max(box.left + 1, box.right - 1));
   const y = clamp(event.clientY, box.top + 1, Math.max(box.top + 1, box.bottom - 1));
   const pos = safePositionAtCoords(view, x, y) ?? safePositionAtDOM(view, line);
+  if (pos === null) return;
+  view.focus();
+  view.dispatch({ selection: { anchor: pos } });
+}
+
+/** 隐藏围栏行没有真实字符；改用正文行的 DOM 起点，避免坐标又映射回围栏边界。 */
+function focusCodeBody(body: HTMLElement, view: EditorView): void {
+  const pos = safePositionAtDOM(view, body);
   if (pos === null) return;
   view.focus();
   view.dispatch({ selection: { anchor: pos } });

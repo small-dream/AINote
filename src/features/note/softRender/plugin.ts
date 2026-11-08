@@ -20,7 +20,7 @@ import {
   TableWidget,
 } from "./widgets";
 import { resolveImageSrc } from "./utils/image";
-import { codeBlockPointer } from "./utils/codeBlockPointer";
+import { codeBlockPointer, isHiddenCodeFenceTarget } from "./utils/codeBlockPointer";
 
 export interface SoftRenderOptions {
   /** 活动仓库绝对路径，用于解析图片等仓库相对路径 */
@@ -137,6 +137,7 @@ function handleClick(event: MouseEvent, view: EditorView, options: SoftRenderOpt
     return true;
   }
   if (closestElement(target, "[data-code-control]")) return true;
+  if (isHiddenCodeFenceTarget(target)) return true;
   if (enterCodeBlockBeside(event, view)) return true;
   if (enterWidgetAt(event, view)) return true;
   correctSelectionToClickedLine(event, view);
