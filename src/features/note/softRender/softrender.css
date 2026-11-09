@@ -40,14 +40,16 @@
   padding: 1.25rem var(--cm-sr-content-inline-padding) 1.5rem;
 }
 /* CodeMirror 的选区层是正文的兄弟节点，不会跟随代码行的 overflow 裁切；
-   这里把选区层限制在正文内容盒内，避免双击长代码时蓝色高亮画到卡片外。 */
+   这里只裁左右，避免双击长代码时蓝色高亮画到卡片外。
+   选区层仅有视口高度，选区坐标却覆盖整篇文档；上下放宽到 CodeMirror 的
+   DOM 高度上限（7,000,000px），避免滚动后正文的选中背景被截断。 */
 .note-theme-surface .cm-soft-render-shell .cm-editor .cm-scroller > .cm-selectionLayer {
   inset: 0;
   width: auto;
   height: auto;
   font-family: var(--note-body-font);
   font-size: var(--note-font-size);
-  clip-path: inset(0 calc(max(0px, (100% - (var(--note-reading-width) + 2 * var(--cm-sr-content-inline-padding))) / 2) + var(--cm-sr-content-inline-padding)));
+  clip-path: inset(-7000000px calc(max(0px, (100% - (var(--note-reading-width) + 2 * var(--cm-sr-content-inline-padding))) / 2) + var(--cm-sr-content-inline-padding)));
 }
 
 .cm-sr-h1,

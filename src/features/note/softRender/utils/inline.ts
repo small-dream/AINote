@@ -31,13 +31,13 @@ export function planInlineCode(node: SyntaxNode, _doc: string, _cursor: number, 
   plan.marks.push({ from: first.to, to: last.from, cls: "cm-sr-inline-code" });
 }
 
-/** 转义符：如 `\[`、`\*`。隐藏反斜杠，保留转义后的字面字符；光标进入时淡显以便编辑源码。 */
+/** 转义符：范围选择时仍隐藏反斜杠，仅折叠光标进入内部时淡显以便编辑源码。 */
 export function planEscape(node: SyntaxNode, _doc: string, cursor: number, plan: SoftRenderPlan, selectionTo?: number): void {
   // Escape 节点覆盖 `\` + 被转义字符；只隐藏反斜杠本身，转义字符保持字面显示。
   plan.hides.push({
     from: node.from,
     to: node.from + 1,
-    reveal: isActiveRange(node.from, node.to, cursor, selectionTo),
+    reveal: selectionTo === undefined && isActiveRange(node.from, node.to, cursor),
   });
 }
 
