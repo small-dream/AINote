@@ -86,6 +86,26 @@ describe("dedupeRepeatedMargins", () => {
     const pages = ["报告\n第 1 页\n报告", "报告\n第 2 页\n报告"];
     expect(dedupeRepeatedMargins(pages)).toEqual(pages);
   });
+
+  it("去页眉页脚时保留页内段落分隔", () => {
+    const pages = [
+      ["页眉", "标题", "段落一第一行", "段落一第二行", "", "段落二", "第 1 页"].join("\n"),
+      ["页眉", "标题", "第三段第一行", "第三段第二行", "", "第四段", "第 2 页"].join("\n"),
+    ];
+    expect(dedupeRepeatedMargins(pages)).toEqual([
+      "段落一第一行\n段落一第二行\n\n段落二",
+      "第三段第一行\n第三段第二行\n\n第四段",
+    ]);
+  });
+
+  it("段落被页眉隔开时仍按块保留", () => {
+    const pages = [
+      ["共 2 页", "第一段", "", "第二段"].join("\n"),
+      ["共 2 页", "第三段", "", "第四段"].join("\n"),
+    ];
+    expect(dedupeRepeatedMargins(pages)).toEqual(["第一段\n\n第二段", "第三段\n\n第四段"]);
+    expect(assemblePdfMarkdown(dedupeRepeatedMargins(pages))).toBe("第一段\n\n第二段\n\n---\n\n第三段\n\n第四段");
+  });
 });
 
 describe("assemblePdfMarkdown", () => {

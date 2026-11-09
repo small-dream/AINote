@@ -63,6 +63,46 @@ describe("htmlToMarkdown", () => {
   });
 });
 
+describe("htmlToMarkdown / 围栏代码块必须原样保留", () => {
+  const fence = "`".repeat(3);
+
+  it("代码块内的 <script> 不会被安全清洗误删", () => {
+    const markdown = htmlToMarkdown(`<pre><code>${escapeHtml("<script>alert(1)</script>")}\nconst ok = 1;</code></pre>`);
+    expect(markdown).toBe(`${fence}\n<script>alert(1)</script>\nconst ok = 1;\n${fence}`);
+  });
+
+  it("代码块内的连续空行与行尾空格不会被压平", () => {
+    const markdown = htmlToMarkdown(`<pre><code>a() {}\n\n\nreturn 1;\nconst pad  \nend</code></pre>`);
+    expect(markdown).toBe(`${fence}\na() {}\n\n\nreturn 1;\nconst pad  \nend\n${fence}`);
+  });
+
+  it("正文片段仍然移除脚本、样式与 iframe", () => {
+    const markdown = htmlToMarkdown(`<p>正文</p><script>alert(1)</script><style>p{}</style><iframe src="x"></iframe><p>结尾</p>`);
+    expect(markdown).toBe("正文\n\n结尾");
+  });
+
+  it("代码块内容包含 ``` 时自动加长围栏", () => {
+    const code = ["示例：", "```js", "const a = 1;", "```"].map(escapeHtml).join("\n");
+    const markdown = htmlToMarkdown(`<pre><code>${code}</code></pre>`);
+    expect(markdown).toBe("````\n示例：\n```js\nconst a = 1;\n```\n````");
+  });
+
+  it("正文里的波浪号不会被当成围栏，后续正文仍会被清洗", () => {
+    const markdown = htmlToMarkdown(`<p>${escapeHtml("~~~")}</p><script>alert(1)</script><p>结尾</p>`);
+    expect(markdown).not.toContain("<script>");
+    expect(markdown).toContain("结尾");
+  });
+
+  it("代码块前后的正文间距保持原样", () => {
+    const markdown = htmlToMarkdown("<p>前面</p><pre><code>code</code></pre><p>后面</p>");
+    expect(markdown).toBe(`前面\n\n${fence}\ncode\n${fence}\n\n后面`);
+  });
+});
+
+function escapeHtml(value: string): string {
+  return value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 describe("isSafeHref", () => {
   it("允许网页、邮件、相对路径与导入占位符", () => {
     for (const href of ["https://example.com", "http://example.com", "mailto:a@b.c", "#top", "./a.md", "../a.md", "/a.md", "ainote-asset://2"]) {

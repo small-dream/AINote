@@ -123,26 +123,32 @@ function marginKey(line: string): string {
 
 export function dedupeRepeatedMargins(pages: string[]): string[] {
   if (pages.length < 2) return pages;
-  const pageLines = pages.map((page) => page.split("\n").map((line) => line.trim()).filter(Boolean));
+  // 保留空行：页面文本里的 "\n\n" 是段落分隔，按非空行过滤会把整页压成一段。
+  const pageLines = pages.map((page) => page.split("\n").map((line) => line.trim()));
+  const contentIndexes = pageLines.map((lines) => lines.reduce<number[]>((indexes, line, index) => {
+    if (line) indexes.push(index);
+    return indexes;
+  }, []));
   const counts = new Map<string, number>();
-  for (const lines of pageLines) {
-    if (lines.length <= 2) continue;
-    const candidates = new Set([...lines.slice(0, 2), ...lines.slice(-2)]);
-    for (const line of candidates) {
-      const key = marginKey(line);
+  contentIndexes.forEach((indexes, page) => {
+    if (indexes.length <= 2) return;
+    const lines = pageLines[page] ?? [];
+    const candidates = new Set([...indexes.slice(0, 2), ...indexes.slice(-2)].map((index) => marginKey(lines[index] ?? "")));
+    for (const key of candidates) {
       if (key) counts.set(key, (counts.get(key) ?? 0) + 1);
     }
-  }
+  });
   const threshold = Math.max(2, Math.ceil(pages.length * 0.6));
   const repeated = new Set([...counts].filter(([, count]) => count >= threshold).map(([key]) => key));
   if (repeated.size === 0) return pages;
-  return pageLines.map((lines) => {
-    if (lines.length <= 2) return lines.join("\n");
-    const cleaned = lines.filter((line, index) => {
-      const inMargin = index < 2 || index >= lines.length - 2;
-      return !(inMargin && repeated.has(marginKey(line)));
-    });
-    return (cleaned.length > 0 ? cleaned : lines).join("\n");
+  return pageLines.map((lines, page) => {
+    const indexes = contentIndexes[page] ?? [];
+    if (indexes.length <= 2) return lines.join("\n");
+    const margins = new Set([...indexes.slice(0, 2), ...indexes.slice(-2)]);
+    const cleaned = lines.filter((line, index) => !(margins.has(index) && repeated.has(marginKey(line))));
+    // 候选行全被删掉时回退原文，避免整页消失。
+    const kept = cleaned.some((line) => line) ? cleaned : lines;
+    return kept.join("\n").replace(/\n{3,}/g, "\n\n").trim();
   });
 }
 
