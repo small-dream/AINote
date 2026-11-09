@@ -1,4 +1,4 @@
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it } from "vitest";
 import { FONT_FAMILY_STORAGE_KEY, FONT_SIZE_STORAGE_KEY, useTypographyStore } from "@/stores/typography.store";
 import { TypographySettings } from "./TypographySettings";
@@ -15,6 +15,13 @@ describe("TypographySettings 排版偏好", () => {
     expect(screen.getByLabelText("行高")).toBeTruthy();
     expect(screen.getByLabelText("阅读宽度")).toBeTruthy();
     expect(screen.getByRole("radio", { name: "衬线" })).toBeTruthy();
+  });
+
+  it("提供更宽的阅读区域档位", () => {
+    render(<TypographySettings />);
+    const select = screen.getByLabelText("阅读宽度");
+    expect(within(select).getByRole("option", { name: "96ch" })).toBeTruthy();
+    expect(within(select).getByRole("option", { name: "112ch" })).toBeTruthy();
   });
 
   it("修改字号与字体族并持久化", () => {

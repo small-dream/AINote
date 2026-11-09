@@ -36,6 +36,8 @@ describe("typography.store 排版偏好解析与持久化", () => {
     expect(parseLineHeight("1.9")).toBe(1.9);
     expect(parseLineHeight("3")).toBe(DEFAULT_LINE_HEIGHT);
     expect(parseReadingWidth("80")).toBe(80);
+    expect(parseReadingWidth("96")).toBe(96);
+    expect(parseReadingWidth("112")).toBe(112);
     expect(parseReadingWidth("0")).toBe(DEFAULT_READING_WIDTH);
     expect(parseFontFamily("serif")).toBe("serif");
     expect(parseFontFamily("unknown")).toBe("sans");

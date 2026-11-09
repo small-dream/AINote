@@ -3,7 +3,7 @@ import { create } from "zustand";
 export type FontFamily = "sans" | "serif";
 export type FontSize = 13 | 14 | 15 | 16 | 17;
 export type LineHeight = 1.5 | 1.7 | 1.9 | 2.1;
-export type ReadingWidth = 60 | 68 | 72 | 80;
+export type ReadingWidth = 60 | 68 | 72 | 80 | 96 | 112;
 
 /** 排版偏好持久化键（localStorage，纯前端全局 UI 态，与配色解耦） */
 export const FONT_SIZE_STORAGE_KEY = "ainote.note-font-size";
@@ -18,7 +18,7 @@ export const DEFAULT_FONT_FAMILY: FontFamily = "sans";
 
 const FONT_SIZES: ReadonlyArray<number> = [13, 14, 15, 16, 17];
 const LINE_HEIGHTS: ReadonlyArray<number> = [1.5, 1.7, 1.9, 2.1];
-const READING_WIDTHS: ReadonlyArray<number> = [60, 68, 72, 80];
+const READING_WIDTHS: ReadonlyArray<number> = [60, 68, 72, 80, 96, 112];
 
 function isLocalStorageAvailable(): boolean {
   if (typeof localStorage === "undefined") return false;

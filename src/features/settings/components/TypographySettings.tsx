@@ -12,7 +12,7 @@ import {
 
 const FONT_SIZE_OPTIONS: FontSize[] = [13, 14, 15, 16, 17];
 const LINE_HEIGHT_OPTIONS: LineHeight[] = [1.5, 1.7, 1.9, 2.1];
-const READING_WIDTH_OPTIONS: ReadingWidth[] = [60, 68, 72, 80];
+const READING_WIDTH_OPTIONS: ReadingWidth[] = [60, 68, 72, 80, 96, 112];
 const FONT_FAMILY_OPTIONS: ReadonlyArray<{ value: FontFamily; key: "settings.fontSans" | "settings.fontSerif" }> = [
   { value: "sans", key: "settings.fontSans" },
   { value: "serif", key: "settings.fontSerif" },
