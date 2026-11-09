@@ -14,7 +14,12 @@ export function attachEditCodeBlockScrollbar(
 ): () => void {
   let syncing = false;
   const readMetrics = () => readCodeLineMetrics(view);
-  const refresh = () => applyCodeBlockScrollbar(track, thumb, readMetrics());
+  const refresh = () => {
+    // 底部留白在 12px / 30px 间切换会改变卡片高度；只在已挂载后通知重新测量，
+    // toDOM 阶段（尚未插入文档）由 CodeMirror 自己测量。
+    const heightChanged = applyCodeBlockScrollbar(track, thumb, readMetrics());
+    if (heightChanged && view.contentDOM.contains(track)) view.requestMeasure();
+  };
   const setScroll = (left: number) => {
     if (syncing) return;
     syncing = true;
