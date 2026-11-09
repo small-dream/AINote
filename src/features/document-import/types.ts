@@ -7,6 +7,7 @@ export type DocumentImportWarning = "formatSimplified" | "scannedPdf" | "imageLi
 export type DocumentImportErrorCode =
   | "desktopOnly"
   | "unsupported"
+  | "oneAtATime"
   | "tooLarge"
   | "empty"
   | "passwordProtected"

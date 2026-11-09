@@ -61,8 +61,7 @@ export function useWorkspaceActions(repoPath: string | null, onOpen: (path: stri
           oneAtATime: "importDoc.oneAtATime",
           desktopOnly: "importDoc.errorDesktopOnly",
         } as const;
-        const code = selection.code === "oneAtATime" ? "unsupported" : selection.code;
-        throw new DocumentImportError(code, t(messages[selection.code]));
+        throw new DocumentImportError(selection.code, t(messages[selection.code]));
       }
       if (selection.kind === "document") {
         await documentImport.start(dir, selection.file);

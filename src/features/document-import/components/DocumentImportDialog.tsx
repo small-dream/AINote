@@ -9,6 +9,7 @@ import { DocumentImportPreview } from "./DocumentImportPreview";
 const ERROR_KEYS: Record<DocumentImportErrorCode, TranslationKey> = {
   desktopOnly: "importDoc.errorDesktopOnly",
   unsupported: "importDoc.errorUnsupported",
+  oneAtATime: "importDoc.oneAtATime",
   tooLarge: "importDoc.errorTooLarge",
   empty: "importDoc.errorEmpty",
   passwordProtected: "importDoc.errorPassword",
