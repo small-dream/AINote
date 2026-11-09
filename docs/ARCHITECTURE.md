@@ -85,6 +85,10 @@ flowchart TB
 - `repositories/`：trait 与实现分离。`git_backend.rs` 定义 `GitBackend` trait，`git2_backend.rs`（本地操作）+ `git2_remote.rs`（网络操作，含历史重置后的 `force_push`）是 libgit2 实现；`repo_maintenance.rs` 定义 `RepoMaintenanceBackend` trait（完整性检查，避免继续膨胀 `GitBackend`），`git2_maintenance.rs` 为 libgit2 只读实现；`repo_rewrite.rs` 定义 `RepoRewriteBackend` trait（历史重置，全应用唯一会物理丢弃 Git 对象的能力），`git2_rewrite.rs` 为 libgit2 + 文件系统实现（旧 `.git` 先移出为同级备份，重建或推送失败即还原，成功后才删除）；`file_storage.rs` / `note_files.rs` / `file_tree.rs` / `trash_files.rs` 为文件系统访问（受 300 行上限拆分）。未来可换实现，Service 零感知。
 - `domain/`：实体（`Note`）、值对象（含 `hosting.rs` 的托管平台元数据与 `remote.rs` 的远端凭证）、统一错误 `AppError`。**零外部依赖**，不 import git2 / tauri。
 
+#### 仓库相对路径约定
+
+仓库相对路径（笔记、资产、搜索结果、wiki / 收藏 / 回收站条目）在前端与 Markdown 里**统一用 `/` 分隔**。`Path::strip_prefix` 在 Windows 上产出 `\`，因此 Rust 侧所有对外出口（`note_service::to_meta`、`file_tree::rel_path`、`search_service`、`wiki_service`、`asset_files`、`trash_files`、`note_files::unique_note_path` 等）都必须经 `domain/path.rs::to_slash` 归一；前端 `features/file-tree/utils/path.ts` 的 `getDirectoryPath` / `splitPath` / `normalizeFolderPath` 做同样兜底。这样同一文件在文件树、编辑器、收藏与 Git 错误信息里始终是同一个 id，标题重命名与移动的默认目录也不会退回仓库根。`.ainote/favorites.json` 等历史清单在**读取时**迁移，读操作不写盘。
+
 #### 托管平台抽象（多平台笔记仓库）
 
 笔记仓库的远端平台是可扩展维度，当前支持 GitHub 与 Gitee：

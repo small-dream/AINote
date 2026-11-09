@@ -30,7 +30,7 @@ pub fn search_notes(repo_path: &Path, query: &str) -> Result<Vec<SearchResult>, 
         let rel = file
             .strip_prefix(repo_path)
             .map_err(|e| AppError::Io(e.to_string()))?;
-        let path = rel.to_string_lossy().into_owned();
+        let path = crate::domain::path::to_slash(rel);
         let fallback = file
             .file_stem()
             .map(|s| s.to_string_lossy().into_owned())

@@ -25,9 +25,7 @@ pub fn list_favorite_notes(repo_path: &Path) -> Result<Vec<NoteMeta>, AppError> 
 
 /// 用例：切换收藏状态并清理已失效路径；返回切换后的状态。
 pub fn toggle_note_favorite(repo_path: &Path, rel: &str) -> Result<bool, AppError> {
-    let path = note_files::validate_rel_path(rel)?
-        .to_string_lossy()
-        .into_owned();
+    let path = crate::domain::path::to_slash(&note_files::validate_rel_path(rel)?);
     if NoteKind::of_path(Path::new(&path)).is_none() || !repo_path.join(&path).is_file() {
         return Err(AppError::NoteNotFound(rel.to_string()));
     }

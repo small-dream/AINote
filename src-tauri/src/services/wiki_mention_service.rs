@@ -160,7 +160,7 @@ fn scan(content: &str, kind: NoteKind, terms: &[String]) -> Result<Vec<MentionHi
 
 fn rel_path(root: &Path, file: &Path) -> Result<String, AppError> {
     file.strip_prefix(root)
-        .map(|path| path.to_string_lossy().into_owned())
+        .map(crate::domain::path::to_slash)
         .map_err(|error| AppError::Io(error.to_string()))
 }
 

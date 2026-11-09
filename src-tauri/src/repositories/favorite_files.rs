@@ -17,8 +17,15 @@ pub fn load(root: &Path) -> Result<FavoriteIndex, AppError> {
     }
 
     let raw = fs::read_to_string(path)?;
-    let index: FavoriteIndex = serde_json::from_str(&raw)
+    let mut index: FavoriteIndex = serde_json::from_str(&raw)
         .map_err(|error| AppError::Repo(format!("invalid favorites index: {error}")))?;
+    // 历史索引可能记录 Windows `\` 路径；统一成 `/` 后才能与笔记列表的路径对上。
+    // 只在读取时归一，不主动写盘（读操作不产生 Git 变更）。
+    index.paths = index
+        .paths
+        .into_iter()
+        .map(|path| crate::domain::path::to_slash(Path::new(&path)))
+        .collect();
     Ok(index)
 }
 

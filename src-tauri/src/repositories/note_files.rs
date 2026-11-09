@@ -121,7 +121,7 @@ pub fn unique_note_path(root: &Path, dir: &str, file_name: &str) -> Result<Strin
         candidate = dir.join(format!("{stem}-{i}.md"));
         i += 1;
     }
-    Ok(candidate.to_string_lossy().into_owned())
+    Ok(crate::domain::path::to_slash(&candidate))
 }
 
 pub fn move_note(root: &Path, from: &str, to: &str) -> Result<(), AppError> {

@@ -63,7 +63,7 @@ fn file_name(path: &Path) -> String {
 
 fn rel_path(root: &Path, path: &Path) -> String {
     path.strip_prefix(root)
-        .map(|p| p.to_string_lossy().into_owned())
+        .map(crate::domain::path::to_slash)
         .unwrap_or_default()
 }
 

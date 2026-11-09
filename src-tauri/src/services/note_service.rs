@@ -193,7 +193,7 @@ pub(crate) fn to_meta(root: &Path, file: &Path) -> Result<NoteMeta, AppError> {
     };
     let updated_at = file_storage::mtime_secs(file);
     Ok(NoteMeta {
-        path: rel.to_string_lossy().into_owned(),
+        path: crate::domain::path::to_slash(rel),
         kind,
         title,
         updated_at,

@@ -130,9 +130,8 @@ pub fn import_document(
             let path = write_asset_new(repo_path, &asset.file_name, &asset.bytes)?;
             let relative = path
                 .strip_prefix(repo_path)
-                .map_err(|error| AppError::Io(error.to_string()))?
-                .to_string_lossy()
-                .replace('\\', "/");
+                .map(crate::domain::path::to_slash)
+                .map_err(|error| AppError::Io(error.to_string()))?;
             created_assets.push(path);
             replace_asset_marker(&mut markdown, &marker, &relative);
         }

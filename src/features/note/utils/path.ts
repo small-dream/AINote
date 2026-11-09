@@ -1,4 +1,4 @@
-import { getDirectoryPath } from "@/features/file-tree/utils/path";
+import { splitPath } from "@/features/file-tree/utils/path";
 import type { NoteKind } from "@/api/types";
 import { noteExtension } from "./noteKind";
 
@@ -19,6 +19,6 @@ export function joinNotePath(dir: string, name: string): string {
 
 /** 取文件名（含扩展名）；无目录时返回原路径 */
 export function getNoteFileName(path: string): string {
-  const directory = getDirectoryPath(path);
-  return directory ? path.slice(directory.length + 1) : path;
+  // 复用路径段拆分：Windows 历史路径里的 `\` 也能正确取到文件名。
+  return splitPath(path).at(-1) ?? path;
 }

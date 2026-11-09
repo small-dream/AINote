@@ -111,8 +111,8 @@ fn read_raw(root: &Path, file: &Path) -> Result<String, AppError> {
 
 fn rel_of(root: &Path, file: &Path) -> String {
     file.strip_prefix(root)
-        .map(|rel| rel.to_string_lossy().into_owned())
-        .unwrap_or_else(|_| file.to_string_lossy().into_owned())
+        .map(crate::domain::path::to_slash)
+        .unwrap_or_else(|_| crate::domain::path::to_slash(file))
 }
 
 #[cfg(test)]

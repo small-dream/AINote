@@ -16,6 +16,7 @@ pub mod maintenance;
 pub mod mcp;
 pub mod metrics;
 pub mod note;
+pub mod path;
 pub mod quick_unlock;
 pub mod remote;
 pub mod rich_text;

@@ -52,4 +52,8 @@ describe("getNoteFileName", () => {
     expect(getNoteFileName("roadmap.md")).toBe("roadmap.md");
     expect(joinNotePath("", getNoteFileName("roadmap.md"))).toBe("roadmap.md");
   });
+
+  it("Windows 反斜杠路径也能取到文件名", () => {
+    expect(getNoteFileName("daily\\archive\\roadmap.md")).toBe("roadmap.md");
+  });
 });

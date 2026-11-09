@@ -15,6 +15,10 @@ describe("normalizeFolderPath", () => {
   it("保留多级目录", () => {
     expect(normalizeFolderPath("daily/2026")).toBe("daily/2026");
   });
+
+  it("统一 Windows 反斜杠分隔符", () => {
+    expect(normalizeFolderPath("docs\\sub\\")).toBe("docs/sub");
+  });
 });
 
 describe("collectDirPaths", () => {
@@ -53,6 +57,11 @@ describe("getDirectoryPath", () => {
   it("多级目录", () => {
     expect(getDirectoryPath("a/b/c.md")).toBe("a/b");
   });
+
+  it("Windows 反斜杠路径按仓库相对路径处理", () => {
+    expect(getDirectoryPath("daily\\2026-08-30.md")).toBe("daily");
+    expect(getDirectoryPath("a\\b\\c.md")).toBe("a/b");
+  });
 });
 
 describe("splitPath / joinPath", () => {
@@ -63,5 +72,9 @@ describe("splitPath / joinPath", () => {
 
   it("过滤空段", () => {
     expect(splitPath("/a//b/")).toEqual(["a", "b"]);
+  });
+
+  it("反斜杠输入同样拆成路径段", () => {
+    expect(splitPath("a\\b\\c.md")).toEqual(["a", "b", "c.md"]);
   });
 });

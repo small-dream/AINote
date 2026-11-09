@@ -26,6 +26,7 @@ pub fn wiki_index(repo_path: &Path) -> Result<Vec<NoteWiki>, AppError> {
         };
         let rel = file
             .strip_prefix(repo_path)
+            .map(crate::domain::path::to_slash)
             .map_err(|e| AppError::Io(e.to_string()))?;
         let fallback = file
             .file_stem()
@@ -34,7 +35,7 @@ pub fn wiki_index(repo_path: &Path) -> Result<Vec<NoteWiki>, AppError> {
         let kind = NoteKind::of_path(&file).unwrap_or(NoteKind::Markdown);
         notes.push(match kind {
             NoteKind::Markdown => NoteWiki {
-                path: rel.to_string_lossy().into_owned(),
+                path: rel,
                 title: extract_title(&content, &fallback),
                 aliases: extract_aliases(&content),
                 tags: extract_tags(&content),
@@ -45,7 +46,7 @@ pub fn wiki_index(repo_path: &Path) -> Result<Vec<NoteWiki>, AppError> {
             NoteKind::RichText => {
                 let text = rich_text::plain_text(&content);
                 NoteWiki {
-                    path: rel.to_string_lossy().into_owned(),
+                    path: rel,
                     title: rich_text::extract_title(&content).unwrap_or(fallback),
                     aliases: Vec::new(),
                     tags: extract_tags(&text),

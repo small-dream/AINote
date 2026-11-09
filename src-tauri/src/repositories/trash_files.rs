@@ -113,9 +113,8 @@ pub fn soft_delete_folder(root: &Path, rel: &str) -> Result<Vec<TrashItem>, AppE
     for file in &files {
         let file_rel = file
             .strip_prefix(root)
-            .map_err(|e| AppError::Io(e.to_string()))?
-            .to_string_lossy()
-            .into_owned();
+            .map(crate::domain::path::to_slash)
+            .map_err(|e| AppError::Io(e.to_string()))?;
         items.push(soft_delete_note(root, &file_rel)?);
     }
     fs::remove_dir_all(&dir).map_err(|err| AppError::io_context("删除目录失败", &dir, err))?;
@@ -159,7 +158,7 @@ fn collect_non_note_files(
         // 符号链接（含指向祖先的目录链接）不跟随，按非笔记条目计入，拒绝删除以防误删
         if file_type.is_symlink() || (file_type.is_file() && !is_note_file(&path)) {
             let shown = path.strip_prefix(base).unwrap_or(&path);
-            out.push(shown.to_string_lossy().into_owned());
+            out.push(crate::domain::path::to_slash(shown));
         } else if file_type.is_dir() {
             collect_non_note_files(base, &path, out, max)?;
         }

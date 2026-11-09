@@ -51,7 +51,7 @@ fn write_unique(root: &Path, bytes: &[u8], name: &str) -> Result<AssetInfo, AppE
         .strip_prefix(root)
         .map_err(|e| AppError::Io(e.to_string()))?;
     Ok(AssetInfo {
-        path: rel.to_string_lossy().into_owned(),
+        path: crate::domain::path::to_slash(rel),
     })
 }
 

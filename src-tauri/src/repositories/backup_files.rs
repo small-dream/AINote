@@ -83,14 +83,7 @@ fn relative_path(root: &Path, path: &Path) -> Result<String, AppError> {
     let relative = path
         .strip_prefix(root)
         .map_err(|_| AppError::InvalidPath(path.display().to_string()))?;
-    let mut name = String::new();
-    for component in relative.components() {
-        if !name.is_empty() {
-            name.push('/');
-        }
-        name.push_str(&component.as_os_str().to_string_lossy());
-    }
-    Ok(name)
+    Ok(crate::domain::path::to_slash(relative))
 }
 
 /// 流式备份写入器：边写边算摘要，`finish` 时把 manifest 作为最后一个条目写入。
