@@ -42,6 +42,13 @@ const actions = {
   setRenameTarget: vi.fn(),
   closeFolder: vi.fn(),
   handleCreateFolder: vi.fn(),
+  documentImport: {
+    state: { open: false, phase: "idle", fileName: "", dir: "", progress: { current: 0, total: 0 }, result: null, error: null, errorDetail: null },
+    start: vi.fn(),
+    retry: vi.fn(),
+    confirm: vi.fn(),
+    cancel: vi.fn(),
+  },
 } as unknown as WorkspaceActions;
 
 function renderSwitcher() {

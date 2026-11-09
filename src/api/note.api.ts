@@ -1,5 +1,5 @@
 import { call } from "./client";
-import type { NoteContent, NoteKind, NoteMeta, TreeNode } from "./types";
+import type { DocumentAssetInput, NoteContent, NoteKind, NoteMeta, TreeNode } from "./types";
 
 /** 笔记 CRUD 与文件树（P0-2 / P0-3）。repoPath 由 Rust 侧 config 读取，无需传参。 */
 export const noteApi = {
@@ -11,6 +11,9 @@ export const noteApi = {
   /** 导入外部 Markdown 内容为笔记（写入当前目录，重名自动加序号） */
   importFromMarkdown: (dir: string, fileName: string, content: string) =>
     call<NoteMeta>("import_note", { dir, fileName, content }),
+  /** 导入已转换的 Word/PDF 文档（正文 + 图片占位符），Rust 侧原子落盘 */
+  importDocument: (dir: string, fileName: string, content: string, assets: DocumentAssetInput[]) =>
+    call<NoteMeta>("import_document", { dir, fileName, content, assets }),
   /** 新建文件夹（目录），已存在时幂等 */
   createFolder: (path: string) => call<null>("create_folder", { path }),
   update: (path: string, content: string) => call<null>("update_note", { path, content }),

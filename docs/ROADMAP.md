@@ -26,7 +26,7 @@
 | 笔记核心闭环 | 绑定/新建仓库、创建/编辑/移动/删除、目录树、多仓库切换、软删除回收站 | ✅ 完整 |
 | Git 原生同步 | 一键同步、启动检查、离线可用、待同步重试、三栏冲突合并、版本历史 / Diff / 回滚 | ✅ 完整，接近同类上限 |
 | 知识网络 | `[[双链]]`、反向链接与出链、`#标签` 索引、全文搜索、命令面板、收藏、最近 | ✅ 核心可用 |
-| 编辑体验 | CodeMirror 软渲染 WYSIWYG、源码/分栏/预览、表格就地编辑、大纲、Markdown 诊断、富文本 TipTap、PDF 导出 | ✅ 广度充足，细节待收口 |
+| 编辑体验 | CodeMirror 软渲染 WYSIWYG、源码/分栏/预览、表格就地编辑、大纲、Markdown 诊断、富文本 TipTap、PDF 导出、桌面端 PDF/Word 导入 | ✅ 广度充足，细节待收口 |
 | AI 写作 | 多 Provider/多模型、流式、润色/翻译/缩写/扩写/续写、摘要、标题/大纲建议、创作/审查/优化、全库关键词问答 | ✅ P0 + P1 大部分完成 |
 | 跨端 | 桌面 macOS(Apple Silicon)/Windows/Linux；Android arm64 APK/AAB 已发布；移动端单栏壳与返回栈 | 🚧 Android 已发布，iOS 未发布 |
 | 分发与更新 | 桌面 Tauri updater 签名校验；Android 签名 Release；主题/语言/排版偏好 | 🚧 桌面未做平台签名（M1.5 补） |
@@ -273,6 +273,20 @@ timeline
 - **Desktop Impact**：新增设置页 MCP 分组、本地监听与 Token 管理。
 - **Mobile Impact**：无入站服务与入口；共享类型/i18n/API 可编译，Rust 侧 stub。
 - **验收**：真实 MCP 客户端 7 工具闭环；revision 冲突、草稿拒绝、加密锁定、Token 轮换、错误 Origin、端口占用均有明确反馈；全量门禁通过。
+
+---
+
+### 本轮增量 — 桌面端 PDF / Word 导入
+
+> 复用统一「导入笔记」入口，把常见办公文档转成可编辑 Markdown；解析只在本地进行，不自动提交 Git。
+
+- **入口**：创建菜单「导入笔记」按扩展名分流；桌面端支持 `.md` / `.markdown` / `.docx` / 文本型 `.pdf`，移动端仅保留 Markdown，Hook 层二次拒绝文档。
+- **Word**：Mammoth Worker 解析 + Turndown GFM 转换，保留标题、段落、列表、表格、链接、强调与内嵌图片；Worker 不可用回退主线程。
+- **PDF**：`pdfjs-dist/legacy` 按坐标重建行/段落，清理重复页眉页脚、页间插入分隔线、中文不强行加空格；仅支持文本型 PDF，扫描件不 OCR。
+- **落盘**：图片写 `assets/`（单图 20 MB、最多 100 张、总量 80 MB），笔记与图片由 Rust 一次性写入，失败回滚；源文档上限 30 MB，拒绝 `.doc` / `.docm` 与加密文档。
+- **Desktop Impact**：新增文档选择、解析进度、预览确认、保存失败重试与图片引用替换；导入后打开笔记但不生成提交。
+- **Mobile Impact**：无入口、不加载转换 Worker，仍只支持 Markdown 导入，功能无变化。
+- **验收**：`pnpm build && pnpm test && pnpm lint`、`cargo test` 全绿；覆盖中文/英文 DOCX、文本型/扫描版/密码 PDF、取消、图片落盘与失败回滚。
 
 ---
 

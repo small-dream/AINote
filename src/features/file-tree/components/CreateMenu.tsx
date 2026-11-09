@@ -3,6 +3,7 @@ import { createPortal } from "react-dom";
 import { FileDown, FolderPlus, Import, NotebookPen, Plus, Type } from "lucide-react";
 import type { NoteKind } from "@/api/types";
 import { useTranslation } from "@/i18n";
+import { isMobileApp } from "@/platform/runtime";
 import { useCreateMenu } from "../hooks/useCreateMenu";
 import { useCreateMenuLayer } from "../hooks/useCreateMenuLayer";
 
@@ -18,6 +19,9 @@ interface CreateMenuProps {
 /** 统一创建入口：笔记、文件和文件夹都从同一个 + 菜单进入。 */
 export function CreateMenu({ onCreateNote, onCreateFolder, onImportFiles, onImportNotes, compact = false, className = "" }: CreateMenuProps) {
   const { t } = useTranslation();
+  const mobile = isMobileApp();
+  const noteAccept = mobile ? ".md,.markdown" : ".md,.markdown,.docx,.pdf";
+  const noteHint = mobile ? t("create.importNoteHint") : t("create.importNoteHintDesktop");
   const tooltip = compact ? t("tree.newHere") : t("create.open");
   const inputRef = useRef<HTMLInputElement>(null);
   const noteInputRef = useRef<HTMLInputElement>(null);
@@ -39,11 +43,11 @@ export function CreateMenu({ onCreateNote, onCreateFolder, onImportFiles, onImpo
         <Plus size={18} aria-hidden="true" />
       </button>
       {menu.open && createPortal(
-        <CreateMenuPanel menuRef={menuRef} position={position} menu={menu} inputRef={inputRef} noteInputRef={noteInputRef} onCreateFolder={onCreateFolder} markdownLabel={t("create.markdown")} richTextLabel={t("create.richText")} folderLabel={t("create.folder")} importLabel={t("create.importFile")} importHint={t("create.importHint")} importNoteLabel={t("create.importNote")} importNoteHint={t("create.importNoteHint")} />,
+        <CreateMenuPanel menuRef={menuRef} position={position} menu={menu} inputRef={inputRef} noteInputRef={noteInputRef} onCreateFolder={onCreateFolder} markdownLabel={t("create.markdown")} richTextLabel={t("create.richText")} folderLabel={t("create.folder")} importLabel={t("create.importFile")} importHint={t("create.importHint")} importNoteLabel={t("create.importNote")} importNoteHint={noteHint} />,
         document.body,
       )}
       <FileInput ref={inputRef} onSelect={menu.importFiles} />
-      <FileInput ref={noteInputRef} accept=".md,.markdown" onSelect={menu.importNotes} />
+      <FileInput ref={noteInputRef} accept={noteAccept} onSelect={menu.importNotes} />
     </div>
   );
 }

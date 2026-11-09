@@ -14,6 +14,9 @@ export interface NoteMeta {
   encrypted: boolean;
 }
 
+/** import_document 的内嵌图片输入：文件名 + 原始字节 */
+export interface DocumentAssetInput { fileName: string; bytes: Uint8Array }
+
 /** read_note 返回的完整笔记内容 */
 export interface NoteContent {
   path: string;

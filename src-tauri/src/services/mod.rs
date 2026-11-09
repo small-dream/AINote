@@ -10,6 +10,7 @@ pub mod capture_service;
 pub(crate) mod conflict_export_service;
 pub(crate) mod diagnostics_service;
 pub mod discard_service;
+pub mod document_import_service;
 pub mod draft_state;
 pub mod history_reset_service;
 pub mod history_service;

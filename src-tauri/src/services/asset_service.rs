@@ -4,7 +4,7 @@ use crate::domain::asset::AssetInfo;
 use crate::domain::error::AppError;
 use crate::repositories::{asset_files, note_files};
 
-const MAX_ASSET_BYTES: u64 = 20 * 1024 * 1024;
+pub(crate) const MAX_ASSET_BYTES: u64 = 20 * 1024 * 1024;
 
 /// 用例：从本地路径导入资产到仓库 `assets/`（拖放文件）。
 pub fn import_asset(repo_path: &Path, source_path: &str) -> Result<AssetInfo, AppError> {

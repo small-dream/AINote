@@ -165,7 +165,7 @@ pub fn list_tree(repo_path: &Path) -> Result<TreeNode, AppError> {
 
 /// re-export：纯函数取展示标题（自 domain/note.rs，供 search/wiki 复用）
 pub use crate::domain::note::extract_title;
-fn to_meta(root: &Path, file: &Path) -> Result<NoteMeta, AppError> {
+pub(crate) fn to_meta(root: &Path, file: &Path) -> Result<NoteMeta, AppError> {
     let rel = file
         .strip_prefix(root)
         .map_err(|e| AppError::Io(e.to_string()))?;

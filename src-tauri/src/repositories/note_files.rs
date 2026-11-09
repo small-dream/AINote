@@ -78,8 +78,12 @@ pub fn write_note_new(root: &Path, rel: &str, content: &str) -> Result<(), AppEr
             std::io::ErrorKind::AlreadyExists => AppError::NoteExists(rel.to_string()),
             _ => AppError::io_context("创建失败", &path, err),
         })?;
-    file.write_all(content.as_bytes())
-        .map_err(|err| AppError::io_context("写入失败", &path, err))
+    if let Err(err) = file.write_all(content.as_bytes()) {
+        drop(file);
+        let _ = fs::remove_file(&path);
+        return Err(AppError::io_context("写入失败", &path, err));
+    }
+    Ok(())
 }
 
 /// 覆盖已有笔记；目标不存在时返回 `NoteNotFound`，绝不隐式创建文件。

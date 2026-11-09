@@ -48,6 +48,7 @@ export type {
   CaptureInput,
   CaptureSettings,
   ContextSnippet,
+  DocumentAssetInput,
   AssetInfo,
   AuthStatusDto,
   BackupExportDto,

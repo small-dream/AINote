@@ -15,6 +15,7 @@ import type { NoteNavigationTarget } from "@/stores/session.store";
 import { VaultUnlockDialog } from "@/features/vault/components/VaultUnlockDialog";
 import { MobileWorkspaceContent } from "./MobileWorkspaceContent";
 import { useFocusModeShortcut } from "@/hooks/useFocusModeShortcut";
+import { DocumentImportDialog } from "@/features/document-import/components/DocumentImportDialog";
 
 const LazySettingsView = lazy(() => import("@/features/settings/components/SettingsView").then(({ SettingsView }) => ({ default: SettingsView })));
 const LazyCommitDialog = lazy(() => import("@/features/commit/components/CommitDialog").then(({ CommitDialog }) => ({ default: CommitDialog })));
@@ -58,6 +59,7 @@ function WorkspaceDialogs({ repoPath, actions, onMoved }: { repoPath: string | n
     <NewFolderDialog key={`new-folder:${actions.folderDialog.open ? actions.folderDialog.dir : "closed"}`} open={actions.folderDialog.open} dir={actions.folderDialog.dir} existingDirs={actions.existingDirs} onClose={actions.closeFolder} onCreate={actions.handleCreateFolder} />
     <MoveNoteDialog key={`move:${actions.moveTarget ?? "none"}`} repoPath={repoPath} path={actions.moveTarget} onClose={() => actions.setMoveTarget(null)} onMoved={onMoved} />
     <RenameNoteDialog key={`rename:${actions.renameTarget ?? "none"}`} path={actions.renameTarget} onClose={() => actions.setRenameTarget(null)} onRenamed={onMoved} />
+    <DocumentImportDialog controller={actions.documentImport} />
   </>;
 }
 

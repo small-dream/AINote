@@ -1,7 +1,7 @@
 {
   "name": "ainote",
   "private": true,
-  "version": "0.63.2",
+  "version": "0.64.0",
   "type": "module",
   "packageManager": "pnpm@10.33.0",
   "scripts": {
@@ -31,6 +31,7 @@
     "@codemirror/search": "^6.7.1",
     "@codemirror/state": "^6.7.1",
     "@codemirror/view": "^6.43.9",
+    "@joplin/turndown-plugin-gfm": "^1.0.68",
     "@lezer/common": "^1.5.2",
     "@lezer/highlight": "^1.2.3",
     "@lezer/markdown": "^1.7.2",
@@ -54,7 +55,9 @@
     "katex": "^0.18.4",
     "lowlight": "^3.3.0",
     "lucide-react": "^1.37.0",
+    "mammoth": "^1.13.0",
     "mermaid": "^11.17.2",
+    "pdfjs-dist": "^6.5.438",
     "react": "^19.2.8",
     "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
@@ -67,6 +70,7 @@
     "remark-math": "^6.0.0",
     "tippy.js": "^6.3.7",
     "tiptap-markdown": "^0.9.0",
+    "turndown": "^7.2.5",
     "yaml": "^2.9.0",
     "zustand": "^5.0.15"
   },
@@ -81,6 +85,7 @@
     "@types/node": "^26.4.0",
     "@types/react": "^19.2.18",
     "@types/react-dom": "^19.2.5",
+    "@types/turndown": "^5.0.6",
     "@vitejs/plugin-react": "^6.1.1",
     "eslint": "^10.9.1",
     "eslint-plugin-react-hooks": "^7.1.1",

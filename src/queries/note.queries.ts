@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { noteApi } from "@/api";
-import type { NoteContent, NoteKind, NoteMeta } from "@/api/types";
+import type { DocumentAssetInput, NoteContent, NoteKind, NoteMeta } from "@/api/types";
 import { useWorkspaceActivityStore } from "@/stores/workspace-activity.store";
 
 export const noteKeys = {
@@ -62,6 +62,30 @@ export function useImportNoteMutation() {
   return useMutation({
     mutationFn: ({ dir, fileName, content }: ImportNoteInput) =>
       noteApi.importFromMarkdown(dir, fileName, content),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["notes"] });
+      void queryClient.invalidateQueries({ queryKey: ["tree"] });
+      void queryClient.invalidateQueries({ queryKey: ["wiki"] });
+      markActivity();
+      void queryClient.invalidateQueries({ queryKey: ["sync"] });
+    },
+  });
+}
+
+interface ImportDocumentInput {
+  dir: string;
+  fileName: string;
+  content: string;
+  assets: DocumentAssetInput[];
+}
+
+/** 导入已转换的 Word/PDF 文档：成功后刷新索引并打开新笔记（不自动提交） */
+export function useImportDocumentMutation() {
+  const queryClient = useQueryClient();
+  const markActivity = useWorkspaceActivityStore((state) => state.markActivity);
+  return useMutation({
+    mutationFn: ({ dir, fileName, content, assets }: ImportDocumentInput) =>
+      noteApi.importDocument(dir, fileName, content, assets),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: ["notes"] });
       void queryClient.invalidateQueries({ queryKey: ["tree"] });

@@ -133,6 +133,7 @@ pub fn run() {
             commands::capture::share::capture_ack_share,
             commands::note::create::create_note,
             commands::note::import::import_note,
+            commands::note::import_document::import_document,
             commands::note::convert::convert_note,
             commands::note::create_folder::create_folder,
             commands::note::read::read_note,

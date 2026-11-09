@@ -5,6 +5,7 @@ pub mod delete;
 pub mod delete_folder;
 pub mod favorites_list;
 pub mod import;
+pub mod import_document;
 pub mod list;
 pub mod r#move;
 pub mod read;
