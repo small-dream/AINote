@@ -62,9 +62,20 @@ fn commit_file_preserving_tree(
         .unwrap()
 }
 
+/// 测试仓库统一关掉 autocrlf：否则开发者全局 `core.autocrlf=true` 时，
+/// 检出到工作区的文本会被改写成 CRLF，断言"落盘内容"的用例会在本机必失败。
+fn init_repo(dir: &Path) -> git2::Repository {
+    let repo = git2::Repository::init(dir).unwrap();
+    repo.config()
+        .expect("读取仓库配置")
+        .set_bool("core.autocrlf", false)
+        .expect("关闭 autocrlf");
+    repo
+}
+
 fn init_local(remote_url: &str) -> (tempfile::TempDir, std::path::PathBuf) {
     let dir = tempfile::tempdir().unwrap();
-    let repo = git2::Repository::init(dir.path()).unwrap();
+    let repo = init_repo(dir.path());
     repo.remote("origin", remote_url).unwrap();
     let path = dir.path().to_path_buf();
     (dir, path)
@@ -285,7 +296,7 @@ fn merge_conflict_repo_on(
     let tmp = tempfile::tempdir().unwrap();
     let dir = tmp.path().join("repo");
     std::fs::create_dir_all(&dir).unwrap();
-    let repo = git2::Repository::init(&dir).unwrap();
+    let repo = init_repo(&dir);
     commit_file(&repo, file, base, "base");
     let head_ref = repo.head().unwrap().name().unwrap().to_string();
     let base_commit = repo.head().unwrap().peel_to_commit().unwrap();
