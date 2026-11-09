@@ -79,10 +79,11 @@ describe("planSoftRender 代码块与引用", () => {
     expect(planFor(text, 9).hides.find((h) => h.from === 8)?.reveal).toBe(true);
   });
 
-  it("选区跨过围栏时淡显围栏，方便整块复制", () => {
+  it("选区跨过围栏时仍隐藏围栏和语言标记", () => {
     const text = "```js\nconst a = 1;\n```";
     const active = planFor(text, 0, 22);
-    expect(active.hides.filter((h) => h.from <= 11 || h.from === 19).every((h) => h.reveal)).toBe(true);
+    expect(active.hides).toHaveLength(3);
+    expect(active.hides.every((h) => !h.reveal)).toBe(true);
   });
 
   it("引用块隐藏 > 前缀", () => {

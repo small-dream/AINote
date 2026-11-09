@@ -44,9 +44,11 @@ function revealedFenceLines(
   selectionTo?: number,
 ): Set<number> {
   const revealed = new Set<number>();
+  // 选择文本不代表要编辑围栏；拖选或全选经过围栏时也应保持卡片外观。
+  if (selectionTo !== undefined && selectionTo !== cursor) return revealed;
   for (const position of [marks[0]?.from, marks[marks.length - 1]?.from]) {
     const index = position === undefined ? -1 : lineIndexAt(lines, position);
-    if (index >= 0 && lineHit(lines[index], cursor, selectionTo)) revealed.add(index);
+    if (index >= 0 && lineHit(lines[index], cursor)) revealed.add(index);
   }
   return revealed;
 }
@@ -131,17 +133,12 @@ function lineIndexAt(lines: TextRange[], pos: number): number {
   return lines.findIndex((line) => pos >= line.from && pos <= line.to);
 }
 
-/** 光标/选区是否落在这一行上（用于只淡显光标所在的那条围栏）。 */
-function lineHit(line: TextRange | undefined, cursor: number, selectionTo?: number): boolean {
+/** 光标是否位于围栏行内部（仅在用户编辑围栏源码时淡显）。 */
+function lineHit(line: TextRange | undefined, cursor: number): boolean {
   if (!line) return false;
   // 折叠光标落在围栏行的起止边界时不淡显：隐藏围栏行没有任何可见字符，
   // 点击顶部 / 底部留白经常正好映射到 line.from / line.to，不能因此把 ``` 冒出来。
-  if (selectionTo === undefined) return cursor > line.from && cursor < line.to;
-  const start = Math.min(cursor, selectionTo);
-  const end = Math.max(cursor, selectionTo);
-  // 选区按半开区间判断：整行选择常带行尾换行，终点恰好在下一行行首时
-  // 不能算命中下一行，否则底部闭合围栏会被误淡显成 ```。
-  return start < line.to && end > line.from;
+  return cursor > line.from && cursor < line.to;
 }
 
 function planCodeBlockLines(lines: TextRange[], plan: SoftRenderPlan): void {
