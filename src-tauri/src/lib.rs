@@ -46,6 +46,8 @@ pub fn run() {
     #[cfg(desktop)]
     let builder = builder.manage(platform::tray::TrayState::default());
     #[cfg(desktop)]
+    let builder = builder.manage(platform::WindowBoundsState::default());
+    #[cfg(desktop)]
     let builder = builder
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .manage(platform::capture_shortcut::CaptureShortcutState::default())
@@ -57,6 +59,8 @@ pub fn run() {
         .manage(commands::close_guard::CloseGuard::default())
         .manage(services::draft_state::DraftState::default())
         .on_window_event(|window, event| {
+            #[cfg(desktop)]
+            platform::handle_window_event(window, event);
             if let tauri::WindowEvent::CloseRequested { api, .. } = event {
                 #[cfg(desktop)]
                 platform::tray::handle_close_requested(window, api);
@@ -91,6 +95,8 @@ pub fn run() {
                 _app.handle().plugin(tauri_plugin_process::init())?;
                 _app.handle()
                     .plugin(tauri_plugin_updater::Builder::new().build())?;
+                // 插件恢复的是旧屏幕的物理尺寸；先校正一次，后续 Resized 事件再兜底。
+                platform::ensure_main_window_in_bounds(_app.handle());
                 // 托盘是「关闭即最小化」的前提；创建失败只降级、不阻断启动。
                 if let Err(error) = platform::tray::setup(_app.handle()) {
                     log::warn!(

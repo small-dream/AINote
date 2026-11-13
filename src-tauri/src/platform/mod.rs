@@ -28,3 +28,13 @@ pub mod tray;
 
 #[cfg(desktop)]
 pub mod capture_shortcut;
+
+#[cfg(desktop)]
+pub(crate) const MAIN_WINDOW_LABEL: &str = "main";
+
+#[cfg(desktop)]
+mod window_bounds;
+#[cfg(desktop)]
+mod window_geometry;
+#[cfg(desktop)]
+pub use window_bounds::{ensure_main_window_in_bounds, handle_window_event, WindowBoundsState};

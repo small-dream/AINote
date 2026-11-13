@@ -15,9 +15,9 @@ use tauri::tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent}
 use tauri::{AppHandle, Emitter, Manager, Window};
 
 use crate::commands::close_guard;
+use crate::platform::window_bounds;
 
-/// 主窗口 label（`tauri.conf.json` 未声明 label，Tauri 默认使用 "main"）。
-const MAIN_WINDOW_LABEL: &str = "main";
+use super::MAIN_WINDOW_LABEL;
 const TRAY_ID: &str = "ainote-tray";
 const MENU_SHOW_ID: &str = "ainote-tray-show";
 const MENU_CAPTURE_ID: &str = "ainote-tray-capture";
@@ -156,10 +156,10 @@ pub fn reveal_main_window(app: &AppHandle) {
     let Some(window) = app.get_webview_window(MAIN_WINDOW_LABEL) else {
         return;
     };
-    let revealed = window
-        .show()
-        .and_then(|_| window.unminimize())
-        .and_then(|_| window.set_focus());
+    // 托盘隐藏期间可能拔掉外接屏或修改缩放；先校正再显示，避免把旧尺寸带回前台。
+    let _ = window.unminimize();
+    window_bounds::ensure_main_window_in_bounds(app);
+    let revealed = window.show().and_then(|_| window.set_focus());
     match revealed {
         Ok(()) => log::info!(target: "ainote::tray", "已从托盘恢复主窗口"),
         Err(error) => log::warn!(target: "ainote::tray", "恢复主窗口失败: {error}"),
