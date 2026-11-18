@@ -1,5 +1,22 @@
 # 更新日志
 
+## v0.65.2 — 2026-11-18（修复：安装包内 Mermaid 流程图渲染成黑块）
+
+### 修复
+
+- **Mermaid 流程图恢复主题配色与排版**：Tauri 构建期会给 `index.html` 的内联 `<style>` 打上随机 nonce，并把 `'nonce-…'` 追加进 `style-src`；按 CSP 规则，指令里一旦出现 nonce，`'unsafe-inline'` 即被忽略，于是 Mermaid 渲染时插入的图表主题样式（节点底色、连线、字体、标签字宽）被整片拒绝，节点与连线回落到 SVG 默认的纯黑填充，标签只剩继承自正文的暗色文字。现关闭 Tauri 对 `style-src` 的资源 CSP 改写（`dangerousDisableAssetCspModification: ["style-src"]`），让配置里既有的 `'unsafe-inline'` 重新生效；`script-src` 仍保留构建期 hash/nonce 保护。
+- 该问题只出现在安装包：`pnpm desktop:run` 直连 Vite dev server，不经过 Tauri 的资源 CSP 改写，开发环境无法复现。
+
+### 跨端影响
+
+- **Desktop Impact**：预览与软渲染中的 Mermaid 图表恢复主题色与正确布局；CodeMirror 等运行时注入样式的库同样回到预期行为。
+- **Mobile Impact**：移动端共用同一份 `tauri.conf.json`，Android / iOS 安装包一并修复；开发流程与界面无变化。
+
+### 验证
+
+- 用带 nonce 的 CSP 复现：节点填充 `rgb(0, 0, 0)`、连线同为黑色填充、标签继承 `#1f2937`，与问题截图一致；去掉 nonce 后恢复 `rgb(255, 244, 221)` 填充与 `#333` 文字。
+- `pnpm desktop:build` 通过；`pnpm build && pnpm test && pnpm lint` 通过（1592 passed，1 skipped）；`cargo test --locked`：544 passed、7 ignored。
+
 ## v0.65.1 — 2026-11-13（修复：跨屏与 DPI 变化后窗口尺寸越界）
 
 ### 修复
