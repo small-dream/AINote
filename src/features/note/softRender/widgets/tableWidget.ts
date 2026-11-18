@@ -1,6 +1,7 @@
 import { WidgetType, EditorView } from "@codemirror/view";
 import { useUiStore } from "@/stores/ui.store";
 import { parseMarkdownTable, serializeMarkdownTable, type MarkdownTableData } from "../utils/table";
+import { renderTableInline, renderedOffsetAtPoint, sourceOffsetAtRendered } from "./tableInline";
 
 interface TableEditState {
   data: MarkdownTableData;
@@ -97,10 +98,21 @@ function buildRow(cells: string[], modelRow: number, state: TableEditState, shel
     const el = document.createElement(modelRow < 0 ? "th" : "td");
     Object.assign(el.dataset, { srCell: "1", srRow: String(modelRow + 1), srCol: String(col) });
     el.contentEditable = "true";
-    el.textContent = text;
+    showRenderedCell(el, text);
     if (state.data.align[col]) el.style.textAlign = state.data.align[col] as string;
-    for (const type of ["mousedown", "click"]) el.addEventListener(type, (e) => e.stopPropagation());
-    el.addEventListener("focus", () => { state.activeRow = modelRow; state.activeCol = col; });
+    const enterSource = (): void => showSourceCell(el, cellText(state, modelRow, col));
+    el.addEventListener("mousedown", (event) => {
+      event.stopPropagation();
+      if (el.dataset.srCellMode === "rendered") rememberCaret(el, event);
+      enterSource();
+    });
+    el.addEventListener("mouseup", () => applyCaretHint(el));
+    el.addEventListener("click", (event) => event.stopPropagation());
+    el.addEventListener("focus", () => {
+      state.activeRow = modelRow;
+      state.activeCol = col;
+      enterSource();
+    });
     el.addEventListener("input", () => {
       if (modelRow < 0) {
         state.data.header[col] = el.textContent ?? "";
@@ -109,11 +121,63 @@ function buildRow(cells: string[], modelRow: number, state: TableEditState, shel
         if (row) row[col] = el.textContent ?? "";
       }
     });
-    el.addEventListener("blur", () => commit(state, shell));
+    el.addEventListener("blur", () => {
+      commit(state, shell);
+      showRenderedCell(el, cellText(state, modelRow, col));
+    });
     el.addEventListener("keydown", (event) => cellKey(event, state, shell, modelRow, col));
     tr.appendChild(el);
   });
   return tr;
+}
+
+function cellText(state: TableEditState, row: number, col: number): string {
+  return row < 0 ? (state.data.header[col] ?? "") : (state.data.rows[row]?.[col] ?? "");
+}
+
+function showSourceCell(el: HTMLElement, text: string): void {
+  if (el.dataset.srCellMode === "source") return;
+  el.textContent = text;
+  el.dataset.srCellMode = "source";
+}
+
+function showRenderedCell(el: HTMLElement, text: string): void {
+  renderTableInline(el, text);
+  el.dataset.srCellMode = "rendered";
+}
+
+/** Remember where the click landed in the rendered text, so switching to source keeps the caret. */
+function rememberCaret(el: HTMLElement, event: MouseEvent): void {
+  const renderedOffset = renderedOffsetAtPoint(el, event.clientX, event.clientY);
+  const sourceOffset = renderedOffset === null ? null : sourceOffsetAtRendered(el, renderedOffset);
+  if (sourceOffset === null) {
+    delete el.dataset.srCaret;
+    return;
+  }
+  el.dataset.srCaret = String(sourceOffset);
+}
+
+/** Restore the click position after the browser placed the caret in the swapped source text. */
+function applyCaretHint(el: HTMLElement): void {
+  const hint = el.dataset.srCaret;
+  if (hint === undefined) return;
+  delete el.dataset.srCaret;
+  const selection = window.getSelection();
+  if (!selection || !selection.isCollapsed || !selection.anchorNode || !el.contains(selection.anchorNode)) return;
+  placeCaret(el, Number(hint));
+}
+
+function placeCaret(el: HTMLElement, offset: number): void {
+  const first = el.firstChild;
+  const node = first && first.nodeType === Node.TEXT_NODE ? first : el;
+  const length = node === el ? 0 : (node.textContent?.length ?? 0);
+  const range = document.createRange();
+  range.setStart(node, Math.max(0, Math.min(offset, length)));
+  range.collapse(true);
+  const selection = window.getSelection();
+  if (!selection) return;
+  selection.removeAllRanges();
+  selection.addRange(range);
 }
 
 function cellKey(event: KeyboardEvent, state: TableEditState, shell: HTMLElement, row: number, col: number): void {

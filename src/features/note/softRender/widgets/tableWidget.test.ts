@@ -52,6 +52,7 @@ function editCell(view: EditorView, domRow: number, col: number, text: string): 
 }
 
 const TABLE = "| a | b |\n| :--- | ---: |\n| 1 | 2 |";
+const INLINE_TABLE = "| 样式 | 代码 |\n| --- | --- |\n| **经典单层** | 一个 `cutout` 槽 |";
 
 describe("softRender 表格可编辑渲染", () => {
   it("渲染为可编辑单元格", async () => {
@@ -68,6 +69,40 @@ describe("softRender 表格可编辑渲染", () => {
     const doc = await docAfter(view);
     expect(view.state.selection.main.head).toBe(0);
     expect(doc).toContain("| a | b |");
+    view.destroy();
+  });
+});
+
+describe("softRender 表格单元格行内渲染", () => {
+  it("渲染加粗与行内代码，不显示原始标记", async () => {
+    const view = await createView(INLINE_TABLE, 0);
+    const bold = cellOf(view, 1, 0);
+    const code = cellOf(view, 1, 1);
+    expect(bold.querySelector("strong")?.textContent).toBe("经典单层");
+    expect(bold.textContent).not.toContain("**");
+    expect(code.querySelector("code")?.textContent).toBe("cutout");
+    expect(code.textContent).not.toContain("`");
+    view.destroy();
+  });
+
+  it("保留行内代码中的 Markdown 字面文本并支持嵌套样式", async () => {
+    const view = await createView("| a | b |\n| --- | --- |\n| **粗 `code` 尾** | `a **b** c` |", 0);
+    expect(cellOf(view, 1, 0).querySelector("strong code")?.textContent).toBe("code");
+    expect(cellOf(view, 1, 1).querySelector("strong")).toBeNull();
+    expect(cellOf(view, 1, 1).querySelector("code")?.textContent).toBe("a **b** c");
+    view.destroy();
+  });
+
+  it("聚焦时显示源码，失焦后恢复渲染且不改写 Markdown", async () => {
+    const view = await createView(INLINE_TABLE, 0);
+    const cell = cellOf(view, 1, 0);
+    cell.dispatchEvent(new FocusEvent("focus"));
+    expect(cell.textContent).toBe("**经典单层**");
+    expect(cell.querySelector("strong")).toBeNull();
+
+    cell.dispatchEvent(new FocusEvent("blur", { bubbles: true }));
+    expect(cell.querySelector("strong")?.textContent).toBe("经典单层");
+    expect(await docAfter(view)).toBe(INLINE_TABLE);
     view.destroy();
   });
 });
