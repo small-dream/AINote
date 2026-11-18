@@ -396,7 +396,7 @@ pre,
 .markdown-body code {
   padding: 0.15em 0.35em;
   border-radius: 4px;
-  background: var(--note-code-bg);
+  background: var(--note-inline-code-bg);
   font-size: 0.9em;
 }
 .markdown-body .markdown-tag {

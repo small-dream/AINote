@@ -43,7 +43,7 @@
 }
 .rich-text-editor .ProseMirror code {
   font-family: var(--note-code-font);
-  background: var(--note-code-bg);
+  background: var(--note-inline-code-bg);
   padding: 0.1em 0.35em;
   border-radius: 4px;
   font-size: 0.9em;

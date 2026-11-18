@@ -128,7 +128,7 @@
 .cm-sr-inline-code {
   font-family: var(--note-code-font);
   font-size: 0.9em;
-  background: var(--note-code-bg);
+  background: var(--note-inline-code-bg);
   border-radius: 4px;
   padding: 0.15em 0.35em;
 }
