@@ -82,7 +82,7 @@ AppError { code: "SYNC_4013", kind: Conflict, message: "...", retriable: true }
 - 前端用户输入在 Hook 层校验。
 - Markdown 渲染强制 sanitize（防 XSS），不信任编辑器产出的任何内容。
 - 壳内安全策略（`src-tauri/tauri.conf.json`）：`app.security.csp` 保持最小白名单（`script-src 'self'`，内联启动脚本由 Tauri 构建期注入 hash），`devCsp` 只用于放行 Vite 开发态（HMR 需要 inline/ws）。新增远程字体、图片域或 iframe 前必须先更新 CSP；**禁止**把它改回 `null`。
-- 打包壳会在 `style-src` 里追加随机 nonce（内联启动样式由 Tauri 注入同名 nonce），此时 `'unsafe-inline'` 失效：**所有运行时注入 `<style>` 的库（CodeMirror/style-mod 等）必须把该 nonce 传给它**（`readCspNonce()` → `EditorView.cspNonce`），否则只在安装包里出现排版塌陷，dev 下无法复现。
+- `style-src` 关闭 Tauri 的资源 CSP 改写（`app.security.dangerousDisableAssetCspModification: ["style-src"]`）。Tauri 默认会把 `index.html` 内联 `<style>` 打上随机 nonce，并把 `'nonce-…'` 追加进 `style-src`；按 CSP3 规则，指令里一旦出现 nonce，`'unsafe-inline'` 即被忽略，于是**运行时注入 `<style>` 的库会被整片拒绝**（Mermaid 的图表主题样式、CodeMirror/style-mod 的基础样式），症状是安装包里流程图变成纯黑方块、编辑器排版塌陷，而 `pnpm desktop:run` 直连 Vite dev server、没有 nonce 注入，dev 下无法复现。`script-src` 仍保留 Tauri 的 hash/nonce 保护；若将来重新打开 `style-src` 改写，必须给每个运行时注入样式的库补 nonce（`readCspNonce()` → `EditorView.cspNonce` 等），并回归 Mermaid 预览与软渲染。
 
 ## 5. 测试友好性
 
