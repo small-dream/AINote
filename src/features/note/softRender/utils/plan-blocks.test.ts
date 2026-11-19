@@ -171,6 +171,23 @@ describe("planSoftRender 分割线与表格", () => {
   });
 });
 
+describe("planSoftRender 列表版式", () => {
+  it("按嵌套层级给出缩进类，并隐藏源码缩进空格", () => {
+    const text = "- a\n  - b";
+    const plan = planFor(text, 0);
+    expect(plan.gaps).toContainEqual({ pos: 0, cls: "cm-sr-list-depth-0" });
+    expect(plan.gaps).toContainEqual({ pos: 4, cls: "cm-sr-list-depth-1" });
+    expect(plan.hides).toContainEqual({ from: 4, to: 6, reveal: false });
+  });
+
+  it("同层相邻项之间加 li + li 间距，首个嵌套项不加", () => {
+    const text = "- a\n- b\n  - c";
+    const plan = planFor(text, 0);
+    expect(plan.gaps).toContainEqual({ pos: 4, cls: "cm-sr-list-gap" });
+    expect(plan.gaps.every((gap) => gap.pos !== 8 || !gap.cls.includes("cm-sr-list-gap"))).toBe(true);
+  });
+});
+
 describe("planSoftRender 有序列表编号", () => {
   it("列表 widget 一并替换标记后的分隔空格", () => {
     const bullet = planFor("-  item", 0).widgets.find((w) => w.kind === "bullet");

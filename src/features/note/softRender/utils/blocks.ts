@@ -92,7 +92,9 @@ export function planList(
   const depth = listDepth(node);
   const format = depth === 0 ? "decimal" : depth === 1 ? "lower-roman" : "lower-alpha";
   const glyph = depth === 0 ? "•" : depth === 1 ? "◦" : "▪";
-  items.forEach((item, index) => emitListItem(item, doc, kind, plan, base, index, format, glyph));
+  items.forEach((item, index) =>
+    emitListItem(item, doc, kind, plan, base, index, format, glyph, depth, index > 0),
+  );
 }
 
 /** 嵌套层级：父级列表节点数量（0 = 顶层），用于复刻 GitHub 的 i / a 序号。 */
@@ -129,8 +131,11 @@ function emitListItem(
   index: number,
   format: "decimal" | "lower-roman" | "lower-alpha",
   glyph: string,
+  depth: number,
+  gapAbove: boolean,
 ): void {
   const { child, mark } = item;
+  emitLineLayout(mark, doc, plan, depth, gapAbove);
   const ordinal = index + 1;
   const number = base !== null ? base + ordinal - 1 : ordinal;
   if (child.getChild("Task")) {
@@ -138,6 +143,19 @@ function emitListItem(
   } else {
     plan.widgets.push(toListWidget(kind, mark, listMarkEnd(mark, doc), number, format, glyph));
   }
+}
+
+/**
+ * 列表行的版式：按嵌套层级套缩进类（每级 2em，与预览一致），隐藏源码里的缩进空格，
+ * 并把「同层相邻项之间 4px」的间距类打在行上（预览的 li + li）。
+ */
+function emitLineLayout(mark: SyntaxNode, doc: string, plan: SoftRenderPlan, depth: number, gapAbove: boolean): void {
+  const lineStart = doc.lastIndexOf("\n", mark.from - 1) + 1;
+  plan.gaps.push({ pos: lineStart, cls: `cm-sr-list-depth-${Math.min(depth, 4)}` });
+  if (gapAbove) plan.gaps.push({ pos: lineStart, cls: "cm-sr-list-gap" });
+  let indentFrom = mark.from;
+  while (indentFrom > lineStart && (doc[indentFrom - 1] === " " || doc[indentFrom - 1] === "\t")) indentFrom -= 1;
+  if (indentFrom < mark.from) plan.hides.push({ from: indentFrom, to: mark.from, reveal: false });
 }
 
 /** ListMark 不包含标记后的分隔空格；软渲染时一并替换，避免源码空格叠加 widget 宽度。 */

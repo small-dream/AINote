@@ -166,34 +166,79 @@
   user-select: none;
 }
 
-/* 预览的列表内容缩进 2em，符号位于内容左侧；软渲染的符号是行内元素，
-   行内边距只补「2em - 标记实际宽度」，避免文字被推到 3em 之外。 */
-.cm-soft-render .cm-line:has(.cm-sr-bullet) { padding-left: calc(2em - 0.85em); }
-.cm-soft-render .cm-line:has(.cm-sr-number) { padding-left: calc(2em - 1.8em); }
-/* 任务勾选框另有 -1.4em 外移，行内边距保持完整的 2em。 */
-.cm-soft-render .cm-line:has(.cm-sr-checkbox) { padding-left: 2em; }
+/* 列表缩进对齐预览：每级 2em。源码里的缩进空格已在 planList 中隐藏，
+   这里用 padding 决定内容列、负 text-indent 把行首标记回拉到标记列，
+   于是续行（长项换行）自然落在内容列，而不是退回最左边。 */
+.cm-soft-render .cm-line.cm-sr-list-depth-0 { --cm-sr-list-indent: 2em; }
+.cm-soft-render .cm-line.cm-sr-list-depth-1 { --cm-sr-list-indent: 4em; }
+.cm-soft-render .cm-line.cm-sr-list-depth-2 { --cm-sr-list-indent: 6em; }
+.cm-soft-render .cm-line.cm-sr-list-depth-3 { --cm-sr-list-indent: 8em; }
+.cm-soft-render .cm-line.cm-sr-list-depth-4 { --cm-sr-list-indent: 10em; }
+/* 无序列表的标记列对齐浏览器的 list-style：圆点中心在内容列左侧 0.94em。
+   标记占位取 1.88em（中心 = 内容列 - 0.94em），负 text-indent 把整行回拉到标记列。 */
+.cm-soft-render .cm-line:has(.cm-sr-bullet) {
+  padding-left: var(--cm-sr-list-indent, 2em);
+  text-indent: -1.88em;
+}
+.cm-soft-render .cm-line:has(.cm-sr-number) {
+  padding-left: var(--cm-sr-list-indent, 2em);
+  text-indent: -1.8em;
+}
+/* 任务勾选框另有 -1.4em 外移；续行仍落在内容列。 */
+.cm-soft-render .cm-line:has(.cm-sr-checkbox) {
+  padding-left: var(--cm-sr-list-indent, 2em);
+}
+/* 预览的 li + li：同一列表内相邻项之间 0.25em，首个嵌套项不需要。 */
+.cm-soft-render .cm-line.cm-sr-list-gap { padding-top: 0.25em; }
 
 .cm-sr-bullet,
 .cm-sr-number {
   display: inline-block;
   min-width: 1.4em;
+  /* text-indent 会继承进 inline-block 并再次作用于标记内部，抵消行上的悬挂缩进。 */
+  text-indent: 0;
   /* 预览的 list marker 继承正文色，软渲染保持相同的视觉权重。 */
   color: var(--note-ink);
   user-select: none;
 }
 .cm-sr-bullet {
-  /* 圆点视觉上放大，但收窄占位，避免标记与正文之间留下过宽空隙。
-     放大放在 .cm-sr-bullet-dot 内层：根节点若被 scale，会同时撑高 CodeMirror
-     用 widget 矩形算出的「标记处光标」高度（行高 ×1.7），光标会压到上下两行。 */
-  min-width: 1em;
-  margin-right: -0.15em;
+  /* 占位宽度 = 标记列到内容列的距离；标记画在占位框的中心。
+     绘制放在 .cm-sr-bullet-dot 内层：根节点若被 scale，会同时撑高 CodeMirror
+     用 widget 矩形算出的「标记处光标」高度，光标会压到上下两行。 */
+  min-width: 1.88em;
+  margin-right: 0;
 }
 .cm-sr-bullet-dot {
-  /* 与根节点同宽：缩放中心与改动前保持一致，圆点视觉位置不变 */
-  display: inline-block;
-  min-width: 1em;
-  transform: scale(1.7);
-  transform-origin: center;
+  position: relative;
+  display: block;
+  /* 字形只占位、不绘制：标记由 ::before 画成与浏览器 list-style 一致的形状，
+     避免 ◦ 跟随字体放大后描边变粗、看起来像实心点。 */
+  color: transparent;
+}
+.cm-sr-bullet-dot::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 0.35em;
+  height: 0.35em;
+  border-radius: 50%;
+  background: var(--note-ink);
+  transform: translate(-50%, -50%);
+}
+/* 二级：细线空心圈（0.3em、1px 描边） */
+.cm-sr-bullet-dot-1::before {
+  box-sizing: border-box;
+  width: 0.3em;
+  height: 0.3em;
+  background: transparent;
+  border: 1px solid var(--note-ink);
+}
+/* 三级：实心方块 */
+.cm-sr-bullet-dot-2::before {
+  width: 0.26em;
+  height: 0.26em;
+  border-radius: 1px;
 }
 .cm-sr-number {
   text-align: right;
@@ -219,11 +264,11 @@
   max-width: 100%;
 }
 
+/* 与预览/GitHub 一致：1px 边框色细线。 */
 .cm-sr-hr {
-  height: 0.25em;
+  height: 1px;
   margin: var(--note-heading-margin) 0;
   border: none;
-  border-radius: 2px;
   background: var(--note-border);
 }
 

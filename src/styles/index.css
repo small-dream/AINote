@@ -396,6 +396,35 @@ pre,
 .markdown-body b, .markdown-body strong { font-weight: 600; }
 .markdown-body ul, .markdown-body ol { padding-left: 2em; }
 .markdown-body ul { list-style: disc; }
+/* GitHub 的二级空心圈、三级方块由浏览器默认 list-style 提供；但 WebKit 原生
+   circle 明显比 Chrome（GitHub 的渲染环境）更大更粗，所以嵌套标记改为 CSS 绘制，
+   形状/尺寸四端一致。不能只写 ul ul——有序列表里嵌的无序列表（ol > ul）同样是空心圈。 */
+.markdown-body ul ul, .markdown-body ol ul { list-style: none; }
+.markdown-body ul ul > li:not(.task-list-item),
+.markdown-body ol ul > li:not(.task-list-item) { position: relative; }
+.markdown-body ul ul > li:not(.task-list-item)::before,
+.markdown-body ol ul > li:not(.task-list-item)::before {
+  content: "";
+  position: absolute;
+  left: -1.09em;
+  top: 0.6em;
+  box-sizing: border-box;
+  width: 0.3em;
+  height: 0.3em;
+  border: 1px solid var(--note-ink);
+  border-radius: 50%;
+}
+.markdown-body ul ul ul > li:not(.task-list-item)::before,
+.markdown-body ul ol ul > li:not(.task-list-item)::before,
+.markdown-body ol ul ul > li:not(.task-list-item)::before,
+.markdown-body ol ol ul > li:not(.task-list-item)::before {
+  left: -1.07em;
+  width: 0.26em;
+  height: 0.26em;
+  border: 0;
+  border-radius: 1px;
+  background: var(--note-ink);
+}
 .markdown-body ol { list-style: decimal; }
 .markdown-body ol ol, .markdown-body ul ol { list-style-type: lower-roman; }
 .markdown-body ol ol ol, .markdown-body ol ul ol, .markdown-body ul ol ol, .markdown-body ul ul ol { list-style-type: lower-alpha; }
@@ -703,12 +732,14 @@ html[lang="zh-CN"] .markdown-callout-danger::before { content: "危险"; }
 .markdown-body th { font-weight: 600; }
 .markdown-body tbody tr:nth-child(2n) { background: var(--note-code-bg); }
 .markdown-body td > :last-child, .markdown-body th > :last-child { margin-bottom: 0; }
+/* 与 GitHub 的渲染结果一致：一条 1px 的边框色细线。
+   （GitHub 的 .markdown-body hr 仍是 0.25em 高，但页面实际显示为细线，
+   按截图逐像素对齐取 1px。） */
 .markdown-body hr {
-  height: 0.25em;
+  height: 1px;
   margin: var(--note-heading-margin) 0;
   padding: 0;
   border: 0;
-  border-radius: 2px;
   background: var(--note-border);
 }
 /* 脚注（remark-gfm）：与 GitHub 一致，正文角标带方括号，脚注区小字弱化。 */

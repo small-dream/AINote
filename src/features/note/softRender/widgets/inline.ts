@@ -1,6 +1,9 @@
 import { WidgetType } from "@codemirror/view";
 import { markRange } from "./block";
 
+/** 圆点字形 → 嵌套层级（与 blocks.ts 的 • / ◦ / ▪ 对应）。 */
+const BULLET_LEVEL: Record<string, number> = { "•": 0, "◦": 1, "▪": 2 };
+
 /** 无序列表圆点 */
 export class BulletWidget extends WidgetType {
   constructor(readonly from: number, readonly to: number, readonly glyph = "•") {
@@ -18,7 +21,8 @@ export class BulletWidget extends WidgetType {
     // getBoundingClientRect 作为「光标停在列表标记处」的几何，根节点一旦被 scale
     // 撑高到行高的 1.7 倍，光标就会比行盒高一截并压到相邻行。
     const dot = document.createElement("span");
-    dot.className = "cm-sr-bullet-dot";
+    // 只有实心圆点需要放大到浏览器 disc 的视觉大小；空心圈/方块放大后会糊成实心。
+    dot.className = `cm-sr-bullet-dot cm-sr-bullet-dot-${BULLET_LEVEL[this.glyph] ?? 0}`;
     dot.textContent = this.glyph;
     span.appendChild(dot);
     markRange(span, this.from, this.to);

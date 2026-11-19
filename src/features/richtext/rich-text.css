@@ -55,6 +55,34 @@
   margin-top: 0;
   margin-bottom: 0;
 }
+/* 嵌套无序标记改用 CSS 绘制，避免 WebKit 原生 circle 比 Chromium（GitHub）更大更粗。 */
+.rich-text-editor .ProseMirror ul ul,
+.rich-text-editor .ProseMirror ol ul { list-style: none; }
+.rich-text-editor .ProseMirror ul ul:not([data-type="taskList"]) > li,
+.rich-text-editor .ProseMirror ol ul:not([data-type="taskList"]) > li { position: relative; }
+.rich-text-editor .ProseMirror ul ul:not([data-type="taskList"]) > li::before,
+.rich-text-editor .ProseMirror ol ul:not([data-type="taskList"]) > li::before {
+  content: "";
+  position: absolute;
+  left: -1.09em;
+  top: 0.6em;
+  box-sizing: border-box;
+  width: 0.3em;
+  height: 0.3em;
+  border: 1px solid var(--note-ink);
+  border-radius: 50%;
+}
+.rich-text-editor .ProseMirror ul ul ul:not([data-type="taskList"]) > li::before,
+.rich-text-editor .ProseMirror ul ol ul:not([data-type="taskList"]) > li::before,
+.rich-text-editor .ProseMirror ol ul ul:not([data-type="taskList"]) > li::before,
+.rich-text-editor .ProseMirror ol ol ul:not([data-type="taskList"]) > li::before {
+  left: -1.07em;
+  width: 0.26em;
+  height: 0.26em;
+  border: 0;
+  border-radius: 1px;
+  background: var(--note-ink);
+}
 .rich-text-editor .ProseMirror li { margin: 0.15em 0; }
 .rich-text-editor .ProseMirror li::marker { color: var(--note-ink); }
 .rich-text-editor .ProseMirror li + li { margin-top: 0.25em; }
@@ -95,10 +123,9 @@
 .rich-text-editor .ProseMirror pre code .hljs-variable,
 .rich-text-editor .ProseMirror pre code .hljs-template-variable { color: var(--note-code-var); }
 .rich-text-editor .ProseMirror hr {
-  height: 0.25em;
+  height: 1px;
   padding: 0;
   border: 0;
-  border-radius: 2px;
   background: var(--note-border);
   margin: var(--note-heading-margin) 0;
 }
