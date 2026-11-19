@@ -59,84 +59,97 @@
 .cm-sr-h5,
 .cm-sr-h6 {
   font-weight: 600;
-  letter-spacing: -0.02em;
   color: var(--note-ink);
-  line-height: 1.3;
+  line-height: 1.25;
 }
-.cm-sr-h1 { font-size: 1.6em; }
-.cm-sr-h2 { font-size: 1.35em; }
-.cm-sr-h3 { font-size: 1.15em; }
-.cm-sr-h4 { font-size: 1.05em; }
-.cm-sr-h5,
-.cm-sr-h6 { font-size: 1em; }
+.cm-sr-h1 { font-size: 2em; }
+.cm-sr-h2 { font-size: 1.5em; }
+.cm-sr-h3 { font-size: 1.25em; }
+.cm-sr-h4 { font-size: 1em; }
+.cm-sr-h5 { font-size: 0.875em; }
+.cm-sr-h6 { font-size: 0.85em; color: var(--note-secondary); }
 
-/* 标题行自带标题上间距，保证源码里 H1 后即使没有空行也能和正文分开。 */
+/* 标题行自带标题上间距，保证源码里标题后即使没有空行也能和正文分开。
+   GitHub 的标题上间距是固定的 24px，不随标题级别缩放。 */
 .cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) {
   padding-top: var(--note-heading-margin);
 }
 
-/* 预览里相邻标题的上下 margin 会折叠；软渲染紧接的标题或只隔一个空行时，
-   由后一个标题按自身字号承担折叠后的上间距，前一个标题的下间距和空行高度归零。 */
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h1),
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h1) { padding-top: 1.92em; }
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h2),
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h2) { padding-top: 1.62em; }
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h3),
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h3) { padding-top: 1.38em; }
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h4),
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h4) { padding-top: 1.26em; }
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h5),
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h5),
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:has(.cm-sr-h6),
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h6) { padding-top: 1.2em; }
-
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank-heading {
-  line-height: 0;
+/* 标题前的空行保留正常行高（可点击、光标可见），标题行只补差额，
+   总间距仍与预览折叠后的 24px 一致。 */
+.cm-soft-render .cm-line.cm-sr-blank-heading + .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) {
+  padding-top: calc(var(--note-heading-margin) - var(--note-block-margin));
 }
 
-/* 标题下间距：预览的 margin-bottom 按标题自身字号计算（0.6em × 标题字号）。
-   .cm-line 的字号是正文字号，所以这里按各级标题比例换算成行内 em，避免 H1 紧贴正文。 */
-.cm-soft-render .cm-line:has(.cm-sr-h1) { padding-bottom: 0.96em; }
-.cm-soft-render .cm-line:has(.cm-sr-h2) { padding-bottom: 0.81em; }
-.cm-soft-render .cm-line:has(.cm-sr-h3) { padding-bottom: 0.69em; }
-.cm-soft-render .cm-line:has(.cm-sr-h4) { padding-bottom: 0.63em; }
-.cm-soft-render .cm-line:has(.cm-sr-h5),
-.cm-soft-render .cm-line:has(.cm-sr-h6) { padding-bottom: 0.6em; }
+/* 文档首个标题与预览一致：顶部不额外留白。 */
+.cm-soft-render .cm-content > .cm-line:first-child:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) {
+  padding-top: 0;
+}
 
-/* 预览里相邻标题的上下 margin 会折叠；软渲染已由下一个标题的上间距承担，不再叠加。
-   标题后若隔着空行再出现标题，空行本身还保留块间距，同样不追加标题下间距。 */
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6):has(+ .cm-line .cm-sr-h1, + .cm-line .cm-sr-h2, + .cm-line .cm-sr-h3, + .cm-line .cm-sr-h4, + .cm-line .cm-sr-h5, + .cm-line .cm-sr-h6),
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6):has(+ .cm-line.cm-sr-blank-heading) {
+/* H1 / H2 的下划线：0.3em 下沉量由 padding-bottom 提供，线画在 padding 底部。
+   下间距不放在标题行上——预览里标题 margin-bottom 与后块 margin-top 折叠为 16px，
+   这里由「标题后的空行」或「后一行补的块间距」承担，避免两段间距叠加。 */
+.cm-soft-render .cm-line:has(.cm-sr-h1),
+.cm-soft-render .cm-line:has(.cm-sr-h2) {
+  background-image: linear-gradient(var(--note-border), var(--note-border));
+  background-repeat: no-repeat;
+  background-size: 100% 1px;
+  background-position: left bottom;
+}
+/* +1px 补上预览里 border-bottom 占用的布局高度，线本身画在底部上方 1px。 */
+.cm-soft-render .cm-line:has(.cm-sr-h1) {
+  padding-bottom: calc(0.6em + 1px);
+  background-position: left calc(100% - 1px);
+}
+.cm-soft-render .cm-line:has(.cm-sr-h2) {
+  padding-bottom: calc(0.45em + 1px);
+  background-position: left calc(100% - 1px);
+}
+
+/* 标题后直接接正文（源码没有空行）时补一个块间距；预览同样按 16px 折叠。 */
+.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line:not(.cm-sr-blank, .cm-sr-blank-heading):not(:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6)) {
+  padding-top: var(--note-block-margin);
+}
+
+/* 代码块前已有自己的 12px 间距；若标题与围栏之间有空行，间距由空行承担。
+   H1 / H2 保留自己的下划线间隙。 */
+.cm-soft-render .cm-line:has(.cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6):has(+ .cm-line.cm-sr-blank:has(+ .cm-sr-codeblock-widget, + .cm-sr-codeblock-header)) {
   padding-bottom: 0;
 }
 
-/* 代码块前已有自己的 12px 间距；若标题与围栏之间有空行，间距由空行承担，
-   标题行不再追加，避免两段间距叠成一大块。 */
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6):has(+ .cm-line.cm-sr-blank:has(+ .cm-sr-codeblock-widget, + .cm-sr-codeblock-header)) {
-  padding-bottom: 0;
-}
-
-/* 标题后只有一个空行再接正文时，空行不再额外占高；标题自身的下间距已与预览一致。 */
-.cm-soft-render .cm-line:has(.cm-sr-h1, .cm-sr-h2, .cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6) + .cm-line.cm-sr-blank {
-  line-height: 0;
-}
-
-.cm-sr-strong { font-weight: 700; }
+.cm-sr-strong { font-weight: 600; }
 .cm-sr-em { font-style: italic; }
 .cm-sr-strike { text-decoration: line-through; }
 
+/* 脚注：引用显示为 [1] 上标；定义显示为 1. 小字，与预览/PDF 的脚注区呼应。 */
+.cm-sr-footnote-ref {
+  color: var(--note-accent);
+  font-size: 0.75em;
+  line-height: 0;
+  vertical-align: super;
+}
+.cm-sr-footnote-def {
+  padding-left: 1.5em;
+  color: var(--note-secondary);
+  font-size: 0.75em;
+}
+.cm-sr-footnote-label {
+  margin-right: 0.5em;
+  color: var(--note-secondary);
+  font-weight: 600;
+}
+
 .cm-sr-inline-code {
   font-family: var(--note-code-font);
-  font-size: 0.9em;
+  font-size: 85%;
   background: var(--note-inline-code-bg);
-  border-radius: 4px;
-  padding: 0.15em 0.35em;
+  border-radius: 6px;
+  padding: 0.2em 0.4em;
 }
 
 .cm-sr-link {
   color: var(--note-accent);
   text-decoration: underline;
-  text-decoration-thickness: 1px;
   text-underline-offset: 2px;
   cursor: pointer;
 }
@@ -152,6 +165,13 @@
   opacity: 0.45;
   user-select: none;
 }
+
+/* 预览的列表内容缩进 2em，符号位于内容左侧；软渲染的符号是行内元素，
+   行内边距只补「2em - 标记实际宽度」，避免文字被推到 3em 之外。 */
+.cm-soft-render .cm-line:has(.cm-sr-bullet) { padding-left: calc(2em - 0.85em); }
+.cm-soft-render .cm-line:has(.cm-sr-number) { padding-left: calc(2em - 1.8em); }
+/* 任务勾选框另有 -1.4em 外移，行内边距保持完整的 2em。 */
+.cm-soft-render .cm-line:has(.cm-sr-checkbox) { padding-left: 2em; }
 
 .cm-sr-bullet,
 .cm-sr-number {
@@ -182,7 +202,9 @@
 
 /* 勾选框本体（尺寸 / 描边 / 对勾）与富文本编辑器、只读预览、打印共用
    styles/note-task-check.css；这里只剩本表面特有的行内间距 */
+/* GitHub 把勾选框外移到列表符号的位置：2em 缩进 - 1.4em。 */
 .cm-sr-checkbox {
+  margin-left: -1.4em;
   margin-right: 0.35em;
 }
 
@@ -193,17 +215,16 @@
   vertical-align: middle;
 }
 .cm-sr-image img {
+  box-sizing: content-box;
   max-width: 100%;
-  max-height: 340px;
-  border: 1px solid var(--note-border);
-  border-radius: 6px;
 }
 
 .cm-sr-hr {
-  height: 1px;
-  margin: 0.6em 0;
-  background: var(--note-border);
+  height: 0.25em;
+  margin: var(--note-heading-margin) 0;
   border: none;
+  border-radius: 2px;
+  background: var(--note-border);
 }
 
 /* 软渲染代码块卡片：渲染态和编辑态共用顶栏、行号、底部滚动条与同一组高度 token。
@@ -211,11 +232,8 @@
 .cm-sr-codeblock-header {
   box-sizing: border-box;
   height: var(--cm-sr-code-header-height);
-  border: 1px solid var(--note-border);
-  border-bottom: 0;
-  border-radius: var(--note-code-radius) var(--note-code-radius) 0 0;
-  background: color-mix(in srgb, var(--note-ink) 3%, var(--note-code-bg));
-  box-shadow: inset 0 -1px 0 var(--note-border);
+  /* GitHub 代码块没有独立顶栏：工具栏使用代码块底色，视觉上并入同一块。 */
+  background: var(--note-code-bg);
   color: var(--note-secondary);
   font-family: var(--note-body-font);
   font-size: 12px;
@@ -240,7 +258,10 @@
   color: var(--note-secondary);
   cursor: pointer;
 }
-.cm-sr-codeblock-toggle:hover { background: var(--note-surface); color: var(--note-ink); }
+.cm-sr-codeblock-toggle:hover {
+  background: color-mix(in srgb, var(--note-ink) 8%, var(--note-code-bg));
+  color: var(--note-ink);
+}
 .cm-sr-codeblock-language { position: relative; display: inline-flex; align-items: center; }
 .cm-sr-codeblock-language::after {
   content: "";
@@ -274,15 +295,12 @@
 }
 .cm-sr-codeblock-actions { margin-left: auto; }
 .cm-sr-codeblock-header .note-code-action { width: 26px; height: 26px; }
-.cm-sr-codeblock-header .note-code-action:hover { background: var(--note-surface); }
+.cm-sr-codeblock-header .note-code-action:hover { background: color-mix(in srgb, var(--note-ink) 8%, var(--note-code-bg)); }
 .cm-sr-codeblock-footer,
 .cm-sr-codeblock-widget .note-code-scroll-host {
   box-sizing: border-box;
   height: var(--cm-sr-code-footer-height);
   padding: 6px 12px 11px;
-  border-inline: 1px solid var(--note-border);
-  border-bottom: 1px solid var(--note-border);
-  border-radius: 0 0 var(--note-code-radius) var(--note-code-radius);
   background: var(--note-code-bg);
 }
 .cm-sr-codeblock-footer .note-code-scrollbar {
@@ -318,10 +336,9 @@
   box-sizing: border-box;
   width: 100%;
   padding: var(--note-code-padding);
-  border-inline: 1px solid var(--note-border);
   background: var(--note-code-bg);
   font-size: var(--note-code-size);
-  line-height: 1.6;
+  line-height: var(--note-code-line-height);
 }
 .cm-sr-codeblock-render-line {
   display: flex;
@@ -355,7 +372,6 @@
    围栏行隐藏 ``` 后仍保留一个行高，正好充当代码块的上下内边距。 */
 .cm-line.cm-sr-codeblock-line {
   background: var(--note-code-bg);
-  border-inline: 1px solid var(--note-border);
   padding-inline: var(--note-code-padding);
   tab-size: 4;
 }
@@ -364,7 +380,7 @@
    字号 / 行高对齐渲染态；滚动条隐藏，光标移动时由浏览器自动横向跟随。 */
 .cm-soft-render .cm-line.cm-sr-codeblock-line {
   font-size: var(--note-code-size);
-  line-height: 1.6;
+  line-height: var(--note-code-line-height);
   white-space: pre;
   box-sizing: border-box;
   width: 100%;
@@ -400,7 +416,7 @@
 }
 .cm-sr-code-text {
   font-family: var(--note-code-font);
-  font-size: 0.92em;
+  font-size: var(--note-code-size);
 }
 /* 行元素已按渲染态缩到代码字号，正文 span 不再二次缩放。 */
 .cm-soft-render .cm-sr-code-text { font-size: 1em; }
@@ -428,6 +444,7 @@
 .cm-sr-blank {
   line-height: var(--note-block-margin);
 }
+/* 标题前的空行保持正常块间距；标题行会用差额补齐 24px（见上方相邻规则）。 */
 .cm-sr-blank-heading {
   line-height: var(--note-block-margin);
 }
@@ -451,17 +468,15 @@
 }
 
 .cm-sr-blockquote {
-  border-left: 3px solid var(--note-border);
-  background: var(--note-muted);
+  border-left: 0.25em solid var(--note-border);
   color: var(--note-secondary);
-  padding: 0.1em 1em;
+  padding: 0 1em;
 }
 
+/* 对齐 GitHub Alerts：只有左侧色条，无底色 / 圆角。 */
 .cm-sr-callout {
-  border-left: 3px solid var(--note-accent);
-  border-radius: 6px;
-  background: var(--note-accent-soft);
-  padding: 0.25em 1em;
+  border-left: 0.25em solid var(--note-accent);
+  padding: 0 1em;
 }
 .cm-sr-callout-note { border-left-color: var(--note-accent); }
 .cm-sr-callout-tip { border-left-color: var(--note-success); }
@@ -482,13 +497,17 @@
 
 .cm-sr-callout::before {
   display: block;
-  margin-bottom: 0.15em;
-  font-size: 0.8em;
-  font-weight: 700;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
-  color: var(--note-secondary);
+  margin-bottom: 0.25rem;
+  font-size: 0.9em;
+  font-weight: 600;
+  line-height: 1.25;
+  color: var(--note-accent);
 }
+.cm-sr-callout-tip::before { color: var(--note-success); }
+.cm-sr-callout-important::before { color: var(--note-accent); }
+.cm-sr-callout-warning::before,
+.cm-sr-callout-caution::before { color: var(--note-warning); }
+.cm-sr-callout-danger::before { color: var(--note-danger); }
 
 .cm-sr-callout-note::before { content: "Note"; }
 .cm-sr-callout-tip::before { content: "Tip"; }
@@ -496,28 +515,31 @@
 .cm-sr-callout-warning::before { content: "Warning"; }
 .cm-sr-callout-caution::before { content: "Caution"; }
 .cm-sr-callout-danger::before { content: "Danger"; }
+/* 与 GitHub Alerts 一致：标题跟随界面语言。 */
+html[lang="zh-CN"] .cm-sr-callout-note::before { content: "注意"; }
+html[lang="zh-CN"] .cm-sr-callout-tip::before { content: "提示"; }
+html[lang="zh-CN"] .cm-sr-callout-important::before { content: "重要"; }
+html[lang="zh-CN"] .cm-sr-callout-warning::before { content: "警告"; }
+html[lang="zh-CN"] .cm-sr-callout-caution::before { content: "谨慎"; }
+html[lang="zh-CN"] .cm-sr-callout-danger::before { content: "危险"; }
 
 .cm-sr-table {
   border-collapse: collapse;
-  margin: 0.5em 0;
-  font-size: 0.95em;
+  margin: var(--note-block-margin) 0;
 }
 .cm-sr-table th,
 .cm-sr-table td {
   border: 1px solid var(--note-border);
-  padding: 0.3em 0.6em;
+  padding: 6px 13px;
   text-align: left;
 }
-.cm-sr-table th {
-  background: var(--note-muted);
-  font-weight: 600;
-}
+.cm-sr-table th { font-weight: 600; }
+.cm-sr-table tbody tr:nth-child(2n) { background: var(--note-code-bg); }
 
 
 .cm-sr-autolink {
   color: var(--note-accent);
   text-decoration: underline;
-  text-decoration-thickness: 1px;
   text-underline-offset: 2px;
   cursor: pointer;
 }
@@ -533,13 +555,14 @@
 
 .cm-sr-math-block {
   display: block;
-  margin: 0.6em 0;
+  margin: var(--note-block-margin) 0;
   overflow-x: auto;
 }
 
 .cm-sr-mermaid {
-  margin: 0.6em 0;
+  margin: var(--note-block-margin) 0;
   overflow-x: auto;
+  text-align: center;
 }
 
 .cm-sr-mermaid svg {

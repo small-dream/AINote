@@ -88,6 +88,8 @@ export function planLink(
   plan: SoftRenderPlan,
   selectionTo?: number,
 ): void {
+  // remark-gfm 把 `[^1](url)` 解析为脚注 + 文本，而不是链接；统一交给 planFootnotes。
+  if (/^\[\^[^\]\s]+\]/.test(doc.slice(node.from, node.to))) return;
   const url = node.getChild("URL");
   const marks = node.getChildren("LinkMark");
   const first = marks[0];

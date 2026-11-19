@@ -26,6 +26,16 @@
   --note-success: var(--success);
   --note-warning: var(--warning);
   --note-danger: var(--danger);
+  /* 代码 token 也要钉到浅色：否则应用暗色主题时 PDF 纸面会出现深色代码块。 */
+  --note-code-bg: #f6f8fa;
+  --note-inline-code-bg: rgb(129 139 152 / 12%);
+  --note-code-keyword: #cf222e;
+  --note-code-string: #0a3069;
+  --note-code-number: #0550ae;
+  --note-code-comment: #6e7781;
+  --note-code-type: #953800;
+  --note-code-function: #8250df;
+  --note-code-var: #953800;
   position: fixed;
   inset: 0;
   z-index: 80;
@@ -116,7 +126,7 @@
   overflow: visible;
   font-family: var(--note-code-font);
   font-size: var(--note-code-size);
-  line-height: 1.6;
+  line-height: var(--note-code-line-height);
 }
 .pdf-export-page .ProseMirror > pre {
   padding: var(--note-code-padding);

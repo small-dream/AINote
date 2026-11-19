@@ -1,5 +1,6 @@
 export type WidgetKind =
   | "checkbox" | "image" | "hr" | "table" | "bullet" | "number"
+  | "footnote-ref" | "footnote-def"
   | "codeblock" | "codeblock-edit-header" | "codeblock-edit-scrollbar" | "mermaid" | "math";
 
 export interface MarkRange {
@@ -36,6 +37,10 @@ export interface WidgetRange {
   languageInsertAt?: number;
   /** ordered 列表序号 */
   index?: number;
+  /** ordered 列表标记样式：与 GitHub 的嵌套有序列表一致（1 / i / a） */
+  listFormat?: "decimal" | "lower-roman" | "lower-alpha";
+  /** unordered 列表标记：按嵌套层级取 • / ◦ / ▪（与浏览器默认一致） */
+  glyph?: string;
   /** math 模式：inline / block */
   mode?: "inline" | "block";
 }

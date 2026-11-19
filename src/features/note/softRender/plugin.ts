@@ -9,6 +9,8 @@ import { planSoftRender } from "./utils/plan";
 import {
   BulletWidget,
   CheckboxWidget,
+  FootnoteDefWidget,
+  FootnoteRefWidget,
   CodeBlockWidget,
   CodeBlockEditHeaderWidget,
   CodeBlockEditScrollbarWidget,
@@ -89,8 +91,12 @@ const WIDGET_BUILDERS: Record<WidgetRange["kind"], (widget: WidgetRange, options
     }).range(widget.from, widget.to),
   hr: (widget) => Decoration.replace({ widget: new HrWidget(widget.from, widget.to), block: true }).range(widget.from, widget.to),
   table: (widget) => Decoration.replace({ widget: new TableWidget(widget.value ?? "", widget.from, widget.to), block: true }).range(widget.from, widget.to),
-  bullet: (widget) => Decoration.replace({ widget: new BulletWidget(widget.from, widget.to) }).range(widget.from, widget.to),
-  number: (widget) => Decoration.replace({ widget: new NumberWidget(widget.from, widget.to, widget.index ?? 1) }).range(widget.from, widget.to),
+  bullet: (widget) => Decoration.replace({ widget: new BulletWidget(widget.from, widget.to, widget.glyph ?? "•") }).range(widget.from, widget.to),
+  "footnote-ref": (widget) =>
+    Decoration.replace({ widget: new FootnoteRefWidget(widget.from, widget.to, Number(widget.value ?? 1)) }).range(widget.from, widget.to),
+  "footnote-def": (widget) =>
+    Decoration.replace({ widget: new FootnoteDefWidget(widget.from, widget.to, widget.value ?? "") }).range(widget.from, widget.to),
+  number: (widget) => Decoration.replace({ widget: new NumberWidget(widget.from, widget.to, widget.index ?? 1, widget.listFormat ?? "decimal") }).range(widget.from, widget.to),
   codeblock: (widget) =>
     Decoration.replace({
       widget: new CodeBlockWidget(

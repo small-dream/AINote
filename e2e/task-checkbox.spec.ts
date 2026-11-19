@@ -86,9 +86,9 @@ for (const { name, viewport } of [
       const richChecked = await drawChecked(rich.nth(1));
       // 自带绘制：不再走系统原生外观
       expect(richDraw.appearance).toBe("none");
-      // 1.05em 见方、0.3em 圆角（token：--note-check-size）
+      // 1.05em 见方，圆角 3px（贴近 GitHub 原生方角；16px 字号下归一化为 0.188em）
       expect(richDraw.sizeEm).toBe(1.05);
-      expect(richDraw.radiusEm).toBe(0.3);
+      expect(richDraw.radiusEm).toBe(0.188);
 
       // Markdown 软渲染（CodeMirror widget）
       await openNote(page, "plan");

@@ -1,17 +1,19 @@
-/* 编辑器 / 预览主题。通过局部变量映射，不影响应用其他页面。 */
+/* 编辑器 / 预览主题。通过局部变量映射，不影响应用其他页面。
+   classic（:root 兜底）对齐 GitHub Markdown：亮色取 Primer light，暗色在
+   [data-theme="dark"] 中取 Primer dark；其余阅读主题继续使用各自的固定配色。 */
 :root {
-  --note-bg: var(--bg-primary);
-  --note-surface: var(--bg-secondary);
-  --note-muted: var(--bg-tertiary);
-  --note-ink: var(--text-primary);
-  --note-secondary: var(--text-secondary);
-  --note-tertiary: var(--text-tertiary);
-  --note-border: var(--border);
-  --note-accent: var(--accent);
-  --note-accent-soft: var(--accent-soft);
-  --note-success: var(--success);
-  --note-warning: var(--warning);
-  --note-danger: var(--danger);
+  --note-bg: #ffffff;
+  --note-surface: #f6f8fa;
+  --note-muted: #eff2f5;
+  --note-ink: #1f2328;
+  --note-secondary: #59636e;
+  --note-tertiary: #818b98;
+  --note-border: #d1d9e0;
+  --note-accent: #0969da;
+  --note-accent-soft: #ddf4ff;
+  --note-success: #1a7f37;
+  --note-warning: #9a6700;
+  --note-danger: #cf222e;
   /* 内容排版 Token：所见即所得编辑（softRender）与 react-markdown 预览共用，
      使「所见」与「所得」在字体、行高、阅读列宽、内联代码样式上保持一致。 */
   /* 西文优先 + 显式 CJK fallback + emoji：中英混排时字形统一，跨平台观感可控。
@@ -28,22 +30,24 @@
     "Songti SC", "STSong", "Noto Serif CJK SC", "Source Han Serif SC", "SimSun",
     serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
   --note-body-font: var(--note-body-font-sans);
+  /* 与 GitHub 的 fontStack-monospace 完全一致；CJK 字体只作为代码中中文的兜底。 */
   --note-code-font:
-    ui-monospace, "JetBrains Mono", "SF Mono", "SFMono-Regular", Menlo, Consolas,
+    ui-monospace, "SFMono-Regular", "SF Mono", Menlo, Consolas,
     "Liberation Mono", "Courier New",
     "PingFang SC", "Hiragino Sans GB",
     "Source Han Sans SC", "Noto Sans CJK SC", "Noto Sans Mono CJK SC",
     "Microsoft YaHei",
     monospace;
   /* 代码层 token：预览 / 软渲染 / 富文本 / CodeMirror 共用，随阅读主题切换。
-     默认即 classic（经典亮色，GitHub Light 系配色）。 */
+     语法色对齐 GitHub Light / Dark 的高亮配色。 */
   --note-code-bg: #f6f8fa;
-  /* 行内代码底色：比代码块再深一档，贴近 Codex / GitHub 行内高亮的对比度。
-     由 ink 混入 code-bg，暗色主题下自动变为「更亮一档」。 */
-  --note-inline-code-bg: color-mix(in srgb, var(--note-ink) 6%, var(--note-code-bg));
+  /* 行内代码底色：GitHub 的 neutral-muted 半透明叠加，任何主题底色上都能成立，
+     不再依赖声明处（:root）的主题变量，避免嵌套阅读主题取到错误色值。 */
+  --note-inline-code-bg: rgb(129 139 152 / 12%);
   --note-code-padding: 16px;
   --note-code-radius: 6px;
-  --note-code-size: 0.92em;
+  --note-code-size: 0.85em;
+  --note-code-line-height: 1.45;
   --note-code-keyword: #cf222e;
   --note-code-string: #0a3069;
   --note-code-number: #0550ae;
@@ -51,13 +55,41 @@
   --note-code-type: #953800;
   --note-code-function: #8250df;
   --note-code-var: #953800;
-  --note-font-size: 15px;
+  --note-font-size: 16px;
   /* 任务勾选框边长：富文本编辑器 / Markdown 软渲染 / 只读预览 / 打印共用 */
   --note-check-size: 1.05em;
-  --note-line-height: 1.7;
+  /* GitHub 排版节奏：正文 16px / 1.5，块间距 16px，标题上间距 24px。
+     间距按正文字号换算成固定长度，而不是 em——标题上的 em 会按标题自身字号放大
+     （H1 的 1.5em 会变成 48px），与 GitHub 的固定 24px 不符。 */
+  --note-line-height: 1.5;
   --note-reading-width: 72ch;
-  --note-block-margin: 0.6em;
-  --note-heading-margin: 1.2em;
+  --note-block-margin: calc(var(--note-font-size) * 1);
+  --note-heading-margin: calc(var(--note-font-size) * 1.5);
+}
+
+/* classic 跟随应用明暗；其余阅读主题在各自块内固定配色。 */
+[data-theme="dark"] {
+  --note-bg: #0d1117;
+  --note-surface: #151b23;
+  --note-muted: #212830;
+  --note-ink: #e6edf3;
+  --note-secondary: #9198a1;
+  --note-tertiary: #6e7681;
+  --note-border: #3d444d;
+  --note-accent: #4493f8;
+  --note-accent-soft: #121d2f;
+  --note-success: #3fb950;
+  --note-warning: #d29922;
+  --note-danger: #f85149;
+  --note-code-bg: #151b23;
+  --note-inline-code-bg: rgb(101 108 118 / 30%);
+  --note-code-keyword: #ff7b72;
+  --note-code-string: #a5d6ff;
+  --note-code-number: #79c0ff;
+  --note-code-comment: #8b949e;
+  --note-code-type: #ffa657;
+  --note-code-function: #d2a8ff;
+  --note-code-var: #ffa657;
 }
 
 [data-note-theme="paper"] {
@@ -81,6 +113,7 @@
   --note-code-type: #9a6b1f;
   --note-code-function: #7d5ba6;
   --note-code-var: #9a6b1f;
+  --note-inline-code-bg: rgb(129 139 152 / 12%);
 }
 
 [data-note-theme="midnight"] {
@@ -104,6 +137,7 @@
   --note-code-type: #ffa657;
   --note-code-function: #d2a8ff;
   --note-code-var: #ffa657;
+  --note-inline-code-bg: rgb(101 108 118 / 30%);
 }
 
 [data-note-theme="forest"] {
@@ -127,6 +161,7 @@
   --note-code-type: #8a5a10;
   --note-code-function: #6b5ba0;
   --note-code-var: #8a5a10;
+  --note-inline-code-bg: rgb(129 139 152 / 12%);
 }
 
 [data-note-theme="solar"] {
@@ -150,6 +185,7 @@
   --note-code-type: #8a5a10;
   --note-code-function: #7d4fc0;
   --note-code-var: #8a5a10;
+  --note-inline-code-bg: rgb(129 139 152 / 12%);
 }
 
 [data-note-theme="graphite"] {
@@ -173,6 +209,7 @@
   --note-code-type: #ffc48a;
   --note-code-function: #c3a6ff;
   --note-code-var: #ffc48a;
+  --note-inline-code-bg: rgb(101 108 118 / 30%);
 }
 
 [data-note-theme="inkblue"] {
@@ -196,6 +233,7 @@
   --note-code-type: #ffc08a;
   --note-code-function: #c3a6ff;
   --note-code-var: #ffc08a;
+  --note-inline-code-bg: rgb(101 108 118 / 30%);
 }
 
 [data-note-theme="warmdark"] {
@@ -219,6 +257,7 @@
   --note-code-type: #e3a857;
   --note-code-function: #c9a6e8;
   --note-code-var: #e3a857;
+  --note-inline-code-bg: rgb(101 108 118 / 30%);
 }
 
 .note-theme-surface {
@@ -254,7 +293,6 @@
 }
 
 .note-theme-surface .markdown-body h1 {
-  letter-spacing: -0.025em;
   color: var(--note-ink);
 }
 

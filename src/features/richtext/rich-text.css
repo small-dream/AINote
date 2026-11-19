@@ -21,32 +21,58 @@
 .rich-text-editor .ProseMirror h4,
 .rich-text-editor .ProseMirror h5,
 .rich-text-editor .ProseMirror h6 {
-  font-weight: 700;
+  font-weight: 600;
   color: var(--note-ink);
-  line-height: 1.3;
+  line-height: 1.25;
 }
-.rich-text-editor .ProseMirror h1 { font-size: 1.7rem; margin: 0.6em 0 0.3em; }
-.rich-text-editor .ProseMirror h2 { font-size: 1.35rem; margin: 0.6em 0 0.3em; }
-.rich-text-editor .ProseMirror h3 { font-size: 1.12rem; margin: 0.6em 0 0.3em; }
-.rich-text-editor .ProseMirror h4 { font-size: 1rem; margin: 0.6em 0 0.3em; }
-.rich-text-editor .ProseMirror h5 { font-size: 0.95rem; margin: 0.6em 0 0.3em; }
-.rich-text-editor .ProseMirror h6 { font-size: 0.875rem; margin: 0.6em 0 0.3em; color: var(--note-secondary); }
-.rich-text-editor .ProseMirror p { margin: 0.4em 0; }
-.rich-text-editor .ProseMirror ul { list-style: disc; padding-left: 1.4rem; }
-.rich-text-editor .ProseMirror ol { list-style: decimal; padding-left: 1.4rem; }
+.rich-text-editor .ProseMirror h1,
+.rich-text-editor .ProseMirror h2 {
+  padding-bottom: 0.3em;
+  border-bottom: 1px solid var(--note-border);
+}
+.rich-text-editor .ProseMirror h1 { font-size: 2em; margin: var(--note-heading-margin) 0 var(--note-block-margin); }
+.rich-text-editor .ProseMirror h2 { font-size: 1.5em; margin: var(--note-heading-margin) 0 var(--note-block-margin); }
+.rich-text-editor .ProseMirror h3 { font-size: 1.25em; margin: var(--note-heading-margin) 0 var(--note-block-margin); }
+.rich-text-editor .ProseMirror h4 { font-size: 1em; margin: var(--note-heading-margin) 0 var(--note-block-margin); }
+.rich-text-editor .ProseMirror h5 { font-size: 0.875em; margin: var(--note-heading-margin) 0 var(--note-block-margin); }
+.rich-text-editor .ProseMirror h6 { font-size: 0.85em; margin: var(--note-heading-margin) 0 var(--note-block-margin); color: var(--note-secondary); }
+.rich-text-editor .ProseMirror p { margin: 0 0 var(--note-block-margin); }
+.rich-text-editor .ProseMirror > :first-child { margin-top: 0; }
+.rich-text-editor .ProseMirror b,
+.rich-text-editor .ProseMirror strong { font-weight: 600; }
+.rich-text-editor .ProseMirror ul { list-style: disc; padding-left: 2em; }
+.rich-text-editor .ProseMirror ol { list-style: decimal; padding-left: 2em; }
+.rich-text-editor .ProseMirror ol ol,
+.rich-text-editor .ProseMirror ul ol { list-style-type: lower-roman; }
+.rich-text-editor .ProseMirror ol ol ol,
+.rich-text-editor .ProseMirror ol ul ol,
+.rich-text-editor .ProseMirror ul ol ol,
+.rich-text-editor .ProseMirror ul ul ol { list-style-type: lower-alpha; }
+.rich-text-editor .ProseMirror ul ul,
+.rich-text-editor .ProseMirror ul ol,
+.rich-text-editor .ProseMirror ol ol,
+.rich-text-editor .ProseMirror ol ul {
+  margin-top: 0;
+  margin-bottom: 0;
+}
 .rich-text-editor .ProseMirror li { margin: 0.15em 0; }
+.rich-text-editor .ProseMirror li::marker { color: var(--note-ink); }
+.rich-text-editor .ProseMirror li + li { margin-top: 0.25em; }
+.rich-text-editor .ProseMirror li > p { margin-top: var(--note-block-margin); }
 .rich-text-editor .ProseMirror blockquote {
-  border-left: 3px solid var(--note-accent);
-  padding-left: 1rem;
+  border-left: 0.25em solid var(--note-border);
+  padding: 0 1em;
   color: var(--note-secondary);
-  margin: 0.5em 0;
+  margin: var(--note-block-margin) 0;
 }
+.rich-text-editor .ProseMirror blockquote > :first-child { margin-top: 0; }
+.rich-text-editor .ProseMirror blockquote > :last-child { margin-bottom: 0; }
 .rich-text-editor .ProseMirror code {
   font-family: var(--note-code-font);
   background: var(--note-inline-code-bg);
-  padding: 0.1em 0.35em;
-  border-radius: 4px;
-  font-size: 0.9em;
+  padding: 0.2em 0.4em;
+  border-radius: 6px;
+  font-size: 85%;
 }
 .rich-text-editor .ProseMirror pre code { background: none; padding: 0; }
 /* 代码块语法高亮：与 Markdown 预览（.markdown-code-block）同一套 hljs 语义配色 */
@@ -69,18 +95,21 @@
 .rich-text-editor .ProseMirror pre code .hljs-variable,
 .rich-text-editor .ProseMirror pre code .hljs-template-variable { color: var(--note-code-var); }
 .rich-text-editor .ProseMirror hr {
-  border: none;
-  border-top: 1px solid var(--note-border);
-  margin: 1em 0;
+  height: 0.25em;
+  padding: 0;
+  border: 0;
+  border-radius: 2px;
+  background: var(--note-border);
+  margin: var(--note-heading-margin) 0;
 }
 .rich-text-editor .ProseMirror .ProseMirror-selectednode {
   outline: 2px solid var(--note-accent);
   border-radius: 4px;
 }
 .rich-text-editor .ProseMirror img {
+  box-sizing: content-box;
   max-width: 100%;
-  border-radius: 6px;
-  margin: 0.5rem 0;
+  margin: var(--note-block-margin) 0;
 }
 .rich-text-editor .ProseMirror table {
   border-collapse: collapse;
@@ -91,14 +120,12 @@
 .rich-text-editor .ProseMirror th,
 .rich-text-editor .ProseMirror td {
   border: 1px solid var(--note-border);
-  padding: 0.4rem 0.6rem;
+  padding: 6px 13px;
   text-align: left;
   vertical-align: top;
 }
-.rich-text-editor .ProseMirror th {
-  background: var(--note-surface);
-  font-weight: 600;
-}
+.rich-text-editor .ProseMirror th { font-weight: 600; }
+.rich-text-editor .ProseMirror tbody tr:nth-child(2n) { background: var(--note-code-bg); }
 .rich-text-editor .ProseMirror .selectedCell:after {
   content: "";
   position: absolute;
@@ -129,7 +156,7 @@
 .rich-text-editor .ProseMirror .link-mark {
   color: var(--note-accent);
   text-decoration: underline;
-  text-underline-offset: 3px;
+  text-underline-offset: 2px;
   cursor: pointer;
   border-radius: 4px;
 }
@@ -143,7 +170,7 @@
    直系子项」选择；行内间距交给内容区的 padding-left，不留「复选框右侧点不进去」的死区。 */
 .rich-text-editor .ProseMirror ul[data-type="taskList"] {
   list-style: none;
-  padding-left: 0;
+  padding-left: 2em;
 }
 .rich-text-editor .ProseMirror ul[data-type="taskList"] > li {
   display: flex;
@@ -155,6 +182,8 @@
   flex: 0 0 auto;
   /* 与首行文字中线对齐（字号可调，所以按 em 计算） */
   margin-top: calc((1em * var(--note-line-height) - var(--note-check-size)) / 2);
+  /* GitHub 把勾选框外移到列表符号的位置：2em 缩进 - 1.4em。 */
+  margin-left: -1.4em;
   user-select: none;
   line-height: 0;
 }
@@ -187,7 +216,7 @@
 /* 嵌套任务列表补缩进：外层 ul 的 padding 已被清零，内层不补会与父项文字齐平；
    父项内容区自带 0.6em 缩进，这里补差额到 1.4rem，与嵌套无序列表的层级感一致 */
 .rich-text-editor .ProseMirror ul[data-type="taskList"] > li ul[data-type="taskList"] {
-  padding-left: calc(1.4rem - 0.6em);
+  padding-left: calc(2em - 0.6em);
 }
 .rich-text-editor .ProseMirror .tag-mark {
   color: var(--note-accent);

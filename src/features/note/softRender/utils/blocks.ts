@@ -54,13 +54,27 @@ export function planBlockquote(
   selectionTo?: number,
 ): void {
   const active = isActiveRange(node.from, node.to, cursor, selectionTo);
-  for (const mark of node.getChildren("QuoteMark")) plan.hides.push({ from: mark.from, to: mark.to, reveal: active });
+  // > 前缀在首行是 Blockquote 的直接子节点，续行则会嵌进 Paragraph（甚至 Link 内部），
+  // 必须遍历子树；但嵌套 Blockquote 的 > 由它自己的 planBlockquote 处理，这里跳过，
+  // 否则同一范围会生成两条 reveal 不同的装饰。
+  collectQuoteMarks(node, (mark) => {
+    plan.hides.push({ from: mark.from, to: mark.to, reveal: active });
+  });
   const callout = findCallout(node, doc);
   if (callout) {
     plan.blocks.push({ from: node.from, to: node.to, cls: `cm-sr-callout cm-sr-callout-${callout.kind}` });
     plan.hides.push({ from: callout.from, to: callout.to, reveal: active });
   } else {
     plan.blocks.push({ from: node.from, to: node.to, cls: "cm-sr-blockquote" });
+  }
+}
+
+/** 收集当前引用块自己的 > 标记，不进入嵌套 Blockquote。 */
+function collectQuoteMarks(node: SyntaxNode, add: (mark: SyntaxNode) => void): void {
+  for (let child = node.firstChild; child; child = child.nextSibling) {
+    if (child.name === "Blockquote") continue;
+    if (child.name === "QuoteMark") add(child);
+    else collectQuoteMarks(child, add);
   }
 }
 
@@ -75,7 +89,19 @@ export function planList(
   if (items.length === 0) return;
   const firstMark = items[0]?.mark;
   const base = kind === "ordered" && firstMark ? parseOrderedMarker(doc.slice(firstMark.from, firstMark.to)) : null;
-  items.forEach((item, index) => emitListItem(item, doc, kind, plan, base, index));
+  const depth = listDepth(node);
+  const format = depth === 0 ? "decimal" : depth === 1 ? "lower-roman" : "lower-alpha";
+  const glyph = depth === 0 ? "•" : depth === 1 ? "◦" : "▪";
+  items.forEach((item, index) => emitListItem(item, doc, kind, plan, base, index, format, glyph));
+}
+
+/** 嵌套层级：父级列表节点数量（0 = 顶层），用于复刻 GitHub 的 i / a 序号。 */
+function listDepth(node: SyntaxNode): number {
+  let depth = 0;
+  for (let parent = node.parent; parent; parent = parent.parent) {
+    if (parent.name === "OrderedList" || parent.name === "BulletList") depth += 1;
+  }
+  return depth;
 }
 
 interface ListItemInfo {
@@ -101,6 +127,8 @@ function emitListItem(
   plan: SoftRenderPlan,
   base: number | null,
   index: number,
+  format: "decimal" | "lower-roman" | "lower-alpha",
+  glyph: string,
 ): void {
   const { child, mark } = item;
   const ordinal = index + 1;
@@ -108,7 +136,7 @@ function emitListItem(
   if (child.getChild("Task")) {
     plan.hides.push({ from: mark.from, to: listMarkEnd(mark, doc), reveal: false });
   } else {
-    plan.widgets.push(toListWidget(kind, mark, listMarkEnd(mark, doc), number));
+    plan.widgets.push(toListWidget(kind, mark, listMarkEnd(mark, doc), number, format, glyph));
   }
 }
 
@@ -164,10 +192,17 @@ function findCallout(node: SyntaxNode, doc: string): { from: number; to: number;
   return { from: para.from, to: para.from + match[0].length, kind: match[1]?.toLocaleLowerCase() ?? "" };
 }
 
-function toListWidget(kind: "bullet" | "ordered", mark: SyntaxNode, to: number, index: number): WidgetRange {
+function toListWidget(
+  kind: "bullet" | "ordered",
+  mark: SyntaxNode,
+  to: number,
+  index: number,
+  format: "decimal" | "lower-roman" | "lower-alpha",
+  glyph: string,
+): WidgetRange {
   return kind === "ordered"
-    ? { kind: "number", from: mark.from, to, index }
-    : { kind: "bullet", from: mark.from, to };
+    ? { kind: "number", from: mark.from, to, index, listFormat: format }
+    : { kind: "bullet", from: mark.from, to, glyph };
 }
 
 export type { BlockRange, HideRange };

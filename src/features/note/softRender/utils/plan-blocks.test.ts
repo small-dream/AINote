@@ -86,13 +86,35 @@ describe("planSoftRender 代码块与引用", () => {
     expect(active.hides.every((h) => !h.reveal)).toBe(true);
   });
 
-  it("引用块隐藏 > 前缀", () => {
+});
+
+describe("planSoftRender 引用与 Callout", () => {
+  it("引用块隐藏每一行的 > 前缀", () => {
     const text = "before\n\n> quote\n> more";
     const plan = planFor(text, 0);
     expect(plan.blocks.some((b) => b.cls === "cm-sr-blockquote")).toBe(true);
     expect(plan.hides.find((h) => h.from === 8)?.reveal).toBe(false);
+    // 续行的 QuoteMark 嵌套在 Paragraph 内，同样必须隐藏
+    expect(plan.hides.find((h) => h.from === 16)?.reveal).toBe(false);
     const active = planFor(text, 10);
     expect(active.hides.find((h) => h.from === 8)?.reveal).toBe(true);
+    expect(active.hides.find((h) => h.from === 16)?.reveal).toBe(true);
+  });
+
+  it("嵌套引用块的 > 前缀不会重复生成装饰", () => {
+    const text = "> a\n>> b";
+    const quoteHides = planFor(text, 0).hides.filter((hide) => [0, 4, 5].includes(hide.from));
+    expect(quoteHides.map((hide) => hide.from).sort((a, b) => a - b)).toEqual([0, 4, 5]);
+    expect(new Set(quoteHides.map((hide) => hide.from)).size).toBe(quoteHides.length);
+  });
+
+  it("嵌套列表按层级使用 i/a 与 ◦/▪", () => {
+    const text = "1. a\n   1. b\n      1. c\n\n- x\n  - y\n    - z";
+    const plan = planFor(text, 0);
+    expect(plan.widgets.filter((widget) => widget.kind === "number").map((widget) => widget.listFormat))
+      .toEqual(["decimal", "lower-roman", "lower-alpha"]);
+    expect(plan.widgets.filter((widget) => widget.kind === "bullet").map((widget) => widget.glyph))
+      .toEqual(["•", "◦", "▪"]);
   });
 
   it("Callout 隐藏 [!NOTE] 标记并套用样式", () => {

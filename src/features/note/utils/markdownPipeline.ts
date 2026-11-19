@@ -70,6 +70,7 @@ function removeMarker(children: Paragraph["children"]): Paragraph["children"] {
   const first = children[0];
   if (!first || first.type !== "text") return children;
   const value = first.value.replace(/^\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION|DANGER)\]\s*/i, "");
-  if (!value) return children.slice(1);
-  return [{ ...(first as Text), value }, ...children.slice(1)];
+  const rest = value ? [{ ...(first as Text), value }, ...children.slice(1)] : children.slice(1);
+  // remark-breaks 会把标记后的换行转成 break 节点；一并移除，避免 callout 内容前多出一空行。
+  return rest[0]?.type === "break" ? rest.slice(1) : rest;
 }

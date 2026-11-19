@@ -79,11 +79,13 @@ test.describe("移动端编辑器工具栏", () => {
 
 test.describe("桌面端可编辑控件字号不受影响", () => {
   test("桌面视口不套用移动端 16px 下限", async ({ page }) => {
+    // 把阅读字号调到 13px：移动壳会抬到 16px，桌面端必须保持用户设置。
+    await page.addInitScript(() => localStorage.setItem("ainote.note-font-size", "13"));
     await openWorkspace(page, baseState());
     await openNote(page, "first", "第一篇");
     const sizes = await editableFontSizes(page);
     expect(sizes.title).toBeLessThan(16);
-    expect(sizes.editor).toBeLessThan(16);
+    expect(sizes.editor).toBe(13);
   });
 });
 

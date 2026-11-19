@@ -3,12 +3,12 @@ import { markRange } from "./block";
 
 /** 无序列表圆点 */
 export class BulletWidget extends WidgetType {
-  constructor(readonly from: number, readonly to: number) {
+  constructor(readonly from: number, readonly to: number, readonly glyph = "•") {
     super();
   }
 
   eq(other: BulletWidget): boolean {
-    return other instanceof BulletWidget && other.from === this.from && other.to === this.to;
+    return other instanceof BulletWidget && other.from === this.from && other.to === this.to && other.glyph === this.glyph;
   }
 
   toDOM(): HTMLElement {
@@ -19,16 +19,23 @@ export class BulletWidget extends WidgetType {
     // 撑高到行高的 1.7 倍，光标就会比行盒高一截并压到相邻行。
     const dot = document.createElement("span");
     dot.className = "cm-sr-bullet-dot";
-    dot.textContent = "•";
+    dot.textContent = this.glyph;
     span.appendChild(dot);
     markRange(span, this.from, this.to);
     return span;
   }
 }
 
+type NumberFormat = "decimal" | "lower-roman" | "lower-alpha";
+
 /** 有序列表序号 */
 export class NumberWidget extends WidgetType {
-  constructor(readonly from: number, readonly to: number, readonly index: number) {
+  constructor(
+    readonly from: number,
+    readonly to: number,
+    readonly index: number,
+    readonly format: NumberFormat = "decimal",
+  ) {
     super();
   }
 
@@ -37,14 +44,88 @@ export class NumberWidget extends WidgetType {
       other instanceof NumberWidget &&
       other.from === this.from &&
       other.to === this.to &&
-      other.index === this.index
+      other.index === this.index &&
+      other.format === this.format
     );
   }
 
   toDOM(): HTMLElement {
     const span = document.createElement("span");
     span.className = "cm-sr-number";
-    span.textContent = `${this.index}.`;
+    span.textContent = `${formatIndex(this.index, this.format)}.`;
+    markRange(span, this.from, this.to);
+    return span;
+  }
+}
+
+/** 与浏览器 / GitHub 的 lower-roman、lower-alpha 标记一致。 */
+function formatIndex(index: number, format: NumberFormat): string {
+  if (format === "lower-alpha") return toAlpha(index);
+  if (format === "lower-roman") return toRoman(index);
+  return String(index);
+}
+
+function toAlpha(index: number): string {
+  let value = Math.max(1, index);
+  let result = "";
+  while (value > 0) {
+    const remainder = (value - 1) % 26;
+    result = String.fromCharCode(97 + remainder) + result;
+    value = Math.floor((value - 1) / 26);
+  }
+  return result;
+}
+
+function toRoman(index: number): string {
+  let value = Math.max(1, Math.min(3999, index));
+  const table: ReadonlyArray<[number, string]> = [
+    [1000, "m"], [900, "cm"], [500, "d"], [400, "cd"],
+    [100, "c"], [90, "xc"], [50, "l"], [40, "xl"],
+    [10, "x"], [9, "ix"], [5, "v"], [4, "iv"], [1, "i"],
+  ];
+  let result = "";
+  for (const [amount, glyph] of table) {
+    while (value >= amount) {
+      result += glyph;
+      value -= amount;
+    }
+  }
+  return result;
+}
+
+/** 脚注引用：整段 `[^label]` 替换为按首次引用顺序编号的 `[n]`。 */
+export class FootnoteRefWidget extends WidgetType {
+  constructor(readonly from: number, readonly to: number, readonly index: number) {
+    super();
+  }
+
+  eq(other: FootnoteRefWidget): boolean {
+    return other instanceof FootnoteRefWidget && other.from === this.from && other.to === this.to && other.index === this.index;
+  }
+
+  toDOM(): HTMLElement {
+    const span = document.createElement("span");
+    span.className = "cm-sr-footnote-ref";
+    span.textContent = `[${this.index}]`;
+    markRange(span, this.from, this.to);
+    return span;
+  }
+}
+
+/** 脚注定义标记：`[^label]: ` 替换为与引用一致的序号（无引用时退回原标签）。 */
+export class FootnoteDefWidget extends WidgetType {
+  constructor(readonly from: number, readonly to: number, readonly label: string) {
+    super();
+  }
+
+  eq(other: FootnoteDefWidget): boolean {
+    return other instanceof FootnoteDefWidget && other.from === this.from && other.to === this.to && other.label === this.label;
+  }
+
+  toDOM(): HTMLElement {
+    const span = document.createElement("span");
+    span.className = "cm-sr-footnote-label";
+    span.textContent = `${this.label}.`;
     markRange(span, this.from, this.to);
     return span;
   }

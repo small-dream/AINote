@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { BulletWidget } from "./inline";
+import { BulletWidget, FootnoteDefWidget, FootnoteRefWidget, NumberWidget } from "./inline";
 
 describe("BulletWidget", () => {
   it("根节点保留行盒高度与源码区间，放大只作用在内层圆点", () => {
@@ -17,5 +17,27 @@ describe("BulletWidget", () => {
     expect(dot).not.toBeNull();
     expect(dot?.textContent).toBe("•");
     expect(dot?.parentElement).toBe(el);
+  });
+});
+
+describe("NumberWidget", () => {
+  it("嵌套有序列表使用 lower-roman / lower-alpha 标记", () => {
+    expect(new NumberWidget(0, 2, 4).toDOM().textContent).toBe("4.");
+    expect(new NumberWidget(0, 2, 4, "lower-roman").toDOM().textContent).toBe("iv.");
+    expect(new NumberWidget(0, 2, 2, "lower-alpha").toDOM().textContent).toBe("b.");
+  });
+});
+
+describe("Footnote widgets", () => {
+  it("引用显示为 [n]，定义显示为 n.，并保留源码区间", () => {
+    const ref = new FootnoteRefWidget(2, 6, 1).toDOM();
+    expect(ref.className).toBe("cm-sr-footnote-ref");
+    expect(ref.textContent).toBe("[1]");
+    expect(ref.dataset.srFrom).toBe("2");
+
+    const definition = new FootnoteDefWidget(8, 14, "2").toDOM();
+    expect(definition.className).toBe("cm-sr-footnote-label");
+    expect(definition.textContent).toBe("2.");
+    expect(definition.dataset.srTo).toBe("14");
   });
 });

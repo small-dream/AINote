@@ -13,6 +13,7 @@ import {
 import { planEscape, planImage, planInlineCode, planLink, planMarkedPair, planTaskMarker } from "./inline";
 import { findAutolinks } from "./autolink";
 import { findMathRanges } from "./math";
+import { planFootnotes } from "./footnotes";
 
 type NodeHandler = (
   node: SyntaxNode,
@@ -54,6 +55,7 @@ export function planSoftRender(tree: Tree, doc: string, cursor: number, selectio
   const linkRanges = collectLinkRanges(tree);
   planWikiLinks(doc, plan, createRangeIndex(codeRanges));
   planMathAndAutolink(doc, cursor, plan, codeRanges, linkRanges, selectionTo);
+  planFootnotes(doc, plan, [...codeRanges, ...plan.wikiRanges, ...plan.mathRanges], cursor, selectionTo);
   const protectedIndex = createRangeIndex([...plan.wikiRanges, ...plan.mathRanges]);
   walk(tree.topNode, doc, cursor, plan, selectionTo, protectedIndex);
   planBlankLines(doc, plan, codeRanges);
@@ -109,7 +111,7 @@ const WIKI_LINK_RE = /\[\[([^\]\n|]+)(?:\|([^\]\n]+?))?\]\]/g;
 function collectCodeRanges(tree: Tree): TextRange[] {
   const ranges: TextRange[] = [];
   function collect(node: SyntaxNode): void {
-    if (node.name === "FencedCode" || node.name === "InlineCode") {
+    if (node.name === "FencedCode" || node.name === "CodeBlock" || node.name === "InlineCode") {
       ranges.push({ from: node.from, to: node.to });
       return;
     }

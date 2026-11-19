@@ -1,5 +1,6 @@
 import { unified } from "unified";
 import remarkParse from "remark-parse";
+import remarkBreaks from "remark-breaks";
 import remarkFrontmatter from "remark-frontmatter";
 import { describe, expect, it } from "vitest";
 import { parseMarkdownDocument, remarkCallouts, remarkRemoveFrontmatter } from "./markdownPipeline";
@@ -20,6 +21,15 @@ describe("markdown pipeline", () => {
     const blockquote = tree.children[0] as { data?: { hProperties?: Record<string, string> }; children: Array<{ type: string; children?: Array<{ value?: string }> }> };
     expect(blockquote.data?.hProperties?.["data-callout"]).toBe("warning");
     expect(blockquote.children[0]?.children?.[0]?.value).toBe("小心\n内容");
+  });
+
+  it("callout 标记后的换行不残留空行", () => {
+    const tree = unified().use(remarkParse).use(remarkBreaks).parse("> [!NOTE]\n> 内容");
+    unified().use(remarkCallouts).runSync(tree);
+    const paragraph = (tree.children[0] as { children: Array<{ children?: Array<{ type: string; value?: string }> }> }).children[0];
+    if (!paragraph) throw new Error("callout paragraph missing");
+    expect(paragraph.children).toHaveLength(1);
+    expect(paragraph.children?.[0]).toMatchObject({ type: "text", value: "内容" });
   });
 
   it("移除 IMPORTANT 和 CAUTION callout 前缀", () => {

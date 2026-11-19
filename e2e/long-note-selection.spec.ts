@@ -3,7 +3,8 @@ import { calls, openWorkspace } from "./helpers";
 
 const fence = "`".repeat(3);
 const paragraphs = ["jumpAfterSuccessPaid", "后续文字同样可以完整选择", "末尾正文依然可以选择"];
-const code = Array.from({ length: 60 }, (_, index) => `run(${index});`).join("\n");
+// GitHub 行高更紧凑，代码行数需要更多才能保证正文段落位于首屏之外。
+const code = Array.from({ length: 90 }, (_, index) => `run(${index});`).join("\n");
 const content = `# 长笔记\n\n${fence}js\n${code}\n${fence}\n\n${paragraphs.join("\n\n")}`;
 
 for (const mobile of [false, true]) {

@@ -5,7 +5,6 @@
   padding: var(--note-code-padding);
   min-width: 0;
   max-width: 100%;
-  border: 1px solid var(--note-border);
   border-radius: var(--note-code-radius);
   background: var(--note-code-bg);
   color: var(--note-ink);
@@ -32,7 +31,7 @@
   color: var(--note-ink);
   font-family: var(--note-code-font);
   font-size: var(--note-code-size);
-  line-height: 1.6;
+  line-height: var(--note-code-line-height);
   tab-size: 4;
   white-space: pre;
   overflow-x: auto;
@@ -59,6 +58,19 @@
   align-items: center;
   gap: 2px;
 }
+/* 与 GitHub 一致：操作按钮在悬停 / 键盘聚焦时才显现；触屏没有 hover，保持常驻。 */
+.note-code-block .note-code-actions {
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.note-code-block:hover .note-code-actions,
+.note-code-block:focus-within .note-code-actions { opacity: 1; }
+@media (hover: none) {
+  .note-code-block .note-code-actions { opacity: 1; transition: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .note-code-block .note-code-actions { transition: none; }
+}
 .note-code-action {
   display: inline-flex;
   align-items: center;
@@ -75,7 +87,7 @@
 }
 .note-code-action:hover,
 .note-code-action[aria-pressed="true"] {
-  background: var(--note-surface);
+  background: color-mix(in srgb, var(--note-ink) 8%, var(--note-code-bg));
   color: var(--note-ink);
 }
 .note-code-action:focus-visible,

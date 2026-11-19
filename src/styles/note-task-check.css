@@ -18,7 +18,8 @@
   /* 行内场景（软渲染 / 只读预览）与首行文字视觉居中；富文本任务项是 flex 行，另行覆盖 */
   vertical-align: -0.15em;
   border: 1.5px solid var(--note-secondary);
-  border-radius: 0.3em;
+  /* GitHub 的 Markdown 勾选框接近系统原生方角（约 2–3px 圆角）。 */
+  border-radius: 3px;
   background-color: transparent;
   cursor: pointer;
   transition: background-color 120ms ease, border-color 120ms ease;

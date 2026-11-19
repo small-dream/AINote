@@ -11,8 +11,9 @@ export const LINE_HEIGHT_STORAGE_KEY = "ainote.note-line-height";
 export const READING_WIDTH_STORAGE_KEY = "ainote.note-reading-width";
 export const FONT_FAMILY_STORAGE_KEY = "ainote.note-font-family";
 
-export const DEFAULT_FONT_SIZE: FontSize = 15;
-export const DEFAULT_LINE_HEIGHT: LineHeight = 1.7;
+/** 默认值对齐 GitHub Markdown：正文 16px / 行高 1.5。 */
+export const DEFAULT_FONT_SIZE: FontSize = 16;
+export const DEFAULT_LINE_HEIGHT: LineHeight = 1.5;
 export const DEFAULT_READING_WIDTH: ReadingWidth = 72;
 export const DEFAULT_FONT_FAMILY: FontFamily = "sans";
 
@@ -34,7 +35,7 @@ function isLocalStorageAvailable(): boolean {
 
 const localStorageAvailable = isLocalStorageAvailable();
 
-/** 解析排版偏好；非法值一律回退默认值（字号 15 / 行高 1.7 / 宽度 72ch / 无衬线）。 */
+/** 解析排版偏好；非法值一律回退默认值（字号 16 / 行高 1.5 / 宽度 72ch / 无衬线）。 */
 export function parseFontSize(value: string | null): FontSize {
   const number = Number(value);
   return FONT_SIZES.includes(number) ? (number as FontSize) : DEFAULT_FONT_SIZE;
