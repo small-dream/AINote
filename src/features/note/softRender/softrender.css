@@ -540,15 +540,12 @@
 .cm-sr-mermaid {
   margin: 0.6em 0;
   overflow-x: auto;
-  padding: 0.75rem;
-  border: 1px solid var(--note-border);
-  border-radius: 6px;
-  background: var(--note-muted);
 }
 
 .cm-sr-mermaid svg {
   max-width: 100%;
   height: auto;
+  background: transparent !important;
 }
 
 @media (max-width: 640px) {

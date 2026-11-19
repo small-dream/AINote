@@ -457,14 +457,17 @@ pre,
 .markdown-mermaid {
   margin: 0.8em 0;
   overflow-x: auto;
-  padding: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 8px;
-  background: var(--bg-secondary);
   text-align: center;
 }
-.markdown-mermaid svg { max-width: 100%; height: auto; }
-.markdown-mermaid-error { color: var(--danger); text-align: left; }
+.markdown-mermaid svg { max-width: 100%; height: auto; background: transparent !important; }
+.markdown-mermaid-error {
+  padding: 0.65em 0.9em;
+  border: 1px solid color-mix(in srgb, var(--danger) 35%, var(--border));
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--danger) 6%, transparent);
+  color: var(--danger);
+  text-align: left;
+}
 .markdown-mermaid-error pre { margin-top: 0.5rem; }
 .markdown-outline-panel {
   max-height: 260px;
