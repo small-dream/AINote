@@ -1,5 +1,25 @@
 # 更新日志
 
+## v0.66.1 — 2026-11-19（修复：列表版式与分隔线对齐 GitHub）
+
+### 修复
+
+- **分隔线**：`---` / `***` 渲染的 hr 由 0.25em 实心灰条改为 1px 边框色细线，预览、软渲染、富文本与 PDF 导出一致。
+- **软渲染列表缩进**：嵌套层级统一按每级 2em 缩进（不再依赖源码空格），源码缩进空格隐藏；长列表项的换行续行对齐内容列，不再退回最左侧。
+- **软渲染标记与间距**：列表标记改为 CSS 绘制的 disc / circle / square，尺寸与位置对齐浏览器 `list-style`；相邻列表项补 0.25em 间距（`li + li`），首个嵌套项不加。
+- **预览与富文本嵌套标记**：二级空心圈、三级方块同样改为 CSS 绘制，修复 macOS WebKit 原生 `circle` 比 Chrome（GitHub）更大更粗的问题；任务列表不受影响。
+
+### 跨端影响
+
+- **Desktop Impact**：桌面端预览、写作软渲染、富文本与 PDF 导出的列表与分隔线统一为 GitHub 观感。
+- **Mobile Impact**：移动端共用同一套渲染组件与主题 token，同步获得上述修正。
+
+### 验证
+
+- `pnpm build && pnpm test && pnpm lint` 通过（261 个测试文件，1624 passed，1 skipped）。
+- `soft-render-caret`、`task-checkbox` e2e 通过（含移动视口用例）。
+- `pnpm release:check v0.66.1` 通过。
+
 ## v0.66.0 — 2026-11-19（新特性：Markdown 渲染全面对齐 GitHub）
 
 ### 新特性
