@@ -29,7 +29,7 @@
 | `pnpm test` | ✅ 261 文件 / 1624 用例（1 skipped 为既有 perf 项） |
 | `pnpm lint` | ✅ 通过 |
 | `cargo test` | ✅ 530 用例（6 ignored 为既有项） |
-| `pnpm test:e2e` | ⚠️ 195/196：`code-block-ui.spec.ts:135`「短代码块编辑前后高度差 ≤1px」实测差 3px；**基线复核**：暂存全部修复改动后在干净 v0.66.1 工作区同样失败，属既有缺陷（该 spec 不在本次增量改动列表内），与 R1/SF1/SF3 修复无关，待跟进排查（怀疑方向：本区间 softrender.css/code-block.css 的代码块高度相关改动） |
+| `pnpm test:e2e` | ✅ 196/196（修复前 195/196：`code-block-ui.spec.ts:135` 高度差 3px，曾基线复核为 v0.66.1 既有缺陷，根因见 §5.4，已一并修复） |
 
 ---
 
@@ -189,6 +189,6 @@ footnotes 12 例边界覆盖好（含 `[^1](url)`、缩进代码块保护、2/4 
 1. **C4** 🟢 脚注区字号/缩进两态统一（预览固定 12px 不随用户字号缩放 vs 软渲染 0.75em）。
 2. **SF7** 🟢 主题切换后已渲染 Mermaid 保持旧配色（监听 surface 主题变化重渲染）。
 3. **SF8/SF9** 🟢 FootnoteDefWidget 参数命名；表格 dirty 时跨格点击点光标丢失。
-4. **e2e 既有失败** `code-block-ui.spec.ts:135`（短代码块编辑前后高度差 3px > 1px）：v0.66.1 基线即失败，怀疑方向为本区间代码块高度相关 CSS 改动，需排查。
+4. ~~**e2e 既有失败** `code-block-ui.spec.ts:135`~~ ✅ 已修复：短代码块聚焦后比渲染态卡片高 3px。根因：`.cm-sr-codeblock-line` 只改了 `font-size` 没改 `font-family`，行盒 strut 用正文字体、内容 span 用等宽代码字体，两种字体 ascent/descent 分配不同，基线对齐后实际行高恒比 `line-height` 高 ~1px（围栏行 16→17、代码行 19.72→20.7，合计 3px）。修复：编辑态代码行补 `font-family: var(--note-code-font)`，strut 与内容同字体后行高精确等于 line-height（围栏行 16px、代码行 19.72px，两态高度差 0px）。修复后 e2e 196/196 全绿。
 5. **plugin.ts** 303 行踩线（ESLint 按 skip 空行/注释计合规），下次扩展前建议先拆分。
 6. C8 README 截图重拍、SF10 第 4+ 层列表回退 decimal（GitHub 亦只定义两级，可不改）。

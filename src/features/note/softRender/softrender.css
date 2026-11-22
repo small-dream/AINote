@@ -418,8 +418,12 @@
 }
 /* 编辑器全局启用了 lineWrapping，聚焦代码块后长行会继承正文的软换行，
    把单行代码拆成多行并撑高整个块。代码块编辑态改为行内横向滚动，同时把
-   字号 / 行高对齐渲染态；滚动条隐藏，光标移动时由浏览器自动横向跟随。 */
+   字号 / 行高对齐渲染态；滚动条隐藏，光标移动时由浏览器自动横向跟随。
+   font-family 必须同步换到代码字体：行盒 strut 用正文字体、内容用等宽字体时，
+   两种字体的 ascent/descent 分配不同，基线对齐后实际行高会恒比 line-height
+   高出约 1px，短代码块聚焦瞬间就会比渲染态卡片高出一截。 */
 .cm-soft-render .cm-line.cm-sr-codeblock-line {
+  font-family: var(--note-code-font);
   font-size: var(--note-code-size);
   line-height: var(--note-code-line-height);
   white-space: pre;
