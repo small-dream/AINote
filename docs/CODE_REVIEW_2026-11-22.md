@@ -3,23 +3,23 @@
 > 审查日期：2026-11-22 · 审查基线：`main @ 72effcf`（v0.66.1，工作区干净）
 > 审查范围：`42e3529..72effcf` 的 17 个提交、52 个文件（+2446 / −401），覆盖窗口边界守卫（Rust）、软渲染脚注与表格内联（TS）、GitHub 版式对齐（CSS）、Mermaid 主题与打包壳 CSP
 > 审查方法：逐 commit diff + 通读全部新增文件 + 三路并行深审（Rust / softRender / CSS）+ 临时用例实证（用后即删）+ remark-gfm / tao / tauri-utils 源码核对
-> 结论：四道门禁全绿，架构分层与测试纪律保持良好。发现 **1 项 🔴 功能缺陷（窗口找回兜底失效）**、**10 项 🟡 缺陷**（集中在「并集包围盒 ≠ 真实桌面」建模与脚注全文扫描的上下文保护）、若干 🟢 建议；XSS 复核**无新增漏洞**。
+> 结论：四道门禁全绿，架构分层与测试纪律保持良好。发现 **1 项 🔴 功能缺陷（窗口找回兜底失效）**、**10 项 🟡 缺陷**（集中在「并集包围盒 ≠ 真实桌面」建模与脚注全文扫描的上下文保护）、若干 🟢 建议；XSS 复核**无新增漏洞**。🔴/🟡 全部已于同日两轮修复完毕（§2.1 修复记录 + §4 第二轮修复记录），🟢 级已顺手清理 C5–C7/SF6，剩余待办见 §5。
 
 ## 0. 结论速览
 
 | ID | 级别 | 问题 | 影响面 | 关键位置 | 状态 |
 |---|---|---|---|---|---|
 | R1 | 🔴 | 异尺寸多屏存在并集「死角」：窗口落入死角时 `has_usable_visibility` 判不可见 → 修复路径却用同一并集盒计算 → 调整为空，窗口**永久搁浅**且每次聚焦/唤回空转 | desktop（多屏异尺寸/错位排列） | `window_geometry.rs:67`、`window_bounds.rs:91` | ✅ 已修复 |
-| R2 | 🟡 | 工作区物理宽 < `minWidth×scale` 时 `set_size` 被 OS 按最小尺寸抬回，校正永不收敛，且日志谎报「已校正」 | desktop（小屏/高 DPI/远程虚拟屏） | `window_geometry.rs:102`、`tauri.conf.json` minWidth 800 | 待修复 |
-| R3 | 🟡 | `Resized` 事件里即时收缩窗口，与用户拖拽边缘调整互搏，拖拽全程抖动回弹 | desktop | `window_bounds.rs:26-28` | 待修复 |
+| R2 | 🟡 | 工作区物理宽 < `minWidth×scale` 时 `set_size` 被 OS 按最小尺寸抬回，校正永不收敛，且日志谎报「已校正」 | desktop（小屏/高 DPI/远程虚拟屏） | `window_geometry.rs:102`、`tauri.conf.json` minWidth 800 | ✅ 已修复 |
+| R3 | 🟡 | `Resized` 事件里即时收缩窗口，与用户拖拽边缘调整互搏，拖拽全程抖动回弹 | desktop | `window_bounds.rs:26-28` | ✅ 已修复 |
 | SF1 | 🟡 | 脚注引用全文正则扫描未保护图片 alt / 链接 URL / `\` 转义上下文：幽灵引用污染**全文档编号**并错误渲染 | desktop + mobile | `plan.ts:58`（保护区缺 linkRanges/Image/Escape）、`footnotes.ts:7` | ✅ 已修复 |
-| SF2 | 🟡 | 引用块/列表项首行内的脚注定义不被识别（GitHub/remark-gfm 识别），迁移文本「功能失效」 | desktop + mobile | `footnotes.ts:5` | 待修复 |
+| SF2 | 🟡 | 引用块/列表项首行内的脚注定义不被识别（GitHub/remark-gfm 识别），迁移文本「功能失效」 | desktop + mobile | `footnotes.ts:5` | ✅ 已修复 |
 | SF3 | 🟡 | 表格源码在编辑态显示 `[1]` 而源码是 `[^1]`，所见非所得（f18301f 同类缺陷复发） | desktop + mobile | `footnotes.ts` + `blocks.ts:196` | ✅ 已修复 |
-| SF4 | 🟡 | 表格单元格内脚注引用不渲染（裸露原文）但编号照常计入 | desktop + mobile | `tableInline.ts:98-128` | 待修复 |
-| SF5 | 🟡 | 链接文本内含脚注引用出现「半渲染」混合态（改动前是全源码，一致性反而更差） | desktop + mobile | `utils/inline.ts:92` | 待修复 |
-| C1 | 🟡 | 软渲染有序列表：宽序号（lower-roman `viii.`、第 100 项 `100.`）把首行文字推出内容列，与软换行续行错位 | desktop + mobile | `softrender.css:183-186`、`243-246` | 待修复 |
-| C2 | 🟡 | 列表项跨多源码行时续行不获 depth 类与缩进，写作态列表左缘断裂（实证） | desktop + mobile | `blocks.ts:152-159` | 待修复 |
-| C3 | 🟡 | Callout 预览/软渲染两态内边距与标题字号不一致（0.5rem vs 0；16px vs 14.4px） | desktop + mobile | `index.css:506-517` vs `softrender.css:522-550` | 待修复 |
+| SF4 | 🟡 | 表格单元格内脚注引用不渲染（裸露原文）但编号照常计入 | desktop + mobile | `tableInline.ts:98-128` | ✅ 已修复 |
+| SF5 | 🟡 | 链接文本内含脚注引用出现「半渲染」混合态（改动前是全源码，一致性反而更差） | desktop + mobile | `utils/inline.ts:92` | ✅ 已修复 |
+| C1 | 🟡 | 软渲染有序列表：宽序号（lower-roman `viii.`、第 100 项 `100.`）把首行文字推出内容列，与软换行续行错位 | desktop + mobile | `softrender.css:183-186`、`243-246` | ✅ 已修复 |
+| C2 | 🟡 | 列表项跨多源码行时续行不获 depth 类与缩进，写作态列表左缘断裂（实证） | desktop + mobile | `blocks.ts:152-159` | ✅ 已修复 |
+| C3 | 🟡 | Callout 预览/软渲染两态内边距与标题字号不一致（0.5rem vs 0；16px vs 14.4px）；修复中发现多行 Callout 标题 `::before` 逐行重复渲染（C9，见 §3.1） | desktop + mobile | `index.css:506-517` vs `softrender.css:522-550` | ✅ 已修复 |
 
 门禁基线（本机 Windows）：
 
@@ -166,13 +166,29 @@ footnotes 12 例边界覆盖好（含 `[^1](url)`、缩进代码块保护、2/4 
 
 ---
 
-## 4. 修复计划（建议优先级）
+## 4. 第二轮修复记录（R2–R6 / SF2·SF4·SF5·SF6 / C1–C7）
 
-1. ✅ **R1**（窗口搁浅）：修复路径改用「重叠面积最大的真实 work area」，补死角单测。窗口找回是该特性的自我宣称，属用户可感知的功能失效。
-2. ✅ **SF1 + SF3**（一次改动）：planFootnotes 保护区并入 linkRanges/Image/Escape/active-table，消解全文编号污染与表格所见非所得。
-3. **R2/R3**（一起做）：normalize 感知最小尺寸 + 回读确认才打成功日志；Resized 降级为兜底修复。
-4. **C2**（列表续行断裂）+ **C1**（宽序号）：软渲染列表系统的两个可见边角。
-5. **SF4/SF5/SF2/C3**：按人力跟进。
-6. 低成本加固随手做：R4 label 过滤、R5 注释、R6/CSP 文档注释、SF6 isOpaque、C5 死规则、C6 注释。
+> 实施日期：2026-11-22（同日第二轮，基线 `3cdf77d`）。门禁：`pnpm build`/`test`（1656 用例）/`lint` 与 `cargo test`（536+4）全绿；e2e 195/196，唯一失败为 §0 表中记录的既有 `code-block-ui.spec.ts:135`，无新增回归。
 
-每项修复按 AGENTS 要求过全部门禁，并标注 `Desktop Impact` / `Mobile Impact`（SF/C 系列均为 shared）。
+- **R2**：`fit_frame_to_work_area` 增加 `min_inner` 参数（tauri 2.12 无最小尺寸 getter，按 tauri.conf.json 的 minWidth/minHeight × `scale_factor()` 向上取整推导，缺配置退回 1×1 旧行为）；工作区装不下最小尺寸时目标抬到 min_inner，窗口宁可超出工作区，不再请求会被 `WM_GETMINMAXINFO` 钳回的值。`apply_fit` 在 `set_size` 后回读 `inner_size`（已核实 runtime-wry 主线程内联同步执行，回读有效），被钳回就打 warn 并返回未生效，消除虚假成功日志。
+- **R3**：`Resized` 并入 `Moved`/`Focused` 同一兜底分支（编译期共享 match 分支保证路由一致），完整校正只剩启动/托盘唤回/`ScaleFactorChanged` 三个程序化时机，不再与拖拽互搏。
+- **R4**：`handle_window_event` 开头过滤非 main label。**R5**：`normalizing` 标志注释如实说明「收敛靠幂等 + PIXEL_TOLERANCE，标志只防同线程同步重入」。**R6**：tauri.conf.json 不支持注释（Cargo.lock 无 JSON5 依赖，编译期严格 JSON），CSP 动机改记入 `docs/TROUBLESHOOTING.md §11`。
+- **SF2**：行首剥离可嵌套容器前缀（`>` 只吞一个空白，对齐 CommonMark）后按原正则匹配定义，marker 偏移换算回源坐标；容器内定义遇真空行终止、`>` 单独成行算容器内空行，均经 remark-gfm 实测对齐；跨真空行的容器多段定义不识别（注释声明边界 + 回归测试锁定）。
+- **SF4**：编号通路 `footnoteNumbering`（从 plan 的 footnote-ref widget 反查 label→序号）→ plugin.ts → TableWidget（`footnoteKey` 参与 `eq()`，查号表变化强制重建）→ `renderTableInline` 把整体恰为 `[^label]` 的节点渲染成 `cm-sr-footnote-ref`；查不到号回退源码。SF3 的 reveal 语义保持不变。
+- **SF5**：选择比「整段跳过」更贴 GitHub 的**计号不替换**：`insideRawLinkSyntax`（行内方括号深度扫描、转义感知）判定引用嵌在 Lezer 未成 Link 的 `[see [^1] end](u)` 语法里时不替换但照常计号，编号与 GitHub 一致，仅外层保持源码，消除混合态。
+- **SF6**：`isOpaque` 改为 `alpha === 1`，不可解析颜色（`var()` 间接引用、命名色）与半透明一律回退默认页色，杜绝非法字符串注入 `edgeLabelBackground`。
+- **C1**：`.cm-sr-number` 定宽 1.8em + `text-align: right`，文字列恒为 2em 与续行同列；超宽序号向左溢出（复刻 GitHub `list-style: outside` 生长方向）。
+- **C2**：`emitLineLayout` 改收整个 item：mark 行之外的每个源码行打同 depth 类并隐藏行首空白；嵌套列表范围扩张到行首后整行跳过（防装饰重复）、行内/围栏代码范围相交时裁剪或跳过（防 replace 装饰重叠）。新增 3 例（缩进/懒续行、嵌套不重复、代码保护）。
+- **C3 + C9（实施中发现）**：CM6 的 block 装饰按行展开成 span，导致多行 Callout 的 `::before` 标题**逐行重复渲染**（审查时漏掉的真实缺陷）；`planCalloutBlocks` 把标题类只打首行、呼吸位类打首/末行，`::before` 挂到 `.cm-sr-callout-title`，预览侧补 `::before` 字号 0.9em，两态统一。
+- **C5/C6/C7**：三处死规则删除；三处过期注释/死兜底值修正；任务项文字列三态对齐 2.0em（含嵌套 `calc(2em-0.6em)→2em` 配套）。
+
+---
+
+## 5. 剩余待办
+
+1. **C4** 🟢 脚注区字号/缩进两态统一（预览固定 12px 不随用户字号缩放 vs 软渲染 0.75em）。
+2. **SF7** 🟢 主题切换后已渲染 Mermaid 保持旧配色（监听 surface 主题变化重渲染）。
+3. **SF8/SF9** 🟢 FootnoteDefWidget 参数命名；表格 dirty 时跨格点击点光标丢失。
+4. **e2e 既有失败** `code-block-ui.spec.ts:135`（短代码块编辑前后高度差 3px > 1px）：v0.66.1 基线即失败，怀疑方向为本区间代码块高度相关 CSS 改动，需排查。
+5. **plugin.ts** 303 行踩线（ESLint 按 skip 空行/注释计合规），下次扩展前建议先拆分。
+6. C8 README 截图重拍、SF10 第 4+ 层列表回退 decimal（GitHub 亦只定义两级，可不改）。
