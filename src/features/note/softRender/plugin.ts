@@ -6,6 +6,7 @@ import { openExternal } from "@/api";
 import type { HideRange, WidgetRange } from "./types";
 import { clickedLinePosition, debugClick, debugMouseDown, debugViewUpdate } from "./clickDebug";
 import { planSoftRender } from "./utils/plan";
+import { footnoteNumbering } from "./utils/footnotes";
 import {
   BulletWidget,
   CheckboxWidget,
@@ -62,18 +63,19 @@ function computeDecorations(state: EditorState, options: SoftRenderOptions): Dec
   const selectionTo = selection.empty ? undefined : selection.anchor;
   const tree = ensureSyntaxTree(state, doc.length, 100) ?? syntaxTree(state);
   const plan = planSoftRender(tree, doc, cursor, selectionTo);
+  const footnotes = footnoteNumbering(doc, plan.widgets);
   const ranges: Range<Decoration>[] = [
     ...plan.marks.map((mark) => Decoration.mark({ class: mark.cls, ...(mark.attrs ? { attributes: mark.attrs } : {}) }).range(mark.from, mark.to)),
     ...plan.gaps.map((gap) => Decoration.line({ class: gap.cls }).range(gap.pos, gap.pos)),
     ...plan.hides.map((hide) => toHideDecoration(hide).range(hide.from, hide.to)),
     ...plan.blocks.map((block) => Decoration.mark({ class: block.cls, block: true }).range(block.from, block.to)),
-    ...plan.widgets.map((widget) => toWidgetDecoration(widget, options)),
+    ...plan.widgets.map((widget) => toWidgetDecoration(widget, options, footnotes)),
   ];
   return Decoration.set(ranges, true);
 }
 
-function toWidgetDecoration(widget: WidgetRange, options: SoftRenderOptions): Range<Decoration> {
-  return WIDGET_BUILDERS[widget.kind](widget, options);
+function toWidgetDecoration(widget: WidgetRange, options: SoftRenderOptions, footnotes: Map<string, string>): Range<Decoration> {
+  return WIDGET_BUILDERS[widget.kind](widget, options, footnotes);
 }
 
 function toHideDecoration(hide: HideRange): Decoration {
@@ -83,14 +85,15 @@ function toHideDecoration(hide: HideRange): Decoration {
   return Decoration.replace({});
 }
 
-const WIDGET_BUILDERS: Record<WidgetRange["kind"], (widget: WidgetRange, options: SoftRenderOptions) => Range<Decoration>> = {
+const WIDGET_BUILDERS: Record<WidgetRange["kind"], (widget: WidgetRange, options: SoftRenderOptions, footnotes: Map<string, string>) => Range<Decoration>> = {
   checkbox: (widget) => Decoration.replace({ widget: new CheckboxWidget(widget.from, widget.checked ?? false) }).range(widget.from, widget.to),
   image: (widget, options) =>
     Decoration.replace({
       widget: new ImageWidget(resolveImageSrc(options.repoPath, widget.value ?? ""), widget.alt ?? "", widget.from, widget.to),
     }).range(widget.from, widget.to),
   hr: (widget) => Decoration.replace({ widget: new HrWidget(widget.from, widget.to), block: true }).range(widget.from, widget.to),
-  table: (widget) => Decoration.replace({ widget: new TableWidget(widget.value ?? "", widget.from, widget.to), block: true }).range(widget.from, widget.to),
+  table: (widget, _options, footnotes) =>
+    Decoration.replace({ widget: new TableWidget(widget.value ?? "", widget.from, widget.to, footnotes), block: true }).range(widget.from, widget.to),
   bullet: (widget) => Decoration.replace({ widget: new BulletWidget(widget.from, widget.to, widget.glyph ?? "•") }).range(widget.from, widget.to),
   "footnote-ref": (widget) =>
     Decoration.replace({ widget: new FootnoteRefWidget(widget.from, widget.to, Number(widget.value ?? 1)) }).range(widget.from, widget.to),

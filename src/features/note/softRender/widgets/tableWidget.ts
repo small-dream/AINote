@@ -42,12 +42,20 @@ const OPS: Record<TableOp, (s: TableEditState) => void> = {
 
 /** 可编辑表格 widget：单元格就地编辑（blur/Enter/Tab 提交），增删行列并保持 Markdown 对齐语法。 */
 export class TableWidget extends WidgetType {
-  constructor(readonly source: string, readonly from: number, readonly to: number) {
+  private readonly footnotes: Map<string, string>;
+  /** eq 比较用：查号表变化（别处新增更早的引用）时必须重建，否则单元格序号陈旧。 */
+  private readonly footnoteKey: string;
+
+  constructor(readonly source: string, readonly from: number, readonly to: number, footnotes: Map<string, string>) {
     super();
+    this.footnotes = footnotes;
+    this.footnoteKey = [...footnotes].map(([label, index]) => `${label}=${index}`).sort().join("&");
   }
 
   eq(other: TableWidget): boolean {
-    return other instanceof TableWidget && other.source === this.source && other.from === this.from && other.to === this.to;
+    return other instanceof TableWidget &&
+      other.source === this.source && other.from === this.from && other.to === this.to &&
+      other.footnoteKey === this.footnoteKey;
   }
 
   ignoreEvent(): boolean {
@@ -64,7 +72,7 @@ export class TableWidget extends WidgetType {
     const table = document.createElement("table");
     table.className = "cm-sr-table cm-sr-table-editable";
     table.spellcheck = false;
-    buildBody(table, state, shell);
+    buildBody(table, state, shell, this.footnotes);
     shell.append(buildToolbar(state, shell), table);
     const focus = pendingFocus;
     if (focus && focus.source === this.source) {
@@ -84,21 +92,21 @@ function fallbackShell(source: string): HTMLElement {
   return shell;
 }
 
-function buildBody(table: HTMLTableElement, state: TableEditState, shell: HTMLElement): void {
+function buildBody(table: HTMLTableElement, state: TableEditState, shell: HTMLElement, footnotes: Map<string, string>): void {
   const thead = document.createElement("thead");
   const tbody = document.createElement("tbody");
-  thead.appendChild(buildRow(state.data.header, -1, state, shell));
-  state.data.rows.forEach((cells, row) => tbody.appendChild(buildRow(cells, row, state, shell)));
+  thead.appendChild(buildRow(state.data.header, -1, state, shell, footnotes));
+  state.data.rows.forEach((cells, row) => tbody.appendChild(buildRow(cells, row, state, shell, footnotes)));
   table.append(thead, tbody);
 }
 
-function buildRow(cells: string[], modelRow: number, state: TableEditState, shell: HTMLElement): HTMLTableRowElement {
+function buildRow(cells: string[], modelRow: number, state: TableEditState, shell: HTMLElement, footnotes: Map<string, string>): HTMLTableRowElement {
   const tr = document.createElement("tr");
   cells.forEach((text, col) => {
     const el = document.createElement(modelRow < 0 ? "th" : "td");
     Object.assign(el.dataset, { srCell: "1", srRow: String(modelRow + 1), srCol: String(col) });
     el.contentEditable = "true";
-    showRenderedCell(el, text);
+    showRenderedCell(el, text, footnotes);
     if (state.data.align[col]) el.style.textAlign = state.data.align[col] as string;
     const enterSource = (): void => showSourceCell(el, cellText(state, modelRow, col));
     el.addEventListener("mousedown", (event) => {
@@ -123,7 +131,7 @@ function buildRow(cells: string[], modelRow: number, state: TableEditState, shel
     });
     el.addEventListener("blur", () => {
       commit(state, shell);
-      showRenderedCell(el, cellText(state, modelRow, col));
+      showRenderedCell(el, cellText(state, modelRow, col), footnotes);
     });
     el.addEventListener("keydown", (event) => cellKey(event, state, shell, modelRow, col));
     tr.appendChild(el);
@@ -141,8 +149,8 @@ function showSourceCell(el: HTMLElement, text: string): void {
   el.dataset.srCellMode = "source";
 }
 
-function showRenderedCell(el: HTMLElement, text: string): void {
-  renderTableInline(el, text);
+function showRenderedCell(el: HTMLElement, text: string, footnotes: Map<string, string>): void {
+  renderTableInline(el, text, footnotes);
   el.dataset.srCellMode = "rendered";
 }
 

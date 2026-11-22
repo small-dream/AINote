@@ -179,3 +179,40 @@ describe("softRender 表格工具栏删行/列", () => {
   });
 });
 
+const FOOTNOTE_TABLE = "序[^b]\n\n| 甲 | 乙 |\n| --- | --- |\n| 见 [^b] | [^none] |\n\n[^b]: 注\n";
+
+describe("softRender 表格单元格脚注", () => {
+  it("单元格内引用渲染为 [n]，未定义标签保持源码", async () => {
+    const view = await createView(FOOTNOTE_TABLE, 0);
+    const cell = cellOf(view, 1, 0);
+    expect(cell.querySelector(".cm-sr-footnote-ref")?.textContent).toBe("[1]");
+    expect(cell.textContent).not.toContain("[^b]");
+    expect(cellOf(view, 1, 1).textContent).toContain("[^none]");
+    view.destroy();
+  });
+
+  it("更早出现的新引用会更新单元格序号", async () => {
+    const view = await createView(FOOTNOTE_TABLE, 0);
+    view.dispatch({ changes: { from: 0, insert: "零[^c]\n\n[^c]: C\n\n" } });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    expect(cellOf(view, 1, 0).querySelector(".cm-sr-footnote-ref")?.textContent).toBe("[2]");
+    view.destroy();
+  });
+
+  it("编号表变化（表格未移动）时重建单元格渲染", async () => {
+    const view = await createView(FOOTNOTE_TABLE, 0);
+    const bodyRef = FOOTNOTE_TABLE.indexOf("[^b]");
+    const defLabel = FOOTNOTE_TABLE.indexOf("[^b]:");
+    // 等长替换：表格外引用与定义的标签 b → a，表格位置不动，仅查号表变化。
+    view.dispatch({ changes: [
+      { from: bodyRef + 3, to: bodyRef + 4, insert: "a" },
+      { from: defLabel + 3, to: defLabel + 4, insert: "a" },
+    ] });
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    // [^b] 不再被引用/定义：单元格回退源码，证明 widget 因查号表变化而重建。
+    expect(cellOf(view, 1, 0).textContent).toContain("[^b]");
+    expect(cellOf(view, 1, 0).querySelector(".cm-sr-footnote-ref")).toBeNull();
+    view.destroy();
+  });
+});
+

@@ -1,6 +1,7 @@
 import { parser, GFM } from "@lezer/markdown";
 import { describe, expect, it } from "vitest";
 import { planSoftRender } from "./plan";
+import { footnoteNumbering } from "./footnotes";
 import type { SoftRenderPlan } from "../types";
 
 const md = parser.configure([GFM]);
@@ -141,5 +142,98 @@ describe("planSoftRender 脚注上下文保护", () => {
     // 编号未被表格引用挪用：[^2] 仍是 2 号，说明 [^1] 照常占了 1 号。
     const defs = footnoteWidgets(plan, "footnote-def");
     expect(defs.map((widget) => widget.value)).toEqual(["1", "2"]);
+  });
+});
+
+describe("planSoftRender 容器内脚注定义", () => {
+  it("引用块首行的定义被识别，引用与定义共享序号", () => {
+    const text = "> [^1]: note\n\na[^1]\n";
+    const plan = planFor(text);
+    expect(footnoteWidgets(plan, "footnote-def")[0]).toMatchObject({ from: 2, to: 8, value: "1" });
+    expect(footnoteWidgets(plan, "footnote-ref")[0]).toMatchObject({ from: text.lastIndexOf("[^1]"), value: "1" });
+    const block = plan.blocks.find((b) => b.cls === "cm-sr-footnote-def");
+    expect(block?.from).toBe(0);
+    expect(block?.to).toBe(12);
+  });
+
+  it("引用块内 > 不带空格、嵌套 > > 的定义同样识别", () => {
+    expect(footnoteWidgets(planFor(">[^1]: note\n\na[^1]"), "footnote-def")[0]).toMatchObject({ from: 1, value: "1" });
+    expect(footnoteWidgets(planFor("> > [^1]: note\n\na[^1]"), "footnote-def")[0]).toMatchObject({ from: 4, value: "1" });
+  });
+
+  it("列表项首行的定义与列表标记共存（不重叠）", () => {
+    const plan = planFor("- [^1]: note\n\na[^1]");
+    expect(footnoteWidgets(plan, "footnote-def")[0]).toMatchObject({ from: 2, to: 8, value: "1" });
+    expect(plan.widgets.some((widget) => widget.kind === "bullet" && widget.from === 0 && widget.to === 2)).toBe(true);
+  });
+
+  it("有序列表项首行的定义同样识别", () => {
+    const plan = planFor("1. [^1]: note\n\na[^1]");
+    expect(footnoteWidgets(plan, "footnote-def")[0]).toMatchObject({ from: 3, to: 9, value: "1" });
+    expect(plan.widgets.some((widget) => widget.kind === "number" && widget.from === 0 && widget.to === 3)).toBe(true);
+  });
+
+  it("引用块内 4 空格续行归入脚注块，`>` 空行不结束", () => {
+    const text = "> [^1]: a\n>\n>     b\n\nbody[^1]";
+    const block = planFor(text).blocks.find((b) => b.cls === "cm-sr-footnote-def");
+    expect(block?.from).toBe(0);
+    expect(block?.to).toBe(text.indexOf("\n\nbody"));
+  });
+
+  it("引用块内未缩进的续行结束脚注块", () => {
+    const text = "> [^1]: a\n> b\n\na[^1]";
+    const block = planFor(text).blocks.find((b) => b.cls === "cm-sr-footnote-def");
+    expect(block?.to).toBe(9);
+  });
+
+  it("顶层定义不吞并随后的引用块缩进行", () => {
+    const text = "[^1]: a\n>     b\n\nbody[^1]";
+    const block = planFor(text).blocks.find((b) => b.cls === "cm-sr-footnote-def");
+    expect(block?.to).toBe(7);
+  });
+
+  it("普通引用行与普通列表项不误判为定义", () => {
+    const plan = planFor("> 普通引用\n- 普通项");
+    expect(footnoteWidgets(plan, "footnote-def")).toHaveLength(0);
+    expect(plan.blocks.some((block) => block.cls === "cm-sr-footnote-def")).toBe(false);
+  });
+});
+
+describe("planSoftRender 链接语法里的引用", () => {
+  it("[see [^1] end](url) 保持整段源码，但仍按 GitHub 顺序计入编号", () => {
+    const text = "[see [^1] end](url)\n\nzz[^2]\n\n[^1]: n\n[^2]: m\n";
+    const plan = planFor(text);
+    // 仅 [^2] 生成替换 widget；[^1] 不出现半渲染混合态。
+    expect(footnoteWidgets(plan, "footnote-ref").map((widget) => widget.value)).toEqual(["2"]);
+    expect(footnoteWidgets(plan, "footnote-ref")[0]).toMatchObject({ from: text.indexOf("[^2]") });
+    // 编号对齐 GitHub：[^1] 仍占 1 号（定义处可见）。
+    expect(footnoteWidgets(plan, "footnote-def").map((widget) => widget.value)).toEqual(["1", "2"]);
+  });
+
+  it("标签后还有嵌套方括号对时同样保持源码", () => {
+    const text = "[see [^1] mid [x] end](url)\n\n[^1]: n\n";
+    const plan = planFor(text);
+    expect(footnoteWidgets(plan, "footnote-ref")).toHaveLength(0);
+    expect(footnoteWidgets(plan, "footnote-def").map((widget) => widget.value)).toEqual(["1"]);
+  });
+
+  it("行内方括号闭合后的引用不受影响", () => {
+    const text = "比较 a[0] 和 b[^1]\n\n[^1]: n";
+    expect(footnoteWidgets(planFor(text), "footnote-ref")).toHaveLength(1);
+  });
+
+  it("链接语法在下一行不影响上一行的引用", () => {
+    const text = "b[^1] 文字\n[see](x)\n\n[^1]: n";
+    expect(footnoteWidgets(planFor(text), "footnote-ref")).toHaveLength(1);
+  });
+});
+
+describe("footnoteNumbering 查号表", () => {
+  it("从 footnote-ref widget 反查 label→编号，大小写归一", () => {
+    const text = "甲[^A] 乙[^b]\n\n[^a]: A\n[^b]: B\n";
+    const numbering = footnoteNumbering(text, planFor(text).widgets);
+    expect(numbering.get("a")).toBe("1");
+    expect(numbering.get("b")).toBe("2");
+    expect(numbering.get("A")).toBeUndefined();
   });
 });

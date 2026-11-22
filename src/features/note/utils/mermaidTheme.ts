@@ -52,9 +52,10 @@ function resolvePage(canvas: string, dark: boolean): string {
   return dark ? DARK_PAGE : LIGHT_PAGE;
 }
 
-/** 只有不透明背景才能可靠判断明暗；透明容器按亮色处理。 */
+/** 只有完全透明度（alpha = 1）的背景才能可靠判断明暗并充当边标签底色；
+ *  不可解析（命名色 / var() 间接引用）与半透明颜色一律回退默认页色。 */
 function isOpaque(color: string): boolean {
-  return parseColor(color)?.alpha !== 0;
+  return parseColor(color)?.alpha === 1;
 }
 
 function isDarkColor(color: string): boolean | null {

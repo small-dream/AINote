@@ -65,3 +65,27 @@ describe("mermaidConfig GitHub 风格", () => {
     child.parentElement?.remove();
   });
 });
+
+describe("mermaidConfig 颜色健壮性", () => {
+  it("不可解析颜色（var() 间接引用 / 命名色）回退默认亮色页色", () => {
+    for (const canvas of ["var(--note-canvas)", "white"]) {
+      const child = withSurface({ "--note-bg": canvas });
+
+      const config = mermaidConfig(child);
+      expect(config.theme).toBe("default");
+      expect(config.themeVariables?.edgeLabelBackground).toBe("#ffffff");
+
+      child.parentElement?.remove();
+    }
+  });
+
+  it("半透明背景判明暗但不充当边标签底色，回退实色页色", () => {
+    const child = withSurface({ "--note-bg": "rgba(13, 17, 23, 0.5)" });
+
+    const config = mermaidConfig(child);
+    expect(config.theme).toBe("dark");
+    expect(config.themeVariables?.edgeLabelBackground).toBe("#0d1117");
+
+    child.parentElement?.remove();
+  });
+});
