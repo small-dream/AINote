@@ -1,6 +1,6 @@
 import type { SyntaxNode, Tree } from "@lezer/common";
 import type { SoftRenderPlan, TextRange } from "../types";
-import { createRangeIndex, type RangeIndex } from "./ranges";
+import { createRangeIndex, isActiveRange, type RangeIndex } from "./ranges";
 import {
   planBlockquote,
   planFencedCode,
@@ -51,11 +51,20 @@ const NODE_HANDLERS: Record<string, NodeHandler> = {
 /** 生成 Markdown 软渲染计划：源码保持原样，仅用 decoration/widget 覆盖显示。 */
 export function planSoftRender(tree: Tree, doc: string, cursor: number, selectionTo?: number): SoftRenderPlan {
   const plan = createEmptyPlan();
-  const codeRanges = collectCodeRanges(tree);
-  const linkRanges = collectLinkRanges(tree);
+  const codeRanges = collectNodeRanges(tree, ["FencedCode", "CodeBlock", "InlineCode"]);
+  const linkRanges = collectNodeRanges(tree, ["Link"]);
   planWikiLinks(doc, plan, createRangeIndex(codeRanges));
   planMathAndAutolink(doc, cursor, plan, codeRanges, linkRanges, selectionTo);
-  planFootnotes(doc, plan, [...codeRanges, ...plan.wikiRanges, ...plan.mathRanges], cursor, selectionTo);
+  planFootnotes(doc, plan, {
+    protectedRanges: [...codeRanges, ...plan.wikiRanges, ...plan.mathRanges],
+    imageRanges: collectNodeRanges(tree, ["Image"]),
+    escapeRanges: collectNodeRanges(tree, ["Escape"]),
+    linkRanges,
+    // 光标所在表格保持源码编辑：其中的引用计入编号但不做替换（所见即所得）。
+    revealRanges: collectNodeRanges(tree, ["Table"]).filter((table) =>
+      isActiveRange(table.from, table.to, cursor, selectionTo),
+    ),
+  }, cursor, selectionTo);
   const protectedIndex = createRangeIndex([...plan.wikiRanges, ...plan.mathRanges]);
   walk(tree.topNode, doc, cursor, plan, selectionTo, protectedIndex);
   planBlankLines(doc, plan, codeRanges);
@@ -108,23 +117,12 @@ function nextNonBlankLineStart(doc: string, from: number): number {
 
 const WIKI_LINK_RE = /\[\[([^\]\n|]+)(?:\|([^\]\n]+?))?\]\]/g;
 
-function collectCodeRanges(tree: Tree): TextRange[] {
+/** 收集指定类型语法节点的完整范围；命中后不再深入子节点（子范围已被覆盖）。 */
+function collectNodeRanges(tree: Tree, nodeNames: readonly string[]): TextRange[] {
+  const wanted = new Set(nodeNames);
   const ranges: TextRange[] = [];
   function collect(node: SyntaxNode): void {
-    if (node.name === "FencedCode" || node.name === "CodeBlock" || node.name === "InlineCode") {
-      ranges.push({ from: node.from, to: node.to });
-      return;
-    }
-    for (let child = node.firstChild; child; child = child.nextSibling) collect(child);
-  }
-  collect(tree.topNode);
-  return ranges;
-}
-
-function collectLinkRanges(tree: Tree): TextRange[] {
-  const ranges: TextRange[] = [];
-  function collect(node: SyntaxNode): void {
-    if (node.name === "Link") {
+    if (wanted.has(node.name)) {
       ranges.push({ from: node.from, to: node.to });
       return;
     }

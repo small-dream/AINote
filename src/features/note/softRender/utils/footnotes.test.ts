@@ -94,3 +94,52 @@ describe("planSoftRender 脚注边界", () => {
     expect(footnoteWidgets(planFor("    [^1] code\n\n[^1]: note\n"), "footnote-ref")).toHaveLength(0);
   });
 });
+
+describe("planSoftRender 脚注上下文保护", () => {
+  it("图片 alt 里的 [^x] 不算引用，不污染全文档编号", () => {
+    const text = "![a [^q] b](u)\n\nzz[^r]\n\n[^q]: orphan\n[^r]: real\n";
+    const plan = planFor(text);
+    expect(footnoteWidgets(plan, "footnote-ref").map((widget) => widget.value)).toEqual(["1"]);
+    expect(footnoteWidgets(plan, "footnote-ref")[0]).toMatchObject({ from: text.indexOf("[^r]") });
+  });
+
+  it("链接 URL 里的 [^x] 不算引用", () => {
+    const text = "[x](https://e.com/[^y])\n\nzz[^r]\n\n[^y]: orphan\n[^r]: real\n";
+    const plan = planFor(text);
+    expect(footnoteWidgets(plan, "footnote-ref").map((widget) => widget.value)).toEqual(["1"]);
+    expect(footnoteWidgets(plan, "footnote-ref")[0]).toMatchObject({ from: text.indexOf("[^r]") });
+  });
+
+  it("转义的 \\[^1] 保持字面文本，双反斜杠后的引用仍是脚注", () => {
+    const escaped = "x \\[^1] y\n\nzz[^2]\n\n[^1]: a\n[^2]: b\n";
+    const escapedPlan = planFor(escaped);
+    expect(footnoteWidgets(escapedPlan, "footnote-ref").map((widget) => widget.value)).toEqual(["1"]);
+    expect(footnoteWidgets(escapedPlan, "footnote-ref")[0]).toMatchObject({ from: escaped.indexOf("[^2]") });
+
+    // `\\[^1]`：转义只吃掉前一个反斜杠，[^1] 是真实脚注（对齐 remark-gfm）。
+    const unescaped = "x \\\\[^1] y\n\n[^1]: note\n";
+    const unescapedPlan = planFor(unescaped);
+    expect(footnoteWidgets(unescapedPlan, "footnote-ref").map((widget) => widget.value)).toEqual(["1"]);
+  });
+
+  it("[^1](url) 仍按脚注 + 文本处理（不因链接保护被吞掉）", () => {
+    const text = "正文[^1](url)\n\n[^1]: note\n";
+    const plan = planFor(text);
+    expect(footnoteWidgets(plan, "footnote-ref").map((widget) => widget.value)).toEqual(["1"]);
+    expect(plan.marks.some((mark) => mark.cls === "cm-sr-link")).toBe(false);
+  });
+
+  it("光标在表格内时表格里的引用保持源码，但仍计入编号", () => {
+    const text = "| a [^1] b |\n| --- |\n| c |\n\nzz[^2]\n\n[^1]: x\n[^2]: y\n";
+    const cursor = text.indexOf("a [^1]") + 1;
+    const plan = planFor(text, cursor);
+
+    // 表格内 [^1] 不替换（编辑态所见即源码），表外 [^2] 正常渲染。
+    const refs = footnoteWidgets(plan, "footnote-ref");
+    expect(refs).toHaveLength(1);
+    expect(refs[0]).toMatchObject({ from: text.indexOf("[^2]"), value: "2" });
+    // 编号未被表格引用挪用：[^2] 仍是 2 号，说明 [^1] 照常占了 1 号。
+    const defs = footnoteWidgets(plan, "footnote-def");
+    expect(defs.map((widget) => widget.value)).toEqual(["1", "2"]);
+  });
+});
