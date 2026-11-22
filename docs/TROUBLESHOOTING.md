@@ -315,3 +315,17 @@ xcrun simctl uninstall booted dev.ainote.app
 
 1. 应用会先把旧 `.git` 移出为同级 `.ainote-git-backup-*` 再重建，失败时自动还原，仓库回到操作前状态。
 2. 若出现回滚失败的提示，把该目录改名为 `.git` 即可恢复旧仓库（例如 `mv .ainote-git-backup-my-notes .git`）。
+
+## 11. `tauri.conf.json` 里的 `dangerousDisableAssetCspModification` 是干什么的（开发）
+
+> 面向本仓库开发者。这一节解释一个名字吓人、但**不能删**的配置项；`tauri.conf.json` 本身是严格 JSON（本仓库依赖链未启用 tauri-utils 的 JSON5 feature），没法就地写注释，动机记录在这里。
+
+**配置**：`src-tauri/tauri.conf.json` → `security.dangerousDisableAssetCspModification: ["style-src"]`。
+
+**现象（若删掉它）**：打包壳里 Mermaid 图表、代码块主题等运行时注入的 `<style>` 失效，样式退化（v0.65.x 曾以「打包壳内 Mermaid 主题样式丢失」复发过一次）。
+
+**原因**：Tauri 默认会往 CSP 的 `style-src` 追加自己内联样式的 `'sha256-…'` 哈希；按 CSP 规范，同一指令里一旦出现哈希，浏览器会**忽略** `'unsafe-inline'`——而应用的 `style-src 'self' 'unsafe-inline'` 里，Mermaid / CodeMirror 等前端库注入的行内样式恰恰依赖 `'unsafe-inline'`。禁用 `style-src` 的哈希注入后，该指令保持原样，运行时样式恢复。
+
+**为什么不放宽安全面**：`script-src` 未动（仍 `'self'`，无 `unsafe-inline`/`unsafe-eval`），XSS 主防线不变；`style-src` 维持 `'self' 'unsafe-inline'`，与修改前一致，样式注入本身不构成数据外传通道。键名里的 "dangerous" 只是 Tauri 对「关闭默认 CSP 保护」的通用警告，本配置按指令粒度只关了 `style-src`。
+
+**动这个键之前**：先用 `pnpm desktop:build` 打一个 Release 包，打开一篇含 Mermaid 图与行内代码块的笔记验证样式，再提交。

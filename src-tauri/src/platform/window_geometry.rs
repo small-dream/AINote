@@ -7,7 +7,9 @@
 //! - 尺寸异常时按外框裁到桌面内，并把窗口移回可见区域；
 //! - 允许用户主动把窗口部分移出屏幕，只要求保留最小可操作区域；
 //! - 找回几乎不可见的窗口时用 [`best_work_area`] 选一个真实工作区：异尺寸多屏
-//!   布局的并集盒内存在「死角」，落在死角里的窗口用并集盒校正会得到空调整。
+//!   布局的并集盒内存在「死角」，落在死角里的窗口用并集盒校正会得到空调整；
+//! - 目标内尺寸不低于窗口最小尺寸约束（minWidth × 缩放）：工作区装不下最小
+//!   尺寸时，宁可让窗口超出工作区，也不请求一个会被系统钳回、永不收敛的尺寸。
 
 /// 最小可见宽度：低于该值时窗口视为“找不回来”，需要重新夹紧。
 pub const MIN_VISIBLE_WIDTH: u32 = 96;
@@ -92,7 +94,16 @@ pub fn union_work_area(areas: &[Rect]) -> Option<Rect> {
 }
 
 /// 计算窗口需要执行的校正；完全合法时返回空调整。
-pub fn fit_frame_to_work_area(frame: WindowFrame, work_area: Rect) -> BoundsAdjustment {
+///
+/// `min_inner` 是窗口在当前缩放下允许的最小内尺寸（物理像素）。系统会按它
+/// 钳制 `set_size`（Windows 走 `WM_GETMINMAXINFO`），目标低于它时请求永远
+/// 无法生效：校正不收敛，还可能反复空转。因此工作区装不下最小尺寸时，目标
+/// 被抬到 `min_inner`，窗口宁可超出工作区。
+pub fn fit_frame_to_work_area(
+    frame: WindowFrame,
+    work_area: Rect,
+    min_inner: Size,
+) -> BoundsAdjustment {
     if work_area.width == 0 || work_area.height == 0 {
         return BoundsAdjustment::default();
     }
@@ -102,8 +113,14 @@ pub fn fit_frame_to_work_area(frame: WindowFrame, work_area: Rect) -> BoundsAdju
     let target_outer_width = frame.outer.width.min(work_area.width);
     let target_outer_height = frame.outer.height.min(work_area.height);
     let target_inner = Size::new(
-        target_outer_width.saturating_sub(chrome_width).max(1),
-        target_outer_height.saturating_sub(chrome_height).max(1),
+        target_outer_width
+            .saturating_sub(chrome_width)
+            .max(min_inner.width)
+            .max(1),
+        target_outer_height
+            .saturating_sub(chrome_height)
+            .max(min_inner.height)
+            .max(1),
     );
 
     let size = if differs(frame.inner.width, target_inner.width)
@@ -187,6 +204,12 @@ fn gap_axis(a_start: i32, a_size: u32, b_start: i32, b_size: u32) -> i64 {
 
 fn differs(current: u32, target: u32) -> bool {
     current.abs_diff(target) > PIXEL_TOLERANCE
+}
+
+/// 实际内尺寸与目标是否相差超过取整容差：供壳层在 `set_size` 后回读验证，
+/// 目标被系统钳回时据此如实告警，而不是谎报校正成功。
+pub fn size_differs(actual: Size, target: Size) -> bool {
+    differs(actual.width, target.width) || differs(actual.height, target.height)
 }
 
 fn contain_axis(position: i32, size: u32, start: i32, extent: u32) -> i32 {
