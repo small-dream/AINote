@@ -168,6 +168,13 @@
 .cm-soft-render .cm-line.cm-sr-list-depth-2 { --cm-sr-list-indent: 6em; }
 .cm-soft-render .cm-line.cm-sr-list-depth-3 { --cm-sr-list-indent: 8em; }
 .cm-soft-render .cm-line.cm-sr-list-depth-4 { --cm-sr-list-indent: 10em; }
+/* 无标记的续行（缩进续行 / 懒续行）行内没有 bullet/number/checkbox widget，
+   :has(标记) 规则不命中——depth 类必须自己承担内容列 padding，
+   否则源码缩进被隐藏后续行会退到最左列。标记行同样命中本规则，
+   padding 值与 :has 规则一致，无叠加冲突。 */
+.cm-soft-render .cm-line[class*="cm-sr-list-depth"] {
+  padding-left: var(--cm-sr-list-indent, 2em);
+}
 /* 无序列表的标记列对齐浏览器的 list-style：圆点中心在内容列左侧 0.94em。
    标记占位取 1.88em（中心 = 内容列 - 0.94em），负 text-indent 把整行回拉到标记列。 */
 .cm-soft-render .cm-line:has(.cm-sr-bullet) {

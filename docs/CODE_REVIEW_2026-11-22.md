@@ -29,7 +29,7 @@
 | `pnpm test` | ✅ 261 文件 / 1624 用例（1 skipped 为既有 perf 项） |
 | `pnpm lint` | ✅ 通过 |
 | `cargo test` | ✅ 530 用例（6 ignored 为既有项） |
-| `pnpm test:e2e` | ✅ 196/196（修复前 195/196：`code-block-ui.spec.ts:135` 高度差 3px，曾基线复核为 v0.66.1 既有缺陷，根因见 §5.4，已一并修复） |
+| `pnpm test:e2e` | ✅ 196/196（在 6e8e744 修复后实测；修复前基线为 195/196：`code-block-ui.spec.ts:135` 高度差 3px，曾基线复核为 v0.66.1 既有缺陷，根因见 §5.4，已一并修复） |
 
 ---
 
@@ -43,7 +43,7 @@
 
 **修复方向**：修复路径不再用并集盒，而是把窗口强制夹进**单个真实 work area**——取与窗口重叠面积最大的显示器（无重叠则取主屏）；并集盒只保留给「尺寸不超桌面」的宽松判断。
 
-**已修复（2026-11-22）**：`window_geometry.rs` 新增 `best_work_area`（重叠面积最大 → 切比雪夫距离最近 → 并列取先，跳过零尺寸工作区）+ `overlap_area` / `rect_distance` / `gap_axis` 纯函数；`window_bounds.rs` 的 `repair_if_unusable` 不再委托并集盒版 `normalize`，直接用 `best_work_area` 选出的真实工作区 `fit`；`set_size/set_position` 应用逻辑抽成 `apply_fit` 供两条路径复用。测试外移到 `window_geometry_tests.rs`（`#[path]` 接线，遵循 `git2_remote_tests.rs` 先例，主文件保持 214 行），新增 5 个死角/择区用例：上下错位双屏死角（并集校正为空 vs 真实工作区校正到位）、对角线排列取更近屏、重叠优先于距离、等距取先、零尺寸过滤。
+**已修复（2026-11-22）**：`window_geometry.rs` 新增 `best_work_area`（重叠面积最大 → 切比雪夫距离最近 → 并列取先，跳过零尺寸工作区）+ `overlap_area` / `rect_distance` / `gap_axis` 纯函数；`window_bounds.rs` 的 `repair_if_unusable` 不再委托并集盒版 `normalize`，直接用 `best_work_area` 选出的真实工作区 `fit`；`set_size/set_position` 应用逻辑抽成 `apply_fit` 供两条路径复用。测试外移到 `window_geometry_tests.rs`（`#[path]` 接线，遵循 `git2_remote_tests.rs` 先例，主文件保持远低于 300 行上限），新增 5 个死角/择区用例：上下错位双屏死角（并集校正为空 vs 真实工作区校正到位）、对角线排列取更近屏、重叠优先于距离、等距取先、零尺寸过滤。
 
 ### R2 🟡 最小尺寸无感知 + 虚假成功日志（实证 ✅）
 
@@ -178,7 +178,7 @@ footnotes 12 例边界覆盖好（含 `[^1](url)`、缩进代码块保护、2/4 
 - **SF5**：选择比「整段跳过」更贴 GitHub 的**计号不替换**：`insideRawLinkSyntax`（行内方括号深度扫描、转义感知）判定引用嵌在 Lezer 未成 Link 的 `[see [^1] end](u)` 语法里时不替换但照常计号，编号与 GitHub 一致，仅外层保持源码，消除混合态。
 - **SF6**：`isOpaque` 改为 `alpha === 1`，不可解析颜色（`var()` 间接引用、命名色）与半透明一律回退默认页色，杜绝非法字符串注入 `edgeLabelBackground`。
 - **C1**：`.cm-sr-number` 定宽 1.8em + `text-align: right`，文字列恒为 2em 与续行同列；超宽序号向左溢出（复刻 GitHub `list-style: outside` 生长方向）。
-- **C2**：`emitLineLayout` 改收整个 item：mark 行之外的每个源码行打同 depth 类并隐藏行首空白；嵌套列表范围扩张到行首后整行跳过（防装饰重复）、行内/围栏代码范围相交时裁剪或跳过（防 replace 装饰重叠）。新增 3 例（缩进/懒续行、嵌套不重复、代码保护）。
+- **C2**：`emitLineLayout` 改收整个 item：mark 行之外的每个源码行打同 depth 类并隐藏行首空白；嵌套列表范围扩张到行首后整行跳过（防装饰重复）、行内/围栏代码范围相交时裁剪或跳过（防 replace 装饰重叠）。新增 3 例（缩进/懒续行、嵌套不重复、代码保护）。**发版审计补修**：depth 类的消费规则原本只挂在 `:has(标记)` 上，无标记的续行是 CSS 惰性的（缩进被隐藏后退到最左列，比改动前更差）；补 `[class*="cm-sr-list-depth"]` 的 `padding-left` 兜底规则，e2e 探针实测缩进/懒续行均落在内容列（与首行文字同列）。
 - **C3 + C9（实施中发现）**：CM6 的 block 装饰按行展开成 span，导致多行 Callout 的 `::before` 标题**逐行重复渲染**（审查时漏掉的真实缺陷）；`planCalloutBlocks` 把标题类只打首行、呼吸位类打首/末行，`::before` 挂到 `.cm-sr-callout-title`，预览侧补 `::before` 字号 0.9em，两态统一。
 - **C5/C6/C7**：三处死规则删除；三处过期注释/死兜底值修正；任务项文字列三态对齐 2.0em（含嵌套 `calc(2em-0.6em)→2em` 配套）。
 
@@ -192,3 +192,4 @@ footnotes 12 例边界覆盖好（含 `[^1](url)`、缩进代码块保护、2/4 
 4. ~~**e2e 既有失败** `code-block-ui.spec.ts:135`~~ ✅ 已修复：短代码块聚焦后比渲染态卡片高 3px。根因：`.cm-sr-codeblock-line` 只改了 `font-size` 没改 `font-family`，行盒 strut 用正文字体、内容 span 用等宽代码字体，两种字体 ascent/descent 分配不同，基线对齐后实际行高恒比 `line-height` 高 ~1px（围栏行 16→17、代码行 19.72→20.7，合计 3px）。修复：编辑态代码行补 `font-family: var(--note-code-font)`，strut 与内容同字体后行高精确等于 line-height（围栏行 16px、代码行 19.72px，两态高度差 0px）。修复后 e2e 196/196 全绿。
 5. **plugin.ts** 303 行踩线（ESLint 按 skip 空行/注释计合规），下次扩展前建议先拆分。
 6. C8 README 截图重拍、SF10 第 4+ 层列表回退 decimal（GitHub 亦只定义两级，可不改）。
+7. **发版审计移交**（对抗性复审 `72effcf..HEAD` 提出，均非阻塞）：SF4-1 光标扫过正文脚注引用会触发全部 TableWidget 重建（查号表变化即 eq 失效，语义正确但触发面可收敛）；SF5-1 `insideRawLinkSyntax` 行级扫描漏判跨行链接（低频、与改前行为一致）；C2-2 列表内 Callout 光标进入时行首缩进编辑不可见（cosmetic）；SF4-2 footnoteKey 序列化理论上可碰撞（病态标签）；SF5-2 单元格内 `[^1](url)` 与正文语义不一致（罕见）；SF2-1 容器内未缩进懒续行结束定义块（与顶层语义一致的方向选择）；PRE-1 容器内围栏代码行的编辑态样式丢失（存量）。
