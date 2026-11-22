@@ -62,11 +62,28 @@ export function planBlockquote(
   });
   const callout = findCallout(node, doc);
   if (callout) {
-    plan.blocks.push({ from: node.from, to: node.to, cls: `cm-sr-callout cm-sr-callout-${callout.kind}` });
+    planCalloutBlocks(node, doc, plan, callout.kind);
     plan.hides.push({ from: callout.from, to: callout.to, reveal: active });
   } else {
     plan.blocks.push({ from: node.from, to: node.to, cls: "cm-sr-blockquote" });
   }
+}
+
+/** Callout 的块装饰按行展开成每行一个 span：标题类只打在首行（否则 ::before 标题随行重复），
+    末行类打在最后一行（垂直呼吸位由 CSS 落到对应行盒上）。 */
+function planCalloutBlocks(node: SyntaxNode, doc: string, plan: SoftRenderPlan, kind: string): void {
+  const base = `cm-sr-callout cm-sr-callout-${kind}`;
+  const firstLineEnd = doc.indexOf("\n", node.from);
+  const lastLineStart = doc.lastIndexOf("\n", node.to - 1) + 1;
+  if (firstLineEnd === -1 || firstLineEnd >= node.to) {
+    plan.blocks.push({ from: node.from, to: node.to, cls: `${base} cm-sr-callout-title cm-sr-callout-last` });
+    return;
+  }
+  plan.blocks.push({ from: node.from, to: firstLineEnd, cls: `${base} cm-sr-callout-title` });
+  if (lastLineStart > firstLineEnd + 1) {
+    plan.blocks.push({ from: firstLineEnd + 1, to: lastLineStart, cls: base });
+  }
+  plan.blocks.push({ from: lastLineStart, to: node.to, cls: `${base} cm-sr-callout-last` });
 }
 
 /** 收集当前引用块自己的 > 标记，不进入嵌套 Blockquote。 */
@@ -135,7 +152,7 @@ function emitListItem(
   gapAbove: boolean,
 ): void {
   const { child, mark } = item;
-  emitLineLayout(mark, doc, plan, depth, gapAbove);
+  emitLineLayout(item, doc, plan, depth, gapAbove);
   const ordinal = index + 1;
   const number = base !== null ? base + ordinal - 1 : ordinal;
   if (child.getChild("Task")) {
@@ -148,14 +165,74 @@ function emitListItem(
 /**
  * 列表行的版式：按嵌套层级套缩进类（每级 2em，与预览一致），隐藏源码里的缩进空格，
  * 并把「同层相邻项之间 4px」的间距类打在行上（预览的 li + li）。
+ * 跨源码行的列表项（缩进续行 / 懒续行）同样打缩进类并隐藏行首空白，续行落在内容列
+ * 而不是退回最左列；嵌套列表覆盖的行交给内层 planList 处理，避免装饰重复叠加；
+ * 行首空白若已处于行内代码等替换范围内则保留可见。
  */
-function emitLineLayout(mark: SyntaxNode, doc: string, plan: SoftRenderPlan, depth: number, gapAbove: boolean): void {
-  const lineStart = doc.lastIndexOf("\n", mark.from - 1) + 1;
-  plan.gaps.push({ pos: lineStart, cls: `cm-sr-list-depth-${Math.min(depth, 4)}` });
-  if (gapAbove) plan.gaps.push({ pos: lineStart, cls: "cm-sr-list-gap" });
+function emitLineLayout(item: ListItemInfo, doc: string, plan: SoftRenderPlan, depth: number, gapAbove: boolean): void {
+  const { child, mark } = item;
+  const depthCls = `cm-sr-list-depth-${Math.min(depth, 4)}`;
+  const markLine = doc.lastIndexOf("\n", mark.from - 1) + 1;
+  plan.gaps.push({ pos: markLine, cls: depthCls });
+  if (gapAbove) plan.gaps.push({ pos: markLine, cls: "cm-sr-list-gap" });
   let indentFrom = mark.from;
-  while (indentFrom > lineStart && (doc[indentFrom - 1] === " " || doc[indentFrom - 1] === "\t")) indentFrom -= 1;
+  while (indentFrom > markLine && isIndentChar(doc[indentFrom - 1])) indentFrom -= 1;
   if (indentFrom < mark.from) plan.hides.push({ from: indentFrom, to: mark.from, reveal: false });
+  // 嵌套列表的行首空白属于内层项的缩进，范围扩张到行首，外层才能整行跳过。
+  const nestedLists = collectRanges(child, (name) => name === "BulletList" || name === "OrderedList")
+    .map((range) => ({ from: doc.lastIndexOf("\n", range.from - 1) + 1, to: range.to }));
+  const protectedSpans = collectRanges(child, (name) => name === "InlineCode" || name === "FencedCode" || name === "CodeBlock");
+  let lineStart = doc.indexOf("\n", markLine) + 1;
+  while (lineStart > markLine && lineStart < child.to) {
+    if (!inRanges(lineStart, nestedLists)) {
+      plan.gaps.push({ pos: lineStart, cls: depthCls });
+      hideLineIndent(lineStart, child.to, doc, plan, protectedSpans);
+    }
+    const nextBreak = doc.indexOf("\n", lineStart);
+    if (nextBreak === -1) break;
+    lineStart = nextBreak + 1;
+  }
+}
+
+/** 子树内按节点名收集范围：嵌套列表行跳过（内层 planList 负责），行内代码等替换范围不隐藏。 */
+function collectRanges(node: SyntaxNode, matches: (name: string) => boolean): Array<{ from: number; to: number }> {
+  const ranges: Array<{ from: number; to: number }> = [];
+  const visit = (current: SyntaxNode): void => {
+    for (let child = current.firstChild; child; child = child.nextSibling) {
+      if (matches(child.name)) ranges.push({ from: child.from, to: child.to });
+      visit(child);
+    }
+  };
+  visit(node);
+  return ranges;
+}
+
+function inRanges(pos: number, ranges: ReadonlyArray<{ from: number; to: number }>): boolean {
+  return ranges.some((range) => pos >= range.from && pos < range.to);
+}
+
+/** 续行行首空白：软渲染里缩进由行的 padding 类承担，源码空白隐藏；
+    与行内代码等替换范围相交时裁剪或跳过，避免装饰重叠。 */
+function hideLineIndent(
+  lineStart: number,
+  itemEnd: number,
+  doc: string,
+  plan: SoftRenderPlan,
+  protectedSpans: ReadonlyArray<{ from: number; to: number }>,
+): void {
+  let wsEnd = lineStart;
+  while (wsEnd < itemEnd && isIndentChar(doc[wsEnd])) wsEnd += 1;
+  if (wsEnd === lineStart) return;
+  const span = protectedSpans.find((range) => range.from < wsEnd && range.to > lineStart);
+  if (span) {
+    if (span.from <= lineStart) return;
+    wsEnd = span.from;
+  }
+  plan.hides.push({ from: lineStart, to: wsEnd, reveal: false });
+}
+
+function isIndentChar(char: string | undefined): boolean {
+  return char === " " || char === "\t";
 }
 
 /** ListMark 不包含标记后的分隔空格；软渲染时一并替换，避免源码空格叠加 widget 宽度。 */

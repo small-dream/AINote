@@ -111,12 +111,6 @@
   padding-top: var(--note-block-margin);
 }
 
-/* 代码块前已有自己的 12px 间距；若标题与围栏之间有空行，间距由空行承担。
-   H1 / H2 保留自己的下划线间隙。 */
-.cm-soft-render .cm-line:has(.cm-sr-h3, .cm-sr-h4, .cm-sr-h5, .cm-sr-h6):has(+ .cm-line.cm-sr-blank:has(+ .cm-sr-codeblock-widget, + .cm-sr-codeblock-header)) {
-  padding-bottom: 0;
-}
-
 .cm-sr-strong { font-weight: 600; }
 .cm-sr-em { font-style: italic; }
 .cm-sr-strike { text-decoration: line-through; }
@@ -194,7 +188,6 @@
 .cm-sr-bullet,
 .cm-sr-number {
   display: inline-block;
-  min-width: 1.4em;
   /* text-indent 会继承进 inline-block 并再次作用于标记内部，抵消行上的悬挂缩进。 */
   text-indent: 0;
   /* 预览的 list marker 继承正文色，软渲染保持相同的视觉权重。 */
@@ -241,8 +234,11 @@
   border-radius: 1px;
 }
 .cm-sr-number {
+  /* 定宽占满标记列（行起点 = 缩进 2em − 悬挂缩进 1.8em = 0.2em，加 1.8em 恰为内容列 2em）：
+     序号右对齐贴内容列，首行文字与软换行续行恒在同一列；超宽序号（viii. / 100.）向左
+     溢出到标记列，复刻浏览器 list-style: outside 的生长方向，不把文字推出内容列。 */
+  width: 1.8em;
   text-align: right;
-  margin-right: 0.4em;
 }
 
 /* 勾选框本体（尺寸 / 描边 / 对勾）与富文本编辑器、只读预览、打印共用
@@ -540,7 +536,9 @@
   padding: 0.25em 0.5em;
 }
 
-.cm-sr-callout::before {
+/* 标题 ::before 只挂在首行类上：块装饰按行展开成每行一个 span，
+   无此限定时多行 Callout 的标题会随行重复渲染。 */
+.cm-sr-callout.cm-sr-callout-title::before {
   display: block;
   margin-bottom: 0.25rem;
   font-size: 0.9em;
@@ -548,25 +546,31 @@
   line-height: 1.25;
   color: var(--note-accent);
 }
-.cm-sr-callout-tip::before { color: var(--note-success); }
-.cm-sr-callout-important::before { color: var(--note-accent); }
-.cm-sr-callout-warning::before,
-.cm-sr-callout-caution::before { color: var(--note-warning); }
-.cm-sr-callout-danger::before { color: var(--note-danger); }
+.cm-sr-callout-title.cm-sr-callout-tip::before { color: var(--note-success); }
+.cm-sr-callout-title.cm-sr-callout-important::before { color: var(--note-accent); }
+.cm-sr-callout-title.cm-sr-callout-warning::before,
+.cm-sr-callout-title.cm-sr-callout-caution::before { color: var(--note-warning); }
+.cm-sr-callout-title.cm-sr-callout-danger::before { color: var(--note-danger); }
 
-.cm-sr-callout-note::before { content: "Note"; }
-.cm-sr-callout-tip::before { content: "Tip"; }
-.cm-sr-callout-important::before { content: "Important"; }
-.cm-sr-callout-warning::before { content: "Warning"; }
-.cm-sr-callout-caution::before { content: "Caution"; }
-.cm-sr-callout-danger::before { content: "Danger"; }
+.cm-sr-callout-title.cm-sr-callout-note::before { content: "Note"; }
+.cm-sr-callout-title.cm-sr-callout-tip::before { content: "Tip"; }
+.cm-sr-callout-title.cm-sr-callout-important::before { content: "Important"; }
+.cm-sr-callout-title.cm-sr-callout-warning::before { content: "Warning"; }
+.cm-sr-callout-title.cm-sr-callout-caution::before { content: "Caution"; }
+.cm-sr-callout-title.cm-sr-callout-danger::before { content: "Danger"; }
 /* 与 GitHub Alerts 一致：标题跟随界面语言。 */
-html[lang="zh-CN"] .cm-sr-callout-note::before { content: "注意"; }
-html[lang="zh-CN"] .cm-sr-callout-tip::before { content: "提示"; }
-html[lang="zh-CN"] .cm-sr-callout-important::before { content: "重要"; }
-html[lang="zh-CN"] .cm-sr-callout-warning::before { content: "警告"; }
-html[lang="zh-CN"] .cm-sr-callout-caution::before { content: "谨慎"; }
-html[lang="zh-CN"] .cm-sr-callout-danger::before { content: "危险"; }
+html[lang="zh-CN"] .cm-sr-callout-title.cm-sr-callout-note::before { content: "注意"; }
+html[lang="zh-CN"] .cm-sr-callout-title.cm-sr-callout-tip::before { content: "提示"; }
+html[lang="zh-CN"] .cm-sr-callout-title.cm-sr-callout-important::before { content: "重要"; }
+html[lang="zh-CN"] .cm-sr-callout-title.cm-sr-callout-warning::before { content: "警告"; }
+html[lang="zh-CN"] .cm-sr-callout-title.cm-sr-callout-caution::before { content: "谨慎"; }
+html[lang="zh-CN"] .cm-sr-callout-title.cm-sr-callout-danger::before { content: "危险"; }
+
+/* Callout 垂直呼吸位对齐预览（GitHub Alerts 的 0.5rem）：标题/末行类由 planBlockquote
+   打在对应行上，间距落在行盒上——块装饰展开的 span 是行内元素，
+   垂直 padding 不参与行盒布局，写在 span 上无效。 */
+.cm-soft-render .cm-line:has(.cm-sr-callout-title) { padding-top: 0.5rem; }
+.cm-soft-render .cm-line:has(.cm-sr-callout-last) { padding-bottom: 0.5rem; }
 
 .cm-sr-table {
   border-collapse: collapse;

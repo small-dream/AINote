@@ -222,7 +222,9 @@
 .rich-text-editor .ProseMirror ul[data-type="taskList"] > li > div {
   flex: 1 1 auto;
   min-width: 0;
-  padding-left: 0.6em;
+  /* 文字列对齐预览/软渲染的 2em：勾选框外移后在 0.6em，占位 1.05em，
+     0.6em + 1.05em + 0.35em = 2em（预览是 0.6em + 1.05em + margin 0.35em）。 */
+  padding-left: 0.35em;
 }
 .rich-text-editor .ProseMirror ul[data-type="taskList"] > li > div > p {
   margin: 0;
@@ -240,10 +242,10 @@
   color: var(--note-tertiary);
   pointer-events: none;
 }
-/* 嵌套任务列表补缩进：外层 ul 的 padding 已被清零，内层不补会与父项文字齐平；
-   父项内容区自带 0.6em 缩进，这里补差额到 1.4rem，与嵌套无序列表的层级感一致 */
+/* 嵌套任务列表补缩进：嵌套 ul 的包含块就是父项内容区（父项文字列），
+   padding-left 2em 与预览/软渲染的嵌套层级一致——子项勾选框落在父项文字列 + 0.6em。 */
 .rich-text-editor .ProseMirror ul[data-type="taskList"] > li ul[data-type="taskList"] {
-  padding-left: calc(2em - 0.6em);
+  padding-left: 2em;
 }
 .rich-text-editor .ProseMirror .tag-mark {
   color: var(--note-accent);

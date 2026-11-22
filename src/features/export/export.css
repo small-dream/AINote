@@ -12,8 +12,9 @@
   --success: #1a7f37;
   --warning: #9a6700;
   --danger: #cf222e;
-  /* 打印固定浅色纸面：笔记 token 一并钉到浅色，避免深色应用主题把深色语义色带到纸上
-     （:root 里的 --note-* 是按 :root 的 --bg-primary / --text-* 解析的，不会跟着这里改） */
+  /* 打印固定浅色纸面：暗色应用主题下 [data-theme="dark"] 会把 <html> 上整组 --note-*
+     换成 Primer Dark，这里钉回 classic 亮色值，避免深色语义色 / 代码块 / 斑马纹
+     出现在白色纸面上。 */
   --note-bg: #ffffff;
   --note-surface: var(--bg-secondary);
   --note-muted: var(--bg-tertiary);

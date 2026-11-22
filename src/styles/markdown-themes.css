@@ -302,10 +302,6 @@
   color: var(--note-ink);
 }
 
-.note-theme-surface .markdown-body hr {
-  border-top-color: var(--note-border);
-}
-
 /* 阅读主题的工作区联动层：只染色导航壳，内容区仍使用完整阅读主题。 */
 .workspace-shell[data-note-theme] {
   /* 阅读主题主导色相，应用主题只校准少量明度，避免暗色主题被混成灰色。 */

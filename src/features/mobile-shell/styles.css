@@ -160,7 +160,7 @@
   /* 正文编辑器保留用户的排版字号偏好，但移动端不低于 16px */
   .cm-editor .cm-content[contenteditable="true"],
   .rich-text-editor .ProseMirror[contenteditable="true"] {
-    font-size: max(16px, var(--note-font-size, 15px));
+    font-size: max(16px, var(--note-font-size, 16px));
   }
   .note-title-input { font-size: 16px; }
 }

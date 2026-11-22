@@ -513,6 +513,8 @@ pre,
 .markdown-callout::before {
   display: block;
   margin-bottom: 0.25rem;
+  /* 与软渲染写作态一致：标题比正文小一档（GitHub Alerts 的标题观感）。 */
+  font-size: 0.9em;
   font-weight: 600;
   line-height: 1.25;
 }
@@ -750,7 +752,6 @@ html[lang="zh-CN"] .markdown-callout-danger::before { content: "危险"; }
   color: var(--note-secondary);
   font-size: 12px;
 }
-.markdown-body .footnotes hr { margin: var(--note-block-margin) 0; }
 .markdown-body .footnotes ol { padding-left: 1.6em; }
 .markdown-body .footnotes li + li { margin-top: 0.5em; }
 .markdown-body [data-footnote-backref] { text-decoration: none; }

@@ -129,6 +129,29 @@ describe("planSoftRender 引用与 Callout", () => {
     const active = planFor(text, 3);
     expect(active.hides.find((h) => h.from === 2 && h.to === 10)?.reveal).toBe(true);
   });
+
+  it("多行 Callout：标题类只在首行，末行类只在最后一行", () => {
+    const text = "> [!NOTE] t\n> body\n> more";
+    const callouts = planFor(text, 0).blocks.filter((b) => b.cls.includes("cm-sr-callout"));
+    expect(callouts).toHaveLength(3);
+    expect(callouts[0]).toMatchObject({ from: 0, to: 11 });
+    expect(callouts[0]?.cls).toContain("cm-sr-callout-title");
+    expect(callouts[0]?.cls).not.toContain("cm-sr-callout-last");
+    expect(callouts[1]?.cls).not.toContain("cm-sr-callout-title");
+    expect(callouts[1]?.cls).not.toContain("cm-sr-callout-last");
+    expect(callouts[2]).toMatchObject({ from: 19, to: 25 });
+    expect(callouts[2]?.cls).toContain("cm-sr-callout-last");
+  });
+
+  it("两行 / 单行 Callout 的标题与末行类", () => {
+    const two = planFor("> [!NOTE] t\n> body", 0).blocks.filter((b) => b.cls.includes("cm-sr-callout"));
+    expect(two).toHaveLength(2);
+    expect(two[0]?.cls).toContain("cm-sr-callout-title");
+    expect(two[1]?.cls).toContain("cm-sr-callout-last");
+    const single = planFor("> [!NOTE] hi", 0).blocks.find((b) => b.cls.includes("cm-sr-callout"));
+    expect(single?.cls).toContain("cm-sr-callout-title");
+    expect(single?.cls).toContain("cm-sr-callout-last");
+  });
 });
 
 describe("planSoftRender 代码块选区", () => {
@@ -185,6 +208,35 @@ describe("planSoftRender 列表版式", () => {
     const plan = planFor(text, 0);
     expect(plan.gaps).toContainEqual({ pos: 4, cls: "cm-sr-list-gap" });
     expect(plan.gaps.every((gap) => gap.pos !== 8 || !gap.cls.includes("cm-sr-list-gap"))).toBe(true);
+  });
+
+  it("缩进续行与懒续行落在内容列：同深度缩进类 + 隐藏行首空白", () => {
+    const text = "- a\n  b\n- c\nd";
+    const plan = planFor(text, 0);
+    // 四行依次是 mark 行、缩进续行、mark 行、懒续行，全部 depth-0。
+    expect(plan.gaps).toContainEqual({ pos: 0, cls: "cm-sr-list-depth-0" });
+    expect(plan.gaps).toContainEqual({ pos: 4, cls: "cm-sr-list-depth-0" });
+    expect(plan.gaps).toContainEqual({ pos: 12, cls: "cm-sr-list-depth-0" });
+    // 缩进续行的行首空格隐藏；懒续行没有行首空白，不新增 hide。
+    expect(plan.hides).toContainEqual({ from: 4, to: 6, reveal: false });
+    expect(plan.hides.filter((h) => h.from === 12)).toHaveLength(0);
+  });
+
+  it("嵌套列表行只由内层打缩进类并隐藏缩进，不与外层重复叠加", () => {
+    const text = "- a\n  - b\n    c\n- d";
+    const plan = planFor(text, 0);
+    expect(plan.gaps.filter((g) => g.pos === 4).map((g) => g.cls)).toEqual(["cm-sr-list-depth-1"]);
+    expect(plan.gaps.filter((g) => g.pos === 10).map((g) => g.cls)).toEqual(["cm-sr-list-depth-1"]);
+    expect(plan.hides).toContainEqual({ from: 4, to: 6, reveal: false });
+    expect(plan.hides.filter((h) => h.from === 10)).toHaveLength(1);
+    expect(plan.hides).toContainEqual({ from: 10, to: 14, reveal: false });
+  });
+
+  it("续行行首空白落在行内代码范围内时不隐藏，缩进类照常", () => {
+    const text = "- a `x\n  y` b";
+    const plan = planFor(text, 0);
+    expect(plan.gaps).toContainEqual({ pos: 7, cls: "cm-sr-list-depth-0" });
+    expect(plan.hides.filter((h) => h.from === 7)).toHaveLength(0);
   });
 });
 
