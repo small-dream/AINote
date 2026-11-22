@@ -5,7 +5,9 @@
 //! - 以所有显示器 work area 的并集作为可见桌面；
 //! - 窗口可以跨屏，但外框不能超出可见桌面；
 //! - 尺寸异常时按外框裁到桌面内，并把窗口移回可见区域；
-//! - 允许用户主动把窗口部分移出屏幕，只要求保留最小可操作区域。
+//! - 允许用户主动把窗口部分移出屏幕，只要求保留最小可操作区域；
+//! - 找回几乎不可见的窗口时用 [`best_work_area`] 选一个真实工作区：异尺寸多屏
+//!   布局的并集盒内存在「死角」，落在死角里的窗口用并集盒校正会得到空调整。
 
 /// 最小可见宽度：低于该值时窗口视为“找不回来”，需要重新夹紧。
 pub const MIN_VISIBLE_WIDTH: u32 = 96;
@@ -146,6 +148,43 @@ pub fn has_usable_visibility(outer: Rect, work_areas: &[Rect]) -> bool {
     })
 }
 
+/// 找回不可见窗口时选定的目标工作区：与窗口外框重叠面积最大者；
+/// 没有任何重叠时取边界距离最近者（切比雪夫距离）；完全并列取列表靠前者。
+pub fn best_work_area(outer: Rect, work_areas: &[Rect]) -> Option<Rect> {
+    let mut best: Option<(i64, i64, Rect)> = None;
+    for &area in work_areas {
+        if area.width == 0 || area.height == 0 {
+            continue;
+        }
+        let candidate = (overlap_area(outer, area), rect_distance(outer, area));
+        let better = match best {
+            Some((overlap, distance, _)) => {
+                candidate.0 > overlap || (candidate.0 == overlap && candidate.1 < distance)
+            }
+            None => true,
+        };
+        if better {
+            best = Some((candidate.0, candidate.1, area));
+        }
+    }
+    best.map(|(_, _, area)| area)
+}
+
+fn overlap_area(a: Rect, b: Rect) -> i64 {
+    overlap(a.x, a.width, b.x, b.width) * overlap(a.y, a.height, b.y, b.height)
+}
+
+/// 两个矩形的切比雪夫距离：相交或相邻时为 0。
+fn rect_distance(a: Rect, b: Rect) -> i64 {
+    gap_axis(a.x, a.width, b.x, b.width).max(gap_axis(a.y, a.height, b.y, b.height))
+}
+
+fn gap_axis(a_start: i32, a_size: u32, b_start: i32, b_size: u32) -> i64 {
+    let a_end = a_start as i64 + a_size as i64;
+    let b_end = b_start as i64 + b_size as i64;
+    (a_start as i64 - b_end).max(b_start as i64 - a_end).max(0)
+}
+
 fn differs(current: u32, target: u32) -> bool {
     current.abs_diff(target) > PIXEL_TOLERANCE
 }
@@ -171,96 +210,5 @@ fn clamp_i64_to_i32(value: i64) -> i32 {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-
-    fn frame(x: i32, y: i32, outer: Size, inner: Size) -> WindowFrame {
-        WindowFrame {
-            outer: Rect::new(x, y, outer.width, outer.height),
-            inner,
-        }
-    }
-
-    #[test]
-    fn keeps_window_that_already_fits() {
-        let work = Rect::new(0, 0, 1496, 967);
-        let window = frame(18, 60, Size::new(1200, 800), Size::new(1200, 772));
-
-        assert_eq!(
-            fit_frame_to_work_area(window, work),
-            BoundsAdjustment::default()
-        );
-    }
-
-    #[test]
-    fn shrinks_oversized_window_and_keeps_it_inside_work_area() {
-        let work = Rect::new(0, 0, 2992, 1934);
-        let window = frame(18, 158, Size::new(4432, 1688), Size::new(4432, 1688));
-
-        let adjustment = fit_frame_to_work_area(window, work);
-
-        assert_eq!(adjustment.size, Some(Size::new(2992, 1688)));
-        assert_eq!(adjustment.position, Some((0, 158)));
-    }
-
-    #[test]
-    fn accounts_for_outer_versus_inner_chrome() {
-        let work = Rect::new(0, 0, 1200, 800);
-        let window = frame(0, 0, Size::new(2000, 1000), Size::new(1990, 972));
-
-        let adjustment = fit_frame_to_work_area(window, work);
-
-        assert_eq!(adjustment.size, Some(Size::new(1190, 772)));
-        assert_eq!(adjustment.position, None);
-    }
-
-    #[test]
-    fn keeps_window_spanning_multiple_monitors() {
-        let areas = [Rect::new(-1920, 0, 1920, 1080), Rect::new(0, 0, 1496, 967)];
-        let desktop = union_work_area(&areas).expect("desktop");
-        let window = frame(-1200, 80, Size::new(2000, 800), Size::new(2000, 772));
-
-        assert_eq!(desktop, Rect::new(-1920, 0, 3416, 1080));
-        assert_eq!(
-            fit_frame_to_work_area(window, desktop),
-            BoundsAdjustment::default()
-        );
-    }
-
-    #[test]
-    fn moves_window_back_when_saved_position_is_offscreen() {
-        let work = Rect::new(0, 0, 1496, 967);
-        let window = frame(-1800, 100, Size::new(1200, 800), Size::new(1200, 772));
-
-        let adjustment = fit_frame_to_work_area(window, work);
-
-        assert_eq!(adjustment.size, None);
-        assert_eq!(adjustment.position, Some((0, 100)));
-    }
-
-    #[test]
-    fn union_uses_negative_monitor_origins() {
-        let areas = [Rect::new(0, 0, 1496, 967), Rect::new(-1728, 0, 1728, 1117)];
-
-        assert_eq!(
-            union_work_area(&areas),
-            Some(Rect::new(-1728, 0, 3224, 1117))
-        );
-    }
-
-    #[test]
-    fn reports_unusable_visibility_after_monitor_removal() {
-        let remaining = [Rect::new(0, 0, 1496, 967)];
-        let window = Rect::new(-1728, 120, 1799, 800);
-
-        assert!(!has_usable_visibility(window, &remaining));
-    }
-
-    #[test]
-    fn allows_intentionally_partially_offscreen_window() {
-        let remaining = [Rect::new(0, 0, 1496, 967)];
-        let window = Rect::new(-300, 120, 1200, 800);
-
-        assert!(has_usable_visibility(window, &remaining));
-    }
-}
+#[path = "window_geometry_tests.rs"]
+mod tests;

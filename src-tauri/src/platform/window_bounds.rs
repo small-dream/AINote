@@ -2,14 +2,16 @@
 //!
 //! `tauri-plugin-window-state` 只负责持久化，不知道恢复时显示器是否已经变化。
 //! 本模块在启动、缩放、跨屏、DPI 变化和从托盘唤回时，用 [`window_geometry`]
-//! 的纯函数校正窗口；正常尺寸与位置不会被反复改写。
+//! 的纯函数校正窗口；正常尺寸与位置不会被反复改写。窗口几乎不可见时的修复
+//! 用 [`window_geometry::best_work_area`] 选一个真实工作区，而不是并集盒。
 
 use std::sync::atomic::{AtomicBool, Ordering};
 
 use tauri::{AppHandle, Manager, PhysicalPosition, PhysicalSize, Window, WindowEvent};
 
 use super::window_geometry::{
-    fit_frame_to_work_area, has_usable_visibility, union_work_area, Rect, Size, WindowFrame,
+    best_work_area, fit_frame_to_work_area, has_usable_visibility, union_work_area, BoundsAdjustment,
+    Rect, Size, WindowFrame,
 };
 use super::MAIN_WINDOW_LABEL;
 
@@ -74,18 +76,7 @@ fn normalize_inner(window: &Window) -> tauri::Result<bool> {
     let Some(work_area) = union_work_area(&monitor_work_areas(window)?) else {
         return Ok(false);
     };
-    let adjustment = fit_frame_to_work_area(current_frame(window)?, work_area);
-    if adjustment.is_empty() {
-        return Ok(false);
-    }
-
-    if let Some(size) = adjustment.size {
-        window.set_size(PhysicalSize::new(size.width, size.height))?;
-    }
-    if let Some((x, y)) = adjustment.position {
-        window.set_position(PhysicalPosition::new(x, y))?;
-    }
-    Ok(true)
+    apply_fit(window, fit_frame_to_work_area(current_frame(window)?, work_area))
 }
 
 fn repair_if_unusable(window: &Window, state: &WindowBoundsState) -> tauri::Result<bool> {
@@ -94,11 +85,29 @@ fn repair_if_unusable(window: &Window, state: &WindowBoundsState) -> tauri::Resu
     }
 
     let areas = monitor_work_areas(window)?;
-    let outer = current_frame(window)?.outer;
-    if has_usable_visibility(outer, &areas) {
+    let frame = current_frame(window)?;
+    if has_usable_visibility(frame.outer, &areas) {
         return Ok(false);
     }
-    normalize(window, state)
+    // 并集包围盒在异尺寸多屏下有「死角」：窗口落在盒内却不与任何显示器相交时，
+    // 用并集盒校正会得到空调整、窗口永远找不回。修复必须夹进单个真实工作区。
+    let Some(area) = best_work_area(frame.outer, &areas) else {
+        return Ok(false);
+    };
+    apply_fit(window, fit_frame_to_work_area(frame, area))
+}
+
+fn apply_fit(window: &Window, adjustment: BoundsAdjustment) -> tauri::Result<bool> {
+    if adjustment.is_empty() {
+        return Ok(false);
+    }
+    if let Some(size) = adjustment.size {
+        window.set_size(PhysicalSize::new(size.width, size.height))?;
+    }
+    if let Some((x, y)) = adjustment.position {
+        window.set_position(PhysicalPosition::new(x, y))?;
+    }
+    Ok(true)
 }
 
 fn should_skip(window: &Window) -> tauri::Result<bool> {
