@@ -133,6 +133,22 @@ const commandHandlers: Record<string, CommandHandler> = {
   git_push: (_args, ctx) => syncStatus(ctx.store),
   git_commit: () => "e2e-commit",
   git_status_files: (_args, ctx) => ctx.store.changedFiles,
+  git_working_diff: (args, ctx) => {
+    const file = String(args.file ?? "");
+    const current = ctx.store.notes.get(file)?.content ?? "";
+    const previous = ctx.state.versions?.[file]?.[0]?.content;
+    const lines: Array<{ kind: "added" | "removed"; text: string }> = [];
+    // E2E 只验证面板链路：有历史版本时把旧行记为删除、当前内容记为新增。
+    if (previous !== undefined) {
+      for (const text of previous.split("\n")) {
+        if (text) lines.push({ kind: "removed", text });
+      }
+    }
+    for (const text of current.split("\n")) {
+      if (text) lines.push({ kind: "added", text });
+    }
+    return { path: file, lines, binary: false, encrypted: false, truncated: false };
+  },
   git_discard_changes: (args, ctx) => {
     const paths = Array.isArray(args.paths) ? (args.paths as string[]) : [];
     const restored: string[] = [];

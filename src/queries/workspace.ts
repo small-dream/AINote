@@ -17,6 +17,7 @@ export function invalidateWorkspaceQueries(queryClient: QueryClient): void {
   void queryClient.invalidateQueries({ queryKey: ["history"] });
   void queryClient.invalidateQueries({ queryKey: ["repo-history"] });
   void queryClient.invalidateQueries({ queryKey: ["changed-files"] });
+  void queryClient.invalidateQueries({ queryKey: ["working-diff"] });
 }
 
 /**

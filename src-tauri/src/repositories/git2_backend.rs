@@ -12,6 +12,7 @@ use super::git2_discard;
 use super::git2_graph;
 use super::git2_history;
 use super::git2_remote;
+use super::git2_working;
 use super::git_backend::GitBackend;
 
 /// libgit2 实现的本地操作；网络操作委托给 git2_remote。
@@ -181,6 +182,14 @@ impl GitBackend for Git2Backend {
 
     fn changed_files(&self, path: &str) -> Result<Vec<ChangedFile>, AppError> {
         changed_files(path)
+    }
+
+    fn working_diff(
+        &self,
+        path: &str,
+        file: &str,
+    ) -> Result<crate::domain::working_diff::WorkingDiff, AppError> {
+        git2_working::working_diff(path, file)
     }
 
     fn discard_working(&self, path: &str, files: &[String]) -> Result<DiscardReport, AppError> {

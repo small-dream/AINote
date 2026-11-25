@@ -13,3 +13,4 @@ pub mod restore;
 pub mod status;
 pub mod status_files;
 pub mod sync;
+pub mod working_diff;

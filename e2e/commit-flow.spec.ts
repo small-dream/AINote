@@ -29,6 +29,13 @@ test.describe("手动提交（阶段 A）", () => {
     await expect(textarea).toHaveValue(/更新 2 个文件/);
     await expect(textarea).toHaveValue(/M daily\/a\.md/);
 
+    // 自动选中首个文件并展示相对 HEAD 的改动；点击其他文件可切换。
+    const diffPane = dialog.getByRole("region", { name: "改动内容" });
+    await expect(diffPane).toContainText("正文");
+    await dialog.getByRole("button", { name: /new\.md/ }).click();
+    const diffCalls = (await calls(page)).filter((call) => call.cmd === "git_working_diff");
+    expect(diffCalls.some((call) => call.args.file === "new.md")).toBe(true);
+
     await dialog.getByRole("button", { name: "提交" }).click();
     await expect(dialog).not.toBeVisible();
     const commits = (await calls(page)).filter((call) => call.cmd === "git_commit");
@@ -49,6 +56,11 @@ test.describe("手动提交（阶段 A）", () => {
       return overlay ? getComputedStyle(overlay).alignItems : "";
     });
     expect(bottomSheet).toBe("flex-end");
+
+    // 窄屏下文件列表与改动预览上下排列，二者都可见。
+    await expect(dialog.getByRole("region", { name: "改动内容" })).toBeVisible();
+    const stacked = await dialog.locator(".commit-dialog-body").evaluate((node) => getComputedStyle(node).flexDirection);
+    expect(stacked).toBe("column");
   });
 
   test("移动窄屏：无待提交变更时不显示提交入口", async ({ page }) => {

@@ -138,6 +138,10 @@
   .graph-panel-body { flex-direction: column; }
   .graph-panel-body > section { width: 100% !important; max-height: 30dvh; border-right: 0; border-left: 0; border-bottom: 1px solid var(--border); }
   .graph-panel-body > section:last-child { max-height: none; border-bottom: 0; }
+  /* 提交面板：窄屏改为上下排列，文件列表与 diff 各自占一段高度，message 与按钮仍在下方。 */
+  .commit-dialog-body { flex-direction: column; }
+  .commit-file-list { width: 100% !important; height: auto !important; max-height: 20dvh; }
+  .commit-diff-pane { height: 28dvh !important; }
 
   /* 冲突面板：桌面三栏并排在手机宽度下不可读，移动端改为分页签单栏 + 底部操作条。
      操作条要自己让出系统导航栏安全区（弹窗挂在移动壳内，沿用壳上的 --safe-bottom）。 */

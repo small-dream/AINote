@@ -27,3 +27,4 @@ pub mod trash;
 pub mod update;
 pub mod vault;
 pub mod wiki;
+pub mod working_diff;

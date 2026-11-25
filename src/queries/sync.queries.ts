@@ -31,6 +31,15 @@ export function useChangedFilesQuery(repoPath: string | null, enabled = true) {
   });
 }
 
+/** 单个待提交文件相对 HEAD 的 diff（提交面板选中文件时查询） */
+export function useWorkingDiffQuery(repoPath: string | null, file: string | null) {
+  return useQuery({
+    queryKey: ["working-diff", repoPath, file],
+    queryFn: () => syncApi.workingDiff(file as string),
+    enabled: repoPath !== null && file !== null,
+  });
+}
+
 function invalidateSync(queryClient: ReturnType<typeof useQueryClient>) {
   void queryClient.invalidateQueries({ queryKey: ["sync"] });
 }
@@ -44,6 +53,7 @@ export function useCommitPendingMutation() {
       invalidateSync(queryClient);
       // 提交清空待提交列表（一键同步路径由 invalidateWorkspaceQueries 覆盖此键）
       void queryClient.invalidateQueries({ queryKey: ["changed-files"] });
+      void queryClient.invalidateQueries({ queryKey: ["working-diff"] });
     },
   });
 }

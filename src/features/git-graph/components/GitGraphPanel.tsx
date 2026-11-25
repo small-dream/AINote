@@ -3,7 +3,7 @@ import { Tooltip } from "@/components/atoms/Tooltip";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 import { useBackHandler } from "@/platform/back-navigation";
-import { DiffView } from "@/features/history/components/DiffView";
+import { DiffView } from "@/components/molecules/DiffView";
 import { formatDate } from "@/features/history/utils/format";
 import type { RepoCommit } from "@/api/types";
 import type { ChangedFile } from "@/api/types";
@@ -181,7 +181,7 @@ function GraphDiffPane({ graph }: GraphDiffPaneProps) {
       {!graph.activeFile ? (
         <p className="px-4 py-3 text-sm text-text-tertiary">{t("graph.selectFile")}</p>
       ) : (
-        <DiffView diff={graph.diff} loading={graph.diffLoading} />
+        <DiffView lines={graph.diff?.lines} loading={graph.diffLoading} />
       )}
     </section>
   );

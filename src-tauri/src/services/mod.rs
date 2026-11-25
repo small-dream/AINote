@@ -39,3 +39,4 @@ pub mod wiki_mention_parser;
 pub mod wiki_mention_service;
 pub mod wiki_parser;
 pub mod wiki_service;
+pub mod working_diff_service;

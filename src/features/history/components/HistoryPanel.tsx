@@ -6,7 +6,7 @@ import { useTranslation } from "@/i18n";
 import { useBackHandler } from "@/platform/back-navigation";
 import { useFileHistory } from "../hooks/useFileHistory";
 import { CommitList } from "./CommitList";
-import { DiffView } from "./DiffView";
+import { DiffView } from "@/components/molecules/DiffView";
 import { formatDate } from "../utils/format";
 
 interface HistoryPanelProps {
@@ -96,7 +96,7 @@ function DiffPane({ history }: DiffPaneProps) {
         )}
       </div>
       {errorMessage && <p className="border-b border-border px-4 py-2 text-xs text-danger">{errorMessage}</p>}
-      <DiffView diff={history.diff} loading={history.diffLoading} />
+      <DiffView lines={history.diff?.lines} loading={history.diffLoading} />
     </section>
   );
 }

@@ -75,6 +75,7 @@ export type {
   UnlinkedMentionRef,
   WikiHeading,
   WikiLinkContext,
+  WorkingDiff,
   RepoInfo,
   RepoPathDto,
   RestoreResultDto,

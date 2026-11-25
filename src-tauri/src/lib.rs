@@ -170,6 +170,7 @@ pub fn run() {
             commands::git::history::git_file_history,
             commands::git::graph::git_repo_history,
             commands::git::diff::git_file_diff,
+            commands::git::working_diff::git_working_diff,
             commands::git::restore::git_restore_file,
             commands::repo::bind::bind_repo,
             commands::repo::create::create_repo,

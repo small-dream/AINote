@@ -13,6 +13,7 @@ pub mod git2_history;
 pub mod git2_maintenance;
 pub mod git2_remote;
 pub mod git2_rewrite;
+pub mod git2_working;
 pub mod git_backend;
 pub mod llm;
 pub(crate) mod llm_stream;

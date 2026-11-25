@@ -263,21 +263,7 @@ export interface CommitInfo {
   timestamp: number;
 }
 
-/** diff 行类型 */
-export type DiffLineKind = "added" | "removed" | "context";
-
-/** git_file_diff 返回的单行（text 不含 +/- 前缀） */
-export interface DiffLine {
-  kind: DiffLineKind;
-  text: string;
-}
-
-/** git_file_diff 返回：选中提交相对其父提交的单文件 diff */
-export interface FileDiff {
-  path: string;
-  commitId: string;
-  lines: DiffLine[];
-}
+export type { DiffLine, DiffLineKind, FileDiff, WorkingDiff } from "./diff.types";
 
 /** git_repo_history 返回：Repo Git Graph 的一条提交（含其直接改动的文件） */
 export interface RepoCommit {

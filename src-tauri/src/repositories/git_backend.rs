@@ -5,6 +5,7 @@ use crate::domain::error::AppError;
 use crate::domain::history::{CommitInfo, FileDiff, RepoCommit};
 use crate::domain::remote::RemoteCredential;
 use crate::domain::sync::{ChangedFile, ConflictFile};
+use crate::domain::working_diff::WorkingDiff;
 
 /// Git 能力抽象（防腐化关键：Service 只依赖此 trait，不依赖 git2）。
 /// 实现：git2_backend.rs（本地）+ git2_remote.rs（网络）。测试注入 MockGitBackend。
@@ -29,6 +30,8 @@ pub trait GitBackend: Send + Sync {
     fn has_uncommitted(&self, path: &str) -> Result<bool, AppError>;
     /// 工作区待提交变更（增/改/删 + 相对仓库根路径），供手动提交面板与同步前 message 生成
     fn changed_files(&self, path: &str) -> Result<Vec<ChangedFile>, AppError>;
+    /// 单个待提交文件相对 HEAD 的 diff（HEAD 树 → 工作区，含暂存与未暂存改动）
+    fn working_diff(&self, path: &str, file: &str) -> Result<WorkingDiff, AppError>;
     /// 丢弃指定路径的本地改动：HEAD 中存在则恢复该版本，否则（新增）删除工作区文件。
     /// 路径必须已由 Service 层校验并复核为待提交变更；不读历史 blob。
     fn discard_working(&self, path: &str, files: &[String]) -> Result<DiscardReport, AppError>;
@@ -196,6 +199,17 @@ impl GitBackend for MockGitBackend {
     fn changed_files(&self, _path: &str) -> Result<Vec<ChangedFile>, AppError> {
         self.record("changed_files".into());
         Ok(self.changed.clone())
+    }
+
+    fn working_diff(&self, _path: &str, file: &str) -> Result<WorkingDiff, AppError> {
+        self.record(format!("working_diff:{file}"));
+        Ok(WorkingDiff {
+            path: file.into(),
+            lines: Vec::new(),
+            binary: false,
+            encrypted: false,
+            truncated: false,
+        })
     }
 
     fn discard_working(&self, _path: &str, files: &[String]) -> Result<DiscardReport, AppError> {
