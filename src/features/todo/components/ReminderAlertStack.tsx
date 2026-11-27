@@ -1,6 +1,7 @@
 import { BellRing, CalendarClock, X } from "lucide-react";
 import type { TaskPriority } from "@/api/types";
 import { Tooltip } from "@/components/atoms/Tooltip";
+import { ALERT_CARD_CLASS } from "@/components/molecules/AlertCard";
 import { useTranslation } from "@/i18n";
 import type { TranslationKey } from "@/i18n/messages";
 import { useReminderAlertStore, type ReminderAlertItem } from "@/stores/reminderAlert.store";
@@ -23,7 +24,8 @@ const PRIORITY_TONE: Record<TaskPriority, string> = {
   none: "text-text-tertiary",
 };
 
-const CARD_CLASS = "pointer-events-auto w-full max-w-md rounded-lg border border-accent/35 bg-bg-primary/95 px-3 py-2.5 shadow-lg backdrop-blur";
+/** 与 Toast 同一张实底提示卡（AlertCard 壳），浮层视觉全系统统一。 */
+const CARD_CLASS = `${ALERT_CARD_CLASS} px-3 py-2.5`;
 
 /**
  * 待办顶部提醒浮层（桌面与移动共用）：启动摘要卡在前、到点提醒卡片在后。
