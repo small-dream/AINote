@@ -1,5 +1,22 @@
 # 更新日志
 
+## v0.68.1 — 2026-11-28（修复：Android 语音服务误判不可用）
+
+### 修复
+
+- **Android 语音入口正确显示**：补齐 Android 11+ 包可见性所需的 `android.speech.RecognitionService` 查询声明。此前 `targetSdk=37` 的安装包可能看不到系统中已有的语音识别服务，`SpeechRecognizer.isRecognitionAvailable()` 返回 `false`，错误提示“当前设备或系统语音服务不可用”。修复后系统识别服务可被正常发现，麦克风入口会按能力探测结果出现。
+
+### 跨端影响
+
+- **Desktop Impact**：无变化。
+- **Mobile Impact**：仅 Android Manifest 增加系统语音识别服务查询；iOS 行为不变。
+
+### 验证
+
+- 在 OPPO PGJM10 / Android 14 真机确认系统存在 `android.speech.RecognitionService` 提供方。
+- `pnpm release:check v0.68.1`、前端构建与测试、Rust 测试、Android Release 构建通过。
+- GitHub Actions 全平台 Release 矩阵重新构建并发布。
+
 ## v0.68.0 — 2026-11-28（新特性：移动端系统语音输入）
 
 ### 新特性
