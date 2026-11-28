@@ -1,5 +1,31 @@
 # 更新日志
 
+## v0.68.0 — 2026-11-28（新特性：移动端系统语音输入）
+
+### 新特性
+
+- **移动端语音输入**：Android / iOS 编辑器工具栏新增麦克风入口，支持在 Markdown 与富文本笔记的当前光标位置输入系统语音识别结果；识别中展示实时部分转写，结束后插入最终定稿并进入原有自动保存流程。
+- **本机优先与显式联网授权**：优先使用系统 on-device ASR；当前语言无法完全本机识别时，必须由用户明确选择联网识别。请求本机识别失败不会静默降级为可能联网的识别器。
+- **会话与笔记强隔离**：每次识别携带独立 `sessionId`。正常结束会等待最后一段定稿；切换笔记、页面隐藏或离开前台会立即取消并丢弃迟到 final，避免把旧笔记内容写进新笔记。
+- **双端原生生命周期收口**：Android `SpeechRecognizer` 固定在主线程创建与调用，权限被拒、服务不可用、后台切换和系统中断都有明确处理；iOS 停止时等待 final/Stopped 后释放音频队列并停用 `AVAudioSession`。
+- **富文本安全插入**：语音内容始终按纯文本与换行插入，不会被 TipTap 当作 HTML 标签解析。
+
+### 跨端影响
+
+- **Desktop Impact**：桌面端不显示语音入口、不探测能力、不发起语音 IPC；共享编辑器仅增加可选的移动工具栏插槽。
+- **Mobile Impact**：Android / iOS 单栏编辑器新增 44px 麦克风入口、权限请求与联网识别同意框；隐私、会话取消、前后台生命周期按移动端系统能力处理。
+
+### 验证
+
+- `pnpm build && pnpm test && pnpm lint` 通过（264 个测试文件，1673 passed，1 skipped）。
+- `pnpm test:e2e` 通过（桌面与移动视口，196 passed）。
+- `cargo test` 通过（572 + 4 passed，7 ignored）。
+- `pnpm test:drills` 通过（7 passed）。
+- `cargo check --target aarch64-apple-ios` 通过。
+- `pnpm android:build` 通过并生成 Release APK/AAB。
+- `pnpm release:check v0.68.0` 通过。
+- Android / iOS 真机权限、识别、切换笔记与前后台中断矩阵仍需在发布后补验。
+
 ## v0.67.1 — 2026-11-27（修复：浮层提示卡统一为实底样式）
 
 ### 修复
