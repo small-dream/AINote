@@ -1,5 +1,25 @@
 # 更新日志
 
+## v0.68.3 — 2026-11-28（修复：移动语音入口布局与服务不可用反馈）
+
+### 修复
+
+- **语音按钮不再覆盖笔记标题**：移动编辑器工具栏固定为两行，首行完整显示可编辑标题，次行承载语音、导航、视图切换与更多菜单；标题输入框不再按内容撑出容器，长按提示也改为向下弹出。
+- **联网识别不再假进入聆听状态**：Android 能力探测与启动现在校验系统实际选择的默认语音识别服务，仅发现第三方 `RecognitionService` 包不再视为可用。
+- **无默认识别服务时给出明确提示**：当 `voice_recognition_service` 为空或指向不可用服务时，不再弹出联网确认后卡在“聆听中”，而是提示用户先在系统设置中选择语音识别服务并回到空闲态。
+
+### 跨端影响
+
+- **Desktop Impact**：无变化，桌面端仍不渲染语音入口。
+- **Mobile Impact**：移动编辑器工具栏布局在 Android / iOS 共用修复；系统语音识别服务校验仅影响 Android，iOS 行为不变。
+
+### 验证
+
+- `pnpm build`、`pnpm test`、`pnpm lint` 通过（264 个测试文件通过，1 skipped；1674 passed，1 skipped）。
+- `pnpm exec playwright test e2e/mobile-shell.spec.ts` 通过（7 passed）。
+- `pnpm android:build --target aarch64 --apk` 通过，Android 产物版本为 `0.68.3`（versionCode `68003`）。
+- 在 OPPO PGJM10 / Android 14 上确认原问题由 `voice_recognition_service` 为空触发，系统日志为 `no selected voice recognition service`。
+
 ## v0.68.2 — 2026-11-28（修复：Android 语音 JNI 桥接被 R8 移除）
 
 ### 修复
