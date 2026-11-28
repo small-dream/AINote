@@ -1,5 +1,23 @@
 # 更新日志
 
+## v0.68.2 — 2026-11-28（修复：Android 语音 JNI 桥接被 R8 移除）
+
+### 修复
+
+- **Android 语音入口恢复**：Release 混淆阶段显式保留 `dev.ainote.app.VoiceInput` 的 `probe` / `start` / `stop` / `poll` JNI 方法。v0.68.1 已补齐系统识别服务的包可见性，但 R8 仍会删除这些仅由 Rust 按名称调用的方法，导致能力探测失败并继续提示“当前设备或系统语音服务不可用”。修复后 Release 包会保留完整 JNI 契约。
+
+### 跨端影响
+
+- **Desktop Impact**：无变化。
+- **Mobile Impact**：仅 Android Release 混淆规则变化；iOS 行为不变。
+
+### 验证
+
+- `pnpm build && pnpm test && pnpm lint` 通过（264 个测试文件通过，1 skipped；1673 passed，1 skipped）。
+- `cargo test --manifest-path src-tauri/Cargo.toml --locked` 通过（572 + 4 passed，7 ignored）。
+- `pnpm release:check v0.68.2` 与 Android arm64 Release APK/AAB 构建通过，产物版本为 `0.68.2`（versionCode `68002`）。
+- Android Release DEX 反汇编确认 `VoiceInput.probe` / `start` / `stop` / `poll` 四个 JNI 方法均保留。
+
 ## v0.68.1 — 2026-11-28（修复：Android 语音服务误判不可用）
 
 ### 修复
