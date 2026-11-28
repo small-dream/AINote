@@ -10,6 +10,8 @@
 # 否则调用安装器/钥匙串/设备认证会抛 NoSuchMethodError（表现为功能静默不可用）。
 -keep class dev.ainote.app.ApkInstaller { *; }
 -keep class dev.ainote.app.QuickUnlock { *; }
+# VoiceInput.probe/start/stop/poll are called from Rust by JNI name. Keep all members or R8 removes them and speech always reports unavailable.
+-keep class dev.ainote.app.VoiceInput { *; }
 -keep class io.crates.keyring.Keyring { *; }
 
 # If your project uses WebView with JS, uncomment the following
