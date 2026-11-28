@@ -83,13 +83,18 @@
 .mobile-sidebar-pane .tree-file,
 .mobile-sidebar-pane .tree-folder { width: 20px; height: 20px; }
 .mobile-sidebar-pane .tree-create-trigger { width: 44px; height: 44px; }
-/* 编辑器工具栏在手机上收成一行：标题吃掉剩余宽度，视图切换与「⋯」贴右端。
-   `flex: 1 1 0` 让换行只取决于右组宽度——标题再长也只截断，不会把右组挤到第二行；
-   只有保存失败需要整行说明时（右组多出 role="status"），才退回上下两行。 */
+/* 编辑器工具栏在手机上固定为两行：首行完整显示可编辑标题，次行放语音、导航、视图切换与「⋯」。
+   语音入口加入后若继续单行布局，右侧操作组会挤压标题容器，而 field-sizing 标题又会按内容溢出。
+   次行允许横向滚动，极窄屏或识别中长胶囊状态也不会再次覆盖标题。 */
 .mobile-editor-pane .workspace-toolbar { min-height: 44px; flex-wrap: wrap; gap: 4px; padding: 4px 8px; }
-.mobile-editor-pane .workspace-toolbar > div:first-child { flex: 1 1 0; width: auto; min-width: 0; }
-.mobile-editor-pane .workspace-toolbar > div:last-child { flex: 0 1 auto; width: auto; min-width: 0; justify-content: flex-start; overflow: visible; }
+.mobile-editor-pane .workspace-toolbar > div:first-child,
+.mobile-editor-pane .workspace-toolbar > div:last-child { flex: 1 1 100%; width: 100%; min-width: 0; }
+.mobile-editor-pane .workspace-toolbar > div:last-child { justify-content: flex-end; overflow-x: auto; overflow-y: hidden; scrollbar-width: none; }
+.mobile-editor-pane .workspace-toolbar > div:last-child::-webkit-scrollbar { display: none; }
 .mobile-editor-pane .workspace-toolbar > div:last-child > div { flex-wrap: nowrap; gap: 2px; }
+.mobile-editor-pane .workspace-toolbar > div:first-child { overflow: hidden; }
+.mobile-editor-pane .workspace-toolbar > div:first-child > div:first-child { width: 100%; min-width: 0; }
+.mobile-editor-pane .workspace-toolbar .voice-listening-button { max-width: 9rem; }
 .mobile-editor-pane .workspace-toolbar:has(> div:last-child > span[role="status"]) > div:first-child,
 .mobile-editor-pane .workspace-toolbar:has(> div:last-child > span[role="status"]) > div:last-child { flex: 0 0 100%; width: 100%; }
 /* 保存失败要能读全：让错误信息在右组里独占一行（右组同时启用换行），
@@ -101,7 +106,7 @@
 .mobile-editor-pane .workspace-toolbar .inline-flex { width: 36px; height: 36px; }
 /* 标题输入框跟随剩余宽度（自身仍按内容伸缩），行高抬到 36px 只为触控更好点 */
 .mobile-editor-pane .workspace-toolbar > div:first-child > div:first-child { flex: 1 1 auto; min-width: 0; }
-.mobile-editor-pane .note-title-input { max-width: 100%; min-height: 36px; }
+.mobile-editor-pane .note-title-input { field-sizing: fixed; width: 100%; min-width: 0; max-width: 100%; min-height: 36px; }
 .mobile-editor-pane .workspace-toolbar #note-title-error { max-width: 100%; }
 /* 格式工具栏只横向滑动：tooltip 内联挂在按钮下方（absolute），会撑出 27px 纵向滚动区，
    手机上竖划就会误滚工具栏；滑轨也一并隐藏，和列表标签页、冲突分页签保持一致。 */

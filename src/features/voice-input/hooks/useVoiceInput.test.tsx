@@ -15,9 +15,10 @@ vi.mock("@/api", () => ({
   voiceApi: {
     support: () => supportMock(),
     start: (sessionId: string, onDevice: boolean, onEvent: (event: VoiceStreamEvent) => void) => {
-      startMock(sessionId, onDevice);
-      startListener = onEvent;
-      return Promise.resolve(null);
+      return startMock(sessionId, onDevice).then(() => {
+        startListener = onEvent;
+        return null;
+      });
     },
     finish: (sessionId: string) => finishMock(sessionId),
     cancel: (sessionId: string) => cancelMock(sessionId),
@@ -38,6 +39,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   startListener = null;
   supportMock.mockResolvedValue({ supported: true, onDevice: true });
+  startMock.mockResolvedValue(null);
   finishMock.mockResolvedValue(null);
   cancelMock.mockResolvedValue(null);
 });
@@ -77,6 +79,27 @@ describe("useVoiceInput 能力与启动", () => {
     });
     expect(startMock).toHaveBeenCalledWith(expect.any(String), false);
     expect(hook.result.current.consentOpen).toBe(false);
+  });
+
+  it("联网识别启动失败时关闭同意框并回到空闲", async () => {
+    supportMock.mockResolvedValue({ supported: true, onDevice: false });
+    startMock.mockRejectedValueOnce({
+      code: "VOICE_9002",
+      kind: "unknown",
+      message: "no selected recognition service",
+      retriable: false,
+    });
+    const { hook } = setup();
+    await act(async () => {
+      await hook.result.current.toggle();
+    });
+    expect(hook.result.current.consentOpen).toBe(true);
+
+    await act(async () => {
+      await hook.result.current.confirmNetwork();
+    });
+    expect(hook.result.current.consentOpen).toBe(false);
+    expect(hook.result.current.status).toBe("idle");
   });
 
   it("不支持语音识别时不启动会话", async () => {

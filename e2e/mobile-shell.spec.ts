@@ -40,7 +40,7 @@ test.describe("移动端可编辑控件字号（防 iOS 聚焦缩放）", () => 
 test.describe("移动端编辑器工具栏", () => {
   test.use({ viewport: { width: 375, height: 667 } });
 
-  test("标题、视图切换与「⋯」共用一行，格式工具栏不出现滑轨", async ({ page }) => {
+  test("标题与操作分两行，语音入口不会覆盖标题，格式工具栏不出现滑轨", async ({ page }) => {
     await openWorkspace(page, { repoPath: "/mock-repo", notes: [{ path: "toolbar.md", content: "## 标题\n\n正文\n" }] });
     await openNote(page, "toolbar", "标题");
 
@@ -56,24 +56,27 @@ test.describe("移动端编辑器工具栏", () => {
       return {
         toolbarHeight: box(toolbar).height,
         titleRowTop: box(titleRow).top,
+        titleRowBottom: box(titleRow).bottom,
+        titleRowWidth: box(titleRow).width,
+        toolbarWidth: box(toolbar).width,
         actionsRowTop: box(actionsRow).top,
         titleRight: box(input).right,
-        tabsLeft: box(tabs).left,
+        toolbarRight: box(toolbar).right,
         formatOverflowY: getComputedStyle(format).overflowY,
         formatScrollbar: getComputedStyle(format).scrollbarWidth,
         contentTop: box(content).top,
       };
     });
 
-    // 收成一行：两组同一水平线，工具栏不再占两行（改动前 76px）
-    expect(layout.actionsRowTop).toBeCloseTo(layout.titleRowTop, 0);
-    expect(layout.toolbarHeight).toBeLessThan(56);
-    // 标题吃掉剩余宽度，但不得压到视图切换上
-    expect(layout.titleRight).toBeLessThanOrEqual(layout.tabsLeft);
+    // 标题独占首行，操作组从下一行开始；语音按钮加入后不再挤压并覆盖标题。
+    expect(layout.actionsRowTop).toBeGreaterThanOrEqual(layout.titleRowBottom);
+    expect(layout.titleRowWidth).toBeGreaterThan(layout.toolbarWidth - 20);
+    expect(layout.toolbarHeight).toBeLessThan(100);
+    expect(layout.titleRight).toBeLessThanOrEqual(layout.toolbarRight);
     // 内联 tooltip 曾把格式工具栏撑成可纵向滚动，滑轨也一直可见
     expect(layout.formatOverflowY).toBe("hidden");
     expect(layout.formatScrollbar).toBe("none");
-    expect(layout.contentTop).toBeLessThan(160);
+    expect(layout.contentTop).toBeLessThan(200);
   });
 });
 

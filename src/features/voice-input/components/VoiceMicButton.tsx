@@ -17,7 +17,7 @@ export function VoiceMicButton({ status, partial, onToggle }: VoiceMicButtonProp
   const { t } = useTranslation();
   if (status === "idle") {
     return (
-      <IconButton icon={Mic} label={t("voice.mic")} size="md" tooltipPortal className="h-11 w-11" onClick={onToggle} />
+      <IconButton icon={Mic} label={t("voice.mic")} size="md" tooltipPlacement="bottom" tooltipPortal className="voice-mic-button h-11 w-11" onClick={onToggle} />
     );
   }
   return (
@@ -25,7 +25,7 @@ export function VoiceMicButton({ status, partial, onToggle }: VoiceMicButtonProp
       type="button"
       aria-label={t("voice.listening")}
       onClick={onToggle}
-      className="flex h-11 min-w-0 max-w-52 shrink-0 items-center gap-1.5 rounded-md border border-accent/40 bg-accent-soft px-3 text-xs text-accent transition-colors active:scale-[0.97]"
+      className="voice-listening-button flex h-11 min-w-0 max-w-52 shrink items-center gap-1.5 rounded-md border border-accent/40 bg-accent-soft px-3 text-xs text-accent transition-colors active:scale-[0.97]"
     >
       {status === "starting" ? (
         <Loader2 size={14} className="shrink-0 animate-spin" aria-hidden="true" />

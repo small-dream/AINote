@@ -37,7 +37,11 @@ export function useVoiceSupport(enabled: boolean): { support: VoiceSupport | nul
   useEffect(() => {
     if (reportedRef.current || support?.supported !== false) return;
     reportedRef.current = true;
-    const key = support.reason === "denied" ? "voice.permissionDenied" : "voice.unavailable";
+    const key = support.reason === "denied"
+      ? "voice.permissionDenied"
+      : support.reason === "noService"
+        ? "voice.noService"
+        : "voice.unavailable";
     useToastStore.getState().push(t(key), "info");
   }, [support, t]);
 

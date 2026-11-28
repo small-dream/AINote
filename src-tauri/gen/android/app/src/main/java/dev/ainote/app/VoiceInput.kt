@@ -1,11 +1,14 @@
 package dev.ainote.app
 
 import android.app.Activity
+import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Handler
 import android.os.Looper
+import android.provider.Settings
+import android.speech.RecognitionService
 import android.speech.RecognizerIntent
 import android.speech.SpeechRecognizer
 import java.util.ArrayDeque
@@ -26,6 +29,7 @@ object VoiceInput {
     private const val FIELD_SEPARATOR = "\u001F"
     private const val MAIN_CALL_TIMEOUT_MS = 5_000L
     private const val STOP_WAIT_MS = 1_500L
+    private const val VOICE_RECOGNITION_SERVICE = "voice_recognition_service"
 
     @Volatile
     private var current: Activity? = null
@@ -61,12 +65,10 @@ object VoiceInput {
     /** Capability probe: no permission prompt and no recognition session. */
     @JvmStatic
     fun probe(context: Context): String = runCatching {
-        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
-            "unsupported:noService"
-        } else if (SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) {
-            "ok:onDevice"
-        } else {
-            "ok:network"
+        when {
+            SpeechRecognizer.isOnDeviceRecognitionAvailable(context) -> "ok:onDevice"
+            selectedRecognitionService(context) != null -> "ok:network"
+            else -> "unsupported:noService"
         }
     }.getOrElse { "unsupported:probeFailed" }
 
@@ -133,9 +135,13 @@ object VoiceInput {
             activeSessionId = sessionId
             events.clear()
         }
-        if (!SpeechRecognizer.isRecognitionAvailable(context)) {
+        if (!onDevice && selectedRecognitionService(context) == null) {
             clearActive(sessionId)
             return "fail:noService"
+        }
+        if (onDevice && !SpeechRecognizer.isOnDeviceRecognitionAvailable(context)) {
+            clearActive(sessionId)
+            return "fail:onDeviceUnavailable"
         }
         if (context.checkSelfPermission(android.Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             val activity = current ?: run {
@@ -155,7 +161,11 @@ object VoiceInput {
     private fun startRecognition(context: Context, pending: PendingStart): String {
         val recognizer = runCatching {
             when {
-                !pending.onDevice -> SpeechRecognizer.createSpeechRecognizer(context)
+                !pending.onDevice -> {
+                    val service = selectedRecognitionService(context)
+                        ?: return failStart(pending.sessionId, "noService")
+                    SpeechRecognizer.createSpeechRecognizer(context, service)
+                }
                 SpeechRecognizer.isOnDeviceRecognitionAvailable(context) ->
                     SpeechRecognizer.createOnDeviceSpeechRecognizer(context)
                 else -> return failStart(pending.sessionId, "onDeviceUnavailable")
@@ -177,6 +187,31 @@ object VoiceInput {
             session.forceStop()
             "fail:startError"
         }
+    }
+
+    /**
+     * Android keeps the user-selected network recognizer in Secure settings. Merely finding a
+     * RecognitionService package is insufficient: without this setting SpeechRecognizer reports
+     * "no selected voice recognition service" and never starts a usable session.
+     */
+    private fun selectedRecognitionService(context: Context): ComponentName? {
+        val raw = Settings.Secure.getString(context.contentResolver, VOICE_RECOGNITION_SERVICE)
+            ?.trim()
+            .orEmpty()
+        if (raw.isEmpty()) return null
+        val selected = ComponentName.unflattenFromString(raw) ?: return null
+        val expectedClass = if (selected.className.startsWith(".")) {
+            selected.packageName + selected.className
+        } else {
+            selected.className
+        }
+        val available = context.packageManager
+            .queryIntentServices(Intent(RecognitionService.SERVICE_INTERFACE), 0)
+            .any { info ->
+                info.serviceInfo.packageName == selected.packageName &&
+                    info.serviceInfo.name == expectedClass
+            }
+        return selected.takeIf { available }
     }
 
     private fun failStart(sessionId: String, code: String): String {
