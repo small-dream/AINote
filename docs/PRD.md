@@ -72,6 +72,7 @@
 | P2-2 | 协作（多人实时） |
 | P2-3 | 插件系统 |
 | P2-4 | 端到端加密仓库 |
+| P2-5 | 移动端语音输入：在手机上用系统语音识别把内容说进当前笔记（Markdown 与富文本均支持），识别优先在本机完成、不引入第二套凭证体系，详细方案见 §2.10 |
 
 ### 2.6 AI 能力（新增，详细设计见 `docs/AI_PRODUCT_DESIGN.md`）
 
@@ -145,6 +146,22 @@
 - **P1-MCP-5 凭证与边界**：Token 只存平台安全存储，仅在首次生成/轮换时一次性展示；日志只记录方法与工具名，不含 Token、正文或绝对路径。移动端不提供服务与入口，保持共享代码可编译。
 - **P1-MCP-6 一键写入客户端**：设置页可直接把当前地址与 Token 写入 Claude Code、Codex、Cursor、VS Code、Windsurf、Cline 的本机 MCP 配置；只替换 `ainote` 条目，保留其他服务器；解析失败不覆盖原文件；轮换 Token / 改端口后自动同步已写入的客户端。客户端配置含 Token 明文，界面明确提示文件权限风险。Claude Desktop 的远程连接器需在其 Connectors UI 添加，本版本不写 `claude_desktop_config.json`。
 - **验收**：7 个工具可被真实 MCP 客户端调用；创建/修改后列表、目录树、编辑器刷新；revision 冲突、草稿守卫、加密锁定、Token 轮换、错误 Origin、端口占用均有明确反馈；`pnpm build && pnpm test && pnpm lint` 与 `cargo test` 通过。
+
+### 2.10 移动端语音输入（P2-5，已实现待真机验证）
+
+> 仅移动端（iOS / Android）。技术评估结论：首选**系统 ASR**，本地 whisper.cpp 因模型体积 / 内存 / 发热排除，WebView 原生 Web Speech API 在 WKWebView 与 Android WebView 均不可用；云端 ASR 仅保留为后续可选项，首期不引入。
+>
+> **实现落点（与最初方案的差异）**：没有引入独立 Tauri 移动插件，而是复用项目既有的原生桥接模式——Android 经 JNI 调 `gen/android/.../VoiceInput.kt`（字符串协议 + 事件轮询，对齐 `QuickUnlock`），iOS 在 `platform/voice/apple.rs` 内用 `objc2-speech` + `objc2-avf-audio` 纯 Rust 实现（对齐 `quick_unlock::apple`）。Rust 侧 `Transcriber` trait + `services/voice_service` 单会话防重入 + `VOICE_9xxx` 错误域；前端 `src/features/voice-input/`（会话状态机 + 能力探测 + 联网同意框）。
+
+- **入口与交互**：移动编辑器工具栏提供麦克风按钮，支持「点击开始/再次点击结束」；识别期间实时展示**部分转写结果**（编辑器瞬态，不进入防抖保存），结束后把定稿文本插入光标处、随后照常进入自动保存与手动提交链路。每次识别携带 `sessionId`；用户点击结束时走 `voice_stop` 等待最终定稿，切换笔记、页面隐藏或离开前台时走 `voice_cancel` 立即丢弃迟到 final。前端和原生两侧都按 `sessionId` 过滤旧事件，避免文本插错文件。
+- **识别引擎**：Android 经 JNI 调 `VoiceInput.kt` / `VoiceInputSession.kt`，所有 `SpeechRecognizer` 创建与调用固定在 Android 主线程，优先 `createOnDeviceSpeechRecognizer`（API 31+），用户要求本机识别但当前设备不满足时明确报错，**不会自动切换网络识别**；iOS 在 `platform/voice/apple.rs` 内用 `objc2-speech` + `objc2-avf-audio` 实现 `SFSpeechRecognizer`（`AVAudioEngine` 采集 + `requiresOnDeviceRecognition = true` 优先）。部分结果经 Tauri channel 流式推送前端，停止时等待最终结果后再释放音频会话。用例层只依赖 `Transcriber` trait（与 `GitBackend` / `DeviceKeyStore` 同构），`VoiceService` 支持注入 Mock 单测。
+- **隐私边界**：识别优先在本机完成；当前语言的 on-device 模型不可用时，必须弹出「本机识别 / 联网识别」选择器由用户显式决定，**绝不静默把语音上传**。本功能不使用 AI Provider 的云端 ASR、不新增凭证。
+- **权限声明**：iOS `NSMicrophoneUsageDescription` + `NSSpeechRecognitionUsageDescription`；Android `RECORD_AUDIO`。系统弹窗被拒时给出可操作的引导与重试入口。
+- **错误码**：新增 `VOICE_9xxx` 域（`domain/error.rs`）：麦克风权限被拒、on-device 不支持当前语言、ASR 服务不可用（无 GMS 设备）、识别超时 / 被系统中断。Android 无 Google 服务的设备**只报错不降级**，不引入云端识别链。
+- **运行边界**：系统 ASR 均要求应用前台活跃；锁屏 / 来电导致的中断给出明确反馈与重试，不承诺后台识别。
+- **Desktop Impact**：无任何入口与 UI；仅因共享构建配置，桌面端 Info.plist 会带上权限声明 key，功能不启用。
+- **Mobile Impact**：主要新增落在 `src/features/voice-input/`、移动原生桥接与共享编辑器接线；麦克风按钮融入移动单栏编辑器工具栏，遵循 safe-area 与 44px 触控标准，不影响桌面三栏。桌面端不探测能力、不发起语音 IPC。
+- **工作量估算**：约 5–7 个工作日（插件骨架 2–3 天、双端 ASR 与降级 1.5–2 天、前端接线 1–1.5 天、权限 / 错误 / 单测 / 真机双端验证 1 天）。
 
 ## 3. 核心业务流程
 

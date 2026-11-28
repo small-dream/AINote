@@ -23,6 +23,9 @@ pub use fallback::*;
 /// 设备级快速解锁的平台接缝（macOS / iOS / Android，其余平台明确不支持）。
 pub mod quick_unlock;
 
+/// 移动端语音输入的平台接缝（iOS / Android，桌面与测试环境明确不支持）。
+pub mod voice;
+
 #[cfg(desktop)]
 pub mod tray;
 

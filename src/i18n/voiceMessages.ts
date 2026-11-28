@@ -1,0 +1,38 @@
+/** 语音输入（移动端，PRD §2.10）的界面文案。 */
+export const VOICE_MESSAGES_ZH = {
+  "voice.mic": "语音输入",
+  "voice.listening": "聆听中，点击结束",
+  "voice.permissionDenied": "麦克风权限被拒绝，请到系统设置 → AINote → 麦克风开启",
+  "voice.unavailable": "当前设备或系统语音服务不可用",
+  "voice.failed": "语音识别出错：{message}",
+  "voice.errorNetwork": "网络不可用，请检查网络后重试",
+  "voice.errorPermission": "麦克风权限不可用，请到系统设置中开启",
+  "voice.errorAudio": "录音失败，请检查麦克风权限后重试",
+  "voice.errorNoMatch": "没有识别到语音，请靠近麦克风后重试",
+  "voice.errorBusy": "识别服务忙，请稍后重试",
+  "voice.errorSpeechTimeout": "没有检测到语音，请重试",
+  "voice.errorService": "系统语音服务出错，请稍后重试",
+  "voice.errorGeneric": "系统语音服务暂时不可用，请重试",
+  "voice.consentTitle": "使用联网识别？",
+  "voice.consentBody": "当前语言不支持完全本机识别。联网识别会把这段录音交给系统的语音服务处理；AINote 本身不会保存录音。",
+  "voice.consentUseNetwork": "使用联网识别",
+} as const;
+
+export const VOICE_MESSAGES_EN: Record<keyof typeof VOICE_MESSAGES_ZH, string> = {
+  "voice.mic": "Voice input",
+  "voice.listening": "Listening, tap to finish",
+  "voice.permissionDenied": "Microphone permission denied. Enable it in Settings → AINote → Microphone.",
+  "voice.unavailable": "System speech recognition is unavailable on this device",
+  "voice.failed": "Speech recognition failed: {message}",
+  "voice.errorNetwork": "Network unavailable. Check your connection and try again.",
+  "voice.errorPermission": "Microphone permission is unavailable. Enable it in system settings.",
+  "voice.errorAudio": "Recording failed. Check microphone permission and try again.",
+  "voice.errorNoMatch": "No speech was recognized. Move closer to the microphone and try again.",
+  "voice.errorBusy": "The speech service is busy. Try again shortly.",
+  "voice.errorSpeechTimeout": "No speech was detected. Try again.",
+  "voice.errorService": "The system speech service failed. Try again shortly.",
+  "voice.errorGeneric": "System speech recognition is temporarily unavailable. Try again.",
+  "voice.consentTitle": "Use network recognition?",
+  "voice.consentBody": "Fully on-device recognition is unavailable for this language. Network recognition sends this recording to the system speech service; AINote does not retain the recording.",
+  "voice.consentUseNetwork": "Use network recognition",
+};

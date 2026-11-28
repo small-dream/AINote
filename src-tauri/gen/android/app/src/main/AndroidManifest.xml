@@ -5,6 +5,8 @@
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
     <!-- 设备级快速解锁：Android 12 及以上使用系统 BiometricPrompt -->
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <!-- 语音输入：系统 SpeechRecognizer 采集麦克风（运行时权限，首次使用时弹窗申请） -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
 
     <!-- AndroidTV support -->
     <uses-feature android:name="android.software.leanback" android:required="false" />

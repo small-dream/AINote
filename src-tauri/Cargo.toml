@@ -58,6 +58,12 @@ objc2-foundation = "0.3.2"
 objc2-local-authentication = "0.3.2"
 block2 = "0.6.2"
 
+# 语音输入（仅 iOS，移动端功能）：SFSpeechRecognizer + AVAudioEngine 采集。
+# 桌面 macOS 不启用入口，只需保证可编译；本依赖块对 macOS 同样生效但不会触发运行时行为。
+[target."cfg(target_os = \"ios\")".dependencies]
+objc2-speech = { version = "0.3.2", features = ["SFSpeechRecognizer", "SFSpeechRecognitionRequest", "SFSpeechRecognitionResult", "SFSpeechRecognitionTask", "block2"] }
+objc2-avf-audio = "0.3.2"
+
 [target."cfg(target_os = \"android\")".dependencies]
 jni = "0.21"
 ndk-context = "0.1"

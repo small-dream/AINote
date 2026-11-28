@@ -35,10 +35,20 @@ import type { LinkOverlayRequest } from "./LinkOverlay";
 import { useMarkdownLinkInput } from "../hooks/useMarkdownLinkInput";
 import { useMarkdownNavigation } from "../hooks/useMarkdownNavigation";
 import { openExternalLink } from "@/platform/open-link";
+import { VoiceConsentDialog } from "@/features/voice-input";
+import { useNoteVoiceInput } from "../hooks/useNoteVoiceInput";
 import type { NoteNavigationTarget } from "@/stores/session.store";
 import { useNoteNavigationHistory } from "../hooks/useNoteNavigationHistory";
 
 export type { NoteEditorHandle } from "../hooks/useNoteEditor";
+
+/** 富文本 → Markdown 复制导出（模块级小工具，保持组件函数行数达标）。 */
+function exportRichTextMarkdown(draft: string, t: ReturnType<typeof useTranslation>["t"]) {
+  void import("@/features/richtext/utils/markdownConversion")
+    .then(({ richTextJsonToMarkdown }) => navigator.clipboard.writeText(richTextJsonToMarkdown(draft)))
+    .then(() => useToastStore.getState().push(t("richtext.markdownCopied"), "success"))
+    .catch(reportToastError);
+}
 
 interface NoteEditorProps {
   repoPath: string | null;
@@ -101,16 +111,18 @@ export const NoteEditor = forwardRef<NoteEditorHandle, NoteEditorProps>(
       view.focus();
     };
     const handleOutlineSelect = (item: OutlineItem) => selectOutline(item, mode, viewRef.current ?? readyView, previewRef.current);
-    const exportMarkdown = () => {
-      void import("@/features/richtext/utils/markdownConversion")
-        .then(({ richTextJsonToMarkdown }) => navigator.clipboard.writeText(richTextJsonToMarkdown(draft)))
-        .then(() => useToastStore.getState().push(t("richtext.markdownCopied"), "success"))
-        .catch(reportToastError);
-    };
+    const exportMarkdown = () => exportRichTextMarkdown(draft, t);
+
+    // 语音输入（仅移动壳渲染入口）：Markdown 光标处插入，富文本经注册回调插入。
+    const voice = useNoteVoiceInput({ notePath, viewRef, draft, onChange });
 
     const placeholder = editorPlaceholder(notePath, loadError, locked);
     if (placeholder !== null) return placeholder;
     const surfaceProps: MarkdownEditorSurfaceProps = { mode, noteTheme, repoPath, draft, onChange, extensions, onCreateEditor: handleCreateEditor, previewRef, onOpenWiki: wiki.handleOpenWiki, wikiNotes: wiki.notes, ratio, onRatioChange: setRatio, outline, outlineOpen, onOutlineToggle: () => setOutlineOpen((open) => !open), onOutlineSelect: handleOutlineSelect, diagnostics, diagnosticsOpen, onDiagnosticsToggle: () => setDiagnosticsOpen((open) => !open), onDiagnosticsSelect: handleDiagnosticsSelect, viewRef, activeFormats, canUndo, canRedo, onImagePicked: asset.handleFiles, assetStatus: asset.status, onContextMenu: markdownMenu.handleContextMenu, contextMenu: <MarkdownContextMenu menu={markdownMenu} noteTheme={noteTheme} aiBlocked={encrypted} encryption={{ action: encryption.action, pending: encryption.pending, onSelect: encryption.toggle }} />, previewContextMenu: { onContextMenu: previewMenu.handleContextMenu }, softRender: softRenderEnabled, onLinkAction: handleLinkAction, onLinkInput: openMarkdownLink };
-    return <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} previewMenu={previewMenu} noteTheme={noteTheme} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} encrypted={encrypted} navigationTarget={navigationTarget} navigationNonce={navigationNonce} linkOverlay={linkOverlay} markdownLinkInput={markdownLinkInput} markdownCursor={cursorPosition} noteNavigation={noteNavigation} />;
+    const editorContent = <NoteEditorContent notePath={notePath as string} repoPath={repoPath} kind={kind} draft={draft} onChange={onChange} onMove={onMove} onOpenNote={onOpenNote} createdPath={createdPath} mode={mode} compact={isCompact} setMode={setMode} setOutlineOpen={setOutlineOpen} outlineOpen={outlineOpen} surfaceProps={surfaceProps} previewMenu={previewMenu} noteTheme={noteTheme} richTextDialog={richTextDialog} onRequestConvertToRichText={requestConvertToRichText} onConfirmConvertToRichText={() => void confirmConvertToRichText()} onCancelConvertToRichText={cancelConvertToRichText} onConvertToMarkdown={() => void handleConvertToMarkdown()} onExportMarkdown={kind === "richText" ? exportMarkdown : undefined} flush={flush} saving={saving} dirty={dirty} saveError={saveError?.message ?? null} saveErrorCode={saveError?.code ?? null} history={history} wiki={wiki} ai={ai} suggest={suggest} askAiOpen={askAiOpen} closeAskAi={closeAskAi} insertAnswer={insertAnswer} pdf={pdf} encrypted={encrypted} navigationTarget={navigationTarget} navigationNonce={navigationNonce} linkOverlay={linkOverlay} markdownLinkInput={markdownLinkInput} markdownCursor={cursorPosition} noteNavigation={noteNavigation} voiceSlot={voice.slot} onRegisterRichTextInsert={voice.onRegisterRichTextInsert} />;
+    return <>
+      {editorContent}
+      <VoiceConsentDialog open={voice.consent.open} onConfirm={voice.consent.onConfirm} onCancel={voice.consent.onCancel} />
+    </>;
   },
 );

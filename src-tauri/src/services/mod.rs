@@ -34,6 +34,7 @@ pub mod trash_service;
 pub mod update_service;
 pub mod vault_crypto;
 pub mod vault_service;
+pub mod voice_service;
 pub(crate) mod wiki_mention_mask;
 pub mod wiki_mention_parser;
 pub mod wiki_mention_service;

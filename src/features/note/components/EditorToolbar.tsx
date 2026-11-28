@@ -1,3 +1,4 @@
+import { type ReactNode } from "react";
 import { ChevronLeft, ChevronRight, Code, Eye, Maximize2, Minimize2, Split, SquarePen, type LucideIcon } from "lucide-react";
 import { IconButton } from "@/components/atoms/IconButton";
 import { useTranslation } from "@/i18n";
@@ -48,6 +49,8 @@ interface EditorToolbarProps {
   onGoForward?: (() => void) | undefined;
   focusMode?: boolean;
   onToggleFocus?: () => void;
+  /** 语音输入入口（移动端）：由宿主注入，桌面端不传即不渲染。 */
+  voiceSlot?: ReactNode;
 }
 
 interface ModeTab { key: ViewMode; labelKey: TranslationKey }
@@ -91,7 +94,7 @@ function EditorToolbarTitle({ path, isNewNote, draft, saving, dirty, onTitleChan
 }
 
 /** 笔记操作栏：左侧标题锚点，右侧常驻只有视图切换（仅 Markdown）与「⋯」溢出菜单，低频控件收进菜单保持内容优先。 */
-export function EditorToolbar({ path, mode, compact = false, richText = false, saving = false, dirty = false, saveError, saveErrorCode, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onAi, aiBlocked, historyBlocked, onToggleEncryption, encryptionAction, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed, canGoBack = false, canGoForward = false, onGoBack, onGoForward, focusMode = false, onToggleFocus }: EditorToolbarProps) {
+export function EditorToolbar({ path, mode, compact = false, richText = false, saving = false, dirty = false, saveError, saveErrorCode, onModeChange, onSave, onMove, onHistory, onWiki, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onAi, aiBlocked, historyBlocked, onToggleEncryption, encryptionAction, isNewNote = false, draft = "", onTitleChange, onFlush, onRenamed, canGoBack = false, canGoForward = false, onGoBack, onGoForward, focusMode = false, onToggleFocus, voiceSlot }: EditorToolbarProps) {
   return (
     <div
       data-tauri-drag-region="deep"
@@ -123,6 +126,7 @@ export function EditorToolbar({ path, mode, compact = false, richText = false, s
           onGoBack={onGoBack}
           onGoForward={onGoForward}
           onToggleFocus={onToggleFocus}
+          voiceSlot={voiceSlot}
         />
         <SaveErrorMessage message={saveError} code={saveErrorCode} onRetry={onSave} />
       </div>
@@ -153,13 +157,15 @@ interface ToolbarActionsProps {
   onGoBack?: (() => void) | undefined;
   onGoForward?: (() => void) | undefined;
   onToggleFocus?: (() => void) | undefined;
+  voiceSlot?: ReactNode;
 }
 
 /** 右侧操作分组：常驻只有视图切换（仅 Markdown）与「⋯」溢出菜单；主题 / 历史 / 双链 / AI 与文件操作统一收进菜单。 */
-function ToolbarActions({ mode, compact, richText, focusMode, canGoBack, canGoForward, aiBlocked, historyBlocked, encryptionAction, onModeChange, onHistory, onWiki, onAi, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onMove, onToggleEncryption, onGoBack, onGoForward, onToggleFocus }: ToolbarActionsProps) {
+function ToolbarActions({ mode, compact, richText, focusMode, canGoBack, canGoForward, aiBlocked, historyBlocked, encryptionAction, onModeChange, onHistory, onWiki, onAi, onConvertToRichText, onConvertToMarkdown, onExportPdf, onExportMarkdown, onMove, onToggleEncryption, onGoBack, onGoForward, onToggleFocus, voiceSlot }: ToolbarActionsProps) {
   const { t } = useTranslation();
   return (
     <div className="flex items-center gap-1">
+      {voiceSlot}
       {onGoBack || onGoForward ? (
         <div className="flex items-center gap-0.5">
           <IconButton size="sm" icon={ChevronLeft} label={t("note.goBack")} disabled={!canGoBack} onClick={onGoBack} />

@@ -12,6 +12,8 @@ class MainActivity : TauriActivity() {
     // credentials / ApkInstaller 等 JNI 桥接照常可用。
     // 设备级快速解锁的认证弹窗需要一个前台 Activity，所以这里保留 attach。
     QuickUnlock.attach(this)
+    // 语音输入的运行时麦克风权限弹窗同样需要前台 Activity。
+    VoiceInput.attach(this)
     enableEdgeToEdge()
     super.onCreate(savedInstanceState)
     ShareIntake.accept(this, intent)
@@ -23,8 +25,25 @@ class MainActivity : TauriActivity() {
     ShareIntake.accept(this, intent)
   }
 
+  override fun onRequestPermissionsResult(
+    requestCode: Int,
+    permissions: Array<out String>,
+    grantResults: IntArray,
+  ) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+    if (requestCode == VoiceInput.PERMISSION_REQUEST_CODE) {
+      VoiceInput.onPermissionResult(permissions, grantResults)
+    }
+  }
+
+  override fun onStop() {
+    VoiceInput.onHostBackgrounded()
+    super.onStop()
+  }
+
   override fun onDestroy() {
     QuickUnlock.detach(this)
+    VoiceInput.detach(this)
     super.onDestroy()
   }
 }

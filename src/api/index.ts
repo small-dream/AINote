@@ -16,6 +16,8 @@ export { releaseApi } from "./release.api";
 export type { ReleaseInfo } from "./release.api";
 export { mobileUpdateApi } from "./mobile-update.api";
 export type { ApkDownloadProgress, ApkDownloadResult, InstallApkResult } from "./mobile-update.api";
+export { voiceApi } from "./voice.api";
+export type { VoiceStreamEvent, VoiceSupport } from "./voice.types";
 export { metricsApi, recordMetric } from "./metrics.api";
 export type {
   MetricEventName,

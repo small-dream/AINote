@@ -5,6 +5,7 @@ import { RichTextToolbar } from "./RichTextToolbar";
 import { RichTextBubbleMenu } from "./RichTextBubbleMenu";
 import { RichTextContextMenu } from "./RichTextContextMenu";
 import { useRichTextContextMenu } from "../hooks/useRichTextContextMenu";
+import { voiceTextContent } from "../utils/voiceText";
 import { useRichTextEditor } from "../hooks/useRichTextEditor";
 import { useRichTextOutline } from "../hooks/useRichTextOutline";
 import { useUiStore } from "@/stores/ui.store";
@@ -38,6 +39,8 @@ interface RichTextEditorProps {
   onOutlineToggle?: () => void;
   /** 顶部工具栏的 AI 入口：AI 按钮统一收在 EditorToolbar，这里把富文本侧的菜单触发器注册给宿主 */
   aiTriggerRef?: RefObject<(() => void) | null> | undefined;
+  /** 语音输入定稿插入注册：编辑器就绪后把「光标处插入」回调交给宿主，卸载时注销（null）。 */
+  onRegisterInsert?: ((insert: ((text: string) => void) | null) => void) | undefined;
   navigationTarget?: NoteNavigationTarget | null | undefined;
   navigationNonce?: number | undefined;
   focusMode?: boolean;
@@ -48,7 +51,7 @@ interface RichTextEditorProps {
 /** 真富文本所见即所得编辑器：TipTap 读写 TipTap JSON。
  * 支持图片/表格/任务列表、斜杠命令、双链与标签 mark。
  * 通过父组件 key 重挂载以切换笔记；异步加载的 content 会由 hook 同步到编辑器。 */
-export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, encrypted = false, outlineOpen = false, onOutlineToggle = () => undefined, aiTriggerRef, navigationTarget = null, navigationNonce = 0, focusMode = false, typewriterMode = false, onStatsChange }: RichTextEditorProps) {
+export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePath, encrypted = false, outlineOpen = false, onOutlineToggle = () => undefined, aiTriggerRef, onRegisterInsert, navigationTarget = null, navigationNonce = 0, focusMode = false, typewriterMode = false, onStatsChange }: RichTextEditorProps) {
   const { t } = useTranslation();
   const { editor, handleFiles, status } = useRichTextEditor({ content, onChange, repoPath, typewriterMode, ...(onStatsChange ? { onStatsChange } : {}) });
   const contextMenu = useRichTextContextMenu();
@@ -81,6 +84,15 @@ export function RichTextEditor({ content, onChange, repoPath, onOpenWiki, notePa
     targetRef.current = ai.openMenu;
     return () => { targetRef.current = null; };
   }, [aiTriggerRef, ai.openMenu]);
+
+  // 语音输入定稿插入：注册回调交给宿主（宿主未提供时不注册），卸载时注销。
+  useEffect(() => {
+    if (!onRegisterInsert || !editor) return undefined;
+    onRegisterInsert((text: string) => {
+      editor.chain().focus().insertContent(voiceTextContent(text)).run();
+    });
+    return () => onRegisterInsert(null);
+  }, [onRegisterInsert, editor]);
 
   return (
     <div data-note-theme={noteTheme} style={emptyTaskPlaceholder(t)} className="note-theme-surface rich-text-editor flex h-full min-h-0 flex-col" onClick={(event) => handleEditorClick(event, onOpenWiki, openTagIndex)} onContextMenu={(event) => contextMenu.handleContextMenu(event, editor)}>

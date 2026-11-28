@@ -111,6 +111,21 @@ pub enum AppError {
     /// 设备认证失败：未录入生物识别、被系统锁定、密钥失效等（可重试或用口令解锁）
     #[error("vault device auth failed: {0}")]
     VaultDeviceAuthFailed(String),
+    /// 语音输入：麦克风权限被系统或用户拒绝（需引导去系统设置开启）
+    #[error("voice mic permission denied: {0}")]
+    VoiceMicDenied(String),
+    /// 语音输入：平台 / 设备不支持系统语音识别（桌面、无 GMS 设备等）
+    #[error("voice unavailable: {0}")]
+    VoiceUnavailable(String),
+    /// 语音输入：已有识别会话进行中（防重入，稍后重试即可，消息直接进全局 toast）
+    #[error("{0}")]
+    VoiceBusy(String),
+    /// 语音输入：用户主动取消或会话被系统中断（前端静默处理，不显示红色错误）
+    #[error("voice cancelled: {0}")]
+    VoiceCancelled(String),
+    /// 语音输入：识别引擎运行中失败（网络受限的 on-device、服务中断等，可重试）
+    #[error("voice recognition failed: {0}")]
+    VoiceFailed(String),
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize)]
@@ -209,6 +224,11 @@ impl From<AppError> for AppErrorDto {
             AppError::VaultQuickUnlockUnavailable(_) => ("VAULT_9006", ErrorKind::Unknown, false),
             AppError::VaultDeviceAuthCancelled(_) => ("VAULT_9007", ErrorKind::Unknown, false),
             AppError::VaultDeviceAuthFailed(_) => ("VAULT_9008", ErrorKind::Unknown, false),
+            AppError::VoiceMicDenied(_) => ("VOICE_9001", ErrorKind::Permission, false),
+            AppError::VoiceUnavailable(_) => ("VOICE_9002", ErrorKind::Unknown, false),
+            AppError::VoiceBusy(_) => ("VOICE_9003", ErrorKind::Conflict, true),
+            AppError::VoiceCancelled(_) => ("VOICE_9004", ErrorKind::Unknown, false),
+            AppError::VoiceFailed(_) => ("VOICE_9005", ErrorKind::Unknown, true),
         };
         let provider = match &err {
             AppError::AuthLoginRequired { provider, .. } => Some(provider.clone()),
@@ -370,6 +390,44 @@ mod tests {
             dto(AppError::VaultDeviceAuthFailed("no biometrics".into())).code,
             "VAULT_9008"
         );
+        assert_eq!(
+            dto(AppError::VoiceMicDenied("denied".into())).code,
+            "VOICE_9001"
+        );
+        assert_eq!(
+            dto(AppError::VoiceUnavailable("no service".into())).code,
+            "VOICE_9002"
+        );
+        let voice_busy = dto(AppError::VoiceBusy("识别中".into()));
+        assert_eq!(voice_busy.code, "VOICE_9003");
+        assert!(voice_busy.retriable, "防重入错误稍后重试即可");
+        assert_eq!(voice_busy.message, "识别中", "Busy 消息不带英文前缀");
+        assert_eq!(
+            dto(AppError::VoiceCancelled("cancel".into())).code,
+            "VOICE_9004"
+        );
+        assert_eq!(
+            dto(AppError::VoiceFailed("engine".into())).code,
+            "VOICE_9005"
+        );
+    }
+
+    #[test]
+    fn voice_errors_keep_expected_kind_and_retriable() {
+        assert_eq!(
+            dto(AppError::VoiceMicDenied("denied".into())).kind,
+            ErrorKind::Permission
+        );
+        assert!(!dto(AppError::VoiceMicDenied("denied".into())).retriable);
+        assert!(!dto(AppError::VoiceUnavailable("no gms".into())).retriable);
+        assert_eq!(
+            dto(AppError::VoiceBusy("busy".into())).kind,
+            ErrorKind::Conflict
+        );
+        // 取消类错误前端静默处理，不进重试链路。
+        assert!(!dto(AppError::VoiceCancelled("cancel".into())).retriable);
+        // 引擎运行中失败可重试：用户再点一次麦克风即可。
+        assert!(dto(AppError::VoiceFailed("engine".into())).retriable);
     }
 
     #[test]
